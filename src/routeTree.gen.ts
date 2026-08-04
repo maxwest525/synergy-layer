@@ -10,33 +10,309 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AgentsRouteImport } from './routes/agents'
+import { Route as AssetsRouteImport } from './routes/assets'
+import { Route as CapabilitiesRouteImport } from './routes/capabilities'
+import { Route as CommandCenterRouteImport } from './routes/command-center'
+import { Route as KnowledgeRouteImport } from './routes/knowledge'
+import { Route as RecommendationsRouteImport } from './routes/recommendations'
+import { Route as SchedulerRouteImport } from './routes/scheduler'
+import { Route as WorkflowsRouteImport } from './routes/workflows'
+import { Route as AgentsIndexRouteImport } from './routes/agents.index'
+import { Route as AgentsIdRouteImport } from './routes/agents.$id'
+import { Route as AssetsIndexRouteImport } from './routes/assets.index'
+import { Route as AssetsIdRouteImport } from './routes/assets.$id'
+import { Route as CapabilitiesIndexRouteImport } from './routes/capabilities.index'
+import { Route as CapabilitiesIdRouteImport } from './routes/capabilities.$id'
+import { Route as KnowledgeIndexRouteImport } from './routes/knowledge.index'
+import { Route as KnowledgeIdRouteImport } from './routes/knowledge.$id'
+import { Route as RecommendationsIndexRouteImport } from './routes/recommendations.index'
+import { Route as RecommendationsIdRouteImport } from './routes/recommendations.$id'
+import { Route as SchedulerIndexRouteImport } from './routes/scheduler.index'
+import { Route as SchedulerIdRouteImport } from './routes/scheduler.$id'
+import { Route as WorkflowsIndexRouteImport } from './routes/workflows.index'
+import { Route as WorkflowsIdRouteImport } from './routes/workflows.$id'
+import { Route as ApiPublicHooksSchedulerTickRouteImport } from './routes/api/public/hooks/scheduler-tick'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AgentsRoute = AgentsRouteImport.update({
+  id: '/agents',
+  path: '/agents',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AssetsRoute = AssetsRouteImport.update({
+  id: '/assets',
+  path: '/assets',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CapabilitiesRoute = CapabilitiesRouteImport.update({
+  id: '/capabilities',
+  path: '/capabilities',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CommandCenterRoute = CommandCenterRouteImport.update({
+  id: '/command-center',
+  path: '/command-center',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const KnowledgeRoute = KnowledgeRouteImport.update({
+  id: '/knowledge',
+  path: '/knowledge',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RecommendationsRoute = RecommendationsRouteImport.update({
+  id: '/recommendations',
+  path: '/recommendations',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SchedulerRoute = SchedulerRouteImport.update({
+  id: '/scheduler',
+  path: '/scheduler',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WorkflowsRoute = WorkflowsRouteImport.update({
+  id: '/workflows',
+  path: '/workflows',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AgentsIndexRoute = AgentsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AgentsRoute,
+} as any)
+const AgentsIdRoute = AgentsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AgentsRoute,
+} as any)
+const AssetsIndexRoute = AssetsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AssetsRoute,
+} as any)
+const AssetsIdRoute = AssetsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AssetsRoute,
+} as any)
+const CapabilitiesIndexRoute = CapabilitiesIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => CapabilitiesRoute,
+} as any)
+const CapabilitiesIdRoute = CapabilitiesIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => CapabilitiesRoute,
+} as any)
+const KnowledgeIndexRoute = KnowledgeIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => KnowledgeRoute,
+} as any)
+const KnowledgeIdRoute = KnowledgeIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => KnowledgeRoute,
+} as any)
+const RecommendationsIndexRoute = RecommendationsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => RecommendationsRoute,
+} as any)
+const RecommendationsIdRoute = RecommendationsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => RecommendationsRoute,
+} as any)
+const SchedulerIndexRoute = SchedulerIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => SchedulerRoute,
+} as any)
+const SchedulerIdRoute = SchedulerIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => SchedulerRoute,
+} as any)
+const WorkflowsIndexRoute = WorkflowsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => WorkflowsRoute,
+} as any)
+const WorkflowsIdRoute = WorkflowsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => WorkflowsRoute,
+} as any)
+const ApiPublicHooksSchedulerTickRoute =
+  ApiPublicHooksSchedulerTickRouteImport.update({
+    id: '/api/public/hooks/scheduler-tick',
+    path: '/api/public/hooks/scheduler-tick',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/agents': typeof AgentsRouteWithChildren
+  '/assets': typeof AssetsRouteWithChildren
+  '/capabilities': typeof CapabilitiesRouteWithChildren
+  '/command-center': typeof CommandCenterRoute
+  '/knowledge': typeof KnowledgeRouteWithChildren
+  '/recommendations': typeof RecommendationsRouteWithChildren
+  '/scheduler': typeof SchedulerRouteWithChildren
+  '/workflows': typeof WorkflowsRouteWithChildren
+  '/agents/$id': typeof AgentsIdRoute
+  '/assets/$id': typeof AssetsIdRoute
+  '/capabilities/$id': typeof CapabilitiesIdRoute
+  '/knowledge/$id': typeof KnowledgeIdRoute
+  '/recommendations/$id': typeof RecommendationsIdRoute
+  '/scheduler/$id': typeof SchedulerIdRoute
+  '/workflows/$id': typeof WorkflowsIdRoute
+  '/agents/': typeof AgentsIndexRoute
+  '/assets/': typeof AssetsIndexRoute
+  '/capabilities/': typeof CapabilitiesIndexRoute
+  '/knowledge/': typeof KnowledgeIndexRoute
+  '/recommendations/': typeof RecommendationsIndexRoute
+  '/scheduler/': typeof SchedulerIndexRoute
+  '/workflows/': typeof WorkflowsIndexRoute
+  '/api/public/hooks/scheduler-tick': typeof ApiPublicHooksSchedulerTickRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/command-center': typeof CommandCenterRoute
+  '/agents/$id': typeof AgentsIdRoute
+  '/assets/$id': typeof AssetsIdRoute
+  '/capabilities/$id': typeof CapabilitiesIdRoute
+  '/knowledge/$id': typeof KnowledgeIdRoute
+  '/recommendations/$id': typeof RecommendationsIdRoute
+  '/scheduler/$id': typeof SchedulerIdRoute
+  '/workflows/$id': typeof WorkflowsIdRoute
+  '/agents': typeof AgentsIndexRoute
+  '/assets': typeof AssetsIndexRoute
+  '/capabilities': typeof CapabilitiesIndexRoute
+  '/knowledge': typeof KnowledgeIndexRoute
+  '/recommendations': typeof RecommendationsIndexRoute
+  '/scheduler': typeof SchedulerIndexRoute
+  '/workflows': typeof WorkflowsIndexRoute
+  '/api/public/hooks/scheduler-tick': typeof ApiPublicHooksSchedulerTickRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/agents': typeof AgentsRouteWithChildren
+  '/assets': typeof AssetsRouteWithChildren
+  '/capabilities': typeof CapabilitiesRouteWithChildren
+  '/command-center': typeof CommandCenterRoute
+  '/knowledge': typeof KnowledgeRouteWithChildren
+  '/recommendations': typeof RecommendationsRouteWithChildren
+  '/scheduler': typeof SchedulerRouteWithChildren
+  '/workflows': typeof WorkflowsRouteWithChildren
+  '/agents/$id': typeof AgentsIdRoute
+  '/assets/$id': typeof AssetsIdRoute
+  '/capabilities/$id': typeof CapabilitiesIdRoute
+  '/knowledge/$id': typeof KnowledgeIdRoute
+  '/recommendations/$id': typeof RecommendationsIdRoute
+  '/scheduler/$id': typeof SchedulerIdRoute
+  '/workflows/$id': typeof WorkflowsIdRoute
+  '/agents/': typeof AgentsIndexRoute
+  '/assets/': typeof AssetsIndexRoute
+  '/capabilities/': typeof CapabilitiesIndexRoute
+  '/knowledge/': typeof KnowledgeIndexRoute
+  '/recommendations/': typeof RecommendationsIndexRoute
+  '/scheduler/': typeof SchedulerIndexRoute
+  '/workflows/': typeof WorkflowsIndexRoute
+  '/api/public/hooks/scheduler-tick': typeof ApiPublicHooksSchedulerTickRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/agents'
+    | '/assets'
+    | '/capabilities'
+    | '/command-center'
+    | '/knowledge'
+    | '/recommendations'
+    | '/scheduler'
+    | '/workflows'
+    | '/agents/$id'
+    | '/assets/$id'
+    | '/capabilities/$id'
+    | '/knowledge/$id'
+    | '/recommendations/$id'
+    | '/scheduler/$id'
+    | '/workflows/$id'
+    | '/agents/'
+    | '/assets/'
+    | '/capabilities/'
+    | '/knowledge/'
+    | '/recommendations/'
+    | '/scheduler/'
+    | '/workflows/'
+    | '/api/public/hooks/scheduler-tick'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/command-center'
+    | '/agents/$id'
+    | '/assets/$id'
+    | '/capabilities/$id'
+    | '/knowledge/$id'
+    | '/recommendations/$id'
+    | '/scheduler/$id'
+    | '/workflows/$id'
+    | '/agents'
+    | '/assets'
+    | '/capabilities'
+    | '/knowledge'
+    | '/recommendations'
+    | '/scheduler'
+    | '/workflows'
+    | '/api/public/hooks/scheduler-tick'
+  id:
+    | '__root__'
+    | '/'
+    | '/agents'
+    | '/assets'
+    | '/capabilities'
+    | '/command-center'
+    | '/knowledge'
+    | '/recommendations'
+    | '/scheduler'
+    | '/workflows'
+    | '/agents/$id'
+    | '/assets/$id'
+    | '/capabilities/$id'
+    | '/knowledge/$id'
+    | '/recommendations/$id'
+    | '/scheduler/$id'
+    | '/workflows/$id'
+    | '/agents/'
+    | '/assets/'
+    | '/capabilities/'
+    | '/knowledge/'
+    | '/recommendations/'
+    | '/scheduler/'
+    | '/workflows/'
+    | '/api/public/hooks/scheduler-tick'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AgentsRoute: typeof AgentsRouteWithChildren
+  AssetsRoute: typeof AssetsRouteWithChildren
+  CapabilitiesRoute: typeof CapabilitiesRouteWithChildren
+  CommandCenterRoute: typeof CommandCenterRoute
+  KnowledgeRoute: typeof KnowledgeRouteWithChildren
+  RecommendationsRoute: typeof RecommendationsRouteWithChildren
+  SchedulerRoute: typeof SchedulerRouteWithChildren
+  WorkflowsRoute: typeof WorkflowsRouteWithChildren
+  ApiPublicHooksSchedulerTickRoute: typeof ApiPublicHooksSchedulerTickRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,22 +324,278 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/agents': {
+      id: '/agents'
+      path: '/agents'
+      fullPath: '/agents'
+      preLoaderRoute: typeof AgentsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/assets': {
+      id: '/assets'
+      path: '/assets'
+      fullPath: '/assets'
+      preLoaderRoute: typeof AssetsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/capabilities': {
+      id: '/capabilities'
+      path: '/capabilities'
+      fullPath: '/capabilities'
+      preLoaderRoute: typeof CapabilitiesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/command-center': {
+      id: '/command-center'
+      path: '/command-center'
+      fullPath: '/command-center'
+      preLoaderRoute: typeof CommandCenterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/knowledge': {
+      id: '/knowledge'
+      path: '/knowledge'
+      fullPath: '/knowledge'
+      preLoaderRoute: typeof KnowledgeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/recommendations': {
+      id: '/recommendations'
+      path: '/recommendations'
+      fullPath: '/recommendations'
+      preLoaderRoute: typeof RecommendationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/scheduler': {
+      id: '/scheduler'
+      path: '/scheduler'
+      fullPath: '/scheduler'
+      preLoaderRoute: typeof SchedulerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/workflows': {
+      id: '/workflows'
+      path: '/workflows'
+      fullPath: '/workflows'
+      preLoaderRoute: typeof WorkflowsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/agents/': {
+      id: '/agents/'
+      path: '/'
+      fullPath: '/agents/'
+      preLoaderRoute: typeof AgentsIndexRouteImport
+      parentRoute: typeof AgentsRoute
+    }
+    '/agents/$id': {
+      id: '/agents/$id'
+      path: '/$id'
+      fullPath: '/agents/$id'
+      preLoaderRoute: typeof AgentsIdRouteImport
+      parentRoute: typeof AgentsRoute
+    }
+    '/assets/': {
+      id: '/assets/'
+      path: '/'
+      fullPath: '/assets/'
+      preLoaderRoute: typeof AssetsIndexRouteImport
+      parentRoute: typeof AssetsRoute
+    }
+    '/assets/$id': {
+      id: '/assets/$id'
+      path: '/$id'
+      fullPath: '/assets/$id'
+      preLoaderRoute: typeof AssetsIdRouteImport
+      parentRoute: typeof AssetsRoute
+    }
+    '/capabilities/': {
+      id: '/capabilities/'
+      path: '/'
+      fullPath: '/capabilities/'
+      preLoaderRoute: typeof CapabilitiesIndexRouteImport
+      parentRoute: typeof CapabilitiesRoute
+    }
+    '/capabilities/$id': {
+      id: '/capabilities/$id'
+      path: '/$id'
+      fullPath: '/capabilities/$id'
+      preLoaderRoute: typeof CapabilitiesIdRouteImport
+      parentRoute: typeof CapabilitiesRoute
+    }
+    '/knowledge/': {
+      id: '/knowledge/'
+      path: '/'
+      fullPath: '/knowledge/'
+      preLoaderRoute: typeof KnowledgeIndexRouteImport
+      parentRoute: typeof KnowledgeRoute
+    }
+    '/knowledge/$id': {
+      id: '/knowledge/$id'
+      path: '/$id'
+      fullPath: '/knowledge/$id'
+      preLoaderRoute: typeof KnowledgeIdRouteImport
+      parentRoute: typeof KnowledgeRoute
+    }
+    '/recommendations/': {
+      id: '/recommendations/'
+      path: '/'
+      fullPath: '/recommendations/'
+      preLoaderRoute: typeof RecommendationsIndexRouteImport
+      parentRoute: typeof RecommendationsRoute
+    }
+    '/recommendations/$id': {
+      id: '/recommendations/$id'
+      path: '/$id'
+      fullPath: '/recommendations/$id'
+      preLoaderRoute: typeof RecommendationsIdRouteImport
+      parentRoute: typeof RecommendationsRoute
+    }
+    '/scheduler/': {
+      id: '/scheduler/'
+      path: '/'
+      fullPath: '/scheduler/'
+      preLoaderRoute: typeof SchedulerIndexRouteImport
+      parentRoute: typeof SchedulerRoute
+    }
+    '/scheduler/$id': {
+      id: '/scheduler/$id'
+      path: '/$id'
+      fullPath: '/scheduler/$id'
+      preLoaderRoute: typeof SchedulerIdRouteImport
+      parentRoute: typeof SchedulerRoute
+    }
+    '/workflows/': {
+      id: '/workflows/'
+      path: '/'
+      fullPath: '/workflows/'
+      preLoaderRoute: typeof WorkflowsIndexRouteImport
+      parentRoute: typeof WorkflowsRoute
+    }
+    '/workflows/$id': {
+      id: '/workflows/$id'
+      path: '/$id'
+      fullPath: '/workflows/$id'
+      preLoaderRoute: typeof WorkflowsIdRouteImport
+      parentRoute: typeof WorkflowsRoute
+    }
+    '/api/public/hooks/scheduler-tick': {
+      id: '/api/public/hooks/scheduler-tick'
+      path: '/api/public/hooks/scheduler-tick'
+      fullPath: '/api/public/hooks/scheduler-tick'
+      preLoaderRoute: typeof ApiPublicHooksSchedulerTickRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
+interface AgentsRouteChildren {
+  AgentsIdRoute: typeof AgentsIdRoute
+  AgentsIndexRoute: typeof AgentsIndexRoute
+}
+
+const AgentsRouteChildren: AgentsRouteChildren = {
+  AgentsIdRoute: AgentsIdRoute,
+  AgentsIndexRoute: AgentsIndexRoute,
+}
+
+const AgentsRouteWithChildren =
+  AgentsRoute._addFileChildren(AgentsRouteChildren)
+
+interface AssetsRouteChildren {
+  AssetsIdRoute: typeof AssetsIdRoute
+  AssetsIndexRoute: typeof AssetsIndexRoute
+}
+
+const AssetsRouteChildren: AssetsRouteChildren = {
+  AssetsIdRoute: AssetsIdRoute,
+  AssetsIndexRoute: AssetsIndexRoute,
+}
+
+const AssetsRouteWithChildren =
+  AssetsRoute._addFileChildren(AssetsRouteChildren)
+
+interface CapabilitiesRouteChildren {
+  CapabilitiesIdRoute: typeof CapabilitiesIdRoute
+  CapabilitiesIndexRoute: typeof CapabilitiesIndexRoute
+}
+
+const CapabilitiesRouteChildren: CapabilitiesRouteChildren = {
+  CapabilitiesIdRoute: CapabilitiesIdRoute,
+  CapabilitiesIndexRoute: CapabilitiesIndexRoute,
+}
+
+const CapabilitiesRouteWithChildren = CapabilitiesRoute._addFileChildren(
+  CapabilitiesRouteChildren,
+)
+
+interface KnowledgeRouteChildren {
+  KnowledgeIdRoute: typeof KnowledgeIdRoute
+  KnowledgeIndexRoute: typeof KnowledgeIndexRoute
+}
+
+const KnowledgeRouteChildren: KnowledgeRouteChildren = {
+  KnowledgeIdRoute: KnowledgeIdRoute,
+  KnowledgeIndexRoute: KnowledgeIndexRoute,
+}
+
+const KnowledgeRouteWithChildren = KnowledgeRoute._addFileChildren(
+  KnowledgeRouteChildren,
+)
+
+interface RecommendationsRouteChildren {
+  RecommendationsIdRoute: typeof RecommendationsIdRoute
+  RecommendationsIndexRoute: typeof RecommendationsIndexRoute
+}
+
+const RecommendationsRouteChildren: RecommendationsRouteChildren = {
+  RecommendationsIdRoute: RecommendationsIdRoute,
+  RecommendationsIndexRoute: RecommendationsIndexRoute,
+}
+
+const RecommendationsRouteWithChildren = RecommendationsRoute._addFileChildren(
+  RecommendationsRouteChildren,
+)
+
+interface SchedulerRouteChildren {
+  SchedulerIdRoute: typeof SchedulerIdRoute
+  SchedulerIndexRoute: typeof SchedulerIndexRoute
+}
+
+const SchedulerRouteChildren: SchedulerRouteChildren = {
+  SchedulerIdRoute: SchedulerIdRoute,
+  SchedulerIndexRoute: SchedulerIndexRoute,
+}
+
+const SchedulerRouteWithChildren = SchedulerRoute._addFileChildren(
+  SchedulerRouteChildren,
+)
+
+interface WorkflowsRouteChildren {
+  WorkflowsIdRoute: typeof WorkflowsIdRoute
+  WorkflowsIndexRoute: typeof WorkflowsIndexRoute
+}
+
+const WorkflowsRouteChildren: WorkflowsRouteChildren = {
+  WorkflowsIdRoute: WorkflowsIdRoute,
+  WorkflowsIndexRoute: WorkflowsIndexRoute,
+}
+
+const WorkflowsRouteWithChildren = WorkflowsRoute._addFileChildren(
+  WorkflowsRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AgentsRoute: AgentsRouteWithChildren,
+  AssetsRoute: AssetsRouteWithChildren,
+  CapabilitiesRoute: CapabilitiesRouteWithChildren,
+  CommandCenterRoute: CommandCenterRoute,
+  KnowledgeRoute: KnowledgeRouteWithChildren,
+  RecommendationsRoute: RecommendationsRouteWithChildren,
+  SchedulerRoute: SchedulerRouteWithChildren,
+  WorkflowsRoute: WorkflowsRouteWithChildren,
+  ApiPublicHooksSchedulerTickRoute: ApiPublicHooksSchedulerTickRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
