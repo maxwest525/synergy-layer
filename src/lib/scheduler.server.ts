@@ -1,0 +1,102 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+import type { Database } from "@/integrations/supabase/types";
+import { nextRunAt } from "./cron";
+import { fileInboxItem, logActivity } from "./os.server";
+import { runWorkflow } from "./workflow-runner.server";
+
+type Client = SupabaseClient<Database>;
+
+export type TickResult = {
+  claimed: number;
+  blocked: number;
+  ran: { schedule: string; state: string }[];
+};
+
+/**
+ * Claims every due schedule, respecting dependency edges so chains run in
+ * order instead of as isolated jobs.
+ */
+export async function tickScheduler(client: Client, now = new Date()): Promise<TickResult> {
+  const { data: schedules, error } = await client.from("schedules").select("*").eq("enabled", true);
+  if (error) throw new Error(error.message);
+
+  const { data: dependencies, error: dependencyError } = await client
+    .from("schedule_dependencies")
+    .select("*");
+  if (dependencyError) throw new Error(dependencyError.message);
+
+  const byId = new Map((schedules ?? []).map((schedule) => [schedule.id, schedule]));
+  const result: TickResult = { claimed: 0, blocked: 0, ran: [] };
+
+  for (const schedule of schedules ?? []) {
+    const due = schedule.next_run_at === null || new Date(schedule.next_run_at) <= now;
+    if (!due) continue;
+
+    const edges = (dependencies ?? []).filter((edge) => edge.schedule_id === schedule.id);
+    const blockedBy = edges.find((edge) => {
+      const upstream = byId.get(edge.depends_on_schedule_id);
+      if (!upstream) return false;
+      if (!upstream.last_run_at) return true;
+      if (edge.condition === "on_success") return upstream.last_state !== "succeeded";
+      return upstream.last_state === null;
+    });
+
+    if (blockedBy) {
+      result.blocked += 1;
+      const upstream = byId.get(blockedBy.depends_on_schedule_id);
+      if (upstream?.last_state === "failed") {
+        await fileInboxItem(client, {
+          lane: "needs_attention",
+          sourceModule: "scheduler",
+          title: `${schedule.name} is blocked`,
+          summary: `Upstream schedule "${upstream.name}" failed, so this step did not start.`,
+          priority: 1,
+          subjectKind: "schedule",
+          subjectId: schedule.id,
+          actions: [{ kind: "open" }],
+        });
+      }
+      continue;
+    }
+
+    result.claimed += 1;
+    const startedAt = Date.now();
+    let state: Database["public"]["Enums"]["run_state"] = "failed";
+    try {
+      if (schedule.target_kind === "workflow" && schedule.target_id) {
+        const run = await runWorkflow(client, schedule.target_id, `schedule:${schedule.key}`, null);
+        state = run.state;
+      } else {
+        state = "succeeded";
+      }
+    } catch (error) {
+      state = "failed";
+      await logActivity(client, {
+        actorKind: "system",
+        actorId: "scheduler",
+        verb: "schedule.error",
+        subjectKind: "schedule",
+        subjectId: schedule.id,
+        summary: `${schedule.name} failed: ${(error as Error).message}`,
+      });
+    }
+
+    const next = nextRunAt(schedule.cron, now);
+    await client
+      .from("schedules")
+      .update({
+        last_run_at: now.toISOString(),
+        last_state: state,
+        last_duration_ms: Date.now() - startedAt,
+        next_run_at: next ? next.toISOString() : null,
+        failure_count: state === "failed" ? schedule.failure_count + 1 : 0,
+        health: state === "failed" ? "failing" : "healthy",
+      })
+      .eq("id", schedule.id);
+
+    result.ran.push({ schedule: schedule.key, state });
+  }
+
+  return result;
+}
