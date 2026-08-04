@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AgentsRouteImport } from './routes/agents'
 import { Route as AssetsRouteImport } from './routes/assets'
+import { Route as AuthRouteImport } from './routes/auth'
 import { Route as CapabilitiesRouteImport } from './routes/capabilities'
 import { Route as CommandCenterRouteImport } from './routes/command-center'
 import { Route as KnowledgeRouteImport } from './routes/knowledge'
@@ -47,6 +48,11 @@ const AgentsRoute = AgentsRouteImport.update({
 const AssetsRoute = AssetsRouteImport.update({
   id: '/assets',
   path: '/assets',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CapabilitiesRoute = CapabilitiesRouteImport.update({
@@ -160,6 +166,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/agents': typeof AgentsRouteWithChildren
   '/assets': typeof AssetsRouteWithChildren
+  '/auth': typeof AuthRoute
   '/capabilities': typeof CapabilitiesRouteWithChildren
   '/command-center': typeof CommandCenterRoute
   '/knowledge': typeof KnowledgeRouteWithChildren
@@ -184,6 +191,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
   '/command-center': typeof CommandCenterRoute
   '/agents/$id': typeof AgentsIdRoute
   '/assets/$id': typeof AssetsIdRoute
@@ -206,6 +214,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/agents': typeof AgentsRouteWithChildren
   '/assets': typeof AssetsRouteWithChildren
+  '/auth': typeof AuthRoute
   '/capabilities': typeof CapabilitiesRouteWithChildren
   '/command-center': typeof CommandCenterRoute
   '/knowledge': typeof KnowledgeRouteWithChildren
@@ -234,6 +243,7 @@ export interface FileRouteTypes {
     | '/'
     | '/agents'
     | '/assets'
+    | '/auth'
     | '/capabilities'
     | '/command-center'
     | '/knowledge'
@@ -258,6 +268,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/auth'
     | '/command-center'
     | '/agents/$id'
     | '/assets/$id'
@@ -279,6 +290,7 @@ export interface FileRouteTypes {
     | '/'
     | '/agents'
     | '/assets'
+    | '/auth'
     | '/capabilities'
     | '/command-center'
     | '/knowledge'
@@ -306,6 +318,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AgentsRoute: typeof AgentsRouteWithChildren
   AssetsRoute: typeof AssetsRouteWithChildren
+  AuthRoute: typeof AuthRoute
   CapabilitiesRoute: typeof CapabilitiesRouteWithChildren
   CommandCenterRoute: typeof CommandCenterRoute
   KnowledgeRoute: typeof KnowledgeRouteWithChildren
@@ -336,6 +349,13 @@ declare module '@tanstack/react-router' {
       path: '/assets'
       fullPath: '/assets'
       preLoaderRoute: typeof AssetsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/capabilities': {
@@ -588,6 +608,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AgentsRoute: AgentsRouteWithChildren,
   AssetsRoute: AssetsRouteWithChildren,
+  AuthRoute: AuthRoute,
   CapabilitiesRoute: CapabilitiesRouteWithChildren,
   CommandCenterRoute: CommandCenterRoute,
   KnowledgeRoute: KnowledgeRouteWithChildren,

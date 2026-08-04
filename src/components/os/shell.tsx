@@ -73,7 +73,13 @@ export function Shell({ children }: { children: ReactNode }) {
             })}
           </ul>
 
-          <p className="px-3 pt-4 text-xs leading-relaxed text-muted-foreground">
+          <Link
+            to="/auth"
+            className="mt-4 rounded-xl px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-sidebar-accent/60 hover:text-foreground"
+          >
+            Operator sign in
+          </Link>
+          <p className="px-3 pt-3 text-xs leading-relaxed text-muted-foreground">
             Every module registers itself. Nothing here is hardcoded per integration.
           </p>
         </nav>
