@@ -23,6 +23,7 @@ import { Route as AgentsIndexRouteImport } from './routes/agents.index'
 import { Route as AgentsIdRouteImport } from './routes/agents.$id'
 import { Route as AssetsIndexRouteImport } from './routes/assets.index'
 import { Route as AssetsIdRouteImport } from './routes/assets.$id'
+import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as CapabilitiesIndexRouteImport } from './routes/capabilities.index'
 import { Route as CapabilitiesIdRouteImport } from './routes/capabilities.$id'
 import { Route as KnowledgeIndexRouteImport } from './routes/knowledge.index'
@@ -105,6 +106,11 @@ const AssetsIdRoute = AssetsIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => AssetsRoute,
 } as any)
+const AuthCallbackRoute = AuthCallbackRouteImport.update({
+  id: '/callback',
+  path: '/callback',
+  getParentRoute: () => AuthRoute,
+} as any)
 const CapabilitiesIndexRoute = CapabilitiesIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -166,7 +172,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/agents': typeof AgentsRouteWithChildren
   '/assets': typeof AssetsRouteWithChildren
-  '/auth': typeof AuthRoute
+  '/auth': typeof AuthRouteWithChildren
   '/capabilities': typeof CapabilitiesRouteWithChildren
   '/command-center': typeof CommandCenterRoute
   '/knowledge': typeof KnowledgeRouteWithChildren
@@ -175,6 +181,7 @@ export interface FileRoutesByFullPath {
   '/workflows': typeof WorkflowsRouteWithChildren
   '/agents/$id': typeof AgentsIdRoute
   '/assets/$id': typeof AssetsIdRoute
+  '/auth/callback': typeof AuthCallbackRoute
   '/capabilities/$id': typeof CapabilitiesIdRoute
   '/knowledge/$id': typeof KnowledgeIdRoute
   '/recommendations/$id': typeof RecommendationsIdRoute
@@ -191,10 +198,11 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/auth': typeof AuthRoute
+  '/auth': typeof AuthRouteWithChildren
   '/command-center': typeof CommandCenterRoute
   '/agents/$id': typeof AgentsIdRoute
   '/assets/$id': typeof AssetsIdRoute
+  '/auth/callback': typeof AuthCallbackRoute
   '/capabilities/$id': typeof CapabilitiesIdRoute
   '/knowledge/$id': typeof KnowledgeIdRoute
   '/recommendations/$id': typeof RecommendationsIdRoute
@@ -214,7 +222,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/agents': typeof AgentsRouteWithChildren
   '/assets': typeof AssetsRouteWithChildren
-  '/auth': typeof AuthRoute
+  '/auth': typeof AuthRouteWithChildren
   '/capabilities': typeof CapabilitiesRouteWithChildren
   '/command-center': typeof CommandCenterRoute
   '/knowledge': typeof KnowledgeRouteWithChildren
@@ -223,6 +231,7 @@ export interface FileRoutesById {
   '/workflows': typeof WorkflowsRouteWithChildren
   '/agents/$id': typeof AgentsIdRoute
   '/assets/$id': typeof AssetsIdRoute
+  '/auth/callback': typeof AuthCallbackRoute
   '/capabilities/$id': typeof CapabilitiesIdRoute
   '/knowledge/$id': typeof KnowledgeIdRoute
   '/recommendations/$id': typeof RecommendationsIdRoute
@@ -252,6 +261,7 @@ export interface FileRouteTypes {
     | '/workflows'
     | '/agents/$id'
     | '/assets/$id'
+    | '/auth/callback'
     | '/capabilities/$id'
     | '/knowledge/$id'
     | '/recommendations/$id'
@@ -272,6 +282,7 @@ export interface FileRouteTypes {
     | '/command-center'
     | '/agents/$id'
     | '/assets/$id'
+    | '/auth/callback'
     | '/capabilities/$id'
     | '/knowledge/$id'
     | '/recommendations/$id'
@@ -299,6 +310,7 @@ export interface FileRouteTypes {
     | '/workflows'
     | '/agents/$id'
     | '/assets/$id'
+    | '/auth/callback'
     | '/capabilities/$id'
     | '/knowledge/$id'
     | '/recommendations/$id'
@@ -318,7 +330,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AgentsRoute: typeof AgentsRouteWithChildren
   AssetsRoute: typeof AssetsRouteWithChildren
-  AuthRoute: typeof AuthRoute
+  AuthRoute: typeof AuthRouteWithChildren
   CapabilitiesRoute: typeof CapabilitiesRouteWithChildren
   CommandCenterRoute: typeof CommandCenterRoute
   KnowledgeRoute: typeof KnowledgeRouteWithChildren
@@ -428,6 +440,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AssetsIdRouteImport
       parentRoute: typeof AssetsRoute
     }
+    '/auth/callback': {
+      id: '/auth/callback'
+      path: '/callback'
+      fullPath: '/auth/callback'
+      preLoaderRoute: typeof AuthCallbackRouteImport
+      parentRoute: typeof AuthRoute
+    }
     '/capabilities/': {
       id: '/capabilities/'
       path: '/'
@@ -534,6 +553,16 @@ const AssetsRouteChildren: AssetsRouteChildren = {
 const AssetsRouteWithChildren =
   AssetsRoute._addFileChildren(AssetsRouteChildren)
 
+interface AuthRouteChildren {
+  AuthCallbackRoute: typeof AuthCallbackRoute
+}
+
+const AuthRouteChildren: AuthRouteChildren = {
+  AuthCallbackRoute: AuthCallbackRoute,
+}
+
+const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
+
 interface CapabilitiesRouteChildren {
   CapabilitiesIdRoute: typeof CapabilitiesIdRoute
   CapabilitiesIndexRoute: typeof CapabilitiesIndexRoute
@@ -608,7 +637,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AgentsRoute: AgentsRouteWithChildren,
   AssetsRoute: AssetsRouteWithChildren,
-  AuthRoute: AuthRoute,
+  AuthRoute: AuthRouteWithChildren,
   CapabilitiesRoute: CapabilitiesRouteWithChildren,
   CommandCenterRoute: CommandCenterRoute,
   KnowledgeRoute: KnowledgeRouteWithChildren,
