@@ -36,10 +36,14 @@ Called from: post-authentication server path, post email verification, on grant 
 
 The `on_auth_user_created` trigger is rewritten: it creates the `profiles` row and calls the provisioning function. It is never the sole grant path, and the "first user becomes admin" behaviour is removed.
 
+**Last-admin protection.** Revocation and demotion both run a guard that counts active `admin` rows in `user_roles`. If the change would leave zero active admins, it raises and aborts with a clear message: a second admin must be granted first. This applies to `revoke_operator`, role downgrades, and allowlist edits.
+
 ### Sign-in surface
 
-- `/auth` keeps email/password and gains Google sign-in via the Lovable managed broker (`lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin })`), with the Google provider enabled in the same change.
-- After a session is established, the client calls one server function that resolves the user server-side, runs provisioning, and returns the resulting role. No client-side role decision.
+- `/auth` keeps email/password and gains Google sign-in via the Lovable managed broker.
+- Google sign-in uses an explicit callback route: `redirect_uri` is `${window.location.origin}/auth/callback` (public, not gated). That route validates the returned session server-side, runs allowlist provisioning, records the audit event, then redirects into AOOS at the saved same-origin destination (default `/`). The site origin is not relied on alone.
+- No client-side role decision: the resulting role always comes back from the server function.
+
 
 ### Audit events
 
