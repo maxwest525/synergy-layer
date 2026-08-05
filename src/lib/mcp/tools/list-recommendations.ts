@@ -11,7 +11,7 @@ export default defineTool({
     "List evidence backed AOOS recommendations with their impact, confidence, and lifecycle state.",
   inputSchema: {
     state: z
-      .enum(["proposed", "approved", "rejected", "scheduled", "executing", "completed", "failed"])
+      .enum(["draft", "proposed", "under_review", "approved", "rejected", "scheduled", "applied", "verified", "failed", "rolled_back"])
       .optional()
       .describe("Restrict results to one lifecycle state."),
     source_module: z.string().optional().describe("Restrict results to one source module, for example search-console."),
