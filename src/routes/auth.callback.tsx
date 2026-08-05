@@ -35,6 +35,8 @@ export const Route = createFileRoute("/auth/callback")({
 
 function CallbackPage() {
   const navigate = useNavigate();
+  const search = Route.useSearch();
+  const next = safeNext(search['next' as keyof typeof search]);
   const provision = useServerFn(provisionSession);
   const [hasSession, setHasSession] = useState<boolean | null>(null);
 
