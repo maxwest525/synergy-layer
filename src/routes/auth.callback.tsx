@@ -8,8 +8,19 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { provisionSession } from "@/lib/auth.functions";
 
+/** Only same-origin relative paths may be used as a post sign-in destination. */
+function safeNext(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  if (!value.startsWith("/") || value.startsWith("//")) return undefined;
+  return value;
+}
+
 export const Route = createFileRoute("/auth/callback")({
   ssr: false,
+  validateSearch: (search: Record<string, unknown>) => {
+    const next = safeNext(search['next']);
+    return next ? { next } : {};
+  },
   head: () => ({
     meta: [
       { title: "Completing sign-in — AOOS" },
