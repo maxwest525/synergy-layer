@@ -18,16 +18,6 @@ export const definition: ModuleDefinition = {
       ],
     },
     {
-      key: "search.console",
-      name: "Google Search Console",
-      kind: "connector",
-      category: "Organic",
-      description: "Query, page, and indexation performance.",
-      integrationState: "pending",
-      authKind: "oauth",
-      operations: [{ name: "performance.query", description: "Read search performance." }],
-    },
-    {
       key: "growth.opportunity_scanner",
       name: "Opportunity Scanner",
       kind: "internal_module",
