@@ -208,11 +208,15 @@ async function executeNode(client: Client, node: WorkflowNode): Promise<NodeOutc
     if (capability.integration_state !== "real") {
       return { ok: false, error: `Capability "${capability.name}" is not authorised yet.` };
     }
+
+    const specialised = await runSearchConsoleNode(client, node.ref ?? "");
+    if (specialised && !specialised.ok) return specialised;
+
     await client
       .from("capabilities")
       .update({ last_run_at: new Date().toISOString(), health: "healthy" })
       .eq("id", capability.id);
-    return { ok: true, output: { capability: capability.name } };
+    return { ok: true, output: { capability: capability.name, ...(specialised?.output ?? {}) } };
   }
 
   const { data: agent, error } = await client
