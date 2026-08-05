@@ -1,8 +1,8 @@
 import { defineTool } from "@lovable.dev/mcp-js";
 import { z } from "zod";
 
+import { guardedRead } from "../guard";
 import { errorResult, jsonResult } from "../result";
-import { supabaseForUser } from "../supabase";
 
 export default defineTool({
   name: "list_capabilities",
@@ -16,16 +16,17 @@ export default defineTool({
       .describe("Restrict results to one integration state."),
   },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
-  handler: async ({ integration_state }, ctx) => {
-    if (!ctx.isAuthenticated()) return errorResult("Not authenticated");
-    const supabase = supabaseForUser(ctx);
-    let query = supabase
-      .from("capabilities")
-      .select("id, key, name, description, kind, category, integration_state, status, health, last_run_at")
-      .order("name", { ascending: true });
-    if (integration_state) query = query.eq("integration_state", integration_state);
-    const { data, error } = await query;
-    if (error) return errorResult(error.message);
-    return jsonResult({ capabilities: data ?? [], count: data?.length ?? 0 });
+  handler: async (args, ctx) => {
+    const { integration_state } = args;
+    return guardedRead(ctx, "list_capabilities", args as Record<string, unknown>, async (supabase) => {
+      let query = supabase
+        .from("capabilities")
+        .select("id, key, name, description, kind, category, integration_state, status, health, last_run_at")
+        .order("name", { ascending: true });
+      if (integration_state) query = query.eq("integration_state", integration_state);
+      const { data, error } = await query;
+      if (error) return errorResult(error.message);
+      return jsonResult({ capabilities: data ?? [], count: data?.length ?? 0 });
+    });
   },
 });

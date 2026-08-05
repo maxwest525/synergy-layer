@@ -1,8 +1,8 @@
 import { defineTool } from "@lovable.dev/mcp-js";
 import { z } from "zod";
 
+import { guardedRead } from "../guard";
 import { errorResult, jsonResult } from "../result";
-import { supabaseForUser } from "../supabase";
 
 export default defineTool({
   name: "list_recommendations",
@@ -18,20 +18,22 @@ export default defineTool({
     limit: z.number().int().optional().describe("Maximum number of items to return, default 25."),
   },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
-  handler: async ({ state, source_module, limit }, ctx) => {
-    if (!ctx.isAuthenticated()) return errorResult("Not authenticated");
-    const supabase = supabaseForUser(ctx);
-    let query = supabase
-      .from("recommendations")
-      .select(
-        "id, title, description, state, source_module, confidence, business_impact, revenue_impact, traffic_impact, risk, requires_approval, issue_fingerprint, created_at",
-      )
-      .order("created_at", { ascending: false })
-      .limit(Math.min(Math.max(limit ?? 25, 1), 100));
-    if (state) query = query.eq("state", state);
-    if (source_module) query = query.eq("source_module", source_module);
-    const { data, error } = await query;
-    if (error) return errorResult(error.message);
-    return jsonResult({ recommendations: data ?? [], count: data?.length ?? 0 });
+  handler: async (args, ctx) => {
+    const { state, source_module, limit } = args;
+    return guardedRead(ctx, "list_recommendations", args as Record<string, unknown>, async (supabase) => {
+      let query = supabase
+        .from("recommendations")
+        .select(
+          "id, title, description, state, source_module, confidence, business_impact, revenue_impact, traffic_impact, risk, requires_approval, issue_fingerprint, created_at",
+        )
+        .order("created_at", { ascending: false })
+        .limit(Math.min(Math.max(limit ?? 25, 1), 100));
+      if (state) query = query.eq("state", state);
+      if (source_module) query = query.eq("source_module", source_module);
+      const { data, error } = await query;
+      if (error) return errorResult(error.message);
+      return jsonResult({ recommendations: data ?? [], count: data?.length ?? 0 });
+    });
   },
 });
+

@@ -1,8 +1,8 @@
 import { defineTool } from "@lovable.dev/mcp-js";
 import { z } from "zod";
 
+import { guardedRead } from "../guard";
 import { errorResult, jsonResult } from "../result";
-import { supabaseForUser } from "../supabase";
 
 export default defineTool({
   name: "list_assets",
@@ -14,17 +14,18 @@ export default defineTool({
     limit: z.number().int().optional().describe("Maximum number of assets to return, default 50."),
   },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
-  handler: async ({ kind, limit }, ctx) => {
-    if (!ctx.isAuthenticated()) return errorResult("Not authenticated");
-    const supabase = supabaseForUser(ctx);
-    let query = supabase
-      .from("assets")
-      .select("id, name, kind, status, health, owner_label, external_ref, description, updated_at")
-      .order("name", { ascending: true })
-      .limit(Math.min(Math.max(limit ?? 50, 1), 200));
-    if (kind) query = query.eq("kind", kind as never);
-    const { data, error } = await query;
-    if (error) return errorResult(error.message);
-    return jsonResult({ assets: data ?? [], count: data?.length ?? 0 });
+  handler: async (args, ctx) => {
+    const { kind, limit } = args;
+    return guardedRead(ctx, "list_assets", args as Record<string, unknown>, async (supabase) => {
+      let query = supabase
+        .from("assets")
+        .select("id, name, kind, status, health, owner_label, external_ref, description, updated_at")
+        .order("name", { ascending: true })
+        .limit(Math.min(Math.max(limit ?? 50, 1), 200));
+      if (kind) query = query.eq("kind", kind as never);
+      const { data, error } = await query;
+      if (error) return errorResult(error.message);
+      return jsonResult({ assets: data ?? [], count: data?.length ?? 0 });
+    });
   },
 });
