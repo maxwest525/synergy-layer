@@ -19,7 +19,7 @@ export default defineTool({
     const supabase = supabaseForUser(ctx);
     let query = supabase
       .from("assets")
-      .select("id, name, kind, status, health, owner_label, external_ref, url, updated_at")
+      .select("id, name, kind, status, health, owner_label, external_ref, description, updated_at")
       .order("name", { ascending: true })
       .limit(Math.min(Math.max(limit ?? 50, 1), 200));
     if (kind) query = query.eq("kind", kind as never);
