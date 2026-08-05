@@ -260,7 +260,8 @@ async function persistSnapshot(client: Client, input: SnapshotInput): Promise<st
       row_limit: input.rowLimit,
       paginated_request_count: input.paginatedRequestCount,
       returned_row_count: input.rows.length,
-      possibly_truncated: input.rows.length >= input.rowLimit,
+      // An ungrouped property-total query returns exactly one row by design.
+      possibly_truncated: input.kind === "dimensional_rows" && input.rows.length >= input.rowLimit,
       reporting_timezone: REPORTING_TIMEZONE,
       period_start_pt: input.periodStart,
       period_end_pt: input.periodEnd,
