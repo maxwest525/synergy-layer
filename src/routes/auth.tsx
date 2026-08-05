@@ -111,6 +111,28 @@ function AuthPage() {
           </Button>
         </form>
 
+        <div className="my-5 flex items-center gap-3 text-xs uppercase tracking-[0.2em] text-muted-foreground">
+          <span className="h-px flex-1 bg-border/60" />
+          or
+          <span className="h-px flex-1 bg-border/60" />
+        </div>
+
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full"
+          disabled={google.isPending}
+          onClick={() => google.mutate()}
+        >
+          {google.isPending ? "Opening Google" : "Continue with Google"}
+        </Button>
+
+        <p className="mt-4 text-xs leading-relaxed text-muted-foreground">
+          Signing in proves identity only. AOOS access is granted by the server side operator allowlist.
+        </p>
+
+
+
         <button
           type="button"
           className="mt-4 text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
