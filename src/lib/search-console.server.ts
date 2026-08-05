@@ -194,7 +194,7 @@ type QueryBody = {
   aggregationType?: string;
 };
 
-type QueryRow = { keys?: string[]; clicks: number; impressions: number; ctr: number; position: number };
+export type QueryRow = { keys?: string[]; clicks: number; impressions: number; ctr: number; position: number };
 type QueryResponse = { rows?: QueryRow[]; responseAggregationType?: string };
 
 async function query(property: string, body: QueryBody): Promise<QueryResponse> {
