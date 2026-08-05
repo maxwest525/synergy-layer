@@ -63,11 +63,17 @@ function CallbackPage() {
 
   useEffect(() => {
     if (result.data?.canOperate) {
-      const timer = setTimeout(() => void navigate({ to: "/" }), 600);
+      const timer = setTimeout(() => {
+        if (next) {
+          window.location.href = next;
+          return;
+        }
+        void navigate({ to: "/" });
+      }, 600);
       return () => clearTimeout(timer);
     }
     return undefined;
-  }, [result.data?.canOperate, navigate]);
+  }, [result.data?.canOperate, navigate, next]);
 
   const denied = result.data && !result.data.canOperate;
 
