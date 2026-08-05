@@ -46,7 +46,22 @@ function AuthPage() {
     },
     onSuccess: () => {
       toast.success(mode === "sign_in" ? "Signed in" : "Account created");
-      void navigate({ to: "/" });
+      void navigate({ to: "/auth/callback" });
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+  const google = useMutation({
+    mutationFn: async () => {
+      const result = await lovable.auth.signInWithOAuth("google", {
+        redirect_uri: `${window.location.origin}/auth/callback`,
+      });
+      if (result.error) throw result.error instanceof Error ? result.error : new Error(String(result.error));
+      return result;
+    },
+    onSuccess: (result) => {
+      if (result.redirected) return;
+      void navigate({ to: "/auth/callback" });
     },
     onError: (error: Error) => toast.error(error.message),
   });
