@@ -2,6 +2,7 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 
 import { DetailRow, GlassCard, PageHeader, StatePill, formatWhen, toneForState } from "@/components/os/primitives";
+import { SearchConsolePanel } from "@/components/os/search-console-panel";
 import { getCapability } from "@/lib/os.functions";
 
 const capabilityQuery = (id: string) => ({
