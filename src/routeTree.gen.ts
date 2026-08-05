@@ -37,6 +37,7 @@ import { Route as SchedulerIndexRouteImport } from './routes/scheduler.index'
 import { Route as SchedulerIdRouteImport } from './routes/scheduler.$id'
 import { Route as WorkflowsIndexRouteImport } from './routes/workflows.index'
 import { Route as WorkflowsIdRouteImport } from './routes/workflows.$id'
+import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
 import { Route as ApiPublicHooksSchedulerTickRouteImport } from './routes/api/public/hooks/scheduler-tick'
 
@@ -182,6 +183,11 @@ const WorkflowsIdRoute = WorkflowsIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => WorkflowsRoute,
 } as any)
+const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
+  id: '/.lovable/oauth/consent',
+  path: '/.lovable/oauth/consent',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const Char91DotmcpChar93InvokeToolToolRoute =
   Char91DotmcpChar93InvokeToolToolRouteImport.update({
     id: '/.mcp/invoke-tool/$tool',
@@ -224,6 +230,7 @@ export interface FileRoutesByFullPath {
   '/recommendations/': typeof RecommendationsIndexRoute
   '/scheduler/': typeof SchedulerIndexRoute
   '/workflows/': typeof WorkflowsIndexRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/public/hooks/scheduler-tick': typeof ApiPublicHooksSchedulerTickRoute
 }
@@ -249,6 +256,7 @@ export interface FileRoutesByTo {
   '/recommendations': typeof RecommendationsIndexRoute
   '/scheduler': typeof SchedulerIndexRoute
   '/workflows': typeof WorkflowsIndexRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/public/hooks/scheduler-tick': typeof ApiPublicHooksSchedulerTickRoute
 }
@@ -282,6 +290,7 @@ export interface FileRoutesById {
   '/recommendations/': typeof RecommendationsIndexRoute
   '/scheduler/': typeof SchedulerIndexRoute
   '/workflows/': typeof WorkflowsIndexRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/public/hooks/scheduler-tick': typeof ApiPublicHooksSchedulerTickRoute
 }
@@ -316,6 +325,7 @@ export interface FileRouteTypes {
     | '/recommendations/'
     | '/scheduler/'
     | '/workflows/'
+    | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/api/public/hooks/scheduler-tick'
   fileRoutesByTo: FileRoutesByTo
@@ -341,6 +351,7 @@ export interface FileRouteTypes {
     | '/recommendations'
     | '/scheduler'
     | '/workflows'
+    | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/api/public/hooks/scheduler-tick'
   id:
@@ -373,6 +384,7 @@ export interface FileRouteTypes {
     | '/recommendations/'
     | '/scheduler/'
     | '/workflows/'
+    | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/api/public/hooks/scheduler-tick'
   fileRoutesById: FileRoutesById
@@ -391,6 +403,7 @@ export interface RootRouteChildren {
   WorkflowsRoute: typeof WorkflowsRouteWithChildren
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
   ApiPublicHooksSchedulerTickRoute: typeof ApiPublicHooksSchedulerTickRoute
 }
@@ -593,6 +606,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WorkflowsIdRouteImport
       parentRoute: typeof WorkflowsRoute
     }
+    '/.lovable/oauth/consent': {
+      id: '/.lovable/oauth/consent'
+      path: '/.lovable/oauth/consent'
+      fullPath: '/.lovable/oauth/consent'
+      preLoaderRoute: typeof DotlovableOauthConsentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/.mcp/invoke-tool/$tool': {
       id: '/.mcp/invoke-tool/$tool'
       path: '/.mcp/invoke-tool/$tool'
@@ -731,6 +751,7 @@ const rootRouteChildren: RootRouteChildren = {
   Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
+  DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
   ApiPublicHooksSchedulerTickRoute: ApiPublicHooksSchedulerTickRoute,
 }
