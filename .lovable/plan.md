@@ -102,7 +102,9 @@ Approving a Search Console recommendation changes only its AOOS lifecycle state.
 
 ### Scheduling and failure behaviour
 
-A daily workflow (`search-console-observe`) runs collection → rule evaluation → recommendation filing, registered through the existing registry and scheduler. Missing authorization, missing property, quota errors, and API failures fail the run safely, file an Inbox item in Needs Attention, and leave all previous snapshots intact and readable.
+A daily workflow (`search-console-observe`) runs collection → rule evaluation → recommendation filing, registered through the existing registry and scheduler.
+
+**Empty is not failure.** A valid query that returns zero rows completes successfully as an empty snapshot or a no-change observation. It does not degrade connector health, does not create a failure alert, and does not file a Needs Attention item. Only a genuine fault — API error, authorization failure, validation failure, or persistence failure — fails the run, degrades health, files an Inbox item in Needs Attention, and leaves all previous snapshots intact and readable.
 
 ## Technical notes
 
