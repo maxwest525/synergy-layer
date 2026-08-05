@@ -89,6 +89,8 @@ function CapabilityDetailPage() {
       </div>
 
       {capability.key === "search.console" ? <SearchConsolePanel /> : null}
+      {capability.key === "aoos.mcp" ? <McpPanel /> : null}
+
 
 
 
