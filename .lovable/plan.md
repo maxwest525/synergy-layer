@@ -1,73 +1,108 @@
-# Phase 1.1 — Operator auth hardening + first real observation connector
+# Phase 1.1 — Operator authentication and the first read-only observation connector
 
-Scope: Google sign-in with server-enforced access control, and Google Search Console promoted from `pending` to a real, read-only Capability Registry connector with an idempotent daily observation loop. No new workspaces, no SEO dashboard, no mutating Google actions.
+Scope is unchanged: Google sign-in plus allowlisted operator provisioning, and a read-only Google Search Console observation loop that feeds the existing Assets, Capability Registry, Workflows, Recommendations, Scheduler, Inbox, and Activity architecture. No new workspace, no SEO dashboard, no mutating Google action.
 
-## Part 1 — Google sign-in with provisioned access
+## Preflight findings (confirmed before planning)
 
-**Sign-in**
-- Add a "Continue with Google" outlined button on `/auth` next to the existing email/password form, using Lovable managed Google auth (identity scopes only: email, verified status, name, avatar). No Search Console, Ads, Drive, or Gmail scopes in the login flow.
-- Email/password stays exactly as-is as break-glass admin login.
+- The backend currently has **zero accounts**: no rows in `auth.users`, no rows in `public.user_roles`. There is no existing administrator identity to preserve, so nothing can be locked out by a new uniqueness constraint.
+- Consequence: the "first signup becomes admin" trigger has never fired. It will be replaced rather than migrated around.
+- Confirmed admin identity to seed: **Admin@trumoveinc.com**, role `admin`, stored normalized (lowercased, trimmed) for lookup.
+- First sign-in method: **Google only**. No password account is created for the admin.
+- Connector scope: **`https://www.googleapis.com/auth/webmasters.readonly` only**. No site-verification, sitemap-management, or full webmasters scope is requested at connect time.
 
-**Access control (server-enforced)**
-- New table `authorized_operators`: verified email (unique, normalized lowercase), granted role, status, who granted it, when. Seeded with `admin@trumoveinc.com` as admin.
-- New table `profiles` keyed to the auth user: verified email, display name, avatar, provider(s) seen. One row per user, matched by verified email so Google and password logins on the same address never create duplicates.
-- A database trigger on new sign-up replaces today's "first user becomes admin" rule: a new user gets a role only if their **verified** email matches an `authorized_operators` row. No domain-suffix rule. Existing `user_roles` rows are respected and never duplicated.
-- Unprovisioned users land on a gated screen showing: "Your Google account was verified, but access to AOOS has not been provisioned." They can sign out; they see no workspace data.
-- RLS and `has_role` / `is_operator` remain the sole authority for every mutation. Nothing about the new tables loosens existing policies.
+The preflight duplicate audit still ships as part of the migration (guarded by an assertion) so a re-run on any future environment with real users cannot silently break.
 
-**Activity logging** (through the existing `activity_events` system): login succeeded, login failed, logout, access denied, account provisioned, role changed.
+## Part 1 — Authentication and operator provisioning
 
-**Admin surface**: an operator/admin-only panel to view and manage `authorized_operators` (grant, revoke, change role) — placed inside the existing shell, not a new workspace.
+### Identity model
 
-## Part 2 — Google Search Console as a real capability
+- `profiles.id uuid primary key references auth.users(id) on delete cascade`, plus `email`, `email_normalized`, `display_name`, `avatar_url`. The auth user UUID is the permanent identity key.
+- No account-merging logic. Identity linking for the same verified email across Google and password is left to the auth provider.
+- `authorized_operators`: `email_normalized` (unique), `role` (`admin` | `operator`), `granted_by`, `granted_at`, `revoked_at`, `note`. Seeded with `admin@trumoveinc.com` → `admin`.
+- The unique constraint on `profiles.email_normalized` is applied only after an in-migration audit confirms zero duplicates across `auth.users` and `auth.identities`; on a duplicate it raises and aborts.
 
-**Connection**
-- Link the workspace Google Search Console connector to this project. All calls go through the Lovable connector gateway from server code. No OAuth tokens are ever stored in application tables.
-- One honest constraint: this connector authorizes the workspace/company Google account, and Connect / Reconnect / Disconnect are performed in Lovable's connector settings, not by an in-app OAuth screen. The capability page will show real live connection state plus a clearly labeled action that routes the operator to the right place, rather than faking an in-app OAuth flow.
+### Provisioning
 
-**Capability record** (`google-search-console`, kind `connector`, provider Google, category `organic-search`) exposes: connection status, health, authorized account, granted scopes (read-only), selected property, connected AOOS asset, last successful sync, last attempted sync, next scheduled sync, records received, data freshness, recent errors, connection owner, plus Run now and View runs.
+`public.provision_operator_from_allowlist(_auth_user_id uuid)` — security definer, idempotent:
 
-**Property selection**
-- After the connection is live, the capability page lists the verified properties returned by the connected account at runtime. Nothing is hardcoded, and URL-prefix vs domain properties are never guessed.
-- An admin selects the TruMove production property; the selection is re-validated server-side against the live property list before it is saved, then attached to the existing TruMove Website asset. Only admins can change it. Connect and disconnect events are recorded in Activity.
+1. Requires `email_confirmed_at is not null`; otherwise returns "unverified" without granting.
+2. Matches `authorized_operators` on normalized email where `revoked_at is null`.
+3. Inserts or updates exactly one `user_roles` row; never duplicates; never downgrades an existing higher privilege (`admin` > `operator` > `viewer`).
+4. Emits `operator_provisioned`, `operator_provision_skipped`, or `operator_access_denied` into `activity_events`.
 
-**Ingestion (immutable snapshots)**
-- New tables for connector runs and snapshots covering: daily site totals, landing-page performance, query performance, page+query pairs, device distribution, country distribution, and submitted sitemap status.
-- Every snapshot records clicks, impressions, CTR, average position, property identifier, date range, dimensions used, retrieval timestamp, connector run ID, and a content checksum. Pagination handled where the API requires it.
-- Snapshots are append-only. An identical checksum records a successful no-change run instead of writing duplicate rows. Failures never delete or invalidate prior snapshots or recommendations.
+Called from: post-authentication server path, post email verification, on grant or change of an authorized operator, and from an admin "retry provisioning" action.
 
-**Schedule**
-- Workflow `gsc-daily-observe`, declared in the registry module (not hardcoded UI), running daily on America/New_York via the existing scheduler, executed through the existing DAG runner so every step is visible as completed / skipped / failed / waiting.
-- Because Search Console lags, each run analyzes only through the latest complete reporting date; today is never treated as complete.
-- Run steps: verify connector and property → fetch newest complete data → validate → write snapshot → compare to prior equivalent period → generate observations → create or update recommendations → emit activity → update capability and schedule health.
+`public.revoke_operator(_email text)` runs in one transaction: sets `revoked_at`, deletes the matching `user_roles` row, emits `operator_revoked`. Because `has_role` and `is_operator` read `user_roles` live, an existing session immediately stops passing those checks.
 
-**Recommendation rules**
-- Rules implemented as typed, configurable definitions with thresholds stored in workflow configuration, not literals in execution code: striking-distance queries, high-impressions/low-CTR pages, pages losing clicks/impressions/position, queries gaining visibility, impressions with zero clicks, important pages missing from data, sitemap warnings or errors, Research pages gaining traction, cannibalization (multiple pages on one query), and significant period-over-period swings.
-- Each recommendation carries: triggering rule, exact page/query/sitemap, current period, comparison period, current and previous metric values, absolute and percentage change, property, snapshot ID, run ID, confidence, affected asset, suggested next action, approval requirement.
-- Revenue, lead, and traffic impact are rendered as "Not yet quantified" until GA4 and conversion data exist. No fabricated forecasts, and no recommendation is created just to populate a screen.
+The `on_auth_user_created` trigger is rewritten: it creates the `profiles` row and calls the provisioning function. It is never the sole grant path, and the "first user becomes admin" behaviour is removed.
 
-**Deduplication**
-- Stable fingerprint over property + rule + page/query + reporting period. A persisting issue updates the existing open recommendation with fresh evidence; a resolved issue is marked resolved and logged in Activity.
+### Sign-in surface
 
-**Approval semantics**
-- Observation only. Recommendations can be reviewed, approved, rejected, deferred, or resolved, and approval performs no write to the website, metadata, sitemaps, or Search Console. No mutating Google call exists anywhere in this change.
+- `/auth` keeps email/password and gains Google sign-in via the Lovable managed broker (`lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin })`), with the Google provider enabled in the same change.
+- After a session is established, the client calls one server function that resolves the user server-side, runs provisioning, and returns the resulting role. No client-side role decision.
 
-**UI, inside existing workspaces only**
-- Capability Registry: connection state, scopes, property, health, freshness, run history, errors.
-- Assets: Search Console shown as a connection on the TruMove Website asset with organic-search health, related recommendations, and runs.
-- Workflows: `gsc-daily-observe` with real DAG execution detail.
-- Scheduler: daily schedule, last run, next run, duration, failures, Run now through the same execution path.
-- Recommendations: real evidence with the source snapshot, no placeholders.
-- Inbox: only actionable or failed items; successful syncs do not enter Needs Attention.
-- Activity: authorization, sync, observation, recommendation, review, and failure events.
+### Audit events
+
+All auth audit rows are written server-side only. `activity_events` gains no client insert policy for auth verbs; writes go through the service-role path inside server functions. Recorded: `login_succeeded`, `access_denied`, `operator_provisioned`, `operator_revoked`, `role_changed`, `logout`. Failed logins are recorded by a rate-limited server endpoint that stores only email-normalized, reason code, and timestamp. No passwords, tokens, OAuth payloads, or raw provider errors are stored.
+
+## Part 2 — Google Search Console observation connector
+
+### Connector and scope
+
+Connect the Google Search Console connector with the read-only scope only. It registers in the Capability Registry as a `connector` capability with `integration_state: real`, operations limited to: list properties, query search analytics, list sitemap status. No submit, delete, verify, or inspect operation is declared.
+
+### Connection and property events
+
+AOOS never claims it connected or disconnected anything. It records observations only:
+`connection_status_observed_connected`, `connection_status_observed_disconnected`, `connection_status_observed_degraded`, `property_selected`, `property_changed`. Actor and action time are recorded only when the gateway returns them authoritatively; otherwise actor is `system` and the event is labelled as an observation.
+
+Property resolution follows list → select → pass: verified properties are listed at runtime, multiple matches return `selection_required` to a no-default picker, and the chosen value is re-validated server-side before any per-site call.
+
+### Snapshots
+
+New table `search_console_snapshots`, one row per collection run, storing the response plus the complete query definition:
+
+- `property`, `search_type` (`web`), `dimensions`, `filters`, `aggregation_type`, `response_aggregation_type`, `data_state` (`final`), `row_limit`, `paginated_request_count`, `returned_row_count`, `reporting_timezone` (`America/Los_Angeles`), `possibly_truncated` boolean, `api_query_version`, `checksum`
+- `period_start_pt`, `period_end_pt` stored as Pacific dates
+- `kind`: `property_totals` | `dimensional_rows` — provenance in the UI distinguishes official property totals, API-returned dimensional rows, and potentially incomplete detailed datasets.
+
+Every Search Analytics request sets `dataState: "final"`. The latest finalized date is discovered by querying recent data grouped by date and taking the newest date with data — no hardcoded lag. The scheduler may run in America/New_York; reporting periods stay explicitly labelled Pacific Time.
+
+### Aggregation rules
+
+- Site totals come from an ungrouped property-level query, never from summing dimensional rows.
+- CTR = total clicks / total impressions.
+- Average position is impression-weighted; row-level positions are never arithmetically averaged.
+- Lower position is an improvement.
+- Percentage change against a zero baseline is `null` / "Not applicable", never infinity.
+- Values produced with different aggregation types are never compared.
+
+### Rules and recommendations
+
+Rules run over stored snapshots and file into the existing Recommendation Queue and Inbox:
+
+- Impression or click decline against a comparable prior period
+- Position decline on meaningful-impression queries
+- High-impression, low-CTR pages
+- `possible_query_overlap` (renamed from cannibalization): fires only when multiple pages take meaningful impressions on the same query, the condition persists across configurable periods, and minimum evidence thresholds pass. It never asserts confirmed cannibalization from one snapshot.
+- Absent page copy is fixed to: "No Search Console performance data was returned for this page during the selected period." No indexing claims anywhere.
+
+Deduplication uses two fingerprints:
+
+- `issue_fingerprint` = property + rule + target (page/query/sitemap) — keeps a single open recommendation for a continuing problem, updated with new evidence.
+- `observation_fingerprint` = issue_fingerprint + reporting period + snapshot id — prevents the same period/snapshot being attached twice.
+
+### Lifecycle
+
+Approving a Search Console recommendation changes only its AOOS lifecycle state. It cannot edit the website, change metadata, create content, submit a sitemap, request indexing, alter Search Console, or trigger any mutating connector. This is enforced by the capability declaration having no mutating operation to call.
+
+### Scheduling and failure behaviour
+
+A daily workflow (`search-console-observe`) runs collection → rule evaluation → recommendation filing, registered through the existing registry and scheduler. Missing authorization, missing property, quota errors, and API failures fail the run safely, file an Inbox item in Needs Attention, and leave all previous snapshots intact and readable.
 
 ## Technical notes
 
-- Migrations: `authorized_operators`, `profiles`, `gsc_connections` (property selection + connection metadata, no tokens), `gsc_runs`, `gsc_snapshots`, `gsc_snapshot_rows`, `recommendation_fingerprints`. Each with GRANTs, RLS enabled, and role-scoped policies in the same migration. Replace `handle_new_user` with the allowlist-based version.
-- All Search Console access lives in server-only modules called from `createServerFn`, reusing `os.server.ts`, `workflow-runner.server.ts`, and `scheduler.server.ts`. No new execution engine.
-- Rule thresholds live in typed config attached to the workflow record so they can be tuned without a code change.
-- Failure handling: empty data, expired authorization, missing property, quota errors, and API errors each fail safe — run marked failed, capability health degraded, Inbox item filed, prior snapshots untouched.
-
-## Out of scope
-
-Google Ads, GitHub runtime capability, sitemap submission or any mutating Google permission, per-end-user Google OAuth, and any standalone SEO dashboard.
+- Migrations: `profiles`, `authorized_operators`, `search_console_snapshots`, `search_console_observations` — each with GRANTs, RLS, and policies in the same migration; audit assertion before the unique email constraint.
+- New server modules: `src/lib/auth-provisioning.server.ts`, `src/lib/search-console.server.ts` (list/select/query helpers, finalized-date discovery, pagination), `src/lib/search-console-rules.server.ts`.
+- Registry: `src/registry/modules/search-console.ts` declares the capability, the workflow, and the schedule.
+- Existing Phase 1 workspaces, routes, and behaviour are untouched apart from additive wiring.
