@@ -21,5 +21,6 @@ export default defineMcp({
     issuer: `https://${projectRef}.supabase.co/auth/v1`,
     acceptedAudiences: "authenticated",
   }),
-  tools: [listInbox, listRecommendations, getRecommendation, listWorkflowRuns, listCapabilities, listAssets],
+  // Cast: the SDK's tool type requires outputSchema under exactOptionalPropertyTypes.
+  tools: [listInbox, listRecommendations, getRecommendation, listWorkflowRuns, listCapabilities, listAssets] as never,
 });
