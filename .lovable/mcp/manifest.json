@@ -100,7 +100,7 @@
       {
         "name": "get_recommendation",
         "title": "Get recommendation detail",
-        "description": "Read one AOOS recommendation in full, including its reasoning, suggested action, and the targets it applies to.",
+        "description": "Read one AOOS recommendation in full, including its reasoning, the shape of its suggested action, and the targets it applies to.",
         "annotations": {
           "readOnlyHint": true,
           "idempotentHint": true,
@@ -112,6 +112,8 @@
           "properties": {
             "id": {
               "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
               "description": "The recommendation id."
             }
           },
