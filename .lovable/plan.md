@@ -36,10 +36,14 @@ Called from: post-authentication server path, post email verification, on grant 
 
 The `on_auth_user_created` trigger is rewritten: it creates the `profiles` row and calls the provisioning function. It is never the sole grant path, and the "first user becomes admin" behaviour is removed.
 
+**Last-admin protection.** Revocation and demotion both run a guard that counts active `admin` rows in `user_roles`. If the change would leave zero active admins, it raises and aborts with a clear message: a second admin must be granted first. This applies to `revoke_operator`, role downgrades, and allowlist edits.
+
 ### Sign-in surface
 
-- `/auth` keeps email/password and gains Google sign-in via the Lovable managed broker (`lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin })`), with the Google provider enabled in the same change.
-- After a session is established, the client calls one server function that resolves the user server-side, runs provisioning, and returns the resulting role. No client-side role decision.
+- `/auth` keeps email/password and gains Google sign-in via the Lovable managed broker.
+- Google sign-in uses an explicit callback route: `redirect_uri` is `${window.location.origin}/auth/callback` (public, not gated). That route validates the returned session server-side, runs allowlist provisioning, records the audit event, then redirects into AOOS at the saved same-origin destination (default `/`). The site origin is not relied on alone.
+- No client-side role decision: the resulting role always comes back from the server function.
+
 
 ### Audit events
 
@@ -56,7 +60,7 @@ Connect the Google Search Console connector with the read-only scope only. It re
 AOOS never claims it connected or disconnected anything. It records observations only:
 `connection_status_observed_connected`, `connection_status_observed_disconnected`, `connection_status_observed_degraded`, `property_selected`, `property_changed`. Actor and action time are recorded only when the gateway returns them authoritatively; otherwise actor is `system` and the event is labelled as an observation.
 
-Property resolution follows list → select → pass: verified properties are listed at runtime, multiple matches return `selection_required` to a no-default picker, and the chosen value is re-validated server-side before any per-site call.
+Property resolution follows list → select → pass. Each property is stored with the **permission level Google returns** (`siteOwner`, `siteFullUser`, `siteRestrictedUser`, `siteUnverifiedUser`). Properties are described as **accessible**, never as "verified by AOOS". Selection is permitted only when the connected account's permission level is sufficient to query that property; unverified/insufficient entries are listed as ineligible. Multiple eligible matches return `selection_required` to a no-default picker, and the chosen value is re-validated server-side before any per-site call.
 
 ### Snapshots
 
@@ -98,7 +102,9 @@ Approving a Search Console recommendation changes only its AOOS lifecycle state.
 
 ### Scheduling and failure behaviour
 
-A daily workflow (`search-console-observe`) runs collection → rule evaluation → recommendation filing, registered through the existing registry and scheduler. Missing authorization, missing property, quota errors, and API failures fail the run safely, file an Inbox item in Needs Attention, and leave all previous snapshots intact and readable.
+A daily workflow (`search-console-observe`) runs collection → rule evaluation → recommendation filing, registered through the existing registry and scheduler.
+
+**Empty is not failure.** A valid query that returns zero rows completes successfully as an empty snapshot or a no-change observation. It does not degrade connector health, does not create a failure alert, and does not file a Needs Attention item. Only a genuine fault — API error, authorization failure, validation failure, or persistence failure — fails the run, degrades health, files an Inbox item in Needs Attention, and leaves all previous snapshots intact and readable.
 
 ## Technical notes
 
