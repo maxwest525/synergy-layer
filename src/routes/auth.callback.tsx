@@ -8,8 +8,19 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { provisionSession } from "@/lib/auth.functions";
 
+/** Only same-origin relative paths may be used as a post sign-in destination. */
+function safeNext(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  if (!value.startsWith("/") || value.startsWith("//")) return undefined;
+  return value;
+}
+
 export const Route = createFileRoute("/auth/callback")({
   ssr: false,
+  validateSearch: (search: Record<string, unknown>) => {
+    const next = safeNext(search['next']);
+    return next ? { next } : {};
+  },
   head: () => ({
     meta: [
       { title: "Completing sign-in — AOOS" },
@@ -24,6 +35,8 @@ export const Route = createFileRoute("/auth/callback")({
 
 function CallbackPage() {
   const navigate = useNavigate();
+  const search = Route.useSearch();
+  const next = safeNext(search['next' as keyof typeof search]);
   const provision = useServerFn(provisionSession);
   const [hasSession, setHasSession] = useState<boolean | null>(null);
 
@@ -50,11 +63,17 @@ function CallbackPage() {
 
   useEffect(() => {
     if (result.data?.canOperate) {
-      const timer = setTimeout(() => void navigate({ to: "/" }), 600);
+      const timer = setTimeout(() => {
+        if (next) {
+          window.location.href = next;
+          return;
+        }
+        void navigate({ to: "/" });
+      }, 600);
       return () => clearTimeout(timer);
     }
     return undefined;
-  }, [result.data?.canOperate, navigate]);
+  }, [result.data?.canOperate, navigate, next]);
 
   const denied = result.data && !result.data.canOperate;
 

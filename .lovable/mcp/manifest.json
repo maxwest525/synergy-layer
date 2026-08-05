@@ -1,0 +1,207 @@
+{
+  "version": 1,
+  "sdk_version": "0.26.1",
+  "path": "/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://zrfzllupoccmztyweznq.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "aoos-marketing-os",
+      "version": "0.1.0",
+      "title": "AOOS Marketing OS"
+    },
+    "tools": [
+      {
+        "name": "list_inbox",
+        "title": "List inbox items",
+        "description": "List AOOS inbox items, the operational centre of the marketing operating system. Optionally filter by lane.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "lane": {
+              "description": "Restrict results to one inbox lane.",
+              "type": "string",
+              "enum": [
+                "needs_attention",
+                "pending_approval",
+                "scheduled",
+                "completed",
+                "fyi"
+              ]
+            },
+            "include_resolved": {
+              "description": "Include items that are already resolved.",
+              "type": "boolean"
+            },
+            "limit": {
+              "description": "Maximum number of items to return, default 25.",
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            }
+          }
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_recommendations",
+        "title": "List recommendations",
+        "description": "List evidence backed AOOS recommendations with their impact, confidence, and lifecycle state.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "state": {
+              "description": "Restrict results to one lifecycle state.",
+              "type": "string",
+              "enum": [
+                "draft",
+                "proposed",
+                "under_review",
+                "approved",
+                "rejected",
+                "scheduled",
+                "applied",
+                "verified",
+                "failed",
+                "rolled_back"
+              ]
+            },
+            "source_module": {
+              "description": "Restrict results to one source module, for example search-console.",
+              "type": "string"
+            },
+            "limit": {
+              "description": "Maximum number of items to return, default 25.",
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            }
+          }
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_recommendation",
+        "title": "Get recommendation detail",
+        "description": "Read one AOOS recommendation in full, including its reasoning, suggested action, and the targets it applies to.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "The recommendation id."
+            }
+          },
+          "required": [
+            "id"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_workflow_runs",
+        "title": "List workflow runs",
+        "description": "List recent AOOS workflow runs with status, timing, and the workflow they belong to. Use it to check whether scheduled automation is healthy.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "workflow_key": {
+              "description": "Restrict results to one workflow key, for example gsc-daily-observe.",
+              "type": "string"
+            },
+            "limit": {
+              "description": "Maximum number of runs to return, default 20.",
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            }
+          }
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_capabilities",
+        "title": "List capabilities",
+        "description": "List registered AOOS capabilities (connectors, MCPs, APIs, skills, models) with their integration state and health.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "integration_state": {
+              "description": "Restrict results to one integration state.",
+              "type": "string",
+              "enum": [
+                "real",
+                "simulated",
+                "pending",
+                "mock"
+              ]
+            }
+          }
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_assets",
+        "title": "List marketing assets",
+        "description": "List AOOS marketing assets such as websites, ad accounts, repositories, and knowledge collections.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "description": "Restrict results to one asset kind, for example website.",
+              "type": "string"
+            },
+            "limit": {
+              "description": "Maximum number of assets to return, default 50.",
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            }
+          }
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
