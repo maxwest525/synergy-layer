@@ -266,16 +266,25 @@ async function runSearchConsoleNode(
   }
 
   if (ref === "search.console.rules") {
-    const { getSelectedProperty, latestFinalDate } = await import("./search-console.server");
+    const { getSelectedProperty } = await import("./search-console.server");
     const { evaluateSnapshots } = await import("./search-console-rules.server");
     const property = await getSelectedProperty(client);
     if (!property) {
       return { ok: false, error: "No Search Console property is selected." };
     }
     try {
-      const reportingDate = await latestFinalDate(property);
+      // Rules run over stored snapshots only; no second API call.
+      const { data: latest, error: latestError } = await client
+        .from("search_console_snapshots")
+        .select("period_end_pt")
+        .eq("property", property)
+        .order("period_end_pt", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (latestError) return { ok: false, error: latestError.message };
+      const reportingDate = latest?.period_end_pt ?? null;
       if (!reportingDate) {
-        return { ok: true, output: { noChange: true, reason: "No finalized data returned." } };
+        return { ok: true, output: { noChange: true, reason: "No stored snapshot to evaluate." } };
       }
       const result = await evaluateSnapshots(client, property, reportingDate);
       return { ok: true, output: { ...result } };
