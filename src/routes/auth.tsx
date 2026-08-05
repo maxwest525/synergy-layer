@@ -10,7 +10,18 @@ import { Label } from "@/components/ui/label";
 import { lovable } from "@/integrations/lovable/index";
 import { supabase } from "@/integrations/supabase/client";
 
+/** Only same-origin relative paths may be used as a post sign-in destination. */
+function safeNext(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  if (!value.startsWith("/") || value.startsWith("//")) return undefined;
+  return value;
+}
+
 export const Route = createFileRoute("/auth")({
+  validateSearch: (search: Record<string, unknown>) => {
+    const next = safeNext(search['next']);
+    return next ? { next } : {};
+  },
   head: () => ({
     meta: [
       { title: "Sign in — AOOS" },
@@ -28,6 +39,8 @@ export const Route = createFileRoute("/auth")({
 
 function AuthPage() {
   const navigate = useNavigate();
+  const search = Route.useSearch();
+  const next = safeNext(search['next' as keyof typeof search]);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [mode, setMode] = useState<"sign_in" | "sign_up">("sign_in");
@@ -40,13 +53,17 @@ function AuthPage() {
           : supabase.auth.signUp({
               email,
               password,
-              options: { emailRedirectTo: window.location.origin },
+              options: { emailRedirectTo: next ? `${window.location.origin}${next}` : window.location.origin },
             });
       const { error } = await action;
       if (error) throw new Error(error.message);
     },
     onSuccess: () => {
       toast.success(mode === "sign_in" ? "Signed in" : "Account created");
+      if (next) {
+        window.location.href = next;
+        return;
+      }
       void navigate({ to: "/auth/callback" });
     },
     onError: (error: Error) => toast.error(error.message),
@@ -54,18 +71,18 @@ function AuthPage() {
 
   const google = useMutation({
     mutationFn: async () => {
-      const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: `${window.location.origin}/auth/callback`,
-      });
+      const callback = `${window.location.origin}/auth/callback${next ? `?next=${encodeURIComponent(next)}` : ""}`;
+      const result = await lovable.auth.signInWithOAuth("google", { redirect_uri: callback });
       if (result.error) throw result.error instanceof Error ? result.error : new Error(String(result.error));
       return result;
     },
     onSuccess: (result) => {
       if (result.redirected) return;
-      void navigate({ to: "/auth/callback" });
+      void navigate({ to: "/auth/callback", search: next ? { next } : {} });
     },
     onError: (error: Error) => toast.error(error.message),
   });
+
 
   return (
     <div className="mx-auto max-w-md space-y-8">
