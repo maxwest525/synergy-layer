@@ -404,4 +404,3 @@ export async function collectDaily(client: Client, property: string): Promise<Co
   return { property, reportingDate, snapshotIds, emptyResult };
 }
 
-export type { QueryRow };
