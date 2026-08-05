@@ -87,6 +87,10 @@ function CapabilityDetailPage() {
         </GlassCard>
       </div>
 
+      {capability.key === "search.console" ? <SearchConsolePanel /> : null}
+
+
+
       <GlassCard className="p-5">
         <h2 className="text-sm font-semibold text-foreground">Granted to agents</h2>
         {data.agents.length === 0 ? (
