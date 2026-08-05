@@ -19,8 +19,8 @@ export default defineTool({
     const supabase = supabaseForUser(ctx);
     let query = supabase
       .from("workflow_runs")
-      .select("id, workflow_id, status, trigger_kind, started_at, finished_at, error, workflows(key, name)")
-      .order("started_at", { ascending: false })
+      .select("id, workflow_id, state, trigger_source, started_at, finished_at, duration_ms, error, workflows(key, name)")
+      .order("created_at", { ascending: false })
       .limit(Math.min(Math.max(limit ?? 20, 1), 100));
     if (workflow_key) {
       const { data: workflow, error: workflowError } = await supabase
