@@ -234,3 +234,55 @@ async function executeNode(client: Client, node: WorkflowNode): Promise<NodeOutc
 
   return { ok: true, output: { agent: agent.name, node: node.key } };
 }
+
+/**
+ * Search Console nodes run the real read-only pipeline. An empty result is a
+ * successful step; only a genuine fault fails the node.
+ */
+async function runSearchConsoleNode(
+  client: Client,
+  ref: string,
+): Promise<NodeOutcome | null> {
+  if (ref === "search.console") {
+    const { collectDaily, getSelectedProperty } = await import("./search-console.server");
+    const property = await getSelectedProperty(client);
+    if (!property) {
+      return { ok: false, error: "No Search Console property is selected." };
+    }
+    try {
+      const result = await collectDaily(client, property);
+      return {
+        ok: true,
+        output: {
+          property: result.property,
+          reportingDate: result.reportingDate,
+          emptyResult: result.emptyResult,
+          snapshots: result.snapshotIds.length,
+        },
+      };
+    } catch (error) {
+      return { ok: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  }
+
+  if (ref === "search.console.rules") {
+    const { getSelectedProperty, latestFinalDate } = await import("./search-console.server");
+    const { evaluateSnapshots } = await import("./search-console-rules.server");
+    const property = await getSelectedProperty(client);
+    if (!property) {
+      return { ok: false, error: "No Search Console property is selected." };
+    }
+    try {
+      const reportingDate = await latestFinalDate(property);
+      if (!reportingDate) {
+        return { ok: true, output: { noChange: true, reason: "No finalized data returned." } };
+      }
+      const result = await evaluateSnapshots(client, property, reportingDate);
+      return { ok: true, output: { ...result } };
+    } catch (error) {
+      return { ok: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  }
+
+  return null;
+}
