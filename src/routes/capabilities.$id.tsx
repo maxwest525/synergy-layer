@@ -2,6 +2,7 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 
 import { DetailRow, GlassCard, PageHeader, StatePill, formatWhen, toneForState } from "@/components/os/primitives";
+import { SearchConsolePanel } from "@/components/os/search-console-panel";
 import { getCapability } from "@/lib/os.functions";
 
 const capabilityQuery = (id: string) => ({
@@ -86,6 +87,10 @@ function CapabilityDetailPage() {
           )}
         </GlassCard>
       </div>
+
+      {capability.key === "search.console" ? <SearchConsolePanel /> : null}
+
+
 
       <GlassCard className="p-5">
         <h2 className="text-sm font-semibold text-foreground">Granted to agents</h2>

@@ -154,7 +154,9 @@ export function DetailRow({ label, value }: { label: string; value: ReactNode })
 
 export function formatWhen(value: string | null | undefined): string {
   if (!value) return "Never";
-  return new Date(value).toLocaleString(undefined, {
+  // Fixed locale and timezone: server and client must render the same string.
+  return new Date(value).toLocaleString("en-US", {
+    timeZone: "UTC",
     month: "short",
     day: "numeric",
     hour: "2-digit",

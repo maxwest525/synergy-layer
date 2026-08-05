@@ -1,0 +1,121 @@
+import { useQuery } from "@tanstack/react-query";
+import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
+import { useEffect, useState } from "react";
+
+import { GlassCard, PageHeader } from "@/components/os/primitives";
+import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
+import { provisionSession } from "@/lib/auth.functions";
+
+export const Route = createFileRoute("/auth/callback")({
+  ssr: false,
+  head: () => ({
+    meta: [
+      { title: "Completing sign-in — AOOS" },
+      { name: "description", content: "AOOS is validating your session and checking operator access." },
+      { property: "og:title", content: "Completing sign-in — AOOS" },
+      { property: "og:description", content: "AOOS is validating your session and checking operator access." },
+      { name: "robots", content: "noindex" },
+    ],
+  }),
+  component: CallbackPage,
+});
+
+function CallbackPage() {
+  const navigate = useNavigate();
+  const provision = useServerFn(provisionSession);
+  const [hasSession, setHasSession] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    void supabase.auth.getSession().then(({ data }) => {
+      if (active) setHasSession(Boolean(data.session));
+    });
+    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (active && session) setHasSession(true);
+    });
+    return () => {
+      active = false;
+      data.subscription.unsubscribe();
+    };
+  }, []);
+
+  const result = useQuery({
+    queryKey: ["auth", "provision"],
+    queryFn: () => provision({ data: undefined }),
+    enabled: hasSession === true,
+    retry: false,
+  });
+
+  useEffect(() => {
+    if (result.data?.canOperate) {
+      const timer = setTimeout(() => void navigate({ to: "/" }), 600);
+      return () => clearTimeout(timer);
+    }
+    return undefined;
+  }, [result.data?.canOperate, navigate]);
+
+  const denied = result.data && !result.data.canOperate;
+
+  return (
+    <div className="mx-auto max-w-md space-y-8">
+      <PageHeader
+        eyebrow="Access"
+        title={denied ? "Access not provisioned" : "Completing sign-in"}
+        description={
+          denied
+            ? "Your identity is verified, but this account is not on the AOOS operator allowlist."
+            : "Validating your session and checking operator access."
+        }
+      />
+
+      <GlassCard glow className="space-y-4 p-6">
+        {hasSession === false ? (
+          <>
+            <p className="text-sm text-muted-foreground">
+              No active session was found. Sign in again to continue.
+            </p>
+            <Button variant="outline" asChild>
+              <Link to="/auth">Back to sign in</Link>
+            </Button>
+          </>
+        ) : null}
+
+        {result.isPending && hasSession ? (
+          <p className="text-sm text-muted-foreground">Checking your access.</p>
+        ) : null}
+
+        {result.error ? (
+          <p className="text-sm text-destructive">{(result.error as Error).message}</p>
+        ) : null}
+
+        {denied ? (
+          <>
+            <p className="text-sm text-muted-foreground">
+              An administrator has to add your address to the operator allowlist before AOOS actions unlock.
+              Read-only workspaces stay available in the meantime.
+            </p>
+            <div className="flex gap-3">
+              <Button variant="outline" asChild>
+                <Link to="/">Continue read only</Link>
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  void supabase.auth.signOut().then(() => navigate({ to: "/auth" }));
+                }}
+              >
+                Sign out
+              </Button>
+            </div>
+          </>
+        ) : null}
+
+        {result.data?.canOperate ? (
+          <p className="text-sm text-primary">Operator access confirmed. Taking you to the Inbox.</p>
+        ) : null}
+      </GlassCard>
+    </div>
+  );
+}

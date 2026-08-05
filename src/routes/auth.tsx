@@ -7,6 +7,7 @@ import { GlassCard, PageHeader } from "@/components/os/primitives";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { lovable } from "@/integrations/lovable/index";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/auth")({
@@ -46,7 +47,22 @@ function AuthPage() {
     },
     onSuccess: () => {
       toast.success(mode === "sign_in" ? "Signed in" : "Account created");
-      void navigate({ to: "/" });
+      void navigate({ to: "/auth/callback" });
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+  const google = useMutation({
+    mutationFn: async () => {
+      const result = await lovable.auth.signInWithOAuth("google", {
+        redirect_uri: `${window.location.origin}/auth/callback`,
+      });
+      if (result.error) throw result.error instanceof Error ? result.error : new Error(String(result.error));
+      return result;
+    },
+    onSuccess: (result) => {
+      if (result.redirected) return;
+      void navigate({ to: "/auth/callback" });
     },
     onError: (error: Error) => toast.error(error.message),
   });
@@ -94,6 +110,28 @@ function AuthPage() {
             {mutation.isPending ? "Working" : mode === "sign_in" ? "Sign in" : "Create account"}
           </Button>
         </form>
+
+        <div className="my-5 flex items-center gap-3 text-xs uppercase tracking-[0.2em] text-muted-foreground">
+          <span className="h-px flex-1 bg-border/60" />
+          or
+          <span className="h-px flex-1 bg-border/60" />
+        </div>
+
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full"
+          disabled={google.isPending}
+          onClick={() => google.mutate()}
+        >
+          {google.isPending ? "Opening Google" : "Continue with Google"}
+        </Button>
+
+        <p className="mt-4 text-xs leading-relaxed text-muted-foreground">
+          Signing in proves identity only. AOOS access is granted by the server side operator allowlist.
+        </p>
+
+
 
         <button
           type="button"
