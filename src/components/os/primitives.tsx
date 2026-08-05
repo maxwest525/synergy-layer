@@ -152,14 +152,17 @@ export function DetailRow({ label, value }: { label: string; value: ReactNode })
   );
 }
 
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
 export function formatWhen(value: string | null | undefined): string {
   if (!value) return "Never";
-  // Fixed locale and timezone: server and client must render the same string.
-  return new Date(value).toLocaleString("en-US", {
-    timeZone: "UTC",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  // Manual UTC formatting: Intl output differs between the server and browser ICU builds.
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Never";
+  const hours24 = date.getUTCHours();
+  const suffix = hours24 >= 12 ? "PM" : "AM";
+  const hours = hours24 % 12 === 0 ? 12 : hours24 % 12;
+  const minutes = String(date.getUTCMinutes()).padStart(2, "0");
+  return `${MONTHS[date.getUTCMonth()]} ${date.getUTCDate()}, ${String(hours).padStart(2, "0")}:${minutes} ${suffix}`;
 }
+
