@@ -238,6 +238,42 @@ export type Database = {
         }
         Relationships: []
       }
+      authorized_operators: {
+        Row: {
+          created_at: string
+          email_normalized: string
+          granted_at: string
+          granted_by: string | null
+          id: string
+          note: string | null
+          revoked_at: string | null
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email_normalized: string
+          granted_at?: string
+          granted_by?: string | null
+          id?: string
+          note?: string | null
+          revoked_at?: string | null
+          role?: Database["public"]["Enums"]["app_role"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email_normalized?: string
+          granted_at?: string
+          granted_by?: string | null
+          id?: string
+          note?: string | null
+          revoked_at?: string | null
+          role?: Database["public"]["Enums"]["app_role"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       capabilities: {
         Row: {
           auth_kind: string | null
@@ -474,6 +510,36 @@ export type Database = {
           },
         ]
       }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          display_name: string | null
+          email: string | null
+          email_normalized: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string | null
+          email?: string | null
+          email_normalized?: string | null
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string | null
+          email?: string | null
+          email_normalized?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       recommendation_dependencies: {
         Row: {
           depends_on_recommendation_id: string
@@ -545,6 +611,7 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          issue_fingerprint: string | null
           metadata: Json
           reasoning: string | null
           requires_approval: boolean
@@ -567,6 +634,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          issue_fingerprint?: string | null
           metadata?: Json
           reasoning?: string | null
           requires_approval?: boolean
@@ -589,6 +657,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          issue_fingerprint?: string | null
           metadata?: Json
           reasoning?: string | null
           requires_approval?: boolean
@@ -708,6 +777,191 @@ export type Database = {
           status?: Database["public"]["Enums"]["entity_status"]
           target_id?: string | null
           target_kind?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      search_console_observations: {
+        Row: {
+          created_at: string
+          evidence: Json
+          id: string
+          issue_fingerprint: string
+          observation_fingerprint: string
+          period_end_pt: string
+          period_start_pt: string
+          property: string
+          recommendation_id: string | null
+          rule: string
+          snapshot_id: string
+          target: string
+        }
+        Insert: {
+          created_at?: string
+          evidence?: Json
+          id?: string
+          issue_fingerprint: string
+          observation_fingerprint: string
+          period_end_pt: string
+          period_start_pt: string
+          property: string
+          recommendation_id?: string | null
+          rule: string
+          snapshot_id: string
+          target: string
+        }
+        Update: {
+          created_at?: string
+          evidence?: Json
+          id?: string
+          issue_fingerprint?: string
+          observation_fingerprint?: string
+          period_end_pt?: string
+          period_start_pt?: string
+          property?: string
+          recommendation_id?: string | null
+          rule?: string
+          snapshot_id?: string
+          target?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "search_console_observations_recommendation_id_fkey"
+            columns: ["recommendation_id"]
+            isOneToOne: false
+            referencedRelation: "recommendations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "search_console_observations_snapshot_id_fkey"
+            columns: ["snapshot_id"]
+            isOneToOne: false
+            referencedRelation: "search_console_snapshots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      search_console_properties: {
+        Row: {
+          asset_id: string | null
+          created_at: string
+          eligible: boolean
+          id: string
+          last_observed_at: string | null
+          metadata: Json
+          permission_level: string
+          selected: boolean
+          site_url: string
+          updated_at: string
+        }
+        Insert: {
+          asset_id?: string | null
+          created_at?: string
+          eligible?: boolean
+          id?: string
+          last_observed_at?: string | null
+          metadata?: Json
+          permission_level: string
+          selected?: boolean
+          site_url: string
+          updated_at?: string
+        }
+        Update: {
+          asset_id?: string | null
+          created_at?: string
+          eligible?: boolean
+          id?: string
+          last_observed_at?: string | null
+          metadata?: Json
+          permission_level?: string
+          selected?: boolean
+          site_url?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "search_console_properties_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "assets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      search_console_snapshots: {
+        Row: {
+          aggregation_type: string
+          api_query_version: string
+          checksum: string
+          collected_at: string
+          created_at: string
+          data_state: string
+          dimensions: string[]
+          filters: Json
+          id: string
+          kind: string
+          paginated_request_count: number
+          payload: Json
+          period_end_pt: string
+          period_start_pt: string
+          possibly_truncated: boolean
+          property: string
+          reporting_timezone: string
+          response_aggregation_type: string | null
+          returned_row_count: number
+          row_limit: number
+          search_type: string
+          totals: Json
+          updated_at: string
+        }
+        Insert: {
+          aggregation_type?: string
+          api_query_version?: string
+          checksum: string
+          collected_at?: string
+          created_at?: string
+          data_state?: string
+          dimensions?: string[]
+          filters?: Json
+          id?: string
+          kind: string
+          paginated_request_count?: number
+          payload?: Json
+          period_end_pt: string
+          period_start_pt: string
+          possibly_truncated?: boolean
+          property: string
+          reporting_timezone?: string
+          response_aggregation_type?: string | null
+          returned_row_count?: number
+          row_limit?: number
+          search_type?: string
+          totals?: Json
+          updated_at?: string
+        }
+        Update: {
+          aggregation_type?: string
+          api_query_version?: string
+          checksum?: string
+          collected_at?: string
+          created_at?: string
+          data_state?: string
+          dimensions?: string[]
+          filters?: Json
+          id?: string
+          kind?: string
+          paginated_request_count?: number
+          payload?: Json
+          period_end_pt?: string
+          period_start_pt?: string
+          possibly_truncated?: boolean
+          property?: string
+          reporting_timezone?: string
+          response_aggregation_type?: string | null
+          returned_row_count?: number
+          row_limit?: number
+          search_type?: string
+          totals?: Json
           updated_at?: string
         }
         Relationships: []
@@ -895,6 +1149,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      assert_admin_remains: {
+        Args: { _excluding_user: string }
+        Returns: undefined
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -903,6 +1161,12 @@ export type Database = {
         Returns: boolean
       }
       is_operator: { Args: never; Returns: boolean }
+      normalize_email: { Args: { _email: string }; Returns: string }
+      provision_operator_from_allowlist: {
+        Args: { _auth_user_id: string }
+        Returns: string
+      }
+      revoke_operator: { Args: { _email: string }; Returns: string }
     }
     Enums: {
       app_role: "admin" | "operator" | "viewer"
