@@ -60,7 +60,7 @@ Connect the Google Search Console connector with the read-only scope only. It re
 AOOS never claims it connected or disconnected anything. It records observations only:
 `connection_status_observed_connected`, `connection_status_observed_disconnected`, `connection_status_observed_degraded`, `property_selected`, `property_changed`. Actor and action time are recorded only when the gateway returns them authoritatively; otherwise actor is `system` and the event is labelled as an observation.
 
-Property resolution follows list → select → pass: verified properties are listed at runtime, multiple matches return `selection_required` to a no-default picker, and the chosen value is re-validated server-side before any per-site call.
+Property resolution follows list → select → pass. Each property is stored with the **permission level Google returns** (`siteOwner`, `siteFullUser`, `siteRestrictedUser`, `siteUnverifiedUser`). Properties are described as **accessible**, never as "verified by AOOS". Selection is permitted only when the connected account's permission level is sufficient to query that property; unverified/insufficient entries are listed as ineligible. Multiple eligible matches return `selection_required` to a no-default picker, and the chosen value is re-validated server-side before any per-site call.
 
 ### Snapshots
 
