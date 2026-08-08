@@ -16,7 +16,7 @@ export const SEO_VALIDATION_THRESHOLDS = {
   decliningPosition: { minImpressions: 50, minPositionDrop: 3 },
   highImpressionLowCtr: { minImpressions: 200, maxCtr: 0.01 },
   zeroClickPage: { minImpressions: 150 },
-  queryOverlap: { minImpressionsPerPage: 25, minPages: 2 },
+  queryOverlap: { minImpressionsPerPage: 25, minPages: 2, minPeriods: 2, minTotalImpressions: 50 },
   significantChange: { minPreviousImpressions: 100, minChangeRatio: 0.5 },
   researchTraction: { minImpressions: 20, minImpressionGrowth: 0.25 },
 } as const;
@@ -309,42 +309,61 @@ export function evaluateSeoRules(
     }
   }
 
-  // Possible query overlap: one query drawing impressions across several pages.
-  const overlapSnapshot = current.find(
-    (snapshot) => snapshot.dimensions.length === 2 && snapshot.dimensions.includes("query") && snapshot.dimensions.includes("page"),
-  );
-  if (overlapSnapshot) {
+  // Possible query overlap: one query drawing meaningful impressions across
+  // several pages, and doing so in every configured period. Never presented as
+  // confirmed cannibalisation.
+  const pageQueryOf = (snapshots: SnapshotRow[]): SnapshotRow | undefined =>
+    snapshots.find((snapshot) => snapshot.kind === "page_query");
+
+  const overlapSnapshot = pageQueryOf(current);
+  const priorOverlapSnapshot = pageQueryOf(prior);
+
+  const overlapBuckets = (snapshot: SnapshotRow | undefined) => {
     const byQuery = new Map<string, { page: string; impressions: number }[]>();
-    for (const row of rowsOf(overlapSnapshot)) {
+    if (!snapshot) return byQuery;
+    const dims = snapshot.dimensions;
+    for (const row of rowsOf(snapshot)) {
       const keys = row.keys ?? [];
-      const dims = overlapSnapshot.dimensions;
       const term = keys[dims.indexOf("query")] ?? "";
       const page = keys[dims.indexOf("page")] ?? "";
+      if (!term || !page) continue;
       if (row.impressions < t.queryOverlap.minImpressionsPerPage) continue;
       const bucket = byQuery.get(term) ?? [];
       bucket.push({ page, impressions: row.impressions });
       byQuery.set(term, bucket);
     }
-    for (const [term, bucket] of byQuery) {
+    return byQuery;
+  };
+
+  const periodsAvailable = [overlapSnapshot, priorOverlapSnapshot].filter(Boolean).length;
+  if (overlapSnapshot && periodsAvailable >= t.queryOverlap.minPeriods) {
+    const currentBuckets = overlapBuckets(overlapSnapshot);
+    const priorBuckets = overlapBuckets(priorOverlapSnapshot);
+
+    for (const [term, bucket] of currentBuckets) {
       if (bucket.length < t.queryOverlap.minPages) continue;
+      const priorBucket = priorBuckets.get(term) ?? [];
+      if (priorBucket.length < t.queryOverlap.minPages) continue;
       const impressions = bucket.reduce((sum, entry) => sum + entry.impressions, 0);
+      if (impressions < t.queryOverlap.minTotalImpressions) continue;
       findings.push({
         rule: "possible_query_overlap",
         targetKind: "query",
         target: term,
         title: `Possible page overlap on "${term}"`,
-        description: `${bucket.length} pages each drew at least ${t.queryOverlap.minImpressionsPerPage} impressions for the same query.`,
+        description: `${bucket.length} pages each drew at least ${t.queryOverlap.minImpressionsPerPage} impressions for the same query, in ${t.queryOverlap.minPeriods} consecutive finalized periods. This is a signal worth reviewing, not confirmed cannibalisation.`,
         current: { clicks: 0, impressions, ctr: 0, position: 0 },
         previous: null,
-        change: { pages: bucket },
+        change: { pages: bucket, priorPages: priorBucket, periods: periodsAvailable },
         snapshotId: overlapSnapshot.id,
-        priorSnapshotId: null,
+        priorSnapshotId: priorOverlapSnapshot?.id ?? null,
         businessImpact: "low",
         confidence: 0.55,
-        suggestedAction: { kind: "review", area: "query_cannibalisation", target: term },
+        suggestedAction: { kind: "review", area: "possible_query_overlap", target: term },
       });
     }
   }
+
 
   return findings;
 }
