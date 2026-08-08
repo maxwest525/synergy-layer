@@ -223,7 +223,7 @@ export async function latestFinalDate(property: string): Promise<string | null> 
 
 type SnapshotInput = {
   property: string;
-  kind: "property_totals" | "dimensional_rows";
+  kind: "property_totals" | "dimensional_rows" | "page_query";
   dimensions: string[];
   aggregationType: string;
   responseAggregationType: string | null;
@@ -236,6 +236,7 @@ type SnapshotInput = {
 };
 
 async function persistSnapshot(client: Client, input: SnapshotInput): Promise<string> {
+
   const definition = {
     property: input.property,
     kind: input.kind,
@@ -261,7 +262,8 @@ async function persistSnapshot(client: Client, input: SnapshotInput): Promise<st
       paginated_request_count: input.paginatedRequestCount,
       returned_row_count: input.rows.length,
       // An ungrouped property-total query returns exactly one row by design.
-      possibly_truncated: input.kind === "dimensional_rows" && input.rows.length >= input.rowLimit,
+      possibly_truncated: input.kind !== "property_totals" && input.rows.length >= input.rowLimit,
+
       reporting_timezone: REPORTING_TIMEZONE,
       period_start_pt: input.periodStart,
       period_end_pt: input.periodEnd,
@@ -294,6 +296,70 @@ export type CollectionResult = {
  * Idempotent daily collection for one finalized Pacific date. Site totals come
  * from an ungrouped property query, never from summing dimensional rows.
  */
+const PAGE_QUERY_ROW_LIMIT = 5000;
+const PAGE_QUERY_MAX_REQUESTS = 5;
+
+/**
+ * Immutable page+query snapshot for one finalized Pacific date. Re-running for a
+ * date already collected is a successful no-change run: no duplicate is written.
+ * Zero rows is a successful empty collection.
+ */
+export async function collectPageQuery(
+  client: Client,
+  property: string,
+  reportingDate: string,
+): Promise<{ snapshotId: string | null; rows: number; created: boolean }> {
+  const { data: existing, error: existingError } = await client
+    .from("search_console_snapshots")
+    .select("id, checksum, returned_row_count")
+    .eq("property", property)
+    .eq("period_end_pt", reportingDate)
+    .eq("kind", "page_query");
+  if (existingError) throw new SearchConsoleFailure("persistence", existingError.message);
+  if ((existing ?? []).length > 0) {
+    const first = existing![0]!;
+    return { snapshotId: first.id, rows: first.returned_row_count, created: false };
+  }
+
+  const rows: QueryRow[] = [];
+  let requests = 0;
+  let responseAggregationType: string | null = null;
+  while (requests < PAGE_QUERY_MAX_REQUESTS) {
+    const response = await query(property, {
+      startDate: reportingDate,
+      endDate: reportingDate,
+      dimensions: ["page", "query"],
+      rowLimit: PAGE_QUERY_ROW_LIMIT,
+      startRow: requests * PAGE_QUERY_ROW_LIMIT,
+    });
+    requests += 1;
+    responseAggregationType = response.responseAggregationType ?? responseAggregationType;
+    const page = response.rows ?? [];
+    rows.push(...page);
+    if (page.length < PAGE_QUERY_ROW_LIMIT) break;
+  }
+
+  const snapshotId = await persistSnapshot(client, {
+    property,
+    kind: "page_query",
+    dimensions: ["page", "query"],
+    aggregationType: "auto",
+    responseAggregationType,
+    rowLimit: PAGE_QUERY_ROW_LIMIT * requests,
+    paginatedRequestCount: requests,
+    periodStart: reportingDate,
+    periodEnd: reportingDate,
+    rows,
+    totals: {
+      clicks: rows.reduce((total, row) => total + row.clicks, 0),
+      impressions: rows.reduce((total, row) => total + row.impressions, 0),
+      position: weightedPosition(rows),
+    },
+  });
+
+  return { snapshotId, rows: rows.length, created: true };
+}
+
 export async function collectDaily(client: Client, property: string): Promise<CollectionResult> {
   const reportingDate = await latestFinalDate(property);
 
@@ -309,10 +375,18 @@ export async function collectDaily(client: Client, property: string): Promise<Co
     .eq("kind", "property_totals");
   if (existingError) throw new SearchConsoleFailure("persistence", existingError.message);
   if ((existing ?? []).length > 0) {
-    return { property, reportingDate, snapshotIds: [], emptyResult: false };
+    // Still ensure the page+query snapshot exists for this finalized date.
+    const backfilled = await collectPageQuery(client, property, reportingDate);
+    return {
+      property,
+      reportingDate,
+      snapshotIds: backfilled.created && backfilled.snapshotId ? [backfilled.snapshotId] : [],
+      emptyResult: false,
+    };
   }
 
   const snapshotIds: string[] = [];
+
 
   const totalsResponse = await query(property, {
     startDate: reportingDate,
@@ -371,6 +445,11 @@ export async function collectDaily(client: Client, property: string): Promise<Co
       }),
     );
   }
+
+  const pageQuery = await collectPageQuery(client, property, reportingDate);
+  if (pageQuery.created && pageQuery.snapshotId) snapshotIds.push(pageQuery.snapshotId);
+
+
 
   const sitemaps = await gateway<{ sitemap?: unknown[] }>(
     `/webmasters/v3/sites/${encodeURIComponent(property)}/sitemaps`,
