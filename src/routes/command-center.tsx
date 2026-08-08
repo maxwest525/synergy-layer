@@ -14,7 +14,9 @@ import { getOverview } from "@/lib/os.functions";
 const overviewQuery = { queryKey: ["overview"], queryFn: () => getOverview() };
 
 export const Route = createFileRoute("/command-center")({
-  loader: ({ context }) => context.queryClient.ensureQueryData(overviewQuery),
+  // A transient data failure must not turn SSR into a 500 blank screen; the
+  // client-side suspense query retries and surfaces the error in the boundary.
+  loader: ({ context }) => context.queryClient.ensureQueryData(overviewQuery).catch(() => undefined),
   head: () => ({
     meta: [
       { title: "Command Center — AOOS" },
