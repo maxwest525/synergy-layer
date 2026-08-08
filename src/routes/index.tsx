@@ -22,7 +22,9 @@ const lanes = [
 ] as const;
 
 export const Route = createFileRoute("/")({
-  loader: ({ context }) => context.queryClient.ensureQueryData(inboxQuery),
+  // A transient data failure must not turn SSR into a 500 blank screen; the
+  // client-side suspense query retries and surfaces the error in the boundary.
+  loader: ({ context }) => context.queryClient.ensureQueryData(inboxQuery).catch(() => undefined),
   head: () => ({
     meta: [
       { title: "Inbox — AOOS Marketing Operating System" },
