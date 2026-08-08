@@ -209,8 +209,11 @@ async function executeNode(client: Client, node: WorkflowNode): Promise<NodeOutc
       return { ok: false, error: `Capability "${capability.name}" is not authorised yet.` };
     }
 
-    const specialised = await runSearchConsoleNode(client, node.ref ?? "");
+    const specialised =
+      (await runSearchConsoleNode(client, node.ref ?? "")) ??
+      (await runResearchNode(client, node.ref ?? ""));
     if (specialised && !specialised.ok) return specialised;
+
 
     await client
       .from("capabilities")
