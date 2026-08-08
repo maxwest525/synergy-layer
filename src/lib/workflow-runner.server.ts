@@ -209,8 +209,11 @@ async function executeNode(client: Client, node: WorkflowNode): Promise<NodeOutc
       return { ok: false, error: `Capability "${capability.name}" is not authorised yet.` };
     }
 
-    const specialised = await runSearchConsoleNode(client, node.ref ?? "");
+    const specialised =
+      (await runSearchConsoleNode(client, node.ref ?? "")) ??
+      (await runResearchNode(client, node.ref ?? ""));
     if (specialised && !specialised.ok) return specialised;
+
 
     await client
       .from("capabilities")
@@ -294,4 +297,19 @@ async function runSearchConsoleNode(
   }
 
   return null;
+}
+
+/**
+ * Research nodes run the real Perplexity + Firecrawl pass. A pass that files no
+ * new entries is a successful step; only a genuine fault fails the node.
+ */
+async function runResearchNode(client: Client, ref: string): Promise<NodeOutcome | null> {
+  if (ref !== "cap.web_research") return null;
+  const { runWebResearch } = await import("./web-research.server");
+  try {
+    const result = await runWebResearch(client);
+    return { ok: true, output: { ...result } };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : String(error) };
+  }
 }
