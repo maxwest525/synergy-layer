@@ -127,7 +127,7 @@ export async function runWorkflow(
       break;
     }
 
-    const outcome = await executeNode(client, node);
+    const outcome = await executeNode(client, node, run.id);
     const duration = Date.now() - stepStart;
 
     await client
@@ -192,7 +192,7 @@ export async function runWorkflow(
 
 type NodeOutcome = { ok: boolean; output?: Record<string, unknown>; error?: string };
 
-async function executeNode(client: Client, node: WorkflowNode): Promise<NodeOutcome> {
+async function executeNode(client: Client, node: WorkflowNode, runId: string): Promise<NodeOutcome> {
   if (node.kind === "condition") {
     return { ok: true, output: { evaluated: true } };
   }
@@ -211,7 +211,8 @@ async function executeNode(client: Client, node: WorkflowNode): Promise<NodeOutc
 
     const specialised =
       (await runSearchConsoleNode(client, node.ref ?? "")) ??
-      (await runResearchNode(client, node.ref ?? ""));
+      (await runResearchNode(client, node.ref ?? "")) ??
+      (await runSeoValidationNode(client, node.ref ?? "", runId));
     if (specialised && !specialised.ok) return specialised;
 
 
@@ -308,6 +309,25 @@ async function runResearchNode(client: Client, ref: string): Promise<NodeOutcome
   const { runWebResearch } = await import("./web-research.server");
   try {
     const result = await runWebResearch(client);
+    return { ok: true, output: { ...result } };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : String(error) };
+  }
+}
+
+/**
+ * SEO validation runs the real rule engine over stored Search Console
+ * snapshots. Zero findings is a successful step, not a failure.
+ */
+async function runSeoValidationNode(
+  client: Client,
+  ref: string,
+  runId: string,
+): Promise<NodeOutcome | null> {
+  if (ref !== "seo.validation") return null;
+  try {
+    const { runSeoValidation } = await import("./seo-validation.server");
+    const result = await runSeoValidation(client, runId);
     return { ok: true, output: { ...result } };
   } catch (error) {
     return { ok: false, error: error instanceof Error ? error.message : String(error) };
