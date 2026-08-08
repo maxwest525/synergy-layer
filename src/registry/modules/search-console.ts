@@ -38,6 +38,19 @@ export const definition: ModuleDefinition = {
       integrationState: "real",
       operations: [{ name: "rules.evaluate", description: "Score stored snapshots against typed thresholds." }],
     },
+    {
+      key: "seo.validation",
+      name: "SEO Validation Engine",
+      kind: "internal_module",
+      category: "Analysis",
+      description:
+        "Validates the site against finalized Search Console snapshots using typed SEO rules. Read-only: it never changes the site.",
+      integrationState: "real",
+      operations: [
+        { name: "seo.validate", description: "Evaluate typed SEO rules over stored snapshots." },
+      ],
+      config: { mutating: false, dataState: "final", rulesEvaluated: 8 },
+    },
   ],
   workflows: [
     {
@@ -54,5 +67,20 @@ export const definition: ModuleDefinition = {
         edges: [{ from: "collect", to: "evaluate" }],
       },
     },
+    {
+      key: "wf.seo_validation",
+      name: "SEO validation",
+      description:
+        "Loads stored knowledge, then validates the TruMove site against finalized Search Console snapshots with typed SEO rules.",
+      triggerKind: "schedule",
+      graph: {
+        nodes: [
+          { key: "load", kind: "capability", ref: "cap.knowledge_retrieval" },
+          { key: "validate", kind: "capability", ref: "seo.validation" },
+        ],
+        edges: [{ from: "load", to: "validate" }],
+      },
+    },
   ],
+
 };
