@@ -165,7 +165,9 @@ export async function suggestKeywords(
   // associations cannot be judged and must not be filed. Operator-supplied
   // seeds outrank everything else, because a human naming the service and the
   // market is better evidence than headline copy.
-  const operatorSeeds = (manualSeeds ?? []).map((seed) => seed.trim().toLowerCase()).filter(Boolean);
+  const explicitSeeds = (manualSeeds ?? []).map((seed) => seed.trim().toLowerCase()).filter(Boolean);
+  const operatorSeeds =
+    explicitSeeds.length > 0 ? explicitSeeds : await readTenantSeeds(client, tenantId);
   const querySeeds = operatorSeeds.length > 0 ? [] : await readSeedQueries(client, tenantId);
   const siteSeeds =
     operatorSeeds.length > 0 || querySeeds.length > 0 ? [] : await readSeedsFromSite(domain);
