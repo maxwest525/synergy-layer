@@ -421,7 +421,9 @@ async function runDataForSeoNode(
  * re-reads stored evidence and never calls the provider.
  */
 async function runSerpCompetitorNode(client: Client, ref: string): Promise<NodeOutcome | null> {
-  if (ref !== "serp.competitors") return null;
+  if (ref !== "serp.competitors" && ref !== "serp.competitor_intelligence" && ref !== "competitor.page_observation") {
+    return null;
+  }
   try {
     const { requireTenantId } = await import("./tenant.server");
     const { getSelectedProperty } = await import("./search-console.server");
