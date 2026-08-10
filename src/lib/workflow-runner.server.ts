@@ -216,6 +216,7 @@ async function executeNode(client: Client, node: WorkflowNode, runId: string): P
       (await runSearchConsoleNode(client, node.ref ?? "")) ??
       (await runResearchNode(client, node.ref ?? "")) ??
       (await runSeoValidationNode(client, node.ref ?? "", runId)) ??
+      (await runSerpCompetitorNode(client, node.ref ?? "")) ??
       (await runDataForSeoNode(client, node.ref ?? "", runId));
     if (specialised && !specialised.ok) return specialised;
 
@@ -338,9 +339,18 @@ async function runSeoValidationNode(
   }
 }
 
+/** Immutable published origin: SERP postbacks must reach a stable URL. */
+const PUBLIC_ORIGIN =
+  process.env["AOOS_PUBLIC_ORIGIN"] ??
+  "https://project--4aa4b3cf-b3ab-4721-aff6-e0d55ce13276.lovable.app";
+
 /**
  * DataForSEO observation nodes. Ingestion only: they write immutable evidence
  * and never produce recommendations. A no-change pass is a successful step.
+ *
+ * Keyword selection is never automatic. SERP observes the operator-approved
+ * set and nothing else; an empty set stops the node rather than inventing a
+ * query to search for.
  */
 async function runDataForSeoNode(
   client: Client,
@@ -359,8 +369,8 @@ async function runDataForSeoNode(
     if (!target) return { ok: false, error: "No owned property is selected to observe." };
 
     if (ref === "cap.dataforseo_labs") {
-      const { discoverCompetitors } = await import("./dataforseo/labs.server");
-      const result = await discoverCompetitors(client, tenantId, target, { runId, key: "dfs-competitor-discovery" });
+      const { suggestKeywords } = await import("./dataforseo/keywords.server");
+      const result = await suggestKeywords(client, tenantId, target, { runId, key: "dfs-keyword-discovery" });
       return { ok: true, output: { target, ...result } };
     }
 
@@ -379,7 +389,48 @@ async function runDataForSeoNode(
       };
     }
 
-    return { ok: true, output: { target, note: "SERP observation is queued by its own schedule." } };
+    if (ref === "cap.dataforseo_serp") {
+      const { getTrackedKeywords } = await import("./dataforseo/keywords.server");
+      const { queueSerpTasks } = await import("./dataforseo/serp.server");
+      const keywords = await getTrackedKeywords(client, tenantId);
+      if (keywords.length === 0) {
+        return {
+          ok: false,
+          error:
+            "No approved keywords to observe. Run keyword discovery and approve a set in the Inbox first: AOOS will not queue a keyword nobody chose.",
+        };
+      }
+      const result = await queueSerpTasks(client, tenantId, keywords, PUBLIC_ORIGIN, {
+        runId,
+        key: "dfs-serp-observe",
+      });
+      return { ok: true, output: { target, keywords: keywords.length, ...result } };
+    }
+
+    return { ok: true, output: { target } };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : String(error) };
+  }
+}
+
+/**
+ * Rebuilds the competitor set from observed SERP results. Costs nothing: it
+ * re-reads stored evidence and never calls the provider.
+ */
+async function runSerpCompetitorNode(client: Client, ref: string): Promise<NodeOutcome | null> {
+  if (ref !== "serp.competitors") return null;
+  try {
+    const { requireTenantId } = await import("./tenant.server");
+    const { getSelectedProperty } = await import("./search-console.server");
+    const { deriveCompetitorsFromSerp } = await import("./dataforseo/competitors.server");
+
+    const tenantId = await requireTenantId(client);
+    const property = await getSelectedProperty(client);
+    const own = (property ?? "").replace(/^sc-domain:/, "").replace(/^https?:\/\//, "").replace(/\/$/, "");
+    if (!own) return { ok: false, error: "No owned property is selected." };
+
+    const result = await deriveCompetitorsFromSerp(client, tenantId, own);
+    return { ok: true, output: { ...result } };
   } catch (error) {
     return { ok: false, error: error instanceof Error ? error.message : String(error) };
   }

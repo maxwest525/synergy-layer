@@ -14,11 +14,12 @@ export const definition: ModuleDefinition = {
       kind: "api",
       category: "Organic",
       description:
-        "Keyword and competitor intelligence from the DataForSEO Labs database. Values are estimates, never authoritative for owned performance: Search Console remains the truth for that.",
+        "Keyword intelligence from the DataForSEO Labs database. Labs proposes a keyword set; a human approves it. Values are estimates, never authoritative for owned performance: Search Console remains the truth for that.",
       integrationState: "real",
       authKind: "basic",
       operations: [
-        { name: "competitors.discover", description: "Discover the organic competitor universe for a seed domain.", mutates: false },
+        { name: "keywords.for_site", description: "Keywords the provider already associates with the owned domain.", mutates: false },
+        { name: "keywords.suggest", description: "Expansions of the property's own Search Console queries.", mutates: false },
         { name: "keywords.ranked", description: "Collect the ranked keyword landscape for a domain.", mutates: false },
       ],
       config: {
@@ -26,8 +27,28 @@ export const definition: ModuleDefinition = {
         evidenceLabel: "estimated",
         cadence: "weekly",
         mode: "live",
+        requiresApproval: "keyword_set",
         monthlyBudgetUsd: 300,
         digest: "docs/integrations/dataforseo/DIGEST.md",
+        note: "Intersection-based competitor discovery is deliberately retired: it returns social and directory domains for thin-footprint sites. Competitors are derived from observed SERPs instead.",
+      },
+    },
+    {
+      key: "serp.competitors",
+      name: "SERP competitor derivation",
+      kind: "internal_module",
+      category: "Organic",
+      description:
+        "Rebuilds the competitor set from the SERPs AOOS actually observed. A domain becomes a competitor by repeatedly ranking for approved keywords, not by sharing a couple of keywords in a database. Aggregators and social networks are classified as surfaces, never competitors.",
+      integrationState: "real",
+      operations: [
+        { name: "competitors.derive", description: "Re-read stored SERP snapshots and classify ranking domains.", mutates: false },
+      ],
+      config: {
+        mutating: false,
+        costUsd: 0,
+        evidenceLabel: "observed",
+        source: "stored_serp_snapshots",
       },
     },
     {
@@ -76,13 +97,13 @@ export const definition: ModuleDefinition = {
   ],
   workflows: [
     {
-      key: "dfs-competitor-discovery",
-      name: "DataForSEO competitor discovery",
+      key: "dfs-keyword-discovery",
+      name: "DataForSEO keyword discovery",
       description:
-        "Discovers the organic competitor universe from the actual search landscape and files candidates for operator review. It never starts recurring tracking on its own.",
+        "Proposes a keyword set for the owned domain from provider associations and the property's own Search Console queries, then files it to the Inbox for approval. Nothing is observed until a human approves it.",
       triggerKind: "manual",
       graph: {
-        nodes: [{ key: "discover", kind: "capability", ref: "cap.dataforseo_labs" }],
+        nodes: [{ key: "suggest", kind: "capability", ref: "cap.dataforseo_labs" }],
         edges: [],
       },
     },
@@ -101,10 +122,21 @@ export const definition: ModuleDefinition = {
       key: "dfs-serp-observe",
       name: "DataForSEO SERP observation",
       description:
-        "Queues Standard SERP tasks for tracked queries and stores provider callbacks as immutable snapshots.",
+        "Queues Standard SERP tasks for the approved keyword set and stores provider callbacks as immutable snapshots. It fails cleanly when no keyword has been approved.",
       triggerKind: "schedule",
       graph: {
         nodes: [{ key: "queue", kind: "capability", ref: "cap.dataforseo_serp" }],
+        edges: [],
+      },
+    },
+    {
+      key: "dfs-competitor-derive",
+      name: "SERP competitor derivation",
+      description:
+        "Rebuilds competitor candidates from observed SERP results and classifies aggregators and social networks as surfaces. Costs nothing and never starts recurring tracking on its own.",
+      triggerKind: "manual",
+      graph: {
+        nodes: [{ key: "derive", kind: "capability", ref: "serp.competitors" }],
         edges: [],
       },
     },
