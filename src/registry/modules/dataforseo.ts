@@ -14,11 +14,12 @@ export const definition: ModuleDefinition = {
       kind: "api",
       category: "Organic",
       description:
-        "Keyword and competitor intelligence from the DataForSEO Labs database. Values are estimates, never authoritative for owned performance: Search Console remains the truth for that.",
+        "Keyword intelligence from the DataForSEO Labs database. Labs proposes a keyword set; a human approves it. Values are estimates, never authoritative for owned performance: Search Console remains the truth for that.",
       integrationState: "real",
       authKind: "basic",
       operations: [
-        { name: "competitors.discover", description: "Discover the organic competitor universe for a seed domain.", mutates: false },
+        { name: "keywords.for_site", description: "Keywords the provider already associates with the owned domain.", mutates: false },
+        { name: "keywords.suggest", description: "Expansions of the property's own Search Console queries.", mutates: false },
         { name: "keywords.ranked", description: "Collect the ranked keyword landscape for a domain.", mutates: false },
       ],
       config: {
@@ -26,8 +27,28 @@ export const definition: ModuleDefinition = {
         evidenceLabel: "estimated",
         cadence: "weekly",
         mode: "live",
+        requiresApproval: "keyword_set",
         monthlyBudgetUsd: 300,
         digest: "docs/integrations/dataforseo/DIGEST.md",
+        note: "Intersection-based competitor discovery is deliberately retired: it returns social and directory domains for thin-footprint sites. Competitors are derived from observed SERPs instead.",
+      },
+    },
+    {
+      key: "serp.competitors",
+      name: "SERP competitor derivation",
+      kind: "internal_module",
+      category: "Organic",
+      description:
+        "Rebuilds the competitor set from the SERPs AOOS actually observed. A domain becomes a competitor by repeatedly ranking for approved keywords, not by sharing a couple of keywords in a database. Aggregators and social networks are classified as surfaces, never competitors.",
+      integrationState: "real",
+      operations: [
+        { name: "competitors.derive", description: "Re-read stored SERP snapshots and classify ranking domains.", mutates: false },
+      ],
+      config: {
+        mutating: false,
+        costUsd: 0,
+        evidenceLabel: "observed",
+        source: "stored_serp_snapshots",
       },
     },
     {
