@@ -16,6 +16,10 @@ const capabilityQuery = (id: string) => ({
 type Operation = { name: string; description?: string; mutates?: boolean };
 
 export const Route = createFileRoute("/capabilities/$id")({
+  // Operator-only workspace: nothing here is public, and rendering it on the
+  // server without the operator bearer token produced an empty tree that the
+  // client immediately replaced. Render it client side and skip that mismatch.
+  ssr: false,
   loader: async ({ context, params }) => {
     const data = await context.queryClient.ensureQueryData(capabilityQuery(params.id));
     if (!data.capability) throw notFound();

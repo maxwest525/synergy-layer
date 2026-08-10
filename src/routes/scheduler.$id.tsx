@@ -10,6 +10,10 @@ const scheduleQuery = (id: string) => ({
 });
 
 export const Route = createFileRoute("/scheduler/$id")({
+  // Operator-only workspace: nothing here is public, and rendering it on the
+  // server without the operator bearer token produced an empty tree that the
+  // client immediately replaced. Render it client side and skip that mismatch.
+  ssr: false,
   loader: async ({ context, params }) => {
     const data = await context.queryClient.ensureQueryData(scheduleQuery(params.id));
     if (!data.schedule) throw notFound();

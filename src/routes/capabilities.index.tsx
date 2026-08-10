@@ -11,6 +11,10 @@ import { getCapabilities } from "@/lib/os.functions";
 const capabilitiesQuery = { queryKey: ["capabilities"], queryFn: () => getCapabilities() };
 
 export const Route = createFileRoute("/capabilities/")({
+  // Operator-only workspace: nothing here is public, and rendering it on the
+  // server without the operator bearer token produced an empty tree that the
+  // client immediately replaced. Render it client side and skip that mismatch.
+  ssr: false,
   loader: ({ context }) => context.queryClient.ensureQueryData(capabilitiesQuery),
   head: () => ({
     meta: [
