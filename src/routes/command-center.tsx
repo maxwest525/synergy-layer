@@ -18,6 +18,7 @@ export const Route = createFileRoute("/command-center")({
   // Operator-only workspace: nothing here is public, and rendering it on the
   // server without the operator bearer token produced an empty tree that the
   // client immediately replaced. Render it client side and skip that mismatch.
+  ssr: false,
   // A transient data failure must not turn SSR into a 500 blank screen; the
   // client-side suspense query retries and surfaces the error in the boundary.
   loader: ({ context }) => context.queryClient.ensureQueryData(overviewQuery).catch(() => undefined),

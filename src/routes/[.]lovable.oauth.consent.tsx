@@ -23,6 +23,7 @@ function oauthApi(): OAuthNamespace {
 
 export const Route = createFileRoute("/.lovable/oauth/consent")({
   // Browser only: the Supabase client reads its session from localStorage.
+  ssr: false,
   head: () => ({
     meta: [
       { title: "Authorize access — AOOS" },
