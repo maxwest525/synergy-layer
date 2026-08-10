@@ -75,19 +75,54 @@ async function readSeedQueries(client: Client, tenantId: string): Promise<string
   return [...seen];
 }
 
-async function snapshotRows(client: Client, snapshotId: string): Promise<Record<string, unknown>[]> {
-  const { data } = await client
-    .from("dataforseo_snapshots")
-    .select("payload")
-    .eq("id", snapshotId)
-    .single();
-  return ((data?.payload as { rows?: Record<string, unknown>[] } | null)?.rows ?? []);
+const STOPWORDS = new Set([
+  "the", "and", "for", "with", "your", "you", "our", "from", "that", "this", "are", "was",
+  "will", "can", "get", "all", "any", "how", "why", "who", "what", "when", "into", "more",
+  "best", "top", "near", "com", "www", "home", "page", "site", "welcome", "official",
+]);
+
+function phraseTokens(phrase: string): string[] {
+  return phrase
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter((token) => token.length >= 4 && !STOPWORDS.has(token));
+}
+
+/**
+ * Seeds derived from the owned site itself. Reading the property's own title
+ * and headings is real evidence about what the business sells, which is the
+ * only defensible substitute when Search Console has no query history yet.
+ */
+async function readSeedsFromSite(domain: string): Promise<string[]> {
+  const { scrapeFirecrawl } = await import("../web-research.server");
+  const page = await scrapeFirecrawl(`https://${domain}`).catch(() => null);
+  if (!page) return [];
+
+  const headings = page.markdown
+    .split("\n")
+    .filter((line) => /^#{1,3}\s/.test(line))
+    .map((line) => line.replace(/^#{1,3}\s+/, ""))
+    .slice(0, 12);
+
+  const phrases = new Set<string>();
+  for (const source of [page.title, ...headings]) {
+    for (const segment of source.split(/[|\u2013\u2014\-:•,.!?]/)) {
+      const cleaned = segment.replace(/[^A-Za-z0-9 ]/g, " ").replace(/\s+/g, " ").trim().toLowerCase();
+      const words = cleaned.split(" ").filter(Boolean);
+      if (words.length < 2 || words.length > 5) continue;
+      if (phraseTokens(cleaned).length === 0) continue;
+      phrases.add(cleaned);
+    }
+  }
+  return [...phrases];
 }
 
 /**
  * Proposes a keyword set for the owned domain and files it for approval.
- * Two evidence sources, both real: what the provider already associates with
- * the domain, and expansions of the property's own Search Console queries.
+ * Every candidate must be relevant to real evidence about the business: its
+ * own Search Console queries, or the language on its own site. Provider
+ * associations that match neither are discarded, because a domain with a thin
+ * footprint makes the provider's own keyword list meaningless.
  */
 export async function suggestKeywords(
   client: Client,
