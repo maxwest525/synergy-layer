@@ -187,5 +187,23 @@ export const definition: ModuleDefinition = {
         edges: [],
       },
     },
+    {
+      key: "dfs-competitor-intelligence",
+      name: "Competitor intelligence pass",
+      description:
+        "Profiles every domain observed in the stored SERPs, shortlists a small set by significance, inspects the winning page of each shortlisted domain with Firecrawl, files the observations as knowledge evidence, and re-runs SEO validation so competitor rules become eligible. Nothing is promoted to a tracked competitor: the shortlist is filed for operator review.",
+      triggerKind: "manual",
+      graph: {
+        nodes: [
+          { key: "profile", kind: "capability", ref: "serp.competitor_intelligence" },
+          { key: "observe", kind: "capability", ref: "competitor.page_observation" },
+          { key: "validate", kind: "capability", ref: "seo.validation" },
+        ],
+        edges: [
+          { from: "profile", to: "observe" },
+          { from: "observe", to: "validate" },
+        ],
+      },
+    },
   ],
 };
