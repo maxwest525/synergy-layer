@@ -254,7 +254,29 @@ export async function fetchOverview() {
     inbox_items: 0,
   };
 
-  if (!ready) return { counts, capabilities: [], runs: [], activity: [] };
+  const empty = {
+    ready: false,
+    counts,
+    capabilities: [] as ReturnType<typeof rows>,
+    runs: [] as ReturnType<typeof rows>,
+    activity: [] as Awaited<ReturnType<typeof fetchActivity>>,
+    evidence: {
+      spentUsd: 0,
+      ceilingUsd: 0,
+      providerRequests: 0,
+      dataforseoSnapshots: 0,
+      searchConsoleSnapshots: 0,
+      lastDataforseoAt: null as string | null,
+      lastSearchConsoleAt: null as string | null,
+      pendingKeywordCandidates: 0,
+      trackedKeywords: 0,
+      competitorCandidates: 0,
+      trackedCompetitors: 0,
+    },
+    pendingApprovals: 0,
+  };
+
+  if (!ready) return empty;
 
   const head = { count: "exact" as const, head: true };
   const [assets, capabilityCount, entries, agents, workflows, recommendations, schedules, inbox] =
@@ -282,11 +304,62 @@ export async function fetchOverview() {
   const runs = rows(
     await db
       .from("workflow_runs")
-      .select("state")
+      .select("id, state, trigger_source, created_at, duration_ms, error, workflows(key, name)")
       .eq("tenant_id", tenantId!)
       .order("created_at", { ascending: false })
       .limit(50),
   );
 
-  return { counts, capabilities, runs, activity: await fetchActivity(20) };
+  // Evidence and spend the operator paid for. Everything here is read straight
+  // from the ledger and snapshot tables; nothing is estimated.
+  const period = `${new Date().toISOString().slice(0, 7)}-01`;
+  const [budget, requests, dfsSnapshots, gscSnapshots, pendingKeywords, tracked, competitors, trackedComps, approvals] =
+    await Promise.all([
+      db
+        .from("dataforseo_budgets")
+        .select("ceiling_usd, spent_usd")
+        .eq("tenant_id", tenantId!)
+        .eq("period_month", period)
+        .maybeSingle(),
+      db.from("dataforseo_requests").select("id", head).eq("tenant_id", tenantId!),
+      db
+        .from("dataforseo_snapshots")
+        .select("id, collected_at", { count: "exact" })
+        .eq("tenant_id", tenantId!)
+        .order("collected_at", { ascending: false })
+        .limit(1),
+      db
+        .from("search_console_snapshots")
+        .select("id, collected_at", { count: "exact" })
+        .eq("tenant_id", tenantId!)
+        .order("collected_at", { ascending: false })
+        .limit(1),
+      db.from("keyword_candidates").select("id", head).eq("tenant_id", tenantId!).eq("review_state", "pending"),
+      db.from("tracked_keywords").select("id", head).eq("tenant_id", tenantId!).eq("active", true),
+      db.from("competitor_candidates").select("id", head).eq("tenant_id", tenantId!),
+      db.from("tracked_competitors").select("id", head).eq("tenant_id", tenantId!).eq("active", true),
+      db.from("inbox_items").select("id", head).eq("tenant_id", tenantId!).eq("lane", "pending_approval"),
+    ]);
+
+  return {
+    ready: true,
+    counts,
+    capabilities,
+    runs,
+    activity: await fetchActivity(20),
+    evidence: {
+      spentUsd: Number(budget.data?.spent_usd ?? 0),
+      ceilingUsd: Number(budget.data?.ceiling_usd ?? 0),
+      providerRequests: requests.count ?? 0,
+      dataforseoSnapshots: dfsSnapshots.count ?? 0,
+      searchConsoleSnapshots: gscSnapshots.count ?? 0,
+      lastDataforseoAt: dfsSnapshots.data?.[0]?.collected_at ?? null,
+      lastSearchConsoleAt: gscSnapshots.data?.[0]?.collected_at ?? null,
+      pendingKeywordCandidates: pendingKeywords.count ?? 0,
+      trackedKeywords: tracked.count ?? 0,
+      competitorCandidates: competitors.count ?? 0,
+      trackedCompetitors: trackedComps.count ?? 0,
+    },
+    pendingApprovals: approvals.count ?? 0,
+  };
 }
