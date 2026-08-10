@@ -94,7 +94,9 @@ function InboxPage() {
                 <EmptyState title="Nothing here" description={`No ${lane.label.toLowerCase()} items right now.`} />
               ) : (
                 <ul className="space-y-2">
-                  {items.map((item) => (
+                  {items.map((item) => {
+                    const reviewRoute = reviewRouteFor(item);
+                    return (
                     <li key={item.id}>
                       <GlassCard className="flex flex-col gap-3 p-4 md:flex-row md:items-center md:justify-between">
                         <div className="min-w-0 space-y-1">
@@ -103,7 +105,16 @@ function InboxPage() {
                             <StatePill label={`P${item.priority}`} tone={item.priority <= 1 ? "danger" : "neutral"} />
                             {item.subject_kind ? <StatePill label={item.subject_kind} tone="primary" /> : null}
                           </div>
-                          <p className="text-sm font-medium text-foreground">{item.title}</p>
+                          {reviewRoute ? (
+                            <Link
+                              to={reviewRoute}
+                              className="text-sm font-medium text-foreground underline-offset-4 hover:text-primary hover:underline"
+                            >
+                              {item.title}
+                            </Link>
+                          ) : (
+                            <p className="text-sm font-medium text-foreground">{item.title}</p>
+                          )}
                           {item.summary ? (
                             <p className="text-sm text-muted-foreground">{item.summary}</p>
                           ) : null}
@@ -111,6 +122,11 @@ function InboxPage() {
                         </div>
                         <div className="flex shrink-0 items-center gap-2">
                           <StatePill label={item.lane} tone={toneForState(item.lane)} />
+                          {reviewRoute ? (
+                            <Button asChild variant="outline" size="sm">
+                              <Link to={reviewRoute}>Review</Link>
+                            </Button>
+                          ) : null}
                           {item.lane !== "completed" ? (
                             <Button
                               variant="outline"
@@ -122,6 +138,7 @@ function InboxPage() {
                             </Button>
                           ) : null}
                         </div>
+
                       </GlassCard>
                     </li>
                   ))}
