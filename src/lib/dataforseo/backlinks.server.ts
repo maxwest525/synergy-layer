@@ -11,6 +11,10 @@ const FAMILY = "backlinks" as const;
 export const BACKLINKS_CONFIG = {
   referringDomainLimit: 200,
   backlinkLimit: 200,
+  anchorLimit: 100,
+  pageLimit: 100,
+  /** Months of history read for velocity evidence. */
+  historyMonths: 12,
   rankScale: "one_thousand" as const,
   /** Native dedup, removes the need for local one-per-domain logic. */
   backlinkMode: "one_per_domain" as const,
