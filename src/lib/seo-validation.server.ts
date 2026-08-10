@@ -402,6 +402,55 @@ export function evaluateSeoRules(
 }
 
 /**
+ * Reads stored competitor profiles for the owned property. Returns null when no
+ * competitor intelligence pass has run, which keeps the competitor rules
+ * ineligible rather than guessing.
+ */
+async function loadCompetitorEvidence(
+  client: Client,
+  property: string,
+): Promise<CompetitorEvidence | null> {
+  const ownDomain = property.replace(/^sc-domain:/, "").replace(/^https?:\/\//, "").replace(/\/$/, "");
+  const { data, error } = await client
+    .from("competitor_candidates")
+    .select("domain, domain_class, metrics")
+    .eq("seed_domain", ownDomain);
+  if (error) throw new SearchConsoleFailure("persistence", error.message);
+
+  let serpsAnalysed = 0;
+  let ownedAbsentSerps: string[] = [];
+  const profiles: CompetitorEvidence["profiles"] = [];
+
+  for (const row of data ?? []) {
+    const metrics = (row.metrics ?? {}) as Record<string, unknown>;
+    const pass = metrics["intelligence_pass"] as Record<string, unknown> | undefined;
+    if (!pass) continue;
+    serpsAnalysed = Math.max(serpsAnalysed, Number(pass["serps_analysed"] ?? 0));
+    const absent = pass["owned_absent_while_present"];
+    if (Array.isArray(absent) && absent.length > ownedAbsentSerps.length) {
+      // The widest observed absence set is the property-level absence signal.
+      ownedAbsentSerps = absent.map(String);
+    }
+    profiles.push({
+      domain: row.domain,
+      domainClass: row.domain_class,
+      serpsPresent: Number(pass["serps_present"] ?? 0),
+      serpShare: Number(pass["serp_share"] ?? 0),
+      medianPosition: Number(pass["median_position"] ?? 0),
+      outranksOwned: (pass["outranks_owned"] ?? []) as CompetitorEvidence["profiles"][number]["outranksOwned"],
+      ownedOutranks: (pass["owned_outranks"] ?? []) as CompetitorEvidence["profiles"][number]["ownedOutranks"],
+      confidence: Number(pass["confidence"] ?? 0),
+      shortlisted: Boolean(pass["shortlisted"]),
+      pageEvidence: (metrics["page_evidence"] as Record<string, unknown>) ?? null,
+    });
+  }
+
+  if (profiles.length === 0 || serpsAnalysed === 0) return null;
+  return { ownDomain, serpsAnalysed, ownedAbsentSerps, profiles };
+}
+
+
+/**
  * Competitor rules. They only become eligible once real SERP-derived competitor
  * evidence exists; with no evidence they return nothing, exactly like a
  * Search Console rule with no snapshot.
