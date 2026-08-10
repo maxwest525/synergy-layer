@@ -43,7 +43,17 @@ export const Route = createFileRoute("/")({
   component: InboxPage,
 });
 
+/**
+ * Some inbox items are decisions with a real review surface behind them. An
+ * item the operator cannot open is a gate nobody can pass.
+ */
+function reviewRouteFor(item: { source_module: string; title: string }): "/keywords" | null {
+  if (item.source_module === "dataforseo" && /keyword candidates/i.test(item.title)) return "/keywords";
+  return null;
+}
+
 function InboxPage() {
+
   const { data } = useSuspenseQuery(inboxQuery);
   const queryClient = useQueryClient();
   const resolve = useServerFn(resolveInboxItem);
