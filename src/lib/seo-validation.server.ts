@@ -755,7 +755,7 @@ export async function runSeoValidation(
         period_end_pt: reportingDate,
         evidence: evidence as never,
       },
-      { onConflict: "observation_fingerprint", ignoreDuplicates: true },
+      { onConflict: "tenant_id,observation_fingerprint", ignoreDuplicates: true },
     );
     if (observationError) throw new SearchConsoleFailure("persistence", observationError.message);
   }
