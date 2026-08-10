@@ -138,10 +138,11 @@ function InboxPage() {
                             </Button>
                           ) : null}
                         </div>
-
                       </GlassCard>
                     </li>
-                  ))}
+                    );
+                  })}
+
                 </ul>
               )}
             </section>
