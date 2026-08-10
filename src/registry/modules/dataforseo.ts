@@ -52,6 +52,48 @@ export const definition: ModuleDefinition = {
       },
     },
     {
+      key: "serp.competitor_intelligence",
+      name: "Competitor intelligence pass",
+      kind: "internal_module",
+      category: "Organic",
+      description:
+        "Second pass over stored SERP evidence. Profiles every observed domain with keyword overlap, SERP share, position statistics, head to head wins and losses against the owned property, and SERP features, then scores significance and selects a small shortlist for deeper observation. Classification stays heuristic: ranking is never treated as proof of business competition.",
+      integrationState: "real",
+      operations: [
+        { name: "competitors.profile", description: "Recompute evidence-backed competitor profiles from stored SERPs.", mutates: false },
+        { name: "competitors.shortlist", description: "Select a reviewable shortlist by significance score.", mutates: false },
+      ],
+      config: {
+        mutating: false,
+        costUsd: 0,
+        evidenceLabel: "observed",
+        source: "stored_serp_snapshots",
+        promotesToTracked: false,
+        note: "The shortlist is a review queue. Nothing becomes a tracked competitor without operator approval.",
+      },
+    },
+    {
+      key: "competitor.page_observation",
+      name: "Competitor page observation",
+      kind: "api",
+      category: "Organic",
+      description:
+        "Firecrawl inspection of the best-ranking page of each shortlisted competitor. Records page type, intent match, topical coverage, structure, schema, internal linking, and conversion elements as observations. It stores no competitor copy and makes no claim about why a page ranks.",
+      integrationState: "real",
+      authKind: "api_key",
+      operations: [
+        { name: "page.observe", description: "Scrape and normalise one ranking page per shortlisted domain.", mutates: false },
+      ],
+      config: {
+        mutating: false,
+        provider: "firecrawl",
+        scope: "shortlist_only",
+        pagesPerDomain: 1,
+        evidenceLabel: "observed",
+        contentCopying: "prohibited",
+      },
+    },
+    {
       key: "cap.dataforseo_serp",
       name: "DataForSEO SERP",
       kind: "api",
