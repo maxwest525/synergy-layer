@@ -317,7 +317,9 @@ export async function fetchOverview() {
   counts["schedules"] = schedules.count ?? 0;
   counts["inbox_items"] = inbox.count ?? 0;
 
-  const capabilities = rows(await db.from("capabilities").select("key, name, integration_state, health"));
+  const capabilities = rows(
+    await db.from("capabilities").select("key, name, integration_state, health"),
+  ) as CapabilitySummary[];
   const runs = rows(
     await db
       .from("workflow_runs")
@@ -325,7 +327,7 @@ export async function fetchOverview() {
       .eq("tenant_id", tenantId!)
       .order("created_at", { ascending: false })
       .limit(50),
-  );
+  ) as RunSummary[];
 
   // Evidence and spend the operator paid for. Everything here is read straight
   // from the ledger and snapshot tables; nothing is estimated.
