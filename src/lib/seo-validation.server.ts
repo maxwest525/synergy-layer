@@ -426,9 +426,9 @@ async function loadCompetitorEvidence(
     const pass = metrics["intelligence_pass"] as Record<string, unknown> | undefined;
     if (!pass) continue;
     serpsAnalysed = Math.max(serpsAnalysed, Number(pass["serps_analysed"] ?? 0));
-    const absent = pass["owned_absent_while_present"];
+    const absent = pass["owned_absent_serps"];
     if (Array.isArray(absent) && absent.length > ownedAbsentSerps.length) {
-      // The widest observed absence set is the property-level absence signal.
+      // Property-level absence recorded by the intelligence pass.
       ownedAbsentSerps = absent.map(String);
     }
     profiles.push({
