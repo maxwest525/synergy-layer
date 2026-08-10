@@ -69,6 +69,8 @@ function release(): void {
 }
 
 function credentials(): string {
+  const token = process.env["DATAFORSEO_BASIC_TOKEN"];
+  if (token) return token.replace(/^Basic\s+/i, "").trim();
   const login = process.env["DATAFORSEO_LOGIN"];
   const password = process.env["DATAFORSEO_PASSWORD"];
   if (login && password) {
