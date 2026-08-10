@@ -14,8 +14,7 @@ const SEEDS = ["long distance movers", "interstate moving company", "long distan
 const out: Record<string, unknown> = {};
 
 // 1. Registry sync so capabilities and workflows are visible in AOOS.
-const { syncRegistryDefinitions } = await import("./src/registry/sync.server");
-out["registrySync"] = await syncRegistryDefinitions(client);
+
 
 // 2. Record the operator-approved seed concepts on the tenant.
 const { data: tenant } = await client.from("tenants").select("metadata").eq("id", TENANT).single();
