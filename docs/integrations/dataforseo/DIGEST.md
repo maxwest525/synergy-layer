@@ -16,6 +16,9 @@
 | Backlinks Summary Live | https://docs.dataforseo.com/v3/backlinks-summary-live/ |
 | Backlinks Backlinks Live | https://docs.dataforseo.com/v3/backlinks-backlinks-live/ |
 | Backlinks History Live | https://docs.dataforseo.com/v3/backlinks/history/live/ |
+| Backlinks Anchors Live | https://docs.dataforseo.com/v3/backlinks/anchors/live/ |
+| Backlinks Domain Pages Live (top linked pages) | https://docs.dataforseo.com/v3/backlinks/domain_pages/live/ |
+| Backlinks Referring Domains Live | https://docs.dataforseo.com/v3/backlinks/referring_domains/live/ |
 | Backlinks Timeseries Summary | https://docs.dataforseo.com/v3/backlinks-timeseries_summary-live/ |
 | Backlinks Page Intersection | https://docs.dataforseo.com/v3/backlinks/page_intersection/live/ |
 | Backlinks Bulk Ranks | https://docs.dataforseo.com/v3/backlinks/bulk_ranks/live/ |
