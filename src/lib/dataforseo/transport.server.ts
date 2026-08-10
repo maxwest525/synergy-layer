@@ -71,14 +71,18 @@ function release(): void {
 function credentials(): string {
   const login = process.env["DATAFORSEO_LOGIN"];
   const password = process.env["DATAFORSEO_PASSWORD"];
-  if (!login || !password) {
-    throw new DataForSeoFailure(
-      "missing_credentials",
-      "DataForSEO credentials are not available to the server.",
-    );
+  if (login && password) {
+    return Buffer.from(`${login}:${password}`).toString("base64");
   }
-  return Buffer.from(`${login}:${password}`).toString("base64");
+  // DataForSEO's API access page also shows a ready-made base64 Basic token.
+  const token = process.env["DATAFORSEO_BASIC_TOKEN"];
+  if (token) return token.replace(/^Basic\s+/i, "").trim();
+  throw new DataForSeoFailure(
+    "missing_credentials",
+    "DataForSEO credentials are not available to the server.",
+  );
 }
+
 
 /** Stable, order-insensitive fingerprint: endpoint + normalized params + reporting date. */
 export function fingerprint(endpoint: string, params: unknown, reportingDate: string): string {
