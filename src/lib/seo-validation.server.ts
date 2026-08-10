@@ -20,6 +20,9 @@ export const SEO_VALIDATION_THRESHOLDS = {
   queryOverlap: { minImpressionsPerPage: 25, minPages: 2, minPeriods: 2, minTotalImpressions: 50 },
   significantChange: { minPreviousImpressions: 100, minChangeRatio: 0.5 },
   researchTraction: { minImpressions: 20, minImpressionGrowth: 0.25 },
+  // Competitor evidence. These read observed SERP profiles, never estimates.
+  competitorOutranks: { minQueries: 3, minConfidence: 0.5 },
+  ownedSerpAbsence: { minAbsentSerps: 5, minShareAbsent: 0.25 },
 } as const;
 
 export type SeoRule =
@@ -30,7 +33,9 @@ export type SeoRule =
   | "zero_click_page"
   | "possible_query_overlap"
   | "significant_period_change"
-  | "research_page_traction";
+  | "research_page_traction"
+  | "competitor_outranks_owned"
+  | "owned_absent_from_approved_serps";
 
 export const SEO_RULES: SeoRule[] = [
   "declining_clicks",
@@ -41,7 +46,34 @@ export const SEO_RULES: SeoRule[] = [
   "possible_query_overlap",
   "significant_period_change",
   "research_page_traction",
+  "competitor_outranks_owned",
+  "owned_absent_from_approved_serps",
 ];
+
+/**
+ * Narrow extension of the evidence contract. Until now every rule consumed
+ * Search Console rows. Competitor rules consume the SERP-derived competitor
+ * profiles instead, in the same Finding shape, so the persistence, dedup, and
+ * approval path stay exactly as they are.
+ */
+export type CompetitorEvidence = {
+  ownDomain: string;
+  serpsAnalysed: number;
+  ownedAbsentSerps: string[];
+  profiles: {
+    domain: string;
+    domainClass: string;
+    serpsPresent: number;
+    serpShare: number;
+    medianPosition: number;
+    outranksOwned: { keyword: string; competitorPosition: number; ownedPosition: number | null }[];
+    ownedOutranks: { keyword: string; competitorPosition: number; ownedPosition: number }[];
+    confidence: number;
+    shortlisted: boolean;
+    pageEvidence: Record<string, unknown> | null;
+  }[];
+};
+
 
 type Metrics = { clicks: number; impressions: number; ctr: number; position: number };
 
@@ -369,6 +401,133 @@ export function evaluateSeoRules(
   return findings;
 }
 
+/**
+ * Reads stored competitor profiles for the owned property. Returns null when no
+ * competitor intelligence pass has run, which keeps the competitor rules
+ * ineligible rather than guessing.
+ */
+async function loadCompetitorEvidence(
+  client: Client,
+  property: string,
+): Promise<CompetitorEvidence | null> {
+  const ownDomain = property.replace(/^sc-domain:/, "").replace(/^https?:\/\//, "").replace(/\/$/, "");
+  const { data, error } = await client
+    .from("competitor_candidates")
+    .select("domain, domain_class, metrics")
+    .eq("seed_domain", ownDomain);
+  if (error) throw new SearchConsoleFailure("persistence", error.message);
+
+  let serpsAnalysed = 0;
+  let ownedAbsentSerps: string[] = [];
+  const profiles: CompetitorEvidence["profiles"] = [];
+
+  for (const row of data ?? []) {
+    const metrics = (row.metrics ?? {}) as Record<string, unknown>;
+    const pass = metrics["intelligence_pass"] as Record<string, unknown> | undefined;
+    if (!pass) continue;
+    serpsAnalysed = Math.max(serpsAnalysed, Number(pass["serps_analysed"] ?? 0));
+    const absent = pass["owned_absent_serps"];
+    if (Array.isArray(absent) && absent.length > ownedAbsentSerps.length) {
+      // Property-level absence recorded by the intelligence pass.
+      ownedAbsentSerps = absent.map(String);
+    }
+    profiles.push({
+      domain: row.domain,
+      domainClass: row.domain_class,
+      serpsPresent: Number(pass["serps_present"] ?? 0),
+      serpShare: Number(pass["serp_share"] ?? 0),
+      medianPosition: Number(pass["median_position"] ?? 0),
+      outranksOwned: (pass["outranks_owned"] ?? []) as CompetitorEvidence["profiles"][number]["outranksOwned"],
+      ownedOutranks: (pass["owned_outranks"] ?? []) as CompetitorEvidence["profiles"][number]["ownedOutranks"],
+      confidence: Number(pass["confidence"] ?? 0),
+      shortlisted: Boolean(pass["shortlisted"]),
+      pageEvidence: (metrics["page_evidence"] as Record<string, unknown>) ?? null,
+    });
+  }
+
+  if (profiles.length === 0 || serpsAnalysed === 0) return null;
+  return { ownDomain, serpsAnalysed, ownedAbsentSerps, profiles };
+}
+
+
+/**
+ * Competitor rules. They only become eligible once real SERP-derived competitor
+ * evidence exists; with no evidence they return nothing, exactly like a
+ * Search Console rule with no snapshot.
+ */
+export function evaluateCompetitorRules(evidence: CompetitorEvidence | null): Finding[] {
+  const findings: Finding[] = [];
+  if (!evidence || evidence.serpsAnalysed === 0) return findings;
+
+  const outrank = SEO_VALIDATION_THRESHOLDS.competitorOutranks;
+  for (const profile of evidence.profiles) {
+    if (profile.domainClass !== "competitor") continue;
+    if (!profile.shortlisted) continue;
+    if (profile.outranksOwned.length < outrank.minQueries) continue;
+    if (profile.confidence < outrank.minConfidence) continue;
+
+    const queries = profile.outranksOwned.map((row) => row.keyword);
+    const headToHead = profile.outranksOwned.filter((row) => row.ownedPosition !== null).length;
+
+    findings.push({
+      rule: "competitor_outranks_owned",
+      targetKind: "query",
+      target: profile.domain,
+      title: `${profile.domain} outranks the owned property on ${profile.outranksOwned.length} approved queries`,
+      description: `Across ${evidence.serpsAnalysed} observed SERPs for operator-approved keywords, ${profile.domain} appears in ${profile.serpsPresent} (${Math.round(profile.serpShare * 100)}%) at a median organic position of ${profile.medianPosition}. It ranks ahead of ${evidence.ownDomain} on ${profile.outranksOwned.length} of those queries (${headToHead} head to head, ${profile.outranksOwned.length - headToHead} where the owned property does not rank in the top 20). ${evidence.ownDomain} ranks ahead on ${profile.ownedOutranks.length}. Candidate confidence ${profile.confidence}: classification is heuristic, so this is a ranking rival on observed queries, not a confirmed business competitor.`,
+      current: null,
+      previous: null,
+      change: {
+        competitorDomain: profile.domain,
+        serpsPresent: profile.serpsPresent,
+        serpShare: profile.serpShare,
+        medianPosition: profile.medianPosition,
+        queriesCompetitorWins: queries.slice(0, 25),
+        queriesOwnedWins: profile.ownedOutranks.map((row) => row.keyword).slice(0, 25),
+        pageEvidence: profile.pageEvidence,
+      },
+      snapshotId: null,
+      priorSnapshotId: null,
+      businessImpact: profile.serpShare >= 0.5 ? "high" : "medium",
+      confidence: profile.confidence,
+      suggestedAction: {
+        kind: "review_competitor_evidence",
+        domain: profile.domain,
+        note: "Review the observed page evidence for this domain and decide whether to track it as a competitor. No content action is proposed here.",
+      },
+    });
+  }
+
+  const absence = SEO_VALIDATION_THRESHOLDS.ownedSerpAbsence;
+  const absentShare = evidence.ownedAbsentSerps.length / evidence.serpsAnalysed;
+  if (
+    evidence.ownedAbsentSerps.length >= absence.minAbsentSerps &&
+    absentShare >= absence.minShareAbsent
+  ) {
+    findings.push({
+      rule: "owned_absent_from_approved_serps",
+      targetKind: "property",
+      target: evidence.ownDomain,
+      title: `Owned property is absent from the top 20 on ${evidence.ownedAbsentSerps.length} approved queries`,
+      description: `${evidence.ownDomain} does not appear in the observed top 20 organic results for ${evidence.ownedAbsentSerps.length} of ${evidence.serpsAnalysed} operator-approved keywords (${Math.round(absentShare * 100)}%). This is observed SERP absence, not a Search Console decline: those queries may never have produced impressions.`,
+      current: null,
+      previous: null,
+      change: { absentQueries: evidence.ownedAbsentSerps.slice(0, 40), absentShare: Number(absentShare.toFixed(3)) },
+      snapshotId: null,
+      priorSnapshotId: null,
+      businessImpact: absentShare >= 0.6 ? "high" : "medium",
+      confidence: 0.8,
+      suggestedAction: {
+        kind: "review_coverage_gap",
+        note: "Decide which absent queries deserve a page before anything is produced.",
+      },
+    });
+  }
+
+  return findings;
+}
+
+
 export type SeoValidationResult = {
   property: string | null;
   assetId: string | null;
@@ -464,7 +623,11 @@ export async function runSeoValidation(
     .filter((value) => value.startsWith("http"));
 
   const currentSnapshots = (currentRows ?? []) as SnapshotRow[];
-  const findings = evaluateSeoRules(currentSnapshots, priorSnapshots, researchUrls);
+  const competitorEvidence = await loadCompetitorEvidence(client, property);
+  const findings = [
+    ...evaluateSeoRules(currentSnapshots, priorSnapshots, researchUrls),
+    ...evaluateCompetitorRules(competitorEvidence),
+  ];
   const anchorSnapshot = currentSnapshots[0]?.id ?? null;
 
   if (findings.length === 0 || !anchorSnapshot) {
@@ -592,7 +755,7 @@ export async function runSeoValidation(
         period_end_pt: reportingDate,
         evidence: evidence as never,
       },
-      { onConflict: "observation_fingerprint", ignoreDuplicates: true },
+      { onConflict: "tenant_id,observation_fingerprint", ignoreDuplicates: true },
     );
     if (observationError) throw new SearchConsoleFailure("persistence", observationError.message);
   }

@@ -15,6 +15,7 @@ import { Route as AssetsRouteImport } from './routes/assets'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as CapabilitiesRouteImport } from './routes/capabilities'
 import { Route as CommandCenterRouteImport } from './routes/command-center'
+import { Route as CompetitorsRouteImport } from './routes/competitors'
 import { Route as KeywordsRouteImport } from './routes/keywords'
 import { Route as KnowledgeRouteImport } from './routes/knowledge'
 import { Route as McpRouteImport } from './routes/mcp'
@@ -71,6 +72,11 @@ const CapabilitiesRoute = CapabilitiesRouteImport.update({
 const CommandCenterRoute = CommandCenterRouteImport.update({
   id: '/command-center',
   path: '/command-center',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CompetitorsRoute = CompetitorsRouteImport.update({
+  id: '/competitors',
+  path: '/competitors',
   getParentRoute: () => rootRouteImport,
 } as any)
 const KeywordsRoute = KeywordsRouteImport.update({
@@ -221,6 +227,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRouteWithChildren
   '/capabilities': typeof CapabilitiesRouteWithChildren
   '/command-center': typeof CommandCenterRoute
+  '/competitors': typeof CompetitorsRoute
   '/keywords': typeof KeywordsRoute
   '/knowledge': typeof KnowledgeRouteWithChildren
   '/mcp': typeof McpRoute
@@ -253,6 +260,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRouteWithChildren
   '/command-center': typeof CommandCenterRoute
+  '/competitors': typeof CompetitorsRoute
   '/keywords': typeof KeywordsRoute
   '/mcp': typeof McpRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
@@ -285,6 +293,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRouteWithChildren
   '/capabilities': typeof CapabilitiesRouteWithChildren
   '/command-center': typeof CommandCenterRoute
+  '/competitors': typeof CompetitorsRoute
   '/keywords': typeof KeywordsRoute
   '/knowledge': typeof KnowledgeRouteWithChildren
   '/mcp': typeof McpRoute
@@ -322,6 +331,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/capabilities'
     | '/command-center'
+    | '/competitors'
     | '/keywords'
     | '/knowledge'
     | '/mcp'
@@ -354,6 +364,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/command-center'
+    | '/competitors'
     | '/keywords'
     | '/mcp'
     | '/.mcp/list-tools'
@@ -385,6 +396,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/capabilities'
     | '/command-center'
+    | '/competitors'
     | '/keywords'
     | '/knowledge'
     | '/mcp'
@@ -421,6 +433,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRouteWithChildren
   CapabilitiesRoute: typeof CapabilitiesRouteWithChildren
   CommandCenterRoute: typeof CommandCenterRoute
+  CompetitorsRoute: typeof CompetitorsRoute
   KeywordsRoute: typeof KeywordsRoute
   KnowledgeRoute: typeof KnowledgeRouteWithChildren
   McpRoute: typeof McpRoute
@@ -477,6 +490,13 @@ declare module '@tanstack/react-router' {
       path: '/command-center'
       fullPath: '/command-center'
       preLoaderRoute: typeof CommandCenterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/competitors': {
+      id: '/competitors'
+      path: '/competitors'
+      fullPath: '/competitors'
+      preLoaderRoute: typeof CompetitorsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/keywords': {
@@ -784,6 +804,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRouteWithChildren,
   CapabilitiesRoute: CapabilitiesRouteWithChildren,
   CommandCenterRoute: CommandCenterRoute,
+  CompetitorsRoute: CompetitorsRoute,
   KeywordsRoute: KeywordsRoute,
   KnowledgeRoute: KnowledgeRouteWithChildren,
   McpRoute: McpRoute,

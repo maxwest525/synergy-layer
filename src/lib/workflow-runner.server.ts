@@ -421,7 +421,9 @@ async function runDataForSeoNode(
  * re-reads stored evidence and never calls the provider.
  */
 async function runSerpCompetitorNode(client: Client, ref: string): Promise<NodeOutcome | null> {
-  if (ref !== "serp.competitors") return null;
+  if (ref !== "serp.competitors" && ref !== "serp.competitor_intelligence" && ref !== "competitor.page_observation") {
+    return null;
+  }
   try {
     const { requireTenantId } = await import("./tenant.server");
     const { getSelectedProperty } = await import("./search-console.server");
@@ -431,6 +433,23 @@ async function runSerpCompetitorNode(client: Client, ref: string): Promise<NodeO
     const property = await getSelectedProperty(client);
     const own = (property ?? "").replace(/^sc-domain:/, "").replace(/^https?:\/\//, "").replace(/\/$/, "");
     if (!own) return { ok: false, error: "No owned property is selected." };
+
+    if (ref === "serp.competitor_intelligence") {
+      const { buildCompetitorProfiles } = await import("./dataforseo/competitor-intelligence.server");
+      const { result } = await buildCompetitorProfiles(client, tenantId, own);
+      return { ok: true, output: { ...result } };
+    }
+
+    if (ref === "competitor.page_observation") {
+      const { readShortlistedProfiles } = await import("./dataforseo/competitor-intelligence.server");
+      const { inspectShortlistPages } = await import("./dataforseo/competitor-pages.server");
+      const profiles = await readShortlistedProfiles(client, tenantId);
+      if (profiles.length === 0) {
+        return { ok: true, output: { noChange: true, reason: "No shortlisted competitor to inspect." } };
+      }
+      const evidence = await inspectShortlistPages(client, tenantId, profiles);
+      return { ok: true, output: { ...evidence } };
+    }
 
     const result = await deriveCompetitorsFromSerp(client, tenantId, own);
     return { ok: true, output: { ...result } };
