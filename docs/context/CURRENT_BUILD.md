@@ -1,0 +1,103 @@
+# AOOS Current Build Context
+
+Purpose: a lightweight, always-current handoff note so a future agent run does not
+lose decisions made in chat. This file records **current state only**: architecture,
+live integrations, pending approvals, active workflows, and next priorities.
+
+It is not authoritative documentation. Provider digests under
+`docs/integrations/<provider>/DIGEST.md` and their PLAN files remain the source of
+truth for provider behaviour and must never be overwritten by this file.
+
+Last updated: 2026-02 (performance optimization pass complete, paid-media
+intelligence phase starting).
+
+## 1. What AOOS is
+
+An internal marketing operating system for the company. It is **not** the public
+TruMove website and not a CRM. It manages marketing assets, AI agents, workflows,
+MCP tools, connectors, schedulers, recommendations, evidence, and approvals.
+
+Workspaces: Inbox (root route, operational center), Command Center, Assets,
+Capabilities, Agents, Workflows, Knowledge, Recommendations, Scheduler, plus
+operator surfaces for Keywords and Competitors.
+
+## 2. Permanent rules
+
+1. **Documentation-first integrations.** Authoritative provider docs are read and
+   digested before any integration code is written. Required artifacts: persistent
+   digest, selective technical cache, capability map, blueprint, risk register,
+   operator approval. No secrets are ever written into knowledge or digests.
+2. Capabilities, agents, and workflows are declared in `src/registry/modules/*.ts`
+   and synced to the database. No hardcoded per-integration UI.
+3. Every integration carries a real / simulated / pending / mock state. A mock is
+   never presented as connected.
+4. Mutating agent or workflow steps require explicit human approval, filed to Inbox.
+5. Multi-tenant: `tenants` + `tenant_members`, tenant-scoped RLS on registry tables.
+6. UI: dark cyber-luxury theme, semantic tokens only, outlined buttons only, no
+   em dashes in copy.
+
+## 3. Live integrations (real, not simulated)
+
+| Capability | State | Notes |
+| --- | --- | --- |
+| Google Search Console | real | Idempotent daily site / page / query snapshots. |
+| DataForSEO Labs | real | Keyword ideas, competitor derivation. |
+| DataForSEO SERP (Standard queue) | real | Postback hook at `/api/public/hooks/dataforseo-postback`. |
+| DataForSEO Backlinks | real | Pay-as-you-go pricing as of 2026-07-01. |
+| Firecrawl / Web Research (Perplexity) | real | Page inspection and cited research. |
+| Competitor intelligence | real | Built on 39 completed SERP snapshots, 71 observed domains. |
+| MCP read tools | real | Guarded by `src/lib/mcp/guard.ts` (auth + audit). |
+| SerpAPI Ads Transparency | pending | Digest + plan complete (`docs/integrations/serpapi/`). Blocked on credential and plan-tier approval. |
+| GitHub (`cap.github`) | not connected | Blocks `wf.publish`. Do not connect without approval. |
+
+Spend controls: DataForSEO ceiling **$300/month**, ledgered per request, alerts at
+50/75/90/100%. Spend to date is far below ceiling (cents, not dollars).
+
+## 4. Evidence and classification rules
+
+- SERP `competitor` vs `surface` classification is preserved. A domain that ranks
+  is not automatically a direct business competitor.
+- Competitor confidence and classification uncertainty are always retained.
+- Observations are stored separately from recommendations.
+- Transparency-style ad evidence never implies spend, impressions, or performance.
+
+## 5. Pending operator approvals
+
+1. **Competitor shortlist** (6 domains: United Van Lines, Allied and others) awaits
+   human review in `/competitors`. The agent must not approve or reject these.
+2. GitHub credential / `cap.github` authorization for `wf.publish`.
+3. SerpAPI credential plus plan-tier choice for `cap.serpapi_ads_transparency`. Digest and plan are done; no integration code is written until the key exists and a live auth probe passes.
+
+## 6. Active workflows
+
+- `gsc-daily-observe` (real)
+- `dfs-serp-observe` (real, 40 approved keywords)
+- `wf.research_refresh` (real)
+- `wf.seo_validation` (real rule engine, 10 rules incl. competitor rules)
+- `wf.content_generation` (parked at review)
+- `wf.publish` (blocked on `cap.github`)
+
+## 7. Performance baseline (post-optimization)
+
+Measured in-browser client navigation between workspaces: **100-185 ms**, warm
+second visits served from the query cache. Applied fixes:
+
+- `defaultPreload: "intent"`, `defaultPreloadDelay: 50`, shared pending component.
+- Query defaults `staleTime: 30s`, `gcTime: 5m`, no refetch on window focus.
+- `ssr: false` on operator-only workspace routes (removes hydration mismatch).
+- Non-blocking loaders: `ensureQueryData(...).catch(() => undefined)`.
+- Request-scoped Supabase client cache keyed by bearer token, 60s TTL
+  (`src/lib/tenant.server.ts`), removing repeated auth/tenant round trips.
+- Command Center metric fan-out collapsed into one `Promise.all` batch.
+
+## 8. Next build priorities
+
+1. **Google Ads Transparency / paid competitor intelligence** via SerpAPI, applying
+   the documentation-first rule. Capability `cap.serpapi_ads_transparency`, modules
+   `ads.advertiser_resolution`, `ads.creative_intelligence`,
+   `ads.landing_page_intelligence`, `ads.live_serp_observation`,
+   `ads.vendor_network_analysis`. Phase 1 is read-only and evidence-first.
+2. Vendor watchlist for discovery: equatemedia.com, billy.com, moveadvisor.com,
+   mymovingreviews.com, resultcalls.com, doppcall.com, 99calls.com,
+   quoterunner.com, movematcher.com, budgetvanlines.com, 2movers.com.
+3. After evidence quality is proven: paid-media recommendations, then publish path.

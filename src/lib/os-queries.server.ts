@@ -296,17 +296,78 @@ export async function fetchOverview() {
   if (!ready) return empty;
 
   const head = { count: "exact" as const, head: true };
-  const [assets, capabilityCount, entries, agents, workflows, recommendations, schedules, inbox] =
-    await Promise.all([
-      db.from("assets").select("id", head).eq("tenant_id", tenantId!),
-      db.from("capabilities").select("id", head),
-      db.from("knowledge_entries").select("id", head).eq("tenant_id", tenantId!),
-      db.from("agents").select("id", head),
-      db.from("workflows").select("id", head),
-      db.from("recommendations").select("id", head).eq("tenant_id", tenantId!),
-      db.from("schedules").select("id", head),
-      db.from("inbox_items").select("id", head).eq("tenant_id", tenantId!),
-    ]);
+  // Everything the Command Center needs is issued in one parallel batch. Two
+  // sequential batches plus a nested activity read meant the heaviest page paid
+  // three round-trip waves instead of one.
+  const period = `${new Date().toISOString().slice(0, 7)}-01`;
+  const [
+    assets,
+    capabilityCount,
+    entries,
+    agents,
+    workflows,
+    recommendations,
+    schedules,
+    inbox,
+    capabilityRows,
+    runRows,
+    activityRows,
+    budget,
+    requests,
+    dfsSnapshots,
+    gscSnapshots,
+    pendingKeywords,
+    tracked,
+    competitors,
+    trackedComps,
+    approvals,
+  ] = await Promise.all([
+    db.from("assets").select("id", head).eq("tenant_id", tenantId!),
+    db.from("capabilities").select("id", head),
+    db.from("knowledge_entries").select("id", head).eq("tenant_id", tenantId!),
+    db.from("agents").select("id", head),
+    db.from("workflows").select("id", head),
+    db.from("recommendations").select("id", head).eq("tenant_id", tenantId!),
+    db.from("schedules").select("id", head),
+    db.from("inbox_items").select("id", head).eq("tenant_id", tenantId!),
+    db.from("capabilities").select("key, name, integration_state, health"),
+    db
+      .from("workflow_runs")
+      .select("id, state, trigger_source, created_at, duration_ms, error, workflows(key, name)")
+      .eq("tenant_id", tenantId!)
+      .order("created_at", { ascending: false })
+      .limit(50),
+    db
+      .from("activity_events")
+      .select("*")
+      .eq("tenant_id", tenantId!)
+      .order("occurred_at", { ascending: false })
+      .limit(20),
+    db
+      .from("dataforseo_budgets")
+      .select("ceiling_usd, spent_usd")
+      .eq("tenant_id", tenantId!)
+      .eq("period_month", period)
+      .maybeSingle(),
+    db.from("dataforseo_requests").select("id", head).eq("tenant_id", tenantId!),
+    db
+      .from("dataforseo_snapshots")
+      .select("id, collected_at", { count: "exact" })
+      .eq("tenant_id", tenantId!)
+      .order("collected_at", { ascending: false })
+      .limit(1),
+    db
+      .from("search_console_snapshots")
+      .select("id, collected_at", { count: "exact" })
+      .eq("tenant_id", tenantId!)
+      .order("collected_at", { ascending: false })
+      .limit(1),
+    db.from("keyword_candidates").select("id", head).eq("tenant_id", tenantId!).eq("review_state", "pending"),
+    db.from("tracked_keywords").select("id", head).eq("tenant_id", tenantId!).eq("active", true),
+    db.from("competitor_candidates").select("id", head).eq("tenant_id", tenantId!),
+    db.from("tracked_competitors").select("id", head).eq("tenant_id", tenantId!).eq("active", true),
+    db.from("inbox_items").select("id", head).eq("tenant_id", tenantId!).eq("lane", "pending_approval"),
+  ]);
 
   counts["assets"] = assets.count ?? 0;
   counts["capabilities"] = capabilityCount.count ?? 0;
@@ -317,55 +378,17 @@ export async function fetchOverview() {
   counts["schedules"] = schedules.count ?? 0;
   counts["inbox_items"] = inbox.count ?? 0;
 
-  const capabilities = rows(
-    await db.from("capabilities").select("key, name, integration_state, health"),
-  ) as CapabilitySummary[];
-  const runs = rows(
-    await db
-      .from("workflow_runs")
-      .select("id, state, trigger_source, created_at, duration_ms, error, workflows(key, name)")
-      .eq("tenant_id", tenantId!)
-      .order("created_at", { ascending: false })
-      .limit(50),
-  ) as RunSummary[];
-
-  // Evidence and spend the operator paid for. Everything here is read straight
-  // from the ledger and snapshot tables; nothing is estimated.
-  const period = `${new Date().toISOString().slice(0, 7)}-01`;
-  const [budget, requests, dfsSnapshots, gscSnapshots, pendingKeywords, tracked, competitors, trackedComps, approvals] =
-    await Promise.all([
-      db
-        .from("dataforseo_budgets")
-        .select("ceiling_usd, spent_usd")
-        .eq("tenant_id", tenantId!)
-        .eq("period_month", period)
-        .maybeSingle(),
-      db.from("dataforseo_requests").select("id", head).eq("tenant_id", tenantId!),
-      db
-        .from("dataforseo_snapshots")
-        .select("id, collected_at", { count: "exact" })
-        .eq("tenant_id", tenantId!)
-        .order("collected_at", { ascending: false })
-        .limit(1),
-      db
-        .from("search_console_snapshots")
-        .select("id, collected_at", { count: "exact" })
-        .eq("tenant_id", tenantId!)
-        .order("collected_at", { ascending: false })
-        .limit(1),
-      db.from("keyword_candidates").select("id", head).eq("tenant_id", tenantId!).eq("review_state", "pending"),
-      db.from("tracked_keywords").select("id", head).eq("tenant_id", tenantId!).eq("active", true),
-      db.from("competitor_candidates").select("id", head).eq("tenant_id", tenantId!),
-      db.from("tracked_competitors").select("id", head).eq("tenant_id", tenantId!).eq("active", true),
-      db.from("inbox_items").select("id", head).eq("tenant_id", tenantId!).eq("lane", "pending_approval"),
-    ]);
+  const capabilities = rows(capabilityRows) as CapabilitySummary[];
+  const runs = rows(runRows) as RunSummary[];
+  const activity = rows(activityRows) as Awaited<ReturnType<typeof fetchActivity>>;
 
   return {
     ready: true,
     counts,
     capabilities,
     runs,
-    activity: await fetchActivity(20),
+    activity,
+
     evidence: {
       spentUsd: Number(budget.data?.spent_usd ?? 0),
       ceilingUsd: Number(budget.data?.ceiling_usd ?? 0),

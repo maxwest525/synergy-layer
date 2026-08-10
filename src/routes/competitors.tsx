@@ -15,6 +15,10 @@ const shortlistQuery = {
 };
 
 export const Route = createFileRoute("/competitors")({
+  // Operator-only workspace: nothing here is public, and rendering it on the
+  // server without the operator bearer token produced an empty tree that the
+  // client immediately replaced. Render it client side and skip that mismatch.
+  ssr: false,
   head: () => ({
     meta: [
       { title: "Competitor review — AOOS Marketing Operating System" },
