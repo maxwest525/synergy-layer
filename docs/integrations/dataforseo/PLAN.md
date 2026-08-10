@@ -11,7 +11,7 @@ decision record required by the documentation-first integration rule.
 | Competitor keyword/position visibility | none | Labs `competitors_domain`, `domain_intersection`, `ranked_keywords` for a competitor domain | **Genuine gap filled** |
 | Keyword volume, difficulty, intent for keywords TruMove does *not* rank for | none (GSC only shows what already ranks) | Labs `keyword_ideas`, `keyword_suggestions`, `bulk_keyword_difficulty`, `search_intent` | **Genuine gap filled** |
 | Live SERP composition for a target query | none | SERP API Standard queue | **Genuine gap filled** |
-| Backlink profile, new/lost links, referring domains | none | Backlinks `summary`, `history`, `timeseries_summary`, `bulk_*` | **Genuine gap filled** (costs a $100/mo access commitment) |
+| Backlink profile, new/lost links, referring domains | none | Backlinks `summary`, `history`, `timeseries_summary`, `bulk_*` | **Genuine gap filled** (pay-as-you-go since 2026-07-01, no commitment) |
 | Technical crawl of TruMove pages | Firecrawl (scrape/extract only, no audit) | OnPage API — 60+ technical metrics, duplicate content, redirect chains, non-indexable | **Genuine gap filled**, partial overlap with Firecrawl |
 | Page content retrieval for research | Firecrawl (real, already wired) | OnPage `content_parsing`, `instant_pages` | **Overlap — keep Firecrawl.** |
 | Open-web research answers with citations | Perplexity (real, already wired) | none | No overlap |
@@ -62,7 +62,7 @@ needs them and a budget decision.
 | Risk | Severity | Mitigation |
 |---|---|---|
 | Unbounded spend from a looping workflow | **High** | Provider daily cost limits + AOOS pre-call budget guard + persisted per-call `cost` + Inbox alert on `40203` |
-| $100/mo Backlinks access commitment | Medium | Do not activate Backlinks in phase one; Labs and SERP need no subscription |
+| Backlinks spend (pay-as-you-go since 2026-07-01, no commitment) | Low | Per-request cost ledger plus the $300/mo AOOS ceiling. Superseded risk: the earlier "$100/mo access commitment" was stale, see DIGEST v1.1.0 |
 | 30-concurrency cap causing silent throttling | Medium | Semaphore in the transport, read `X-RateLimit-*` headers, never fan out unbounded |
 | Treating Labs estimates as truth alongside GSC actuals | **High** | Label every Labs-derived figure as `estimated` in evidence payloads; GSC remains authoritative for owned properties |
 | Credential leakage | **High** | Secrets only, server-side only, never in registry config, knowledge, or client bundles |
@@ -73,7 +73,7 @@ needs them and a budget decision.
 ## 5. Open decisions requiring your call
 
 1. Which families to authorize now — Labs only, or Labs + SERP?
-2. Backlinks: accept the $100/mo access commitment, or defer?
+2. ~~Backlinks: accept the $100/mo access commitment, or defer?~~ Resolved: no commitment exists as of 2026-07-01. Backlinks runs in the first ingestion under the shared ceiling.
 3. Budget ceiling per month for AOOS to spend against this account.
 4. Which competitor domains to track for TruMove (the Labs value depends on this list).
 5. Whether OnPage should audit the TruMove site now or wait until the publish chain is live.
