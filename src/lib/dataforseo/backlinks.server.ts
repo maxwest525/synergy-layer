@@ -11,6 +11,10 @@ const FAMILY = "backlinks" as const;
 export const BACKLINKS_CONFIG = {
   referringDomainLimit: 200,
   backlinkLimit: 200,
+  anchorLimit: 100,
+  pageLimit: 100,
+  /** Months of history read for velocity evidence. */
+  historyMonths: 12,
   rankScale: "one_thousand" as const,
   /** Native dedup, removes the need for local one-per-domain logic. */
   backlinkMode: "one_per_domain" as const,
@@ -156,6 +160,86 @@ export async function collectBacklinks(
       rows: ((result[0]?.["items"] as unknown[]) ?? []),
       totals: { totalCount: result[0]?.["total_count"] ?? null },
     }),
+    workflow,
+  );
+}
+
+/** Anchor-text distribution. Needed for the anchor-naturalness factor. */
+export async function collectAnchors(
+  client: Client,
+  tenantId: string,
+  target: string,
+  workflow?: { runId?: string | null; key?: string | null },
+): Promise<BacklinksResult> {
+  return backlinksCall(
+    client,
+    tenantId,
+    "/backlinks/anchors/live",
+    "backlinks_anchors",
+    target,
+    {
+      target,
+      limit: BACKLINKS_CONFIG.anchorLimit,
+      // No order_by: the anchors endpoint rejects it and already returns rows
+      // ordered by backlink count.
+      backlinks_status_type: "live",
+      rank_scale: BACKLINKS_CONFIG.rankScale,
+    },
+    (result) => ({
+      rows: ((result[0]?.["items"] as unknown[]) ?? []),
+      totals: { totalCount: result[0]?.["total_count"] ?? null },
+    }),
+    workflow,
+  );
+}
+
+/** Top linked pages on the owned domain. Shows where authority actually lands. */
+export async function collectTopLinkedPages(
+  client: Client,
+  tenantId: string,
+  target: string,
+  workflow?: { runId?: string | null; key?: string | null },
+): Promise<BacklinksResult> {
+  return backlinksCall(
+    client,
+    tenantId,
+    "/backlinks/domain_pages/live",
+    "backlinks_domain_pages",
+    target,
+    {
+      target,
+      limit: BACKLINKS_CONFIG.pageLimit,
+      backlinks_status_type: "live",
+    },
+    (result) => ({
+      rows: ((result[0]?.["items"] as unknown[]) ?? []),
+      totals: { totalCount: result[0]?.["total_count"] ?? null },
+    }),
+    workflow,
+  );
+}
+
+function monthsAgo(months: number): string {
+  const date = new Date();
+  date.setMonth(date.getMonth() - months);
+  return date.toISOString().slice(0, 10);
+}
+
+/** Monthly new/lost link history. The only cheap source of velocity evidence. */
+export async function collectBacklinkHistory(
+  client: Client,
+  tenantId: string,
+  target: string,
+  workflow?: { runId?: string | null; key?: string | null },
+): Promise<BacklinksResult> {
+  return backlinksCall(
+    client,
+    tenantId,
+    "/backlinks/history/live",
+    "backlinks_history",
+    target,
+    { target, date_from: monthsAgo(BACKLINKS_CONFIG.historyMonths), rank_scale: BACKLINKS_CONFIG.rankScale },
+    (result) => ({ rows: result, totals: { months: result.length } }),
     workflow,
   );
 }

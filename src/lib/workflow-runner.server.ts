@@ -375,16 +375,19 @@ async function runDataForSeoNode(
     }
 
     if (ref === "cap.dataforseo_backlinks") {
-      const { collectBacklinkSummary, collectReferringDomains } = await import("./dataforseo/backlinks.server");
-      const summary = await collectBacklinkSummary(client, tenantId, target, { runId, key: "dfs-backlink-baseline" });
-      const domains = await collectReferringDomains(client, tenantId, target, { runId, key: "dfs-backlink-baseline" });
+      const { collectBacklinkEvidence } = await import("./dataforseo/backlink-evidence.server");
+      const evidence = await collectBacklinkEvidence(client, tenantId, target, {
+        runId,
+        key: "dfs-backlink-baseline",
+      });
       return {
         ok: true,
         output: {
           target,
-          summarySnapshot: summary.snapshotId,
-          referringDomainRows: domains.rows,
-          costUsd: summary.costUsd + domains.costUsd,
+          costUsd: evidence.costUsd,
+          snapshots: evidence.normalized["snapshots"],
+          missingFactors: evidence.missingFactors,
+          healthSufficient: evidence.health.sufficient,
         },
       };
     }

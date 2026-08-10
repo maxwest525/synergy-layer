@@ -109,7 +109,8 @@ export async function deriveCompetitorsFromSerp(
   domainsSeen: number;
   competitors: number;
   surfaces: number;
-  skippedBelowThreshold: number;
+  belowSignificanceThreshold: number;
+  retainedAsEvidence: number;
 }> {
   const own = normaliseDomain(ownDomain);
   const cutoff = new Date(Date.now() - COMPETITOR_CONFIG.lookbackDays * 86_400_000)
@@ -169,15 +170,18 @@ export async function deriveCompetitorsFromSerp(
   let surfaces = 0;
   let skipped = 0;
 
+  // Every observed ranking domain is kept as evidence. The threshold decides
+  // whether a domain is competitively significant, never whether it exists:
+  // publishers, directories and platforms still compete for organic space.
   for (const entry of aggregates.values()) {
-    if (entry.keywords.size < COMPETITOR_CONFIG.minKeywordAppearances) {
-      skipped += 1;
-      continue;
-    }
+    const meetsThreshold = entry.keywords.size >= COMPETITOR_CONFIG.minKeywordAppearances;
+    if (!meetsThreshold) skipped += 1;
 
     const domainClass = classify(entry.domain);
-    if (domainClass === "competitor") competitors += 1;
-    else surfaces += 1;
+    if (meetsThreshold) {
+      if (domainClass === "competitor") competitors += 1;
+      else surfaces += 1;
+    }
 
     const averagePosition =
       entry.positions.reduce((total, value) => total + value, 0) / entry.positions.length;
@@ -197,6 +201,8 @@ export async function deriveCompetitorsFromSerp(
           avg_position: Number(averagePosition.toFixed(2)),
           sample_urls: [...entry.urls].slice(0, 5),
           lookback_days: COMPETITOR_CONFIG.lookbackDays,
+          meets_significance_threshold: meetsThreshold,
+          significance_threshold_keywords: COMPETITOR_CONFIG.minKeywordAppearances,
           derived_from: "observed_serp_results",
           estimated: false,
         } as never,
@@ -210,6 +216,7 @@ export async function deriveCompetitorsFromSerp(
     domainsSeen: aggregates.size,
     competitors,
     surfaces,
-    skippedBelowThreshold: skipped,
+    belowSignificanceThreshold: skipped,
+    retainedAsEvidence: aggregates.size,
   };
 }

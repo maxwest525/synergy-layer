@@ -2,6 +2,7 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 
 import { DetailRow, GlassCard, PageHeader, StatePill, formatWhen, toneForState } from "@/components/os/primitives";
+import { DataForSeoPanel } from "@/components/os/dataforseo-panel";
 import { McpPanel } from "@/components/os/mcp-panel";
 import { SearchConsolePanel } from "@/components/os/search-console-panel";
 
@@ -92,6 +93,7 @@ function CapabilityDetailPage() {
 
       {capability.key === "search.console" ? <SearchConsolePanel /> : null}
       {capability.key === "aoos.mcp" ? <McpPanel /> : null}
+      {capability.key.startsWith("cap.dataforseo") ? <DataForSeoPanel /> : null}
 
 
 
