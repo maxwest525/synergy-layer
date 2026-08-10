@@ -327,6 +327,8 @@ export async function buildCompetitorProfiles(
         outranks_owned: profile.outranksOwned,
         owned_outranks: profile.ownedOutranks,
         owned_absent_while_present: profile.ownedAbsentWhilePresent,
+        owned_absent_serps: ownedAbsentSerps.slice(0, 60),
+        owned_present_in_serps: ownedPresentInSerps,
         serp_features: profile.serpFeatures,
         top_urls: profile.topUrls,
         significance_score: profile.significanceScore,
