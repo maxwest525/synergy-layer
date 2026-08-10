@@ -1,7 +1,8 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 
 import {
+  EmptyState,
   GlassCard,
   MetricTile,
   PageHeader,
@@ -47,6 +48,24 @@ function CommandCenterPage() {
   const failing = data.capabilities.filter((capability) => capability.health === "failing");
   const notLive = data.capabilities.filter((capability) => capability.integration_state !== "real");
   const failedRuns = data.runs.filter((run) => run.state === "failed").length;
+  const evidence = data.evidence;
+  const usedShare = evidence.ceilingUsd > 0 ? (evidence.spentUsd / evidence.ceilingUsd) * 100 : 0;
+
+  if (!data.ready) {
+    return (
+      <div className="space-y-8">
+        <PageHeader
+          eyebrow="System state"
+          title="Command Center"
+          description="System state is readable by signed-in operators only."
+        />
+        <EmptyState
+          title="No operator session"
+          description="Sign in to read live counts, capability health, provider spend, and evidence freshness. Nothing is shown until the server can scope the read to you."
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -62,8 +81,63 @@ function CommandCenterPage() {
         ))}
       </div>
 
+      <GlassCard glow className="p-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-sm font-semibold text-foreground">Evidence and spend</h2>
+          <StatePill
+            label={`${usedShare.toFixed(2)}% of ceiling used`}
+            tone={usedShare >= 75 ? "warning" : "success"}
+          />
+        </div>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <MetricTile
+            label="Provider spend"
+            value={`$${evidence.spentUsd.toFixed(4)}`}
+            hint={`Ceiling $${evidence.ceilingUsd.toFixed(2)} this month`}
+          />
+          <MetricTile
+            label="Provider requests"
+            value={evidence.providerRequests}
+            hint="Cost attributed ledger entries"
+          />
+          <MetricTile
+            label="DataForSEO snapshots"
+            value={evidence.dataforseoSnapshots}
+            hint={`Last ${formatWhen(evidence.lastDataforseoAt)}`}
+          />
+          <MetricTile
+            label="Search Console snapshots"
+            value={evidence.searchConsoleSnapshots}
+            hint={`Last ${formatWhen(evidence.lastSearchConsoleAt)}`}
+          />
+        </div>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <MetricTile
+            label="Keyword candidates"
+            value={evidence.pendingKeywordCandidates}
+            hint="Awaiting operator approval"
+          />
+          <MetricTile label="Tracked keywords" value={evidence.trackedKeywords} hint="Approved and active" />
+          <MetricTile
+            label="Competitor candidates"
+            value={evidence.competitorCandidates}
+            hint="Derived from observed SERPs"
+          />
+          <MetricTile label="Tracked competitors" value={evidence.trackedCompetitors} hint="Approved and active" />
+        </div>
+        {data.pendingApprovals > 0 ? (
+          <p className="mt-4 text-sm text-muted-foreground">
+            {data.pendingApprovals} decisions are waiting on you.{" "}
+            <Link to="/" className="text-primary underline-offset-4 hover:underline">
+              Open the Inbox
+            </Link>
+            .
+          </p>
+        ) : null}
+      </GlassCard>
+
       <div className="grid gap-4 lg:grid-cols-2">
-        <GlassCard glow className="p-5">
+        <GlassCard className="p-5">
           <h2 className="text-sm font-semibold text-foreground">Integration truth</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             {notLive.length} of {data.capabilities.length} capabilities are not live yet. Nothing is
@@ -93,6 +167,35 @@ function CommandCenterPage() {
             <MetricTile label="Failed runs" value={failedRuns} hint="Last 50 workflow runs" />
             <MetricTile label="Failing capabilities" value={failing.length} hint="Health check state" />
           </div>
+
+          <GlassCard className="p-5">
+            <h2 className="text-sm font-semibold text-foreground">Recent runs</h2>
+            {data.runs.length === 0 ? (
+              <p className="mt-3 text-sm text-muted-foreground">No workflow runs recorded yet.</p>
+            ) : (
+              <ul className="mt-3 space-y-2">
+                {data.runs.slice(0, 8).map((run) => (
+                  <li
+                    key={run.id}
+                    className="flex flex-wrap items-center justify-between gap-2 border-b border-border/50 pb-2 text-sm last:border-b-0 last:pb-0"
+                  >
+                    <span className="truncate text-foreground">{run.workflows?.name ?? run.workflows?.key ?? "Workflow"}</span>
+                    <span className="flex items-center gap-3">
+                      <StatePill label={run.state} tone={toneForState(run.state)} />
+                      <span className="text-xs text-muted-foreground">{run.trigger_source}</span>
+                      <span className="text-xs text-muted-foreground">{formatWhen(run.created_at)}</span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <Link
+              to="/workflows"
+              className="mt-3 inline-block text-sm text-primary underline-offset-4 hover:underline"
+            >
+              Open the workflow registry
+            </Link>
+          </GlassCard>
 
           <GlassCard className="p-5">
             <h2 className="text-sm font-semibold text-foreground">Recent activity</h2>

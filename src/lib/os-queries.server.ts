@@ -240,6 +240,23 @@ export async function fetchSchedule(id: string) {
   return { schedule, dependencies };
 }
 
+export type CapabilitySummary = {
+  key: string;
+  name: string;
+  integration_state: string;
+  health: string;
+};
+
+export type RunSummary = {
+  id: string;
+  state: string;
+  trigger_source: string;
+  created_at: string;
+  duration_ms: number | null;
+  error: string | null;
+  workflows: { key: string; name: string } | null;
+};
+
 export async function fetchOverview() {
   const { db, tenantId, ready } = await scope();
 
@@ -254,7 +271,29 @@ export async function fetchOverview() {
     inbox_items: 0,
   };
 
-  if (!ready) return { counts, capabilities: [], runs: [], activity: [] };
+  const empty = {
+    ready: false,
+    counts,
+    capabilities: [] as CapabilitySummary[],
+    runs: [] as RunSummary[],
+    activity: [] as Awaited<ReturnType<typeof fetchActivity>>,
+    evidence: {
+      spentUsd: 0,
+      ceilingUsd: 0,
+      providerRequests: 0,
+      dataforseoSnapshots: 0,
+      searchConsoleSnapshots: 0,
+      lastDataforseoAt: null as string | null,
+      lastSearchConsoleAt: null as string | null,
+      pendingKeywordCandidates: 0,
+      trackedKeywords: 0,
+      competitorCandidates: 0,
+      trackedCompetitors: 0,
+    },
+    pendingApprovals: 0,
+  };
+
+  if (!ready) return empty;
 
   const head = { count: "exact" as const, head: true };
   const [assets, capabilityCount, entries, agents, workflows, recommendations, schedules, inbox] =
@@ -278,15 +317,68 @@ export async function fetchOverview() {
   counts["schedules"] = schedules.count ?? 0;
   counts["inbox_items"] = inbox.count ?? 0;
 
-  const capabilities = rows(await db.from("capabilities").select("key, name, integration_state, health"));
+  const capabilities = rows(
+    await db.from("capabilities").select("key, name, integration_state, health"),
+  ) as CapabilitySummary[];
   const runs = rows(
     await db
       .from("workflow_runs")
-      .select("state")
+      .select("id, state, trigger_source, created_at, duration_ms, error, workflows(key, name)")
       .eq("tenant_id", tenantId!)
       .order("created_at", { ascending: false })
       .limit(50),
-  );
+  ) as RunSummary[];
 
-  return { counts, capabilities, runs, activity: await fetchActivity(20) };
+  // Evidence and spend the operator paid for. Everything here is read straight
+  // from the ledger and snapshot tables; nothing is estimated.
+  const period = `${new Date().toISOString().slice(0, 7)}-01`;
+  const [budget, requests, dfsSnapshots, gscSnapshots, pendingKeywords, tracked, competitors, trackedComps, approvals] =
+    await Promise.all([
+      db
+        .from("dataforseo_budgets")
+        .select("ceiling_usd, spent_usd")
+        .eq("tenant_id", tenantId!)
+        .eq("period_month", period)
+        .maybeSingle(),
+      db.from("dataforseo_requests").select("id", head).eq("tenant_id", tenantId!),
+      db
+        .from("dataforseo_snapshots")
+        .select("id, collected_at", { count: "exact" })
+        .eq("tenant_id", tenantId!)
+        .order("collected_at", { ascending: false })
+        .limit(1),
+      db
+        .from("search_console_snapshots")
+        .select("id, collected_at", { count: "exact" })
+        .eq("tenant_id", tenantId!)
+        .order("collected_at", { ascending: false })
+        .limit(1),
+      db.from("keyword_candidates").select("id", head).eq("tenant_id", tenantId!).eq("review_state", "pending"),
+      db.from("tracked_keywords").select("id", head).eq("tenant_id", tenantId!).eq("active", true),
+      db.from("competitor_candidates").select("id", head).eq("tenant_id", tenantId!),
+      db.from("tracked_competitors").select("id", head).eq("tenant_id", tenantId!).eq("active", true),
+      db.from("inbox_items").select("id", head).eq("tenant_id", tenantId!).eq("lane", "pending_approval"),
+    ]);
+
+  return {
+    ready: true,
+    counts,
+    capabilities,
+    runs,
+    activity: await fetchActivity(20),
+    evidence: {
+      spentUsd: Number(budget.data?.spent_usd ?? 0),
+      ceilingUsd: Number(budget.data?.ceiling_usd ?? 0),
+      providerRequests: requests.count ?? 0,
+      dataforseoSnapshots: dfsSnapshots.count ?? 0,
+      searchConsoleSnapshots: gscSnapshots.count ?? 0,
+      lastDataforseoAt: dfsSnapshots.data?.[0]?.collected_at ?? null,
+      lastSearchConsoleAt: gscSnapshots.data?.[0]?.collected_at ?? null,
+      pendingKeywordCandidates: pendingKeywords.count ?? 0,
+      trackedKeywords: tracked.count ?? 0,
+      competitorCandidates: competitors.count ?? 0,
+      trackedCompetitors: trackedComps.count ?? 0,
+    },
+    pendingApprovals: approvals.count ?? 0,
+  };
 }
