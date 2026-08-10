@@ -391,6 +391,7 @@ export type Database = {
           created_at: string
           discovered_at: string
           domain: string
+          domain_class: string
           id: string
           metrics: Json
           review_state: string
@@ -405,6 +406,7 @@ export type Database = {
           created_at?: string
           discovered_at?: string
           domain: string
+          domain_class?: string
           id?: string
           metrics?: Json
           review_state?: string
@@ -419,6 +421,7 @@ export type Database = {
           created_at?: string
           discovered_at?: string
           domain?: string
+          domain_class?: string
           id?: string
           metrics?: Json
           review_state?: string
@@ -803,6 +806,69 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "inbox_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      keyword_candidates: {
+        Row: {
+          created_at: string
+          id: string
+          keyword: string
+          language_code: string
+          location_code: number
+          metrics: Json
+          review_state: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          seed: string | null
+          snapshot_id: string | null
+          source: string
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          keyword: string
+          language_code?: string
+          location_code?: number
+          metrics?: Json
+          review_state?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          seed?: string | null
+          snapshot_id?: string | null
+          source: string
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          keyword?: string
+          language_code?: string
+          location_code?: number
+          metrics?: Json
+          review_state?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          seed?: string | null
+          snapshot_id?: string | null
+          source?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "keyword_candidates_snapshot_id_fkey"
+            columns: ["snapshot_id"]
+            isOneToOne: false
+            referencedRelation: "dataforseo_snapshots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "keyword_candidates_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -1604,6 +1670,63 @@ export type Database = {
           },
           {
             foreignKeyName: "tracked_competitors_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tracked_keywords: {
+        Row: {
+          active: boolean
+          approved_at: string
+          approved_by: string | null
+          candidate_id: string | null
+          created_at: string
+          id: string
+          keyword: string
+          label: string | null
+          language_code: string
+          location_code: number
+          tenant_id: string
+        }
+        Insert: {
+          active?: boolean
+          approved_at?: string
+          approved_by?: string | null
+          candidate_id?: string | null
+          created_at?: string
+          id?: string
+          keyword: string
+          label?: string | null
+          language_code?: string
+          location_code?: number
+          tenant_id: string
+        }
+        Update: {
+          active?: boolean
+          approved_at?: string
+          approved_by?: string | null
+          candidate_id?: string | null
+          created_at?: string
+          id?: string
+          keyword?: string
+          label?: string | null
+          language_code?: string
+          location_code?: number
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tracked_keywords_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "keyword_candidates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tracked_keywords_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
