@@ -51,6 +51,18 @@ function readKeywordInfo(item: Record<string, unknown>): {
   };
 }
 
+/**
+ * Operator-approved seed concepts, stored on the tenant. These outrank every
+ * derived source because a human naming the service and the market is the
+ * strongest evidence AOOS can have about what the business actually sells.
+ */
+export async function readTenantSeeds(client: Client, tenantId: string): Promise<string[]> {
+  const { data } = await client.from("tenants").select("metadata").eq("id", tenantId).maybeSingle();
+  const seeds = (data?.metadata as { keyword_seeds?: unknown } | null)?.keyword_seeds;
+  if (!Array.isArray(seeds)) return [];
+  return seeds.map((seed) => String(seed).trim().toLowerCase()).filter(Boolean);
+}
+
 /** Real Search Console queries are the only non-fabricated seed source. */
 async function readSeedQueries(client: Client, tenantId: string): Promise<string[]> {
   const { data } = await client
