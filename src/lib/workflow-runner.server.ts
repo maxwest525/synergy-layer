@@ -215,7 +215,8 @@ async function executeNode(client: Client, node: WorkflowNode, runId: string): P
     const specialised =
       (await runSearchConsoleNode(client, node.ref ?? "")) ??
       (await runResearchNode(client, node.ref ?? "")) ??
-      (await runSeoValidationNode(client, node.ref ?? "", runId));
+      (await runSeoValidationNode(client, node.ref ?? "", runId)) ??
+      (await runDataForSeoNode(client, node.ref ?? "", runId));
     if (specialised && !specialised.ok) return specialised;
 
 
@@ -332,6 +333,53 @@ async function runSeoValidationNode(
     const { runSeoValidation } = await import("./seo-validation.server");
     const result = await runSeoValidation(client, runId);
     return { ok: true, output: { ...result } };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : String(error) };
+  }
+}
+
+/**
+ * DataForSEO observation nodes. Ingestion only: they write immutable evidence
+ * and never produce recommendations. A no-change pass is a successful step.
+ */
+async function runDataForSeoNode(
+  client: Client,
+  ref: string,
+  runId: string,
+): Promise<NodeOutcome | null> {
+  if (!ref.startsWith("cap.dataforseo_")) return null;
+
+  const { requireTenantId } = await import("./tenant.server");
+  const { getSelectedProperty } = await import("./search-console.server");
+
+  try {
+    const tenantId = await requireTenantId(client);
+    const property = await getSelectedProperty(client);
+    const target = (property ?? "").replace(/^sc-domain:/, "").replace(/^https?:\/\//, "").replace(/\/$/, "");
+    if (!target) return { ok: false, error: "No owned property is selected to observe." };
+
+    if (ref === "cap.dataforseo_labs") {
+      const { discoverCompetitors } = await import("./dataforseo/labs.server");
+      const result = await discoverCompetitors(client, tenantId, target, { runId, key: "dfs-competitor-discovery" });
+      return { ok: true, output: { target, ...result } };
+    }
+
+    if (ref === "cap.dataforseo_backlinks") {
+      const { collectBacklinkSummary, collectReferringDomains } = await import("./dataforseo/backlinks.server");
+      const summary = await collectBacklinkSummary(client, tenantId, target, { runId, key: "dfs-backlink-baseline" });
+      const domains = await collectReferringDomains(client, tenantId, target, { runId, key: "dfs-backlink-baseline" });
+      return {
+        ok: true,
+        output: {
+          target,
+          summarySnapshot: summary.snapshotId,
+          referringDomainRows: domains.rows,
+          costUsd: summary.costUsd + domains.costUsd,
+        },
+      };
+    }
+
+    return { ok: true, output: { target, note: "SERP observation is queued by its own schedule." } };
   } catch (error) {
     return { ok: false, error: error instanceof Error ? error.message : String(error) };
   }
