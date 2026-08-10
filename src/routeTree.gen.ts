@@ -15,6 +15,7 @@ import { Route as AssetsRouteImport } from './routes/assets'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as CapabilitiesRouteImport } from './routes/capabilities'
 import { Route as CommandCenterRouteImport } from './routes/command-center'
+import { Route as KeywordsRouteImport } from './routes/keywords'
 import { Route as KnowledgeRouteImport } from './routes/knowledge'
 import { Route as McpRouteImport } from './routes/mcp'
 import { Route as RecommendationsRouteImport } from './routes/recommendations'
@@ -70,6 +71,11 @@ const CapabilitiesRoute = CapabilitiesRouteImport.update({
 const CommandCenterRoute = CommandCenterRouteImport.update({
   id: '/command-center',
   path: '/command-center',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const KeywordsRoute = KeywordsRouteImport.update({
+  id: '/keywords',
+  path: '/keywords',
   getParentRoute: () => rootRouteImport,
 } as any)
 const KnowledgeRoute = KnowledgeRouteImport.update({
@@ -215,6 +221,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRouteWithChildren
   '/capabilities': typeof CapabilitiesRouteWithChildren
   '/command-center': typeof CommandCenterRoute
+  '/keywords': typeof KeywordsRoute
   '/knowledge': typeof KnowledgeRouteWithChildren
   '/mcp': typeof McpRoute
   '/recommendations': typeof RecommendationsRouteWithChildren
@@ -246,6 +253,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRouteWithChildren
   '/command-center': typeof CommandCenterRoute
+  '/keywords': typeof KeywordsRoute
   '/mcp': typeof McpRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -277,6 +285,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRouteWithChildren
   '/capabilities': typeof CapabilitiesRouteWithChildren
   '/command-center': typeof CommandCenterRoute
+  '/keywords': typeof KeywordsRoute
   '/knowledge': typeof KnowledgeRouteWithChildren
   '/mcp': typeof McpRoute
   '/recommendations': typeof RecommendationsRouteWithChildren
@@ -313,6 +322,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/capabilities'
     | '/command-center'
+    | '/keywords'
     | '/knowledge'
     | '/mcp'
     | '/recommendations'
@@ -344,6 +354,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/command-center'
+    | '/keywords'
     | '/mcp'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
@@ -374,6 +385,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/capabilities'
     | '/command-center'
+    | '/keywords'
     | '/knowledge'
     | '/mcp'
     | '/recommendations'
@@ -409,6 +421,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRouteWithChildren
   CapabilitiesRoute: typeof CapabilitiesRouteWithChildren
   CommandCenterRoute: typeof CommandCenterRoute
+  KeywordsRoute: typeof KeywordsRoute
   KnowledgeRoute: typeof KnowledgeRouteWithChildren
   McpRoute: typeof McpRoute
   RecommendationsRoute: typeof RecommendationsRouteWithChildren
@@ -464,6 +477,13 @@ declare module '@tanstack/react-router' {
       path: '/command-center'
       fullPath: '/command-center'
       preLoaderRoute: typeof CommandCenterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/keywords': {
+      id: '/keywords'
+      path: '/keywords'
+      fullPath: '/keywords'
+      preLoaderRoute: typeof KeywordsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/knowledge': {
@@ -764,6 +784,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRouteWithChildren,
   CapabilitiesRoute: CapabilitiesRouteWithChildren,
   CommandCenterRoute: CommandCenterRoute,
+  KeywordsRoute: KeywordsRoute,
   KnowledgeRoute: KnowledgeRouteWithChildren,
   McpRoute: McpRoute,
   RecommendationsRoute: RecommendationsRouteWithChildren,
