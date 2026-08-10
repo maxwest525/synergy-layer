@@ -28,6 +28,8 @@ export const getRouter = () => {
     defaultPreloadStaleTime: 0,
     defaultPendingMs: 150,
     defaultPendingMinMs: 200,
+    defaultPendingComponent: RoutePending,
+
   });
 
   return router;
