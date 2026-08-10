@@ -61,11 +61,11 @@ export function PageHeader({
 }
 
 const toneStyles: Record<string, string> = {
-  neutral: "border-border text-muted-foreground",
-  positive: "border-success/40 text-success",
-  warning: "border-warning/40 text-warning",
-  danger: "border-destructive/45 text-destructive",
-  primary: "border-primary/45 text-primary",
+  neutral: "text-muted-foreground",
+  positive: "text-success",
+  warning: "text-warning",
+  danger: "text-destructive",
+  primary: "text-primary",
 };
 
 export type Tone = keyof typeof toneStyles;
@@ -74,7 +74,7 @@ export function StatePill({ label, tone = "neutral" }: { label: string; tone?: T
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium capitalize",
+        "inline-flex items-center gap-1.5 text-xs font-medium capitalize",
         toneStyles[tone],
       )}
     >
@@ -83,6 +83,7 @@ export function StatePill({ label, tone = "neutral" }: { label: string; tone?: T
     </span>
   );
 }
+
 
 export function toneForState(state: string | null | undefined): Tone {
   switch (state) {
