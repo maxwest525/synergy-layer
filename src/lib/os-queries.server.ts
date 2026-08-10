@@ -240,6 +240,23 @@ export async function fetchSchedule(id: string) {
   return { schedule, dependencies };
 }
 
+export type CapabilitySummary = {
+  key: string;
+  name: string;
+  integration_state: string;
+  health: string;
+};
+
+export type RunSummary = {
+  id: string;
+  state: string;
+  trigger_source: string;
+  created_at: string;
+  duration_ms: number | null;
+  error: string | null;
+  workflows: { key: string; name: string } | null;
+};
+
 export async function fetchOverview() {
   const { db, tenantId, ready } = await scope();
 
@@ -257,8 +274,8 @@ export async function fetchOverview() {
   const empty = {
     ready: false,
     counts,
-    capabilities: [] as ReturnType<typeof rows>,
-    runs: [] as ReturnType<typeof rows>,
+    capabilities: [] as CapabilitySummary[],
+    runs: [] as RunSummary[],
     activity: [] as Awaited<ReturnType<typeof fetchActivity>>,
     evidence: {
       spentUsd: 0,
