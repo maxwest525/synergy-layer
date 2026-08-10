@@ -1,11 +1,11 @@
 # DataForSEO — AOOS Documentation Digest
 
 - **Provider:** DataForSEO (api.dataforseo.com, API v3)
-- **Digest version:** 1.0.0
-- **Retrieval date:** 2026-08-10
+- **Digest version:** 1.1.0
+- **Retrieval date:** 2026-08-10 (v1.0.0), 2026-08-10 Backlinks pricing correction (v1.1.0)
 - **API version:** v3 (`https://api.dataforseo.com/v3/...`)
-- **Capability (planned):** `cap.dataforseo` — NOT implemented yet
-- **Status:** discovery complete, implementation deferred pending review
+- **Capabilities:** `cap.dataforseo_labs`, `cap.dataforseo_serp`, `cap.dataforseo_backlinks` — implemented
+- **Status:** implemented; Backlinks is pay-as-you-go, no subscription gate
 
 ## 1. Authoritative sources reviewed
 
@@ -26,6 +26,7 @@
 | Pricing hub | https://dataforseo.com/pricing |
 | Backlinks pricing | https://dataforseo.com/pricing/backlinks/backlinks |
 | Backlinks pricing explained | https://dataforseo.com/help-center/backlinks-api-pricing-explained |
+| Backlinks pay-as-you-go pricing update (2026-07-01) | https://dataforseo.com/blog/dataforseo-updates |
 | Labs Google pricing | https://dataforseo.com/pricing/dataforseo-labs/dataforseo-google-api |
 | SERP cost explained | https://dataforseo.com/help-center/serp-api-cost-explained |
 | OnPage pricing | https://dataforseo.com/pricing/on-page/onpage-api |
@@ -73,7 +74,7 @@ Callbacks: `postback_url` requires `postback_data` (`regular` | `advanced` | `ht
 
 | Family | Pricing |
 |---|---|
-| Backlinks | $0.02 per request (pricing page also lists $0.024) + $0.00003 per row ($0.06 per 1,000 rows on the pricing page). Max 1,000 rows per request. **Requires a $100/mo access subscription** — the money stays as account balance. |
+| Backlinks | **Pay-as-you-go, no monthly commitment.** ~$0.024 per request + ~$0.000036 per row. Max 1,000 rows per request. The $100/mo Backlinks access commitment was **removed by DataForSEO on 2026-07-01**; there is no subscription to activate and no separate paid-access approval gate. Treat unavailability as real only when the live API says so (`40200` payment required, or an access error from the account itself). |
 | Labs — most endpoints | $0.012 per task + $0.00012 per item (~$132 / 1M items) |
 | Labs — Historical Rank | $0.12 per task + $0.0012 per item |
 | Labs — Historical SERPs | $0.00012 per SERP item |
@@ -155,3 +156,14 @@ reviews: directly relevant to a moving company's local visibility.
 Content Analysis brand mentions, Business Data reviews/local pack, Domain Analytics technologies,
 `historical_serps`, `bulk_traffic_estimation`, SERP AI Overview capture, OnPage Lighthouse sampling,
 Merchant/App Data. All are recorded here so a future implementation agent does not rediscover them.
+
+## 12. Revision history
+
+| Version | Date | Change | Sources |
+|---|---|---|---|
+| 1.0.0 | 2026-08-10 | Initial documentation-first digest. Recorded Backlinks as requiring a $100/mo access commitment. | Pricing hub, Backlinks pricing, Backlinks pricing explained |
+| 1.1.0 | 2026-08-10 | **Correction.** The $100/mo Backlinks access commitment was removed by DataForSEO on **2026-07-01**; Backlinks moved to pay-as-you-go at ~$0.024 per request + ~$0.000036 per row. The v1.0.0 statement was stale. Removed the subscription gate from the cost model, the risk register, and capability metadata: Backlinks is in scope for first ingestion under the existing $300/mo AOOS ceiling with no separate paid-access approval. Access is now treated as unavailable only when the live API reports it. | https://dataforseo.com/pricing/backlinks/backlinks, https://dataforseo.com/help-center/backlinks-api-pricing-explained, https://dataforseo.com/blog/dataforseo-updates |
+
+Correction protocol: pricing and access claims in this digest are dated. Any claim that gates AOOS
+behaviour (a spend ceiling, an approval, a capability being withheld) must cite a current source and
+be re-verified before it is allowed to block a run.

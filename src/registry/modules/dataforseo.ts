@@ -79,7 +79,7 @@ export const definition: ModuleDefinition = {
       kind: "api",
       category: "Authority",
       description:
-        "Backlink profile and referring-domain baseline for owned properties. Competitor link-gap analysis is deliberately not enabled yet.",
+        "Backlink profile and referring-domain baseline for owned properties. Pay-as-you-go since 2026-07-01: no monthly commitment and no separate paid-access approval. Competitor link-gap analysis is deliberately not enabled yet.",
       integrationState: "real",
       authKind: "basic",
       operations: [
@@ -90,7 +90,12 @@ export const definition: ModuleDefinition = {
       config: {
         mutating: false,
         scope: "owned_properties_only",
-        accessSubscriptionUsdPerMonth: 100,
+        // Corrected 2026-08-10 (digest v1.1.0): DataForSEO removed the $100/mo
+        // Backlinks access commitment on 2026-07-01. Nothing here may gate a run
+        // on a subscription; only the live API can report access as unavailable.
+        pricingModel: "pay_as_you_go",
+        costPerRequestUsd: 0.024,
+        costPerRowUsd: 0.000036,
         monthlyBudgetUsd: 300,
       },
     },
