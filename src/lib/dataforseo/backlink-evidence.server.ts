@@ -130,11 +130,10 @@ export async function collectBacklinkEvidence(
   });
   const ranks = domainRows.map((row) => num(row["rank"])).filter((value): value is number => value !== null);
 
-  const dofollow = num(summaryRow["referring_links_types"] ? null : null);
-  const followCounts = linkRows.reduce(
+  const followCounts = linkRows.reduce<{ dofollow: number; nofollow: number }>(
     (acc, row) => {
-      if (row["dofollow"] === true) acc.dofollow += 1;
-      else if (row["dofollow"] === false) acc.nofollow += 1;
+      if (row["dofollow"] === true) return { ...acc, dofollow: acc.dofollow + 1 };
+      if (row["dofollow"] === false) return { ...acc, nofollow: acc.nofollow + 1 };
       return acc;
     },
     { dofollow: 0, nofollow: 0 },
