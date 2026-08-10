@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database } from "@/integrations/supabase/types";
-import { dataforseoPost, fingerprint, persistSnapshot } from "./transport.server";
+import { dataforseoGet, dataforseoPost, fingerprint, persistSnapshot } from "./transport.server";
 
 type Client = SupabaseClient<Database>;
 
@@ -22,8 +22,12 @@ function today(): string {
 }
 
 export function postbackUrl(origin: string): string {
-  return `${origin}/api/public/hooks/dataforseo-postback?id=$id&tag=$tag`;
+  // The provider sends no custom headers, so the callback is authenticated by
+  // the publishable key in the query string plus the unguessable task tag.
+  const key = process.env["SUPABASE_PUBLISHABLE_KEY"] ?? "";
+  return `${origin}/api/public/hooks/dataforseo-postback?id=$id&tag=$tag&key=${encodeURIComponent(key)}`;
 }
+
 
 /**
  * Scheduled observation path: queue the SERP task and let the provider call
@@ -173,6 +177,57 @@ export async function ingestSerpPostback(
 
   return { stored };
 }
+
+/**
+ * Provider-supported fallback when a postback is delayed or missed. Reuses the
+ * task IDs already paid for at task_post time: tasks_ready lists what the
+ * provider has finished, task_get retrieves it at no incremental charge. Never
+ * posts a new task, and skips anything already persisted.
+ */
+export async function collectReadySerpTasks(
+  client: Client,
+  tenantId: string,
+): Promise<{ ready: number; collected: number; stillQueued: number; costUsd: number }> {
+  const { data: queuedTasks } = await client
+    .from("dataforseo_serp_tasks")
+    .select("id, provider_task_id, keyword, request_fingerprint, request_params")
+    .eq("tenant_id", tenantId)
+    .eq("state", "queued");
+
+  const outstanding = new Map((queuedTasks ?? []).map((task) => [task.provider_task_id, task]));
+  if (outstanding.size === 0) return { ready: 0, collected: 0, stillQueued: 0, costUsd: 0 };
+
+  const readyEnvelope = await dataforseoGet("/serp/google/organic/tasks_ready");
+  const readyIds = new Set<string>();
+  for (const task of readyEnvelope.tasks ?? []) {
+    for (const row of (task.result ?? []) as { id?: string }[]) {
+      if (row?.id) readyIds.add(row.id);
+    }
+  }
+
+  const collectable = [...outstanding.keys()].filter((id) => readyIds.has(id));
+  let collected = 0;
+  let costUsd = 0;
+
+  for (const providerTaskId of collectable) {
+    const envelope = await dataforseoGet(
+      `/serp/google/organic/task_get/regular/${providerTaskId}`,
+    );
+    costUsd += Number(envelope.cost ?? 0);
+    const stored = await ingestSerpPostback(client, tenantId, {
+      tasks: (envelope.tasks ?? []) as never,
+    });
+    collected += stored.stored;
+  }
+
+  return {
+    ready: collectable.length,
+    collected,
+    stillQueued: outstanding.size - collected,
+    costUsd,
+  };
+}
+
 
 /** Operator-initiated real-time inspection only. Never used by a schedule. */
 export async function liveSerp(
