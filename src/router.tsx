@@ -1,6 +1,8 @@
 import { QueryClient } from "@tanstack/react-query";
 import { createRouter } from "@tanstack/react-router";
+import { RoutePending } from "./components/os/route-pending";
 import { routeTree } from "./routeTree.gen";
+
 
 export const getRouter = () => {
   // Workspace reads are operator scoped and change slowly. A short stale window
