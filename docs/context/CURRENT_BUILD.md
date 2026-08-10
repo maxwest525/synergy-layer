@@ -47,7 +47,7 @@ operator surfaces for Keywords and Competitors.
 | Firecrawl / Web Research (Perplexity) | real | Page inspection and cited research. |
 | Competitor intelligence | real | Built on 39 completed SERP snapshots, 71 observed domains. |
 | MCP read tools | real | Guarded by `src/lib/mcp/guard.ts` (auth + audit). |
-| SerpAPI Ads Transparency | pending | Documentation-first pass in progress. |
+| SerpAPI Ads Transparency | pending | Digest + plan complete (`docs/integrations/serpapi/`). Blocked on credential and plan-tier approval. |
 | GitHub (`cap.github`) | not connected | Blocks `wf.publish`. Do not connect without approval. |
 
 Spend controls: DataForSEO ceiling **$300/month**, ledgered per request, alerts at
@@ -66,7 +66,7 @@ Spend controls: DataForSEO ceiling **$300/month**, ledgered per request, alerts 
 1. **Competitor shortlist** (6 domains: United Van Lines, Allied and others) awaits
    human review in `/competitors`. The agent must not approve or reject these.
 2. GitHub credential / `cap.github` authorization for `wf.publish`.
-3. SerpAPI credential for the paid-media capability (not yet requested).
+3. SerpAPI credential plus plan-tier choice for `cap.serpapi_ads_transparency`. Digest and plan are done; no integration code is written until the key exists and a live auth probe passes.
 
 ## 6. Active workflows
 
