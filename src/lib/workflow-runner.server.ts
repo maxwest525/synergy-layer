@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { requireTenantId } from "./tenant.server";
 
 import type { Database } from "@/integrations/supabase/types";
 import { fileInboxItem, logActivity } from "./os.server";
@@ -78,6 +79,7 @@ export async function runWorkflow(
   const { data: run, error: runError } = await client
     .from("workflow_runs")
     .insert({
+      tenant_id: await requireTenantId(client),
       workflow_id: workflowId,
       state: "running",
       trigger_source: triggerSource,
@@ -95,6 +97,7 @@ export async function runWorkflow(
     const { data: step, error: stepError } = await client
       .from("workflow_steps")
       .insert({
+        tenant_id: await requireTenantId(client),
         run_id: run.id,
         node_key: node.key,
         node_kind: node.kind,

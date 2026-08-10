@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 
+import { TenantSwitcher } from "./tenant-switcher";
 import { cn } from "@/lib/utils";
 
 const workspaces = [
@@ -45,6 +46,8 @@ export function Shell({ children }: { children: ReactNode }) {
             <span className="text-sm font-semibold tracking-tight text-foreground">AOOS</span>
             <span className="text-xs text-muted-foreground">Marketing OS</span>
           </Link>
+
+          <TenantSwitcher />
 
           <ul className="flex flex-1 flex-col gap-0.5">
             {workspaces.map((workspace) => {

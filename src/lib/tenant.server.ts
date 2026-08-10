@@ -1,0 +1,129 @@
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { getRequest } from "@tanstack/react-start/server";
+
+import type { Database } from "@/integrations/supabase/types";
+
+type Client = SupabaseClient<Database>;
+
+export type TenantSummary = {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+};
+
+function publishableFetch(key: string): typeof fetch {
+  return (input, init) => {
+    const headers = new Headers(init?.headers);
+    if (key.startsWith("sb_") && headers.get("Authorization") === `Bearer ${key}`) {
+      headers.delete("Authorization");
+    }
+    headers.set("apikey", key);
+    return fetch(input, { ...init, headers });
+  };
+}
+
+/**
+ * Request-scoped Supabase client. When the caller carries a bearer token the
+ * client acts as that operator, so tenant isolation is enforced by RLS rather
+ * than by trusting a tenant id from the browser. Without a token the client is
+ * anonymous and tenant tables simply return nothing.
+ */
+export function createRequestClient(): { db: Client; authenticated: boolean } {
+  const url = process.env["SUPABASE_URL"]!;
+  const key = process.env["SUPABASE_PUBLISHABLE_KEY"]!;
+
+  let token: string | null = null;
+  try {
+    const header = getRequest()?.headers.get("authorization") ?? null;
+    if (header?.startsWith("Bearer ")) {
+      const candidate = header.slice(7);
+      if (candidate.split(".").length === 3) token = candidate;
+    }
+  } catch {
+    token = null;
+  }
+
+  const db = createClient<Database>(url, key, {
+    auth: { storage: undefined, persistSession: false, autoRefreshToken: false },
+    global: {
+      fetch: publishableFetch(key),
+      ...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}),
+    },
+  });
+
+  return { db, authenticated: token !== null };
+}
+
+/** Tenants the current caller may work in. Empty for anonymous requests. */
+export async function listTenants(db: Client): Promise<TenantSummary[]> {
+  const { data, error } = await db
+    .from("tenants")
+    .select("id, slug, name, description")
+    .eq("status", "active")
+    .order("name");
+  if (error) return [];
+  return data ?? [];
+}
+
+const resolvedCache = new WeakMap<Client, string>();
+
+/**
+ * Resolves the tenant a server operation belongs to. An explicit id is honoured
+ * only when the caller can actually see that tenant; otherwise the operator's
+ * saved active tenant wins, then their first membership, then the sole tenant
+ * when the installation still has exactly one.
+ */
+export async function resolveTenantId(db: Client, explicit?: string | null): Promise<string | null> {
+  if (explicit) {
+    const { data } = await db.from("tenants").select("id").eq("id", explicit).maybeSingle();
+    if (data?.id) return data.id;
+  }
+
+  const cached = resolvedCache.get(db);
+  if (cached) return cached;
+
+  const { data: profile } = await db
+    .from("profiles")
+    .select("active_tenant_id")
+    .not("active_tenant_id", "is", null)
+    .limit(1)
+    .maybeSingle();
+  if (profile?.active_tenant_id) {
+    resolvedCache.set(db, profile.active_tenant_id);
+    return profile.active_tenant_id;
+  }
+
+  const { data: membership } = await db.from("tenant_members").select("tenant_id").limit(1).maybeSingle();
+  if (membership?.tenant_id) {
+    resolvedCache.set(db, membership.tenant_id);
+    return membership.tenant_id;
+  }
+
+  const { data: tenants } = await db.from("tenants").select("id").limit(2);
+  if (tenants && tenants.length === 1) {
+    resolvedCache.set(db, tenants[0]!.id);
+    return tenants[0]!.id;
+  }
+
+  return null;
+}
+
+/** Same as resolveTenantId but refuses to continue when no tenant applies. */
+export async function requireTenantId(db: Client, explicit?: string | null): Promise<string> {
+  const tenantId = await resolveTenantId(db, explicit);
+  if (!tenantId) {
+    throw new Error("No tenant is selected for this operation. Choose a client workspace first.");
+  }
+  return tenantId;
+}
+
+/** Remembers which client workspace an operator is working in. */
+export async function setActiveTenant(db: Client, userId: string, tenantId: string): Promise<void> {
+  const { data, error: lookupError } = await db.from("tenants").select("id").eq("id", tenantId).maybeSingle();
+  if (lookupError) throw new Error(lookupError.message);
+  if (!data) throw new Error("That client workspace is not available to this account.");
+
+  const { error } = await db.from("profiles").update({ active_tenant_id: tenantId }).eq("id", userId);
+  if (error) throw new Error(error.message);
+}

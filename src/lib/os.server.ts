@@ -38,6 +38,7 @@ type ActivityInput = {
   subjectId?: string | null;
   summary: string;
   payload?: Record<string, unknown>;
+  tenantId?: string | null;
 };
 
 /** Single entry point for the append-only activity log. */
@@ -45,7 +46,9 @@ export async function logActivity(
   client: SupabaseClient<Database>,
   event: ActivityInput,
 ): Promise<void> {
+  const { resolveTenantId } = await import("./tenant.server");
   const { error } = await client.from("activity_events").insert({
+    tenant_id: event.tenantId ?? (await resolveTenantId(client)),
     actor_kind: event.actorKind ?? "system",
     actor_id: event.actorId ?? null,
     verb: event.verb,
@@ -66,6 +69,7 @@ type InboxInput = {
   subjectKind?: string | null;
   subjectId?: string | null;
   actions?: unknown[];
+  tenantId?: string | null;
 };
 
 /** Every module files work into the unified Inbox through this helper. */
@@ -73,7 +77,9 @@ export async function fileInboxItem(
   client: SupabaseClient<Database>,
   item: InboxInput,
 ): Promise<void> {
+  const { requireTenantId } = await import("./tenant.server");
   const { error } = await client.from("inbox_items").insert({
+    tenant_id: await requireTenantId(client, item.tenantId),
     lane: item.lane,
     source_module: item.sourceModule,
     title: item.title,
@@ -85,6 +91,7 @@ export async function fileInboxItem(
   });
   if (error) throw new Error(error.message);
 }
+
 
 /** List variant of unwrap: a missing rowset is an empty list, never null. */
 export function rows<T>(result: { data: T[] | null; error: { message: string } | null }): T[] {

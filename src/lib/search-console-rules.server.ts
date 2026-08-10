@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { requireTenantId } from "./tenant.server";
 
 import type { Database } from "@/integrations/supabase/types";
 import { fileInboxItem, logActivity } from "./os.server";
@@ -202,6 +203,7 @@ export async function evaluateSnapshots(
       const { data: inserted, error: insertError } = await client
         .from("recommendations")
         .insert({
+          tenant_id: await requireTenantId(client),
           title: observation.title,
           description: observation.description,
           source_module: "search-console",
@@ -238,6 +240,7 @@ export async function evaluateSnapshots(
 
     const { error: observationError } = await client.from("search_console_observations").upsert(
       {
+        tenant_id: await requireTenantId(client),
         snapshot_id: anchorSnapshot,
         recommendation_id: recommendationId,
         rule: observation.rule,
