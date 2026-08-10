@@ -386,6 +386,365 @@ export type Database = {
           },
         ]
       }
+      competitor_candidates: {
+        Row: {
+          created_at: string
+          discovered_at: string
+          domain: string
+          id: string
+          metrics: Json
+          review_state: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          seed_domain: string
+          snapshot_id: string | null
+          source: string
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          discovered_at?: string
+          domain: string
+          id?: string
+          metrics?: Json
+          review_state?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          seed_domain: string
+          snapshot_id?: string | null
+          source: string
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          discovered_at?: string
+          domain?: string
+          id?: string
+          metrics?: Json
+          review_state?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          seed_domain?: string
+          snapshot_id?: string | null
+          source?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "competitor_candidates_snapshot_id_fkey"
+            columns: ["snapshot_id"]
+            isOneToOne: false
+            referencedRelation: "dataforseo_snapshots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "competitor_candidates_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dataforseo_budgets: {
+        Row: {
+          alerts_fired: Json
+          ceiling_usd: number
+          created_at: string
+          hard_stop: boolean
+          id: string
+          period_month: string
+          spent_usd: number
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          alerts_fired?: Json
+          ceiling_usd?: number
+          created_at?: string
+          hard_stop?: boolean
+          id?: string
+          period_month: string
+          spent_usd?: number
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          alerts_fired?: Json
+          ceiling_usd?: number
+          created_at?: string
+          hard_stop?: boolean
+          id?: string
+          period_month?: string
+          spent_usd?: number
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dataforseo_budgets_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dataforseo_requests: {
+        Row: {
+          capability_key: string
+          cost_usd: number
+          created_at: string
+          duration_ms: number | null
+          endpoint: string
+          error: string | null
+          family: string
+          http_status: number | null
+          id: string
+          mode: string
+          outcome: string
+          provider_status_code: number | null
+          provider_status_message: string | null
+          rate_limit: Json
+          request_fingerprint: string
+          returned_row_count: number
+          task_count: number
+          tenant_id: string
+          workflow_key: string | null
+          workflow_run_id: string | null
+        }
+        Insert: {
+          capability_key: string
+          cost_usd?: number
+          created_at?: string
+          duration_ms?: number | null
+          endpoint: string
+          error?: string | null
+          family: string
+          http_status?: number | null
+          id?: string
+          mode?: string
+          outcome?: string
+          provider_status_code?: number | null
+          provider_status_message?: string | null
+          rate_limit?: Json
+          request_fingerprint: string
+          returned_row_count?: number
+          task_count?: number
+          tenant_id: string
+          workflow_key?: string | null
+          workflow_run_id?: string | null
+        }
+        Update: {
+          capability_key?: string
+          cost_usd?: number
+          created_at?: string
+          duration_ms?: number | null
+          endpoint?: string
+          error?: string | null
+          family?: string
+          http_status?: number | null
+          id?: string
+          mode?: string
+          outcome?: string
+          provider_status_code?: number | null
+          provider_status_message?: string | null
+          rate_limit?: Json
+          request_fingerprint?: string
+          returned_row_count?: number
+          task_count?: number
+          tenant_id?: string
+          workflow_key?: string | null
+          workflow_run_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dataforseo_requests_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dataforseo_requests_workflow_run_id_fkey"
+            columns: ["workflow_run_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dataforseo_serp_tasks: {
+        Row: {
+          created_at: string
+          endpoint: string
+          error: string | null
+          id: string
+          keyword: string
+          language_code: string | null
+          location_code: number | null
+          posted_at: string
+          priority: string
+          provider_task_id: string
+          received_at: string | null
+          request_fingerprint: string
+          request_params: Json
+          snapshot_id: string | null
+          state: string
+          tag: string
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          endpoint: string
+          error?: string | null
+          id?: string
+          keyword: string
+          language_code?: string | null
+          location_code?: number | null
+          posted_at?: string
+          priority?: string
+          provider_task_id: string
+          received_at?: string | null
+          request_fingerprint: string
+          request_params?: Json
+          snapshot_id?: string | null
+          state?: string
+          tag: string
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          endpoint?: string
+          error?: string | null
+          id?: string
+          keyword?: string
+          language_code?: string | null
+          location_code?: number | null
+          posted_at?: string
+          priority?: string
+          provider_task_id?: string
+          received_at?: string | null
+          request_fingerprint?: string
+          request_params?: Json
+          snapshot_id?: string | null
+          state?: string
+          tag?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dataforseo_serp_tasks_snapshot_id_fkey"
+            columns: ["snapshot_id"]
+            isOneToOne: false
+            referencedRelation: "dataforseo_snapshots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dataforseo_serp_tasks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dataforseo_snapshots: {
+        Row: {
+          api_version: string
+          capability_key: string
+          checksum: string
+          collected_at: string
+          created_at: string
+          endpoint: string
+          family: string
+          id: string
+          kind: string
+          mode: string
+          payload: Json
+          possibly_truncated: boolean
+          provider_cost_usd: number
+          provider_meta: Json
+          provider_status_code: number | null
+          provider_task_id: string | null
+          reporting_date: string
+          request_fingerprint: string
+          request_id: string | null
+          request_params: Json
+          returned_row_count: number
+          target: string
+          tenant_id: string
+          totals: Json
+        }
+        Insert: {
+          api_version?: string
+          capability_key: string
+          checksum: string
+          collected_at?: string
+          created_at?: string
+          endpoint: string
+          family: string
+          id?: string
+          kind: string
+          mode?: string
+          payload?: Json
+          possibly_truncated?: boolean
+          provider_cost_usd?: number
+          provider_meta?: Json
+          provider_status_code?: number | null
+          provider_task_id?: string | null
+          reporting_date: string
+          request_fingerprint: string
+          request_id?: string | null
+          request_params?: Json
+          returned_row_count?: number
+          target: string
+          tenant_id: string
+          totals?: Json
+        }
+        Update: {
+          api_version?: string
+          capability_key?: string
+          checksum?: string
+          collected_at?: string
+          created_at?: string
+          endpoint?: string
+          family?: string
+          id?: string
+          kind?: string
+          mode?: string
+          payload?: Json
+          possibly_truncated?: boolean
+          provider_cost_usd?: number
+          provider_meta?: Json
+          provider_status_code?: number | null
+          provider_task_id?: string | null
+          reporting_date?: string
+          request_fingerprint?: string
+          request_id?: string | null
+          request_params?: Json
+          returned_row_count?: number
+          target?: string
+          tenant_id?: string
+          totals?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dataforseo_snapshots_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "dataforseo_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dataforseo_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inbox_items: {
         Row: {
           actions: Json
@@ -1197,6 +1556,60 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      tracked_competitors: {
+        Row: {
+          active: boolean
+          approved_at: string
+          approved_by: string | null
+          candidate_id: string | null
+          created_at: string
+          domain: string
+          id: string
+          label: string | null
+          notes: string | null
+          tenant_id: string
+        }
+        Insert: {
+          active?: boolean
+          approved_at?: string
+          approved_by?: string | null
+          candidate_id?: string | null
+          created_at?: string
+          domain: string
+          id?: string
+          label?: string | null
+          notes?: string | null
+          tenant_id: string
+        }
+        Update: {
+          active?: boolean
+          approved_at?: string
+          approved_by?: string | null
+          candidate_id?: string | null
+          created_at?: string
+          domain?: string
+          id?: string
+          label?: string | null
+          notes?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tracked_competitors_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "competitor_candidates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tracked_competitors_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
