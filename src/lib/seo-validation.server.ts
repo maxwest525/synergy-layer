@@ -574,7 +574,11 @@ export async function runSeoValidation(
     .filter((value) => value.startsWith("http"));
 
   const currentSnapshots = (currentRows ?? []) as SnapshotRow[];
-  const findings = evaluateSeoRules(currentSnapshots, priorSnapshots, researchUrls);
+  const competitorEvidence = await loadCompetitorEvidence(client, property);
+  const findings = [
+    ...evaluateSeoRules(currentSnapshots, priorSnapshots, researchUrls),
+    ...evaluateCompetitorRules(competitorEvidence),
+  ];
   const anchorSnapshot = currentSnapshots[0]?.id ?? null;
 
   if (findings.length === 0 || !anchorSnapshot) {
