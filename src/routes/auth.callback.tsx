@@ -16,7 +16,6 @@ function safeNext(value: unknown): string | undefined {
 }
 
 export const Route = createFileRoute("/auth/callback")({
-  ssr: false,
   validateSearch: (search: Record<string, unknown>) => {
     const next = safeNext(search['next']);
     return next ? { next } : {};
