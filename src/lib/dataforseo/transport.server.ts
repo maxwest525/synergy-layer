@@ -74,9 +74,6 @@ function credentials(): string {
   if (login && password) {
     return Buffer.from(`${login}:${password}`).toString("base64");
   }
-  // DataForSEO's API access page also shows a ready-made base64 Basic token.
-  const token = process.env["DATAFORSEO_BASIC_TOKEN"];
-  if (token) return token.replace(/^Basic\s+/i, "").trim();
   throw new DataForSeoFailure(
     "missing_credentials",
     "DataForSEO credentials are not available to the server.",
