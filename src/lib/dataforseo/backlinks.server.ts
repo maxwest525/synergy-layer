@@ -180,7 +180,8 @@ export async function collectAnchors(
     {
       target,
       limit: BACKLINKS_CONFIG.anchorLimit,
-      order_by: ["backlinks,desc"],
+      // No order_by: the anchors endpoint rejects it and already returns rows
+      // ordered by backlink count.
       backlinks_status_type: "live",
       rank_scale: BACKLINKS_CONFIG.rankScale,
     },
@@ -208,7 +209,6 @@ export async function collectTopLinkedPages(
     {
       target,
       limit: BACKLINKS_CONFIG.pageLimit,
-      order_by: ["backlinks,desc"],
       backlinks_status_type: "live",
     },
     (result) => ({
