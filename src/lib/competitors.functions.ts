@@ -2,7 +2,30 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import type { PageObservation } from "./dataforseo/competitor-pages.server";
+
+
+/** Client-safe mirror of the stored page observation shape. */
+type PageEvidenceView = {
+  domain: string;
+  keyword: string;
+  url: string;
+  position: number;
+  fetched: boolean;
+  pageType: string;
+  intentMatch: string;
+  wordCount: number;
+  headingCounts: { h1: number; h2: number; h3: number };
+  headingSamples: string[];
+  topicalCoverage: string[];
+  schemaTypes: string[];
+  internalLinks: number;
+  externalLinks: number;
+  hasPhoneCta: boolean;
+  hasQuoteForm: boolean;
+  hasReviewSignals: boolean;
+  hasFaqBlock: boolean;
+  observedAt: string;
+};
 
 /**
  * The human review gate for competitor intelligence. The shortlist is evidence,
@@ -32,7 +55,7 @@ export const listCompetitorShortlist = createServerFn({ method: "POST" })
     const rows = (data ?? []).map((row) => {
       const metrics = (row.metrics ?? {}) as Record<string, unknown>;
       const pass = (metrics["intelligence_pass"] ?? null) as Record<string, unknown> | null;
-      const page = (metrics["page_evidence"] ?? null) as PageObservation | null;
+      const page = (metrics["page_evidence"] ?? null) as PageEvidenceView | null;
       return {
         id: row.id,
         domain: row.domain,
