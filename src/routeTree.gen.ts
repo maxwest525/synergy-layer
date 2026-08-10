@@ -39,6 +39,7 @@ import { Route as WorkflowsIndexRouteImport } from './routes/workflows.index'
 import { Route as WorkflowsIdRouteImport } from './routes/workflows.$id'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
+import { Route as ApiPublicHooksDataforseoPostbackRouteImport } from './routes/api/public/hooks/dataforseo-postback'
 import { Route as ApiPublicHooksSchedulerTickRouteImport } from './routes/api/public/hooks/scheduler-tick'
 
 const IndexRoute = IndexRouteImport.update({
@@ -194,6 +195,12 @@ const Char91DotmcpChar93InvokeToolToolRoute =
     path: '/.mcp/invoke-tool/$tool',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksDataforseoPostbackRoute =
+  ApiPublicHooksDataforseoPostbackRouteImport.update({
+    id: '/api/public/hooks/dataforseo-postback',
+    path: '/api/public/hooks/dataforseo-postback',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksSchedulerTickRoute =
   ApiPublicHooksSchedulerTickRouteImport.update({
     id: '/api/public/hooks/scheduler-tick',
@@ -232,6 +239,7 @@ export interface FileRoutesByFullPath {
   '/workflows/': typeof WorkflowsIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/api/public/hooks/dataforseo-postback': typeof ApiPublicHooksDataforseoPostbackRoute
   '/api/public/hooks/scheduler-tick': typeof ApiPublicHooksSchedulerTickRoute
 }
 export interface FileRoutesByTo {
@@ -258,6 +266,7 @@ export interface FileRoutesByTo {
   '/workflows': typeof WorkflowsIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/api/public/hooks/dataforseo-postback': typeof ApiPublicHooksDataforseoPostbackRoute
   '/api/public/hooks/scheduler-tick': typeof ApiPublicHooksSchedulerTickRoute
 }
 export interface FileRoutesById {
@@ -292,6 +301,7 @@ export interface FileRoutesById {
   '/workflows/': typeof WorkflowsIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/api/public/hooks/dataforseo-postback': typeof ApiPublicHooksDataforseoPostbackRoute
   '/api/public/hooks/scheduler-tick': typeof ApiPublicHooksSchedulerTickRoute
 }
 export interface FileRouteTypes {
@@ -327,6 +337,7 @@ export interface FileRouteTypes {
     | '/workflows/'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
+    | '/api/public/hooks/dataforseo-postback'
     | '/api/public/hooks/scheduler-tick'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -353,6 +364,7 @@ export interface FileRouteTypes {
     | '/workflows'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
+    | '/api/public/hooks/dataforseo-postback'
     | '/api/public/hooks/scheduler-tick'
   id:
     | '__root__'
@@ -386,6 +398,7 @@ export interface FileRouteTypes {
     | '/workflows/'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
+    | '/api/public/hooks/dataforseo-postback'
     | '/api/public/hooks/scheduler-tick'
   fileRoutesById: FileRoutesById
 }
@@ -405,6 +418,7 @@ export interface RootRouteChildren {
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
+  ApiPublicHooksDataforseoPostbackRoute: typeof ApiPublicHooksDataforseoPostbackRoute
   ApiPublicHooksSchedulerTickRoute: typeof ApiPublicHooksSchedulerTickRoute
 }
 
@@ -620,6 +634,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Char91DotmcpChar93InvokeToolToolRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/dataforseo-postback': {
+      id: '/api/public/hooks/dataforseo-postback'
+      path: '/api/public/hooks/dataforseo-postback'
+      fullPath: '/api/public/hooks/dataforseo-postback'
+      preLoaderRoute: typeof ApiPublicHooksDataforseoPostbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/scheduler-tick': {
       id: '/api/public/hooks/scheduler-tick'
       path: '/api/public/hooks/scheduler-tick'
@@ -753,6 +774,7 @@ const rootRouteChildren: RootRouteChildren = {
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
+  ApiPublicHooksDataforseoPostbackRoute: ApiPublicHooksDataforseoPostbackRoute,
   ApiPublicHooksSchedulerTickRoute: ApiPublicHooksSchedulerTickRoute,
 }
 export const routeTree = rootRouteImport
