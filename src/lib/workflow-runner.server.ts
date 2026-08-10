@@ -456,5 +456,4 @@ async function runSerpCompetitorNode(client: Client, ref: string): Promise<NodeO
   } catch (error) {
     return { ok: false, error: error instanceof Error ? error.message : String(error) };
   }
-  }
 }
