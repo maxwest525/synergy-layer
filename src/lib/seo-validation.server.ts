@@ -401,6 +401,84 @@ export function evaluateSeoRules(
   return findings;
 }
 
+/**
+ * Competitor rules. They only become eligible once real SERP-derived competitor
+ * evidence exists; with no evidence they return nothing, exactly like a
+ * Search Console rule with no snapshot.
+ */
+export function evaluateCompetitorRules(evidence: CompetitorEvidence | null): Finding[] {
+  const findings: Finding[] = [];
+  if (!evidence || evidence.serpsAnalysed === 0) return findings;
+
+  const outrank = SEO_VALIDATION_THRESHOLDS.competitorOutranks;
+  for (const profile of evidence.profiles) {
+    if (profile.domainClass !== "competitor") continue;
+    if (!profile.shortlisted) continue;
+    if (profile.outranksOwned.length < outrank.minQueries) continue;
+    if (profile.confidence < outrank.minConfidence) continue;
+
+    const queries = profile.outranksOwned.map((row) => row.keyword);
+    const headToHead = profile.outranksOwned.filter((row) => row.ownedPosition !== null).length;
+
+    findings.push({
+      rule: "competitor_outranks_owned",
+      targetKind: "query",
+      target: profile.domain,
+      title: `${profile.domain} outranks the owned property on ${profile.outranksOwned.length} approved queries`,
+      description: `Across ${evidence.serpsAnalysed} observed SERPs for operator-approved keywords, ${profile.domain} appears in ${profile.serpsPresent} (${Math.round(profile.serpShare * 100)}%) at a median organic position of ${profile.medianPosition}. It ranks ahead of ${evidence.ownDomain} on ${profile.outranksOwned.length} of those queries (${headToHead} head to head, ${profile.outranksOwned.length - headToHead} where the owned property does not rank in the top 20). ${evidence.ownDomain} ranks ahead on ${profile.ownedOutranks.length}. Candidate confidence ${profile.confidence}: classification is heuristic, so this is a ranking rival on observed queries, not a confirmed business competitor.`,
+      current: null,
+      previous: null,
+      change: {
+        competitorDomain: profile.domain,
+        serpsPresent: profile.serpsPresent,
+        serpShare: profile.serpShare,
+        medianPosition: profile.medianPosition,
+        queriesCompetitorWins: queries.slice(0, 25),
+        queriesOwnedWins: profile.ownedOutranks.map((row) => row.keyword).slice(0, 25),
+        pageEvidence: profile.pageEvidence,
+      },
+      snapshotId: null,
+      priorSnapshotId: null,
+      businessImpact: profile.serpShare >= 0.5 ? "high" : "medium",
+      confidence: profile.confidence,
+      suggestedAction: {
+        kind: "review_competitor_evidence",
+        domain: profile.domain,
+        note: "Review the observed page evidence for this domain and decide whether to track it as a competitor. No content action is proposed here.",
+      },
+    });
+  }
+
+  const absence = SEO_VALIDATION_THRESHOLDS.ownedSerpAbsence;
+  const absentShare = evidence.ownedAbsentSerps.length / evidence.serpsAnalysed;
+  if (
+    evidence.ownedAbsentSerps.length >= absence.minAbsentSerps &&
+    absentShare >= absence.minShareAbsent
+  ) {
+    findings.push({
+      rule: "owned_absent_from_approved_serps",
+      targetKind: "property",
+      target: evidence.ownDomain,
+      title: `Owned property is absent from the top 20 on ${evidence.ownedAbsentSerps.length} approved queries`,
+      description: `${evidence.ownDomain} does not appear in the observed top 20 organic results for ${evidence.ownedAbsentSerps.length} of ${evidence.serpsAnalysed} operator-approved keywords (${Math.round(absentShare * 100)}%). This is observed SERP absence, not a Search Console decline: those queries may never have produced impressions.`,
+      current: null,
+      previous: null,
+      change: { absentQueries: evidence.ownedAbsentSerps.slice(0, 40), absentShare: Number(absentShare.toFixed(3)) },
+      snapshotId: null,
+      priorSnapshotId: null,
+      businessImpact: absentShare >= 0.6 ? "high" : "medium",
+      confidence: 0.8,
+      suggestedAction: {
+        kind: "review_coverage_gap",
+        note: "Decide which absent queries deserve a page before anything is produced.",
+      },
+    });
+  }
+
+  return findings;
+}
+
+
 export type SeoValidationResult = {
   property: string | null;
   assetId: string | null;
