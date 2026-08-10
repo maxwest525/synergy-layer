@@ -215,7 +215,7 @@ export async function collectBacklinkEvidence(
     };
     switch (key) {
       case "referring_domain_count":
-        return { key, score: referringDomainCount > 0 ? null : null, provenance };
+        return { key, score: null, provenance: summaryRow["referring_domains"] === undefined ? null : provenance };
       case "anchor_naturalness":
         return { key, score: null, provenance: anchorRows.length > 0 ? provenance : null };
       case "toxic_link_ratio":
