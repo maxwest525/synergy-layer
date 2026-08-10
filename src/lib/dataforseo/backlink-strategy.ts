@@ -118,7 +118,7 @@ export type HealthScore =
  * their weight redistributed across the scored ones rather than counting as zero.
  */
 export function scoreBacklinkHealth(factors: HealthFactorScore[]): HealthScore {
-  const weights = new Map(HEALTH_FACTORS.map((factor) => [factor.key, factor.weight]));
+  const weights = new Map<string, number>(HEALTH_FACTORS.map((factor) => [factor.key, factor.weight]));
   const scored = factors.filter((factor) => factor.score !== null && weights.has(factor.key));
   const totalFactors = SUFFICIENCY.totalFactors;
 
