@@ -82,6 +82,35 @@ function credentials(): string {
   );
 }
 
+/**
+ * Retrieval-only GET against the provider (tasks_ready / task_get). These paths
+ * carry no incremental charge: the task was already paid for at task_post time.
+ * No ledger row is written for a zero-cost read, but any non-zero provider cost
+ * is surfaced to the caller so it can be attributed.
+ */
+export async function dataforseoGet(path: string): Promise<DataForSeoEnvelope> {
+  const auth = credentials();
+  await acquire();
+  try {
+    const response = await fetch(`${BASE}${path}`, {
+      headers: { Authorization: `Basic ${auth}` },
+    });
+    if (response.status === 401) {
+      throw new DataForSeoFailure("authorization", "DataForSEO rejected the credentials.");
+    }
+    if (!response.ok) {
+      throw new DataForSeoFailure(
+        "api_error",
+        `DataForSEO retrieval failed [${response.status}]: ${await response.text()}`,
+      );
+    }
+    return (await response.json()) as DataForSeoEnvelope;
+  } finally {
+    release();
+  }
+}
+
+
 
 /** Stable, order-insensitive fingerprint: endpoint + normalized params + reporting date. */
 export function fingerprint(endpoint: string, params: unknown, reportingDate: string): string {
