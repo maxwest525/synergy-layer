@@ -24,7 +24,7 @@ function today(): string {
 
 type LabsResult = { snapshotId: string; created: boolean; rows: number; costUsd: number };
 
-async function labsCall(
+export async function labsCall(
   client: Client,
   tenantId: string,
   endpoint: string,
