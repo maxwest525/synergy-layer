@@ -22,8 +22,12 @@ function today(): string {
 }
 
 export function postbackUrl(origin: string): string {
-  return `${origin}/api/public/hooks/dataforseo-postback?id=$id&tag=$tag`;
+  // The provider sends no custom headers, so the callback is authenticated by
+  // the publishable key in the query string plus the unguessable task tag.
+  const key = process.env["SUPABASE_PUBLISHABLE_KEY"] ?? "";
+  return `${origin}/api/public/hooks/dataforseo-postback?id=$id&tag=$tag&key=${encodeURIComponent(key)}`;
 }
+
 
 /**
  * Scheduled observation path: queue the SERP task and let the provider call
