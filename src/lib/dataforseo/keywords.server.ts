@@ -139,6 +139,22 @@ export async function suggestKeywords(
   const candidates = new Map<string, CandidateRow>();
   let costUsd = 0;
 
+  // Seeds first: without real evidence of what the business sells, provider
+  // associations cannot be judged and must not be filed.
+  const querySeeds = await readSeedQueries(client, tenantId);
+  const siteSeeds = querySeeds.length > 0 ? [] : await readSeedsFromSite(domain);
+  const seeds = [...querySeeds, ...siteSeeds];
+
+  if (seeds.length === 0) {
+    throw new Error(
+      "No real seed evidence for this domain: Search Console has no stored queries and the site could not be read. Approve at least one seed keyword manually before keyword discovery can run: AOOS will not invent one.",
+    );
+  }
+
+  const relevantTokens = new Set(seeds.flatMap(phraseTokens));
+  const isRelevant = (keyword: string): boolean =>
+    phraseTokens(keyword).some((token) => relevantTokens.has(token));
+
   const forSite = await labsCall(
     client,
     tenantId,
@@ -156,9 +172,14 @@ export async function suggestKeywords(
   );
   costUsd += forSite.costUsd;
 
+  let discardedIrrelevant = 0;
   for (const item of await snapshotRows(client, forSite.snapshotId)) {
     const keyword = String(item["keyword"] ?? "").trim().toLowerCase();
     if (!keyword) continue;
+    if (!isRelevant(keyword)) {
+      discardedIrrelevant += 1;
+      continue;
+    }
     const info = readKeywordInfo(item);
     candidates.set(keyword, {
       keyword,
@@ -171,8 +192,7 @@ export async function suggestKeywords(
     });
   }
 
-  const seeds = await readSeedQueries(client, tenantId);
-  for (const seed of seeds) {
+  for (const seed of seeds.slice(0, KEYWORD_CONFIG.maxSeeds)) {
     const suggestion = await labsCall(
       client,
       tenantId,
@@ -193,6 +213,10 @@ export async function suggestKeywords(
     for (const item of await snapshotRows(client, suggestion.snapshotId)) {
       const keyword = String(item["keyword"] ?? "").trim().toLowerCase();
       if (!keyword || candidates.has(keyword)) continue;
+      if (!isRelevant(keyword)) {
+        discardedIrrelevant += 1;
+        continue;
+      }
       const info = readKeywordInfo(item);
       candidates.set(keyword, {
         keyword,
