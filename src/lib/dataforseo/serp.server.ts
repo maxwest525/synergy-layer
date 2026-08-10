@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database } from "@/integrations/supabase/types";
-import { dataforseoPost, fingerprint, persistSnapshot } from "./transport.server";
+import { dataforseoGet, dataforseoPost, fingerprint, persistSnapshot } from "./transport.server";
 
 type Client = SupabaseClient<Database>;
 
