@@ -20,6 +20,9 @@ export const SEO_VALIDATION_THRESHOLDS = {
   queryOverlap: { minImpressionsPerPage: 25, minPages: 2, minPeriods: 2, minTotalImpressions: 50 },
   significantChange: { minPreviousImpressions: 100, minChangeRatio: 0.5 },
   researchTraction: { minImpressions: 20, minImpressionGrowth: 0.25 },
+  // Competitor evidence. These read observed SERP profiles, never estimates.
+  competitorOutranks: { minQueries: 3, minConfidence: 0.5 },
+  ownedSerpAbsence: { minAbsentSerps: 5, minShareAbsent: 0.25 },
 } as const;
 
 export type SeoRule =
@@ -30,7 +33,9 @@ export type SeoRule =
   | "zero_click_page"
   | "possible_query_overlap"
   | "significant_period_change"
-  | "research_page_traction";
+  | "research_page_traction"
+  | "competitor_outranks_owned"
+  | "owned_absent_from_approved_serps";
 
 export const SEO_RULES: SeoRule[] = [
   "declining_clicks",
@@ -41,7 +46,34 @@ export const SEO_RULES: SeoRule[] = [
   "possible_query_overlap",
   "significant_period_change",
   "research_page_traction",
+  "competitor_outranks_owned",
+  "owned_absent_from_approved_serps",
 ];
+
+/**
+ * Narrow extension of the evidence contract. Until now every rule consumed
+ * Search Console rows. Competitor rules consume the SERP-derived competitor
+ * profiles instead, in the same Finding shape, so the persistence, dedup, and
+ * approval path stay exactly as they are.
+ */
+export type CompetitorEvidence = {
+  ownDomain: string;
+  serpsAnalysed: number;
+  ownedAbsentSerps: string[];
+  profiles: {
+    domain: string;
+    domainClass: string;
+    serpsPresent: number;
+    serpShare: number;
+    medianPosition: number;
+    outranksOwned: { keyword: string; competitorPosition: number; ownedPosition: number | null }[];
+    ownedOutranks: { keyword: string; competitorPosition: number; ownedPosition: number }[];
+    confidence: number;
+    shortlisted: boolean;
+    pageEvidence: Record<string, unknown> | null;
+  }[];
+};
+
 
 type Metrics = { clicks: number; impressions: number; ctr: number; position: number };
 
