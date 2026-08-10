@@ -407,3 +407,48 @@ export async function getTrackedKeywords(client: Client, tenantId: string): Prom
   if (error) throw new Error(error.message);
   return (data ?? []).map((row) => row.keyword);
 }
+
+/**
+ * Keeps the approval Inbox item honest after an operator decision: it stays
+ * open while candidates remain pending, and resolves once the queue is clear.
+ */
+export async function reconcileKeywordInbox(
+  client: Client,
+  tenantId: string,
+): Promise<{ pending: number; inboxResolved: boolean }> {
+  const { data: pending } = await client
+    .from("keyword_candidates")
+    .select("id")
+    .eq("tenant_id", tenantId)
+    .eq("review_state", "pending");
+  const remaining = (pending ?? []).length;
+
+  const { data: items } = await client
+    .from("inbox_items")
+    .select("id")
+    .eq("tenant_id", tenantId)
+    .eq("source_module", "dataforseo")
+    .is("resolved_at", null)
+    .ilike("title", "%keyword candidates%");
+
+  const ids = (items ?? []).map((row) => row.id);
+  if (ids.length === 0) return { pending: remaining, inboxResolved: false };
+
+  if (remaining === 0) {
+    await client
+      .from("inbox_items")
+      .update({ lane: "completed", resolved_at: new Date().toISOString() })
+      .in("id", ids);
+    return { pending: 0, inboxResolved: true };
+  }
+
+  await client
+    .from("inbox_items")
+    .update({
+      title: `${remaining} keyword candidates need approval`,
+      summary: `${remaining} keyword candidates are still awaiting an operator decision. SERP observation runs only on approved keywords.`,
+    })
+    .in("id", ids);
+
+  return { pending: remaining, inboxResolved: false };
+}
