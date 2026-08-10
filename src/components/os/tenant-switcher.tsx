@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { Building2, Check, ChevronsUpDown } from "lucide-react";
 import { useState } from "react";
 
+import { useOperatorSession } from "@/hooks/use-operator-session";
 import { getTenantContext, switchTenant } from "@/lib/tenant.functions";
 import { cn } from "@/lib/utils";
 
@@ -16,15 +17,20 @@ export function TenantSwitcher() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
+  const session = useOperatorSession();
 
   const loadContext = useServerFn(getTenantContext);
   const switchFn = useServerFn(switchTenant);
 
+  // The server function requires a bearer token; asking for it while signed
+  // out throws "No authorization header provided" and blanks the shell.
   const { data, isLoading } = useQuery({
     queryKey: ["tenant-context"],
     queryFn: () => loadContext(),
+    enabled: session.ready && session.signedIn,
     retry: false,
   });
+
 
   const mutation = useMutation({
     mutationFn: (tenantId: string) => switchFn({ data: { tenantId } }),
