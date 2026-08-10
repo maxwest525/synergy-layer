@@ -138,6 +138,7 @@ export async function suggestKeywords(
   tenantId: string,
   domain: string,
   workflow?: { runId?: string | null; key?: string | null },
+  manualSeeds?: string[],
 ): Promise<{
   proposed: number;
   filed: number;
@@ -149,10 +150,14 @@ export async function suggestKeywords(
   let costUsd = 0;
 
   // Seeds first: without real evidence of what the business sells, provider
-  // associations cannot be judged and must not be filed.
-  const querySeeds = await readSeedQueries(client, tenantId);
-  const siteSeeds = querySeeds.length > 0 ? [] : await readSeedsFromSite(domain);
-  const seeds = [...querySeeds, ...siteSeeds];
+  // associations cannot be judged and must not be filed. Operator-supplied
+  // seeds outrank everything else, because a human naming the service and the
+  // market is better evidence than headline copy.
+  const operatorSeeds = (manualSeeds ?? []).map((seed) => seed.trim().toLowerCase()).filter(Boolean);
+  const querySeeds = operatorSeeds.length > 0 ? [] : await readSeedQueries(client, tenantId);
+  const siteSeeds =
+    operatorSeeds.length > 0 || querySeeds.length > 0 ? [] : await readSeedsFromSite(domain);
+  const seeds = [...operatorSeeds, ...querySeeds, ...siteSeeds];
 
   if (seeds.length === 0) {
     throw new Error(
