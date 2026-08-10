@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { requireTenantId } from "./tenant.server";
 
 import type { Database } from "@/integrations/supabase/types";
 import { fileInboxItem, logActivity } from "./os.server";
@@ -532,6 +533,7 @@ export async function runSeoValidation(
       const { data: inserted, error: insertError } = await client
         .from("recommendations")
         .insert({
+          tenant_id: await requireTenantId(client),
           title: finding.title,
           description: finding.description,
           source_module: "seo-validation",
@@ -578,6 +580,7 @@ export async function runSeoValidation(
 
     const { error: observationError } = await client.from("search_console_observations").upsert(
       {
+        tenant_id: await requireTenantId(client),
         snapshot_id: finding.snapshotId ?? anchorSnapshot,
         recommendation_id: recommendationId,
         rule: finding.rule,

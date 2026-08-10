@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { requireTenantId } from "./tenant.server";
 
 import type { Database } from "@/integrations/supabase/types";
 
@@ -168,6 +169,7 @@ export async function runWebResearch(client: Client): Promise<WebResearchResult>
     }
 
     const { error: insertError } = await client.from("knowledge_entries").insert({
+      tenant_id: await requireTenantId(client),
       collection_id: collection.id,
       title: document.title,
       body: document.body,

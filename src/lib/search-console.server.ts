@@ -1,5 +1,6 @@
 import { createHash } from "crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { requireTenantId } from "./tenant.server";
 
 import type { Database } from "@/integrations/supabase/types";
 import { logActivity } from "./os.server";
@@ -110,6 +111,7 @@ export async function syncProperties(client: Client): Promise<PropertyEntry[]> {
       .from("search_console_properties")
       .upsert(
         {
+          tenant_id: await requireTenantId(client),
           site_url: entry.siteUrl,
           permission_level: entry.permissionLevel,
           eligible: entry.eligible,
@@ -250,6 +252,7 @@ async function persistSnapshot(client: Client, input: SnapshotInput): Promise<st
   const { data, error } = await client
     .from("search_console_snapshots")
     .insert({
+      tenant_id: await requireTenantId(client),
       property: input.property,
       kind: input.kind,
       search_type: "web",
@@ -455,6 +458,7 @@ export async function collectDaily(client: Client, property: string): Promise<Co
     `/webmasters/v3/sites/${encodeURIComponent(property)}/sitemaps`,
   );
   const { error: sitemapError } = await client.from("search_console_snapshots").insert({
+    tenant_id: await requireTenantId(client),
     property,
     kind: "dimensional_rows",
     dimensions: ["sitemap"],
