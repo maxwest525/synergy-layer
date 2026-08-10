@@ -411,3 +411,48 @@ export async function readCompetitorProfiles(
     };
   });
 }
+
+/**
+ * Rebuilds the shortlisted profiles from stored candidate rows so a later node
+ * can inspect them without recomputing or re-observing anything.
+ */
+export async function readShortlistedProfiles(
+  client: Client,
+  tenantId: string,
+): Promise<CompetitorProfile[]> {
+  const { data, error } = await client
+    .from("competitor_candidates")
+    .select("domain, domain_class, metrics")
+    .eq("tenant_id", tenantId);
+  if (error) throw new Error(error.message);
+
+  const profiles: CompetitorProfile[] = [];
+  for (const row of data ?? []) {
+    const metrics = (row.metrics ?? {}) as Record<string, unknown>;
+    const pass = metrics["intelligence_pass"] as Record<string, unknown> | undefined;
+    if (!pass || !pass["shortlisted"]) continue;
+    profiles.push({
+      domain: row.domain,
+      domainClass: (row.domain_class as "competitor" | "surface") ?? "competitor",
+      keywordsObserved: Number(pass["serps_analysed"] ?? 0),
+      serpsPresent: Number(pass["serps_present"] ?? 0),
+      serpShare: Number(pass["serp_share"] ?? 0),
+      keywords: (pass["keywords"] ?? []) as string[],
+      bestPosition: Number(pass["best_position"] ?? 0),
+      averagePosition: Number(pass["average_position"] ?? 0),
+      medianPosition: Number(pass["median_position"] ?? 0),
+      outranksOwned: (pass["outranks_owned"] ?? []) as CompetitorProfile["outranksOwned"],
+      ownedOutranks: (pass["owned_outranks"] ?? []) as CompetitorProfile["ownedOutranks"],
+      ownedAbsentWhilePresent: (pass["owned_absent_while_present"] ?? []) as string[],
+      serpFeatures: (pass["serp_features"] ?? []) as string[],
+      topUrls: (pass["top_urls"] ?? []) as CompetitorProfile["topUrls"],
+      significanceScore: Number(pass["significance_score"] ?? 0),
+      confidence: Number(pass["confidence"] ?? 0),
+      confidenceBasis: (pass["confidence_basis"] ?? []) as string[],
+      classificationCertainty: "heuristic",
+      shortlisted: true,
+      shortlistReason: (pass["shortlist_reason"] as string) ?? null,
+    });
+  }
+  return profiles;
+}
