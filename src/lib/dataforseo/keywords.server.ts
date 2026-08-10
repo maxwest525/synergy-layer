@@ -75,6 +75,15 @@ async function readSeedQueries(client: Client, tenantId: string): Promise<string
   return [...seen];
 }
 
+async function snapshotRows(client: Client, snapshotId: string): Promise<Record<string, unknown>[]> {
+  const { data } = await client
+    .from("dataforseo_snapshots")
+    .select("payload")
+    .eq("id", snapshotId)
+    .single();
+  return ((data?.payload as { rows?: Record<string, unknown>[] } | null)?.rows ?? []);
+}
+
 const STOPWORDS = new Set([
   "the", "and", "for", "with", "your", "you", "our", "from", "that", "this", "are", "was",
   "will", "can", "get", "all", "any", "how", "why", "who", "what", "when", "into", "more",
