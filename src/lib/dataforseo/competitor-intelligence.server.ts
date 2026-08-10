@@ -363,6 +363,44 @@ export async function buildCompetitorProfiles(
     }
   }
 
+  const shortlisted = profiles.filter((profile) => profile.shortlisted);
+  if (shortlisted.length > 0) {
+    const { fileInboxItem, logActivity } = await import("../os.server");
+    const { data: openItem } = await client
+      .from("inbox_items")
+      .select("id")
+      .eq("tenant_id", tenantId)
+      .eq("source_module", "competitor-intelligence")
+      .is("resolved_at", null)
+      .maybeSingle();
+
+    if (!openItem) {
+      await fileInboxItem(client, {
+        tenantId,
+        lane: "pending_approval",
+        sourceModule: "competitor-intelligence",
+        title: `${shortlisted.length} competitors shortlisted for review`,
+        summary: `Profiled ${profiles.length} domains observed across ${serps.length} approved-keyword SERPs. ${shortlisted.length} business-competitor candidates cleared the significance threshold. None are tracked until you approve them.`,
+        priority: 2,
+        subjectKind: "competitor_candidate",
+        actions: [{ kind: "review", href: "/competitors" }],
+      });
+    }
+
+    await logActivity(client, {
+      tenantId,
+      verb: "competitor.intelligence.completed",
+      subjectKind: "capability",
+      summary: `Competitor intelligence profiled ${profiles.length} observed domains and shortlisted ${shortlisted.length} for review.`,
+      payload: {
+        serpsAnalysed: serps.length,
+        shortlist: shortlisted.map((profile) => profile.domain),
+        ownedAbsentSerps: ownedAbsentSerps.length,
+      },
+    });
+  }
+
+
   return {
     result: {
       ownDomain: own,
