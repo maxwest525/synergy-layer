@@ -97,13 +97,13 @@ export const definition: ModuleDefinition = {
   ],
   workflows: [
     {
-      key: "dfs-competitor-discovery",
-      name: "DataForSEO competitor discovery",
+      key: "dfs-keyword-discovery",
+      name: "DataForSEO keyword discovery",
       description:
-        "Discovers the organic competitor universe from the actual search landscape and files candidates for operator review. It never starts recurring tracking on its own.",
+        "Proposes a keyword set for the owned domain from provider associations and the property's own Search Console queries, then files it to the Inbox for approval. Nothing is observed until a human approves it.",
       triggerKind: "manual",
       graph: {
-        nodes: [{ key: "discover", kind: "capability", ref: "cap.dataforseo_labs" }],
+        nodes: [{ key: "suggest", kind: "capability", ref: "cap.dataforseo_labs" }],
         edges: [],
       },
     },
@@ -122,10 +122,21 @@ export const definition: ModuleDefinition = {
       key: "dfs-serp-observe",
       name: "DataForSEO SERP observation",
       description:
-        "Queues Standard SERP tasks for tracked queries and stores provider callbacks as immutable snapshots.",
+        "Queues Standard SERP tasks for the approved keyword set and stores provider callbacks as immutable snapshots. It fails cleanly when no keyword has been approved.",
       triggerKind: "schedule",
       graph: {
         nodes: [{ key: "queue", kind: "capability", ref: "cap.dataforseo_serp" }],
+        edges: [],
+      },
+    },
+    {
+      key: "dfs-competitor-derive",
+      name: "SERP competitor derivation",
+      description:
+        "Rebuilds competitor candidates from observed SERP results and classifies aggregators and social networks as surfaces. Costs nothing and never starts recurring tracking on its own.",
+      triggerKind: "manual",
+      graph: {
+        nodes: [{ key: "derive", kind: "capability", ref: "serp.competitors" }],
         edges: [],
       },
     },
