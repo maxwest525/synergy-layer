@@ -186,7 +186,7 @@ export async function collectBacklinkEvidence(
         rank: num(row["rank"]),
       })),
     },
-    followSplit: { ...followCounts, dofollowSummary: dofollow },
+    followSplit: followCounts,
     topLinkedPages: pageRows.slice(0, 20).map((row) => ({
       url: row["url"] ?? row["page_address"] ?? null,
       backlinks: num(row["backlinks"]),
