@@ -9,6 +9,7 @@ import {
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
 
+import { supabase } from "../integrations/supabase/client";
 import { Shell } from "../components/os/shell";
 import { Toaster } from "../components/ui/sonner";
 import appCss from "../styles.css?url";
@@ -113,6 +114,20 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const router = useRouter();
+
+  // Every read is scoped to the signed-in operator, so a change of identity has
+  // to drop the caches that were filled under the previous one. Without this,
+  // an operator who signs in keeps looking at the empty anonymous result.
+  useEffect(() => {
+    const { data } = supabase.auth.onAuthStateChange((event) => {
+      if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") return;
+      void router.invalidate();
+      if (event !== "SIGNED_OUT") void queryClient.invalidateQueries();
+      else queryClient.clear();
+    });
+    return () => data.subscription.unsubscribe();
+  }, [queryClient, router]);
 
   return (
     <QueryClientProvider client={queryClient}>

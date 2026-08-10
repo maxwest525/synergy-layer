@@ -13,6 +13,7 @@ import {
 import type { ReactNode } from "react";
 
 import { TenantSwitcher } from "./tenant-switcher";
+import { useOperatorSession } from "@/hooks/use-operator-session";
 import { cn } from "@/lib/utils";
 
 const workspaces = [
@@ -29,6 +30,8 @@ const workspaces = [
 
 export function Shell({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const session = useOperatorSession();
+  const onAuthRoute = pathname.startsWith("/auth");
 
   return (
     <div className="relative min-h-screen w-full bg-background">
@@ -80,7 +83,7 @@ export function Shell({ children }: { children: ReactNode }) {
             to="/auth"
             className="mt-4 rounded-xl px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-sidebar-accent/60 hover:text-foreground"
           >
-            Operator sign in
+            {session.signedIn ? (session.email ?? "Operator") : "Operator sign in"}
           </Link>
           <p className="px-3 pt-3 text-xs leading-relaxed text-muted-foreground">
             Every module registers itself. Nothing here is hardcoded per integration.
@@ -100,6 +103,26 @@ export function Shell({ children }: { children: ReactNode }) {
               </Link>
             ))}
           </div>
+
+          {session.ready && !session.signedIn && !onAuthRoute ? (
+            <div className="mx-auto w-full max-w-6xl px-5 pt-6 md:px-8">
+              <div className="rounded-2xl border border-primary/30 bg-primary/5 px-4 py-3">
+                <p className="text-sm font-medium text-foreground">
+                  You are signed out, so every workspace reads as empty.
+                </p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Operational state, evidence, and spend are hidden until an operator signs in. These
+                  zeros are an access state, not the state of the system.
+                </p>
+                <Link
+                  to="/auth"
+                  className="mt-3 inline-flex items-center rounded-lg border border-primary/50 px-3 py-1.5 text-sm font-medium text-primary transition-colors hover:bg-primary/10"
+                >
+                  Sign in as operator
+                </Link>
+              </div>
+            </div>
+          ) : null}
 
           <main className="mx-auto w-full max-w-6xl flex-1 px-5 py-8 md:px-8">{children}</main>
         </div>
