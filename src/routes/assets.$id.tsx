@@ -1,7 +1,9 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 
+import { DataForSeoPanel } from "@/components/os/dataforseo-panel";
 import { DetailRow, GlassCard, PageHeader, StatePill, formatWhen, toneForState } from "@/components/os/primitives";
+import { SearchConsolePanel } from "@/components/os/search-console-panel";
 import { getAsset } from "@/lib/os.functions";
 
 const assetQuery = (id: string) => ({ queryKey: ["asset", id], queryFn: () => getAsset({ data: { id } }) });
@@ -72,6 +74,20 @@ function AssetDetailPage() {
           )}
         </GlassCard>
       </div>
+
+      {asset.kind === "website" ? (
+        <section className="space-y-4">
+          <h2 className="text-sm font-semibold tracking-tight text-foreground">
+            Observation evidence for this asset
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Search Console and DataForSEO collect against this property. Every snapshot below was paid
+            for and stored immutably.
+          </p>
+          <SearchConsolePanel />
+          <DataForSeoPanel />
+        </section>
+      ) : null}
 
       <Link to="/assets" className="text-sm text-primary underline-offset-4 hover:underline">
         Back to assets
