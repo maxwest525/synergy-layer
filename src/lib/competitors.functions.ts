@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import type { PageObservation } from "./dataforseo/competitor-pages.server";
 
 /**
  * The human review gate for competitor intelligence. The shortlist is evidence,
@@ -31,7 +32,7 @@ export const listCompetitorShortlist = createServerFn({ method: "POST" })
     const rows = (data ?? []).map((row) => {
       const metrics = (row.metrics ?? {}) as Record<string, unknown>;
       const pass = (metrics["intelligence_pass"] ?? null) as Record<string, unknown> | null;
-      const page = (metrics["page_evidence"] ?? null) as Record<string, unknown> | null;
+      const page = (metrics["page_evidence"] ?? null) as PageObservation | null;
       return {
         id: row.id,
         domain: row.domain,
