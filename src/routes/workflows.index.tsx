@@ -32,6 +32,7 @@ export const Route = createFileRoute("/workflows/")({
 
 function WorkflowsPage() {
   const { data } = useSuspenseQuery(workflowsQuery);
+  const failedRuns = data.runs.filter((run) => run.state === "failed");
 
   return (
     <div className="space-y-8">
@@ -40,6 +41,54 @@ function WorkflowsPage() {
         title="Workflow Registry"
         description="Each workflow is a declarative graph. Execution and observability come first: every run records step state, duration, and error."
       />
+
+      {failedRuns.length > 0 ? (
+        <section id="failed-runs" className="scroll-mt-24 space-y-3">
+          <h2 className="text-sm font-semibold tracking-tight text-foreground">
+            Failed runs ({failedRuns.length})
+          </h2>
+          <GlassCard className="p-5">
+            <ul className="space-y-3">
+              {failedRuns.map((run) => {
+                const workflow = data.workflows.find((item) => item.id === run.workflow_id);
+                const label = workflow?.name ?? workflow?.key ?? "Unknown workflow";
+                return (
+                  <li
+                    key={run.id}
+                    className="space-y-1 border-b border-border/50 pb-3 last:border-b-0 last:pb-0"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      {run.workflow_id ? (
+                        <Link
+                          to="/workflows/$id"
+                          params={{ id: run.workflow_id }}
+                          className="truncate text-sm text-foreground underline-offset-4 hover:text-primary hover:underline"
+                        >
+                          {label}
+                        </Link>
+                      ) : (
+                        <span className="truncate text-sm text-foreground">{label}</span>
+                      )}
+                      <span className="flex flex-wrap items-center gap-3">
+                        <StatePill label={run.state} tone={toneForState(run.state)} />
+                        <span className="text-xs text-muted-foreground">{formatWhen(run.created_at)}</span>
+                        {run.duration_ms !== null && run.duration_ms !== undefined ? (
+                          <span className="text-xs text-muted-foreground">{run.duration_ms} ms</span>
+                        ) : null}
+                        <span className="text-xs text-muted-foreground">{run.trigger_source}</span>
+                      </span>
+                    </div>
+                    <p className="text-xs text-destructive">
+                      {run.error ?? "No stored error message."}
+                    </p>
+                  </li>
+                );
+              })}
+            </ul>
+          </GlassCard>
+        </section>
+      ) : null}
+
 
       {data.workflows.length === 0 ? (
         <EmptyState title="No workflows" description="Declare a workflow in a module, then sync the registry." />

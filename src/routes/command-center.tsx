@@ -54,17 +54,19 @@ const tiles = [
 /** Safe navigation only. Nothing here runs a workflow or spends provider credit. */
 function QuickAction({
   to,
+  hash,
   label,
   count,
   outcome,
 }: {
   to: "/" | "/competitors" | "/ads/advertisers" | "/workflows";
+  hash?: string;
   label: string;
   count: number;
   outcome: string;
 }) {
   return (
-    <Link to={to} className="block">
+    <Link to={to} {...(hash ? { hash } : {})} className="block">
       <GlassCard className="h-full p-4 transition-colors hover:border-primary/40">
         <div className="flex items-baseline justify-between gap-3">
           <span className="text-sm font-medium text-foreground">{label}</span>
@@ -75,6 +77,7 @@ function QuickAction({
     </Link>
   );
 }
+
 
 function CommandCenterPage() {
   const { data } = useSuspenseQuery(overviewQuery);
@@ -132,10 +135,12 @@ function CommandCenterPage() {
           />
           <QuickAction
             to="/workflows"
+            hash="failed-runs"
             label="Inspect failed workflow runs"
             count={quick.failedRuns}
             outcome="Read the stored error on each failure before deciding to rerun anything."
           />
+
         </div>
       </section>
 
