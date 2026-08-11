@@ -106,3 +106,26 @@ second visits served from the query cache. Applied fixes:
    mymovingreviews.com, resultcalls.com, doppcall.com, 99calls.com,
    quoterunner.com, movematcher.com, budgetvanlines.com, 2movers.com.
 3. After evidence quality is proven: paid-media recommendations, then publish path.
+
+## 9. Operator truth pass (Inbox clarity, observations, Command Center)
+
+- **Clear is reversible.** `inbox_items.cleared_from_lane` + `cleared_by` record
+  provenance. `clear_inbox_item` / `reopen_inbox_item` are SECURITY INVOKER RPCs
+  (authenticated execute only) and are the only write path. Pending approval can
+  never be cleared; Completed shows "Unclear" only for manually cleared rows.
+- **Facts are not approvals.** Rows with `metadata.observationOnly = true` now
+  carry `state = 'observed'`, `requires_approval = false`, and live in the FYI
+  lane. Their detail page states what the evidence is, what it does not mean, and
+  the next real decision. Approve/Reject is hidden and rejected server-side.
+- **No fake approvals.** `src/lib/recommendation-action.ts` is the single source
+  of truth for whether a suggested action has an executable handler. No kind is
+  wired to one yet, so every detail page says so plainly instead of offering a
+  button that changes a column and nothing else.
+- **Command Center leads to work.** Quick actions (safe navigation only), count
+  tiles link to their workspace, capability rows link to capability detail, run
+  rows link to workflow detail and show the stored error on failure. All of it
+  still comes from the one `command_center_overview` RPC.
+- **Google Ads Transparency is the product name.** SerpApi appears only in
+  connection/account/ledger detail. `/ads/advertisers` is a deep review surface
+  reached from Inbox and Command Center, not a sidebar workspace. The one-credit
+  canary is behind an explicit spend confirmation dialog.

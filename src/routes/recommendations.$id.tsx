@@ -7,6 +7,7 @@ import { DetailRow, GlassCard, PageHeader, StatePill, formatWhen, toneForState }
 import { Button } from "@/components/ui/button";
 import { decideRecommendation } from "@/lib/os-admin.functions";
 import { getRecommendation } from "@/lib/os.functions";
+import { describeSuggestedAction, isObservationOnly } from "@/lib/recommendation-action";
 
 const recommendationQuery = (id: string) => ({
   queryKey: ["recommendation", id],
@@ -49,6 +50,9 @@ function RecommendationDetailPage() {
   const decide = useServerFn(decideRecommendation);
   const recommendation = data.recommendation!;
   const decided = recommendation.state === "approved" || recommendation.state === "rejected";
+  const observation = isObservationOnly(recommendation.metadata) || recommendation.state === "observed";
+  const action = describeSuggestedAction(recommendation.suggested_action);
+  const canDecide = !decided && !observation && action.executable;
 
   const mutation = useMutation({
     mutationFn: (decision: "approved" | "rejected") => decide({ data: { id, decision } }),
@@ -62,13 +66,16 @@ function RecommendationDetailPage() {
   return (
     <div className="space-y-8">
       <PageHeader
-        eyebrow={recommendation.source_module}
+        eyebrow={observation ? "Observed evidence" : recommendation.source_module}
         title={recommendation.title}
         description={recommendation.description ?? "No description recorded for this recommendation."}
         actions={
           <>
-            <StatePill label={recommendation.state} tone={toneForState(recommendation.state)} />
-            {!decided ? (
+            <StatePill
+              label={observation ? "observation" : recommendation.state}
+              tone={observation ? "primary" : toneForState(recommendation.state)}
+            />
+            {canDecide ? (
               <>
                 <Button
                   variant="outline"
@@ -89,6 +96,31 @@ function RecommendationDetailPage() {
           </>
         }
       />
+
+      {observation ? (
+        <GlassCard className="p-5">
+          <h2 className="text-sm font-semibold text-foreground">This is an observation, not a proposal</h2>
+          <dl className="mt-3">
+            <DetailRow label="What this is" value="Observed SERP evidence collected from a real provider response." />
+            <DetailRow
+              label="What it means"
+              value="A domain or page was seen in results for keywords this workspace tracks, and that sighting is now dated and stored."
+            />
+            <DetailRow
+              label="What it does not mean"
+              value="It is not a confirmed business competitor, and no content, workflow, or deployment has been approved."
+            />
+            <DetailRow
+              label="Next real decision"
+              value={
+                action.link
+                  ? "Open the competitor review queue and decide the candidate there."
+                  : "None. This row exists so the evidence stays visible; nothing is waiting on you here."
+              }
+            />
+          </dl>
+        </GlassCard>
+      ) : null}
 
       <div className="grid gap-4 lg:grid-cols-2">
         <GlassCard className="p-5">
@@ -115,10 +147,17 @@ function RecommendationDetailPage() {
 
           <GlassCard className="p-5">
             <h2 className="text-sm font-semibold text-foreground">Suggested action</h2>
-            <pre className="mt-2 overflow-x-auto rounded-xl border border-border/60 bg-background/60 p-3 text-xs text-muted-foreground">
-              {JSON.stringify(recommendation.suggested_action, null, 2)}
-            </pre>
+            <p className="mt-2 text-sm text-muted-foreground">{action.summary}</p>
+            {action.link ? (
+              <div className="mt-3 space-y-2">
+                <Button asChild variant="outline" size="sm">
+                  <Link to={action.link.to}>{action.link.label}</Link>
+                </Button>
+                <p className="text-xs text-muted-foreground">{action.link.effect}</p>
+              </div>
+            ) : null}
           </GlassCard>
+
 
           <GlassCard className="p-5">
             <h2 className="text-sm font-semibold text-foreground">Dependencies</h2>

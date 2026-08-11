@@ -5,7 +5,7 @@ import { toast } from "sonner";
 
 import { EmptyState, GlassCard, PageHeader, StatePill, formatWhen, toneForState } from "@/components/os/primitives";
 import { Button } from "@/components/ui/button";
-import { resolveInboxItem } from "@/lib/os-admin.functions";
+import { reopenInboxItem, resolveInboxItem } from "@/lib/os-admin.functions";
 import { getInbox } from "@/lib/os.functions";
 
 const inboxQuery = {
@@ -120,20 +120,55 @@ function InboxActionLink({ route, children }: { route: InboxRoute; children: Rea
   return <Button asChild variant="outline" size="sm"><Link to="/scheduler/$id" params={{ id: route.id }}>{children}</Link></Button>;
 }
 
+/** Descriptive link text. A button that only says "Open" tells an operator nothing. */
+function actionLabel(route: InboxRoute, lane: string): string {
+  const pending = lane === "pending_approval";
+  switch (route.kind) {
+    case "keywords":
+      return pending ? "Review keyword candidates" : "Open keyword review";
+    case "competitors":
+      return pending ? "Review competitor candidates" : "Open competitor review";
+    case "adsAdvertisers":
+      return pending ? "Review advertiser candidate" : "Open advertiser review";
+    case "recommendation":
+      return pending ? "Review recommendation" : "Open recommendation";
+    case "agent":
+      return "Open agent detail";
+    case "workflow":
+      return "Open workflow detail";
+    default:
+      return "Open schedule detail";
+  }
+}
+
 function InboxPage() {
 
   const { data } = useSuspenseQuery(inboxQuery);
   const queryClient = useQueryClient();
   const resolve = useServerFn(resolveInboxItem);
+  const reopen = useServerFn(reopenInboxItem);
 
   const mutation = useMutation({
     mutationFn: (id: string) => resolve({ data: { id } }),
     onSuccess: () => {
-      toast.success("Item cleared");
+      toast.success("Item cleared. You can undo this from Completed.");
       void queryClient.invalidateQueries({ queryKey: ["inbox"] });
+      void queryClient.invalidateQueries({ queryKey: ["overview"] });
     },
     onError: (error: Error) => toast.error(error.message),
   });
+
+  const reopenMutation = useMutation({
+    mutationFn: (id: string) => reopen({ data: { id } }),
+    onSuccess: () => {
+      toast.success("Item reopened into its previous lane.");
+      void queryClient.invalidateQueries({ queryKey: ["inbox"] });
+      void queryClient.invalidateQueries({ queryKey: ["overview"] });
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+  const busy = mutation.isPending || reopenMutation.isPending;
 
   const open = data.filter((item) => item.lane !== "completed" && item.resolved_at === null).length;
 
@@ -187,17 +222,27 @@ function InboxPage() {
                           <StatePill label={item.lane} tone={toneForState(item.lane)} />
                           {reviewRoute ? (
                             <InboxActionLink route={reviewRoute}>
-                              {item.lane === "pending_approval" ? "Review" : "Open"}
+                              {actionLabel(reviewRoute, item.lane)}
                             </InboxActionLink>
                           ) : null}
                           {item.lane !== "completed" && item.lane !== "pending_approval" ? (
                             <Button
                               variant="outline"
                               size="sm"
-                              disabled={mutation.isPending}
+                              disabled={busy}
                               onClick={() => mutation.mutate(item.id)}
                             >
                               Clear
+                            </Button>
+                          ) : null}
+                          {item.lane === "completed" && item.cleared_from_lane !== null ? (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              disabled={busy}
+                              onClick={() => reopenMutation.mutate(item.id)}
+                            >
+                              Unclear
                             </Button>
                           ) : null}
                         </div>

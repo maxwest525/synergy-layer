@@ -42,7 +42,16 @@ export const resolveInboxItem = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { assertOperator, resolveItem } = await import("./os-admin.server");
     await assertOperator(context.supabase, context.userId);
-    return resolveItem(context.supabase, data.id, context.userId);
+    return resolveItem(context.supabase, data.id);
+  });
+
+export const reopenInboxItem = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => z.object({ id: z.string().uuid() }).parse(data))
+  .handler(async ({ data, context }) => {
+    const { assertOperator, reopenItem } = await import("./os-admin.server");
+    await assertOperator(context.supabase, context.userId);
+    return reopenItem(context.supabase, data.id);
   });
 
 export const runSchedulerTick = createServerFn({ method: "POST" })

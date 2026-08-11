@@ -41,15 +41,40 @@ export const Route = createFileRoute("/command-center")({
 });
 
 const tiles = [
-  { key: "assets", label: "Assets" },
-  { key: "capabilities", label: "Capabilities" },
-  { key: "knowledge_entries", label: "Knowledge entries" },
-  { key: "agents", label: "Agents" },
-  { key: "workflows", label: "Workflows" },
-  { key: "recommendations", label: "Recommendations" },
-  { key: "schedules", label: "Schedules" },
-  { key: "inbox_items", label: "Inbox items" },
+  { key: "assets", label: "Assets", to: "/assets" },
+  { key: "capabilities", label: "Capabilities", to: "/capabilities" },
+  { key: "knowledge_entries", label: "Knowledge entries", to: "/knowledge" },
+  { key: "agents", label: "Agents", to: "/agents" },
+  { key: "workflows", label: "Workflows", to: "/workflows" },
+  { key: "recommendations", label: "Recommendations", to: "/recommendations" },
+  { key: "schedules", label: "Schedules", to: "/scheduler" },
+  { key: "inbox_items", label: "Inbox items", to: "/" },
 ] as const;
+
+/** Safe navigation only. Nothing here runs a workflow or spends provider credit. */
+function QuickAction({
+  to,
+  label,
+  count,
+  outcome,
+}: {
+  to: "/" | "/competitors" | "/ads/advertisers" | "/workflows";
+  label: string;
+  count: number;
+  outcome: string;
+}) {
+  return (
+    <Link to={to} className="block">
+      <GlassCard className="h-full p-4 transition-colors hover:border-primary/40">
+        <div className="flex items-baseline justify-between gap-3">
+          <span className="text-sm font-medium text-foreground">{label}</span>
+          <span className="text-lg font-semibold text-primary">{count}</span>
+        </div>
+        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{outcome}</p>
+      </GlassCard>
+    </Link>
+  );
+}
 
 function CommandCenterPage() {
   const { data } = useSuspenseQuery(overviewQuery);
@@ -57,6 +82,7 @@ function CommandCenterPage() {
   const notLive = data.capabilities.filter((capability) => capability.integration_state !== "real");
   const failedRuns = data.runs.filter((run) => run.state === "failed").length;
   const evidence = data.evidence;
+  const quick = data.quickActions;
   const usedShare = evidence.ceilingUsd > 0 ? (evidence.spentUsd / evidence.ceilingUsd) * 100 : 0;
 
   if (!data.ready) {
@@ -83,11 +109,44 @@ function CommandCenterPage() {
         description="One read on what exists, what is live, and what is drifting right now."
       />
 
+      <section className="space-y-3">
+        <h2 className="text-sm font-semibold tracking-tight text-foreground">Quick actions</h2>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <QuickAction
+            to="/"
+            label="Review Inbox"
+            count={quick.openInbox}
+            outcome="Open items waiting on you across every workspace."
+          />
+          <QuickAction
+            to="/competitors"
+            label="Review competitor candidates"
+            count={quick.pendingCompetitors}
+            outcome="Approving a candidate adds the domain to tracked competitors. Nothing is published."
+          />
+          <QuickAction
+            to="/ads/advertisers"
+            label="Review Google Ads advertiser candidate"
+            count={quick.pendingAdvertisers}
+            outcome="Confirming links an observed advertiser account to a watched vendor domain."
+          />
+          <QuickAction
+            to="/workflows"
+            label="Inspect failed workflow runs"
+            count={quick.failedRuns}
+            outcome="Read the stored error on each failure before deciding to rerun anything."
+          />
+        </div>
+      </section>
+
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {tiles.map((tile) => (
-          <MetricTile key={tile.key} label={tile.label} value={data.counts[tile.key] ?? 0} />
+          <Link key={tile.key} to={tile.to} className="block">
+            <MetricTile label={tile.label} value={data.counts[tile.key] ?? 0} />
+          </Link>
         ))}
       </div>
+
 
       <GlassCard glow className="p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -157,7 +216,13 @@ function CommandCenterPage() {
                 key={capability.key}
                 className="flex items-center justify-between gap-3 border-b border-border/50 pb-2 last:border-b-0"
               >
-                <span className="truncate text-sm text-foreground">{capability.name}</span>
+                <Link
+                  to="/capabilities/$id"
+                  params={{ id: capability.id }}
+                  className="truncate text-sm text-foreground underline-offset-4 hover:text-primary hover:underline"
+                >
+                  {capability.name}
+                </Link>
                 <span className="flex shrink-0 items-center gap-2">
                   <StatePill
                     label={capability.integration_state}
@@ -182,19 +247,40 @@ function CommandCenterPage() {
               <p className="mt-3 text-sm text-muted-foreground">No workflow runs recorded yet.</p>
             ) : (
               <ul className="mt-3 space-y-2">
-                {data.runs.slice(0, 8).map((run) => (
-                  <li
-                    key={run.id}
-                    className="flex flex-wrap items-center justify-between gap-2 border-b border-border/50 pb-2 text-sm last:border-b-0 last:pb-0"
-                  >
-                    <span className="truncate text-foreground">{run.workflows?.name ?? run.workflows?.key ?? "Workflow"}</span>
-                    <span className="flex items-center gap-3">
-                      <StatePill label={run.state} tone={toneForState(run.state)} />
-                      <span className="text-xs text-muted-foreground">{run.trigger_source}</span>
-                      <span className="text-xs text-muted-foreground">{formatWhen(run.created_at)}</span>
-                    </span>
-                  </li>
-                ))}
+                {data.runs.slice(0, 8).map((run) => {
+                  const label = run.workflows?.name ?? run.workflows?.key ?? "Workflow";
+                  const workflowId = run.workflows?.id ?? run.workflow_id;
+                  return (
+                    <li
+                      key={run.id}
+                      className="space-y-1 border-b border-border/50 pb-2 text-sm last:border-b-0 last:pb-0"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        {workflowId ? (
+                          <Link
+                            to="/workflows/$id"
+                            params={{ id: workflowId }}
+                            className="truncate text-foreground underline-offset-4 hover:text-primary hover:underline"
+                          >
+                            {label}
+                          </Link>
+                        ) : (
+                          <span className="truncate text-foreground">{label}</span>
+                        )}
+                        <span className="flex items-center gap-3">
+                          <StatePill label={run.state} tone={toneForState(run.state)} />
+                          <span className="text-xs text-muted-foreground">{run.trigger_source}</span>
+                          <span className="text-xs text-muted-foreground">{formatWhen(run.created_at)}</span>
+                        </span>
+                      </div>
+                      {run.state === "failed" ? (
+                        <p className="text-xs text-destructive">
+                          {run.error ?? "The run failed without recording an error message."}
+                        </p>
+                      ) : null}
+                    </li>
+                  );
+                })}
               </ul>
             )}
             <Link
