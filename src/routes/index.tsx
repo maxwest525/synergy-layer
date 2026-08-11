@@ -222,17 +222,27 @@ function InboxPage() {
                           <StatePill label={item.lane} tone={toneForState(item.lane)} />
                           {reviewRoute ? (
                             <InboxActionLink route={reviewRoute}>
-                              {item.lane === "pending_approval" ? "Review" : "Open"}
+                              {actionLabel(reviewRoute, item.lane)}
                             </InboxActionLink>
                           ) : null}
                           {item.lane !== "completed" && item.lane !== "pending_approval" ? (
                             <Button
                               variant="outline"
                               size="sm"
-                              disabled={mutation.isPending}
+                              disabled={busy}
                               onClick={() => mutation.mutate(item.id)}
                             >
                               Clear
+                            </Button>
+                          ) : null}
+                          {item.lane === "completed" && item.cleared_from_lane !== null ? (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              disabled={busy}
+                              onClick={() => reopenMutation.mutate(item.id)}
+                            >
+                              Unclear
                             </Button>
                           ) : null}
                         </div>
