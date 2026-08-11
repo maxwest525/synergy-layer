@@ -24,6 +24,9 @@ export async function fetchInbox() {
     await db
       .from("inbox_items")
       .select("*")
+      // A cleared item is finished work: keeping it in the queue buried the
+      // live gates operators actually need to act on.
+      .is("resolved_at", null)
       .eq("tenant_id", tenantId!)
       .order("priority", { ascending: true })
       .order("created_at", { ascending: false })
