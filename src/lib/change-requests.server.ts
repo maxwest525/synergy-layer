@@ -103,12 +103,15 @@ export async function transitionChangeRequest(
     }
   }
 
-  const { data, error } = await client.rpc("transition_change_request", {
+  const args: { _id: string; _action: string; _notes?: string; _revision?: string } = {
     _id: input.id,
     _action: input.action,
-    _notes: input.notes ?? undefined,
-    _revision: input.revision ?? undefined,
-  });
+  };
+  if (input.notes) args._notes = input.notes;
+  if (input.revision) args._revision = input.revision;
+
+  const { data, error } = await client.rpc("transition_change_request", args);
+
   if (error) throw new Error(error.message);
 
   const result = (data ?? {}) as { changed?: boolean; change_request?: ChangeRow };
