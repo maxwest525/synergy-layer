@@ -1,5 +1,6 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 
 import {
   EmptyState,
@@ -10,22 +11,15 @@ import {
   formatWhen,
   toneForState,
 } from "@/components/os/primitives";
+import { OperatorRouteError } from "@/components/os/route-error";
 import { getOverview } from "@/lib/os.functions";
-
-const overviewQuery = { queryKey: ["overview"], queryFn: () => getOverview() };
+import { getTenantContext } from "@/lib/tenant.functions";
 
 export const Route = createFileRoute("/command-center")({
   // Operator-only workspace: nothing here is public, and rendering it on the
   // server without the operator bearer token produced an empty tree that the
   // client immediately replaced. Render it client side and skip that mismatch.
   ssr: false,
-  // A transient data failure must not turn SSR into a 500 blank screen; the
-  // client-side suspense query retries and surfaces the error in the boundary.
-  loader: ({ context }) => {
-    // Warm the cache without blocking navigation; the suspense boundary
-    // renders the pending surface immediately.
-    void context.queryClient.prefetchQuery(overviewQuery);
-  },
   head: () => ({
     meta: [
       { title: "Command Center — AOOS" },
@@ -37,8 +31,10 @@ export const Route = createFileRoute("/command-center")({
       { property: "og:description", content: "Live system state for the marketing operating system." },
     ],
   }),
+  errorComponent: OperatorRouteError,
   component: CommandCenterPage,
 });
+
 
 const tiles = [
   { key: "assets", label: "Assets", to: "/assets" },
