@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { GOVERNED_BRANCH, GOVERNED_REPO } from "./allowlist";
+import { GOVERNED_BRANCH, GOVERNED_FILE, GOVERNED_PROJECT_ID, GOVERNED_REPO } from "./allowlist";
 import { applyExactReplacements, parseFieldChanges, verifyRenderedPage } from "./source-change";
 import {
   checkPublishedPage,
@@ -41,7 +41,8 @@ function makeRequest(overrides: Partial<ExecutableRequest> = {}): ExecutableRequ
     targetUrl: "https://trumoveinc.com/services/corporate-relocation",
     repo: GOVERNED_REPO,
     branch: GOVERNED_BRANCH,
-    filePath: "src/data.ts",
+    filePath: GOVERNED_FILE,
+    projectId: GOVERNED_PROJECT_ID,
     baseRevision: "base-sha",
     changes,
     commitSha: null,
@@ -50,6 +51,7 @@ function makeRequest(overrides: Partial<ExecutableRequest> = {}): ExecutableRequ
     ...overrides,
   };
 }
+
 
 function makeStore(request: ExecutableRequest | null) {
   const attempts: AttemptRecord[] = [];

@@ -2,7 +2,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database } from "@/integrations/supabase/types";
 import type { AttemptRecord, ExecutableRequest, ExecutionStore, GithubApi, RenderedVerifier } from "./execute";
+import { GithubStatusError } from "./github-error";
 import { extractDocumentTitle, extractFirstHeading, extractMarkdownHeading, parseFieldChanges } from "./source-change";
+
 
 type Client = SupabaseClient<Database>;
 
