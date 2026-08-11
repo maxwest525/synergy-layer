@@ -171,3 +171,13 @@ The selected Search Console property was not changed.
 
 The Search Console connection controls stay on the asset detail page, which now
 links to the Search workspace for the actual metrics.
+
+## Tool estate inventory (2026-08-11)
+
+Tables: `tool_systems`, `tool_operations`, `tool_aliases` (tenant scoped, member read, operator/admin write).
+Surface: `/capabilities/systems` and `/capabilities/systems/$key`, linked from the Capability Registry header.
+Snapshot: 46 canonical systems, 152 operations, 20 alias registrations, frozen discovery date 2026-08-11.
+Truth rule: installed, credentialed, live proven, and callable from AOOS are independent facts. Nothing local is
+marked callable; AdLoop and OpenSEO read "Installed locally, not connected to AOOS". Provider APIs are recorded as
+"surface counted, full normalized import queued" with no invented operation rows. No credential values, tokens, or
+secret paths are stored.
