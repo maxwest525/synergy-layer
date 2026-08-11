@@ -52,11 +52,7 @@ function CompetitorReviewPage() {
   const [selected, setSelected] = useState<string[]>([]);
   const [expanded, setExpanded] = useState<string | null>(null);
 
-  // A candidate is reviewable until an operator has decided on it. The
-  // derivation step files rows as "discovered", so gating on "pending" alone
-  // left every checkbox disabled and the gate unpassable.
-  const isReviewable = (state: string) => state !== "approved" && state !== "rejected";
-  const pending = data.shortlist.filter((row) => isReviewable(row.reviewState));
+  const pending = data.shortlist.filter((row) => row.reviewState === "pending");
   const allSelected = pending.length > 0 && selected.length === pending.length;
 
   const mutation = useMutation({
@@ -194,7 +190,7 @@ function CompetitorRow({ row, busy, checked, expanded, onToggleSelect, onToggleE
               onCheckedChange={onToggleSelect}
               aria-label={`Select ${row.domain}`}
               className="mt-1"
-              disabled={row.reviewState === "approved" || row.reviewState === "rejected"}
+               disabled={row.reviewState !== "pending"}
             />
             <div className="min-w-0 space-y-1">
               <p className="text-sm font-medium text-foreground">{row.domain}</p>
@@ -218,10 +214,10 @@ function CompetitorRow({ row, busy, checked, expanded, onToggleSelect, onToggleE
             <Button variant="outline" size="sm" onClick={onToggleExpand}>
               {expanded ? "Hide evidence" : "Evidence"}
             </Button>
-            <Button variant="outline" size="sm" disabled={busy} onClick={() => onDecide("approve")}>
+             <Button variant="outline" size="sm" disabled={busy || row.reviewState !== "pending"} onClick={() => onDecide("approve")}>
               Approve
             </Button>
-            <Button variant="outline" size="sm" disabled={busy} onClick={() => onDecide("reject")}>
+             <Button variant="outline" size="sm" disabled={busy || row.reviewState !== "pending"} onClick={() => onDecide("reject")}>
               Reject
             </Button>
           </div>

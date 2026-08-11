@@ -118,14 +118,14 @@ export async function runWorkflow(
         .eq("id", step.id);
       finalState = "awaiting_approval";
       await fileInboxItem(client, {
-        lane: "pending_approval",
+        lane: "needs_attention",
         sourceModule: "workflows",
         title: `Approval required: ${workflow.name}`,
-        summary: `Run is parked at the "${node.key}" approval node.`,
+        summary: `Approval continuation is not wired. Open the parent workflow detail to inspect the run parked at "${node.key}".`,
         priority: 1,
         subjectKind: "workflow_run",
         subjectId: run.id,
-        actions: [{ kind: "approve" }, { kind: "open" }],
+        actions: [{ kind: "open", href: `/workflows/${workflowId}` }],
       });
       break;
     }
