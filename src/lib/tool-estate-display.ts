@@ -1,7 +1,14 @@
 import type { Tone } from "@/components/os/primitives";
 
 export type EstateFilter =
-  "all" | "discovered" | "installed" | "credentialed" | "live" | "callable";
+  | "all"
+  | "available"
+  | "enabled"
+  | "credentialed"
+  | "implemented"
+  | "callable"
+  | "installed"
+  | "live";
 
 export const KIND_LABELS: Record<string, string> = {
   local_app: "Local application",
@@ -47,6 +54,25 @@ export const VERIFICATION_LABELS: Record<string, string> = {
   partially_live_proven: "Partly proven working locally",
   live_proven: "Proven working locally",
   surface_counted: "Surface counted, full normalized import queued",
+};
+
+/** Readiness facts. Each one is independent; none of them implies another. */
+export const AVAILABLE_LABELS: Record<string, string> = {
+  unknown: "Not known yet",
+  available_to_enable: "Available to enable",
+  not_available: "Not available to enable",
+};
+
+export const ENABLED_LABELS: Record<string, string> = {
+  unknown: "Not known yet",
+  not_enabled: "Not enabled",
+  enabled: "Enabled",
+};
+
+export const IMPLEMENTED_LABELS: Record<string, string> = {
+  not_implemented: "Not implemented in AOOS",
+  partially_implemented: "Partly implemented in AOOS",
+  implemented: "Implemented in AOOS",
 };
 
 type AvailabilityInput = {

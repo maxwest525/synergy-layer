@@ -16,9 +16,12 @@ import { AvailabilityBadge } from "@/components/os/availability-badge";
 import { getTenantContext } from "@/lib/tenant.functions";
 import { getToolSystem } from "@/lib/tool-estate.functions";
 import {
+  AVAILABLE_LABELS,
   COST_LABELS,
   CREDENTIAL_LABELS,
   INSTALLED_LABELS,
+  ENABLED_LABELS,
+  IMPLEMENTED_LABELS,
   KIND_LABELS,
   MODE_LABELS,
   VERIFICATION_LABELS,
@@ -119,12 +122,24 @@ function SystemDetailPage() {
           </div>
           <dl className="mt-3">
             <DetailRow
+              label="Available to enable"
+              value={AVAILABLE_LABELS[system.available_state] ?? system.available_state}
+            />
+            <DetailRow
+              label="Enabled"
+              value={ENABLED_LABELS[system.enabled_state] ?? system.enabled_state}
+            />
+            <DetailRow
               label="Install"
               value={INSTALLED_LABELS[system.installed_state] ?? system.installed_state}
             />
             <DetailRow
               label="Credentials"
               value={CREDENTIAL_LABELS[system.credential_state] ?? system.credential_state}
+            />
+            <DetailRow
+              label="Implemented in AOOS"
+              value={IMPLEMENTED_LABELS[system.implemented_state] ?? system.implemented_state}
             />
             <DetailRow
               label="Live proof"

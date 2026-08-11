@@ -2333,12 +2333,16 @@ export type Database = {
       tool_systems: {
         Row: {
           aoos_connection_state: string
+          available_state: string
           created_at: string
           credential_state: string
           discovered_from: string | null
+          enabled_state: string
           execution_location: string
           id: string
+          implemented_state: string
           installed_state: string
+          is_essential: boolean
           kind: string
           last_verified_at: string | null
           metadata: Json
@@ -2351,15 +2355,20 @@ export type Database = {
           updated_at: string
           verification_state: string
           version: string | null
+          visible_in_aoos: boolean
         }
         Insert: {
           aoos_connection_state?: string
+          available_state?: string
           created_at?: string
           credential_state?: string
           discovered_from?: string | null
+          enabled_state?: string
           execution_location?: string
           id?: string
+          implemented_state?: string
           installed_state?: string
+          is_essential?: boolean
           kind: string
           last_verified_at?: string | null
           metadata?: Json
@@ -2372,15 +2381,20 @@ export type Database = {
           updated_at?: string
           verification_state?: string
           version?: string | null
+          visible_in_aoos?: boolean
         }
         Update: {
           aoos_connection_state?: string
+          available_state?: string
           created_at?: string
           credential_state?: string
           discovered_from?: string | null
+          enabled_state?: string
           execution_location?: string
           id?: string
+          implemented_state?: string
           installed_state?: string
+          is_essential?: boolean
           kind?: string
           last_verified_at?: string | null
           metadata?: Json
@@ -2393,6 +2407,7 @@ export type Database = {
           updated_at?: string
           verification_state?: string
           version?: string | null
+          visible_in_aoos?: boolean
         }
         Relationships: [
           {

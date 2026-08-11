@@ -181,3 +181,10 @@ Truth rule: installed, credentialed, live proven, and callable from AOOS are ind
 marked callable; AdLoop and OpenSEO read "Installed locally, not connected to AOOS". Provider APIs are recorded as
 "surface counted, full normalized import queued" with no invented operation rows. No credential values, tokens, or
 secret paths are stored.
+
+## Tool estate correction (2026-08-11)
+- SearchAtlas excluded by operator policy: systems, operations, aliases, and all UI results removed. Search returns zero.
+- Vault represented as remote, metadata-only, not AOOS-callable: "25 metadata records checked, 20 active records mapped to 16 providers, secret values never copied." No credential names, labels, IDs, hosts, paths, or values are stored or shown.
+- Readiness is six independent facts: available to enable, enabled, credentialed, implemented in AOOS, callable from AOOS, visible. Credential metadata never promotes enabled or callable.
+- /capabilities/systems now has Essentials (default, 11 foundational systems) and All systems (58). Keyword Planner is an alias of Google Ads API.
+- Counts recalculated from database truth: 58 canonical systems, 139 operations, 21 aliases. Essentials view: 11 systems, 91 operations, 4 aliases.
