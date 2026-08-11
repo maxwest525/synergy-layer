@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import type { SystemFacts } from "./essentials";
+import type { SitemapSummary, SystemFacts } from "./essentials";
 
 export type EssentialsFacts = {
   property: {
@@ -20,6 +20,7 @@ export type EssentialsFacts = {
     pageRows: number;
     queryRows: number;
     sitemapCount: number;
+    sitemaps: SitemapSummary;
   };
   changes: {
     total: number;
@@ -34,10 +35,12 @@ export type EssentialsFacts = {
     referringDomains: number;
     backlinks: number;
     spamScore: number | null;
+    storedSufficient: boolean | null;
   };
-  ads: { pendingCandidates: number; confirmedAdvertisers: number; latestAt: string | null };
+  ads: { confirmedAdvertisers: number };
   systems: Record<string, SystemFacts | null>;
 };
+
 
 const SYSTEM_KEYS = [
   "api.search_console",
@@ -219,12 +222,10 @@ export const getEssentials = createServerFn({ method: "GET" })
         backlinks: num(summary['backlinks']),
         spamScore:
           typeof summary['backlinks_spam_score'] === "number" ? summary['backlinks_spam_score'] : null,
+        storedSufficient,
       },
-      ads: {
-        pendingCandidates: candidates.filter((row) => row.review_state === "pending").length,
-        confirmedAdvertisers: adAdvertisers.count ?? 0,
-        latestAt: candidates[0]?.created_at ?? null,
-      },
+      ads: { confirmedAdvertisers: adAdvertisers.count ?? 0 },
+
       systems: systemMap,
     };
   });
