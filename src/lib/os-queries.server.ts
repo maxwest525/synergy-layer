@@ -74,12 +74,22 @@ export async function fetchCapabilities() {
   return rows(await db.from("capabilities").select("*").order("kind").order("name"));
 }
 
-export async function fetchCapability(id: string) {
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export async function fetchCapability(idOrKey: string) {
   const { db, ready } = await scope();
   if (!ready) return { capability: null, agents: [] };
-  const capability = unwrap(await db.from("capabilities").select("*").eq("id", id).maybeSingle());
+  // Capabilities are reachable by uuid or by their stable registry key.
+  const column = UUID_PATTERN.test(idOrKey) ? "id" : "key";
+  const capability = unwrap(
+    await db.from("capabilities").select("*").eq(column, idOrKey).maybeSingle(),
+  );
+  if (!capability) return { capability: null, agents: [] };
   const agents = rows(
-    await db.from("agent_capabilities").select("grant_scope, agents(id, name, key)").eq("capability_id", id),
+    await db
+      .from("agent_capabilities")
+      .select("grant_scope, agents(id, name, key)")
+      .eq("capability_id", capability.id),
   );
   return { capability, agents };
 }
