@@ -244,9 +244,30 @@ function AdvertiserReviewPage() {
           <Button variant="outline" size="sm" disabled={busy} onClick={() => gateMutation.mutate()}>
             Run free account check
           </Button>
-          <Button variant="outline" size="sm" disabled={busy} onClick={() => canaryMutation.mutate()}>
-            Run one metered canary for {canaryDomain}
-          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="outline" size="sm" disabled={busy}>
+                Run one metered canary for {canaryDomain}
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>This may charge one SerpApi search credit</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Running the canary makes at most one Ads Transparency search for {canaryDomain}. It may
+                  charge one SerpApi search credit against this account, and it only runs when the account
+                  is valid and reports at least ten searches remaining. Any advertiser it finds is filed as
+                  a pending candidate; nothing is confirmed automatically.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={() => canaryMutation.mutate()}>
+                  Spend one credit and run
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
         <p className="mt-2 text-xs text-muted-foreground">
           The account check costs nothing. The canary buys at most one search, and only when the account is valid
