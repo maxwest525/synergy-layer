@@ -66,7 +66,7 @@ export const getExecutionState = createServerFn({ method: "GET" })
     const attempts = await fetchExecutionAttempts(db, data.id);
     return {
       ...empty,
-      isOperator: await isOperator(db, userId),
+      isOperator: operator === true,
       repo: text("source_repo"),
       branch: text("source_branch"),
       filePath: row.source_file,
