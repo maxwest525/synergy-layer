@@ -241,6 +241,7 @@ export async function fetchSchedule(id: string) {
 }
 
 export type CapabilitySummary = {
+  id: string;
   key: string;
   name: string;
   integration_state: string;
@@ -254,7 +255,16 @@ export type RunSummary = {
   created_at: string;
   duration_ms: number | null;
   error: string | null;
-  workflows: { key: string; name: string } | null;
+  workflow_id: string | null;
+  context: unknown;
+  workflows: { id: string; key: string; name: string } | null;
+};
+
+export type QuickActionCounts = {
+  openInbox: number;
+  pendingCompetitors: number;
+  pendingAdvertisers: number;
+  failedRuns: number;
 };
 
 export async function fetchOverview() {
