@@ -190,3 +190,14 @@ secret paths are stored.
 - Readiness is six independent facts: available to enable, enabled, credentialed, implemented in AOOS, callable from AOOS, visible. Credential metadata never promotes enabled or callable.
 - /capabilities/systems now has Essentials (default, 11 foundational systems) and All systems (58). Keyword Planner is an alias of Google Ads API.
 - Counts recalculated from database truth: 58 canonical systems, 139 operations, 21 aliases. Essentials view: 11 systems, 91 operations, 4 aliases.
+
+## Change-request execution adapter (source commit + published proof)
+
+- `src/lib/execution/source-change.ts` — pure guards: exact before/after replacement (refuses on any count other than one), commit marker, published-page title/H1 proof.
+- `src/lib/execution/execute.ts` — dependency-injected execute and publish-check loops. Operator-only, id-only input, replay-safe.
+- `src/lib/execution/execute.server.ts` — GitHub contents API bridge (`GITHUB_EXECUTOR_TOKEN`), execution store, public page fetch.
+- `src/lib/execution/execution.functions.ts` — `getExecutionState`, `executeChangeRequest`, `checkChangeRequestPublished`.
+- `src/components/os/execution-card.tsx` — six-stage plain-language status, execute + check published, attempt log, "Provider API charge: $0" with the AI build usage caveat.
+- Migration: `change_requests.source_repo/source_branch/source_commit_*/published_proof_*` and `public.change_request_executions` (tenant read, server write).
+- Applied now means proven live on the public URL; the manual "Mark applied" button is gone. Verification still requires finalized post-change Search Console rows.
+- Blocker: `GITHUB_EXECUTOR_TOKEN` is not configured, so no real commit has been attempted. The UI names this exactly and refuses without writing.
