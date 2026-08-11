@@ -150,6 +150,8 @@ function AdvertiserReviewPage() {
   const gate = useServerFn(checkAdsProviderGate);
   const decide = useServerFn(decideAdvertiserCandidate);
   const canary = useServerFn(runAdsCanary);
+  const sweep = useServerFn(runAdvertiserSweep);
+
   const [canaryDomain] = useState("budgetvanlines.com");
 
   const refresh = () => {
