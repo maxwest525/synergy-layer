@@ -12,6 +12,8 @@ async function scope() {
   return { db, tenantId, ready: authenticated && tenantId !== null };
 }
 
+export type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
+
 export type ToolSystemRow = {
   id: string;
   stable_key: string;
@@ -28,7 +30,7 @@ export type ToolSystemRow = {
   last_verified_at: string | null;
   source_reference: string | null;
   summary: string | null;
-  metadata: Record<string, unknown>;
+  metadata: JsonValue;
 };
 
 export type ToolSystemSummary = ToolSystemRow & {
