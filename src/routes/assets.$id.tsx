@@ -85,13 +85,16 @@ function AssetDetailPage() {
             Observation evidence for this asset
           </h2>
           <p className="text-sm text-muted-foreground">
-            Search Console and DataForSEO collect against this property. Every snapshot below was paid
-            for and stored immutably. To read the actual observed metrics, open the{" "}
+            Search Console and DataForSEO collect against this property. Search Console observations
+            carry no provider cost. DataForSEO calls can be metered, and that spend is ledgered
+            separately. Every snapshot is stored immutably. To read the actual observed metrics, open
+            the{" "}
             <Link to="/search" className="text-primary underline-offset-4 hover:underline">
               Search workspace
             </Link>
             .
           </p>
+
           <SearchConsolePanel />
           <DataForSeoPanel />
         </section>
