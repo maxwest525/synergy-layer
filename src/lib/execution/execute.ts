@@ -24,6 +24,7 @@ export type ExecutableRequest = {
   repo: string | null;
   branch: string | null;
   filePath: string | null;
+  projectId: string | null;
   baseRevision: string | null;
   changes: FieldChange[];
   commitSha: string | null;
@@ -35,7 +36,7 @@ export type AttemptRecord = {
   tenantId: string;
   changeRequestId: string;
   actorId: string;
-  kind: "source_commit" | "publish_check";
+  kind: "source_commit" | "publish_check" | "preflight";
   status:
     | "committed"
     | "reconciled"
@@ -43,12 +44,14 @@ export type AttemptRecord = {
     | "refused"
     | "failed"
     | "verified"
-    | "pending";
+    | "pending"
+    | "proved";
   commitSha?: string | null;
   commitUrl?: string | null;
   error?: string | null;
   detail?: Record<string, unknown>;
 };
+
 
 export type ExecutionStore = {
   load(id: string): Promise<ExecutableRequest | null>;
