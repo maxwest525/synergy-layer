@@ -103,6 +103,15 @@ function InboxLink({ route, children }: { route: InboxRoute; children: React.Rea
   return <Link to="/scheduler/$id" params={{ id: route.id }} className={className}>{children}</Link>;
 }
 
+function InboxActionLink({ route, children }: { route: InboxRoute; children: React.ReactNode }) {
+  if (route.kind === "keywords") return <Button asChild variant="outline" size="sm"><Link to="/keywords">{children}</Link></Button>;
+  if (route.kind === "competitors") return <Button asChild variant="outline" size="sm"><Link to="/competitors">{children}</Link></Button>;
+  if (route.kind === "recommendation") return <Button asChild variant="outline" size="sm"><Link to="/recommendations/$id" params={{ id: route.id }}>{children}</Link></Button>;
+  if (route.kind === "agent") return <Button asChild variant="outline" size="sm"><Link to="/agents/$id" params={{ id: route.id }}>{children}</Link></Button>;
+  if (route.kind === "workflow") return <Button asChild variant="outline" size="sm"><Link to="/workflows/$id" params={{ id: route.id }}>{children}</Link></Button>;
+  return <Button asChild variant="outline" size="sm"><Link to="/scheduler/$id" params={{ id: route.id }}>{children}</Link></Button>;
+}
+
 function InboxPage() {
 
   const { data } = useSuspenseQuery(inboxQuery);
@@ -169,9 +178,9 @@ function InboxPage() {
                         <div className="flex shrink-0 items-center gap-2">
                           <StatePill label={item.lane} tone={toneForState(item.lane)} />
                           {reviewRoute ? (
-                            <Button asChild variant="outline" size="sm">
-                              <InboxLink route={reviewRoute}>{item.lane === "pending_approval" ? "Review" : "Open"}</InboxLink>
-                            </Button>
+                            <InboxActionLink route={reviewRoute}>
+                              {item.lane === "pending_approval" ? "Review" : "Open"}
+                            </InboxActionLink>
                           ) : null}
                           {item.lane !== "completed" && item.lane !== "pending_approval" ? (
                             <Button
