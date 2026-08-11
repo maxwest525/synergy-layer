@@ -286,7 +286,9 @@ export function ExecutionCard(props: Props) {
       {readinessBlock}
 
       <div className="mt-4 flex flex-wrap gap-2">
+        {preflightButton}
         {data?.isOperator && !committed ? (
+
           <Button
             variant="outline"
             size="sm"
