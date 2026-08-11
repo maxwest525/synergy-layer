@@ -21,6 +21,12 @@ describe("Action Center change request lifecycle", () => {
     );
   });
 
+  it("distinguishes a committed approval from one that still needs execution", () => {
+    expect(actionCenterStage({ ...change, source_commit_sha: "abc123" })).toBe(
+      "Source committed — publish and check next",
+    );
+  });
+
   it("closes only terminal change request states", () => {
     for (const state of ["rejected", "verified", "rolled_back"]) {
       expect(actionCenterLane("needs_attention", { ...change, state })).toBe("completed");

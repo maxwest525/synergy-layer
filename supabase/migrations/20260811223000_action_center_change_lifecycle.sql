@@ -66,10 +66,18 @@ BEGIN
         resolved_at = NULL,
         cleared_by = NULL,
         cleared_from_lane = NULL,
-        title = 'Execute approved change: ' || NEW.title,
-        summary = 'Approved, but not executed or published. Review the exact before-and-after values, then execute when ready.',
+        title = CASE
+          WHEN NEW.source_commit_sha IS NULL THEN 'Execute approved change: ' || NEW.title
+          ELSE 'Check publishing status: ' || NEW.title
+        END,
+        summary = CASE
+          WHEN NEW.source_commit_sha IS NULL THEN 'Approved, but not executed or published. Review the exact before-and-after values, then execute when ready.'
+          ELSE 'The approved source change is committed, but there is no live publication proof yet. Publish through the chosen release path, then verify the page.'
+        END,
         actions = jsonb_build_array(jsonb_build_object(
-          'kind', 'execute', 'label', 'Execute approved change', 'href', v_href
+          'kind', CASE WHEN NEW.source_commit_sha IS NULL THEN 'execute' ELSE 'review' END,
+          'label', CASE WHEN NEW.source_commit_sha IS NULL THEN 'Execute approved change' ELSE 'Check publishing status' END,
+          'href', v_href
         ))
     WHERE id = NEW.inbox_item_id;
   ELSIF NEW.state = 'applied' THEN
@@ -102,7 +110,7 @@ $$;
 
 DROP TRIGGER IF EXISTS sync_change_request_action_item ON public.change_requests;
 CREATE TRIGGER sync_change_request_action_item
-AFTER INSERT OR UPDATE OF state, inbox_item_id ON public.change_requests
+AFTER INSERT OR UPDATE OF state, inbox_item_id, source_commit_sha, published_proof_at ON public.change_requests
 FOR EACH ROW
 EXECUTE FUNCTION public.sync_change_request_action_item();
 
@@ -124,23 +132,27 @@ SET lane = CASE
     cleared_by = NULL,
     cleared_from_lane = NULL,
     title = CASE
-      WHEN c.state = 'approved' THEN 'Execute approved change: ' || c.title
+      WHEN c.state = 'approved' AND c.source_commit_sha IS NULL THEN 'Execute approved change: ' || c.title
+      WHEN c.state = 'approved' THEN 'Check publishing status: ' || c.title
       WHEN c.state = 'applied' THEN 'Track outcome: ' || c.title
       ELSE i.title
     END,
     summary = CASE
-      WHEN c.state = 'approved' THEN 'Approved, but not executed or published. Review the exact before-and-after values, then execute when ready.'
+      WHEN c.state = 'approved' AND c.source_commit_sha IS NULL THEN 'Approved, but not executed or published. Review the exact before-and-after values, then execute when ready.'
+      WHEN c.state = 'approved' THEN 'The approved source change is committed, but there is no live publication proof yet. Publish through the chosen release path, then verify the page.'
       WHEN c.state = 'applied' THEN 'The approved change is proven live. Keep this action open until finalized outcome data is available.'
       ELSE i.summary
     END,
     actions = jsonb_build_array(jsonb_build_object(
       'kind', CASE
-        WHEN c.state = 'approved' THEN 'execute'
+        WHEN c.state = 'approved' AND c.source_commit_sha IS NULL THEN 'execute'
+        WHEN c.state = 'approved' THEN 'review'
         WHEN c.state = 'applied' THEN 'track'
         ELSE 'review'
       END,
       'label', CASE
-        WHEN c.state = 'approved' THEN 'Execute approved change'
+        WHEN c.state = 'approved' AND c.source_commit_sha IS NULL THEN 'Execute approved change'
+        WHEN c.state = 'approved' THEN 'Check publishing status'
         WHEN c.state = 'applied' THEN 'Track outcome'
         WHEN c.state = 'proposed' THEN 'Review the proposed change'
         ELSE 'Review decision record'
