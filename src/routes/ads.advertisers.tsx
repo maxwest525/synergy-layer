@@ -207,8 +207,8 @@ function AdvertiserReviewPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Paid media"
-        title="Google advertiser review"
+        eyebrow="Google Ads Transparency"
+        title="Lead vendor advertiser review"
         description="Every advertiser account observed in the Google Ads Transparency Center stays a candidate until an operator confirms it. A vendor may run several advertiser accounts, so confirming links rather than replaces."
       />
 
