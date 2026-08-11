@@ -51,8 +51,9 @@ export const Route = createFileRoute("/")({
  * Some inbox items are decisions with a real review surface behind them. An
  * item the operator cannot open is a gate nobody can pass.
  */
-function reviewRouteFor(item: { source_module: string; title: string }): "/keywords" | null {
+function reviewRouteFor(item: { source_module: string; title: string }): "/keywords" | "/competitors" | null {
   if (item.source_module === "dataforseo" && /keyword candidates/i.test(item.title)) return "/keywords";
+  if (item.source_module === "competitor-intelligence") return "/competitors";
   return null;
 }
 

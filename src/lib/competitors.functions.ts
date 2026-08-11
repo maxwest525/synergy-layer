@@ -91,7 +91,7 @@ export const listCompetitorShortlist = createServerFn({ method: "POST" })
       shortlist,
       observed,
       tracked: tracked ?? [],
-      serpsAnalysed: rows[0]?.serpsAnalysed ?? 0,
+      serpsAnalysed: rows.reduce((max, row) => Math.max(max, row.serpsAnalysed), 0),
     };
   });
 
@@ -157,7 +157,7 @@ export const decideCompetitorCandidates = createServerFn({ method: "POST" })
       .from("competitor_candidates")
       .select("id, metrics")
       .eq("tenant_id", tenantId)
-      .eq("review_state", "pending");
+      .not("review_state", "in", "(approved,rejected)");
     const pendingShortlisted = (pending ?? []).filter((row) => {
       const metrics = (row.metrics ?? {}) as Record<string, unknown>;
       const pass = metrics["intelligence_pass"] as Record<string, unknown> | undefined;
