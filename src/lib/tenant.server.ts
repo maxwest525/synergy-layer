@@ -124,15 +124,6 @@ export async function requireTenantId(db: Client, explicit?: string | null): Pro
   return tenantId;
 }
 
-/**
- * Drops the cached clients and their resolved tenants. Called whenever the
- * operator changes workspace so the next read cannot answer from the previous
- * workspace within the cache window.
- */
-export function forgetResolvedTenants(): void {
-  clientCache.clear();
-}
-
 /** Remembers which client workspace an operator is working in. */
 export async function setActiveTenant(db: Client, userId: string, tenantId: string): Promise<void> {
   const { data, error: lookupError } = await db.from("tenants").select("id").eq("id", tenantId).maybeSingle();
@@ -141,7 +132,6 @@ export async function setActiveTenant(db: Client, userId: string, tenantId: stri
 
   const { error } = await db.from("profiles").update({ active_tenant_id: tenantId }).eq("id", userId);
   if (error) throw new Error(error.message);
-
-  forgetResolvedTenants();
 }
+
 
