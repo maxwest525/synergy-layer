@@ -14,6 +14,9 @@ const inboxQuery = {
   queryFn: () => getInbox(),
 };
 
+// How many completed items render before the operator asks for the rest.
+const COMPLETED_PREVIEW = 5;
+
 const lanes = [
   { key: "needs_attention", label: "Needs attention", hint: "Broken, blocked, or drifting." },
   { key: "pending_approval", label: "Pending approval", hint: "Waiting on a human decision." },
