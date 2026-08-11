@@ -1413,6 +1413,60 @@ export type Database = {
           },
         ]
       }
+      ga4_snapshots: {
+        Row: {
+          collected_at: string
+          end_date: string
+          id: string
+          metrics: Json
+          property: string
+          provenance: Json
+          quota: Json
+          run_id: string
+          start_date: string
+          tenant_id: string
+        }
+        Insert: {
+          collected_at?: string
+          end_date: string
+          id?: string
+          metrics?: Json
+          property: string
+          provenance?: Json
+          quota?: Json
+          run_id: string
+          start_date: string
+          tenant_id: string
+        }
+        Update: {
+          collected_at?: string
+          end_date?: string
+          id?: string
+          metrics?: Json
+          property?: string
+          provenance?: Json
+          quota?: Json
+          run_id?: string
+          start_date?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ga4_snapshots_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "measurement_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ga4_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inbox_items: {
         Row: {
           actions: Json
@@ -1653,6 +1707,146 @@ export type Database = {
           },
           {
             foreignKeyName: "knowledge_entries_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      measurement_runs: {
+        Row: {
+          actor_id: string | null
+          cost_usd: number
+          created_at: string
+          duration_ms: number | null
+          error: string | null
+          finished_at: string | null
+          http_status: number | null
+          id: string
+          provider: string
+          quota: Json
+          started_at: string
+          status: string
+          strategy: string | null
+          target: string
+          tenant_id: string
+        }
+        Insert: {
+          actor_id?: string | null
+          cost_usd?: number
+          created_at?: string
+          duration_ms?: number | null
+          error?: string | null
+          finished_at?: string | null
+          http_status?: number | null
+          id?: string
+          provider: string
+          quota?: Json
+          started_at?: string
+          status?: string
+          strategy?: string | null
+          target: string
+          tenant_id: string
+        }
+        Update: {
+          actor_id?: string | null
+          cost_usd?: number
+          created_at?: string
+          duration_ms?: number | null
+          error?: string | null
+          finished_at?: string | null
+          http_status?: number | null
+          id?: string
+          provider?: string
+          quota?: Json
+          started_at?: string
+          status?: string
+          strategy?: string | null
+          target?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "measurement_runs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pagespeed_snapshots: {
+        Row: {
+          analysis_timestamp: string | null
+          cls: number | null
+          collected_at: string
+          fcp_ms: number | null
+          final_url: string | null
+          id: string
+          lcp_ms: number | null
+          lighthouse_version: string | null
+          opportunities: Json
+          performance_score: number | null
+          provenance: Json
+          run_id: string
+          seo_score: number | null
+          speed_index_ms: number | null
+          strategy: string
+          tbt_ms: number | null
+          tenant_id: string
+          url: string
+        }
+        Insert: {
+          analysis_timestamp?: string | null
+          cls?: number | null
+          collected_at?: string
+          fcp_ms?: number | null
+          final_url?: string | null
+          id?: string
+          lcp_ms?: number | null
+          lighthouse_version?: string | null
+          opportunities?: Json
+          performance_score?: number | null
+          provenance?: Json
+          run_id: string
+          seo_score?: number | null
+          speed_index_ms?: number | null
+          strategy: string
+          tbt_ms?: number | null
+          tenant_id: string
+          url: string
+        }
+        Update: {
+          analysis_timestamp?: string | null
+          cls?: number | null
+          collected_at?: string
+          fcp_ms?: number | null
+          final_url?: string | null
+          id?: string
+          lcp_ms?: number | null
+          lighthouse_version?: string | null
+          opportunities?: Json
+          performance_score?: number | null
+          provenance?: Json
+          run_id?: string
+          seo_score?: number | null
+          speed_index_ms?: number | null
+          strategy?: string
+          tbt_ms?: number | null
+          tenant_id?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pagespeed_snapshots_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "measurement_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pagespeed_snapshots_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
