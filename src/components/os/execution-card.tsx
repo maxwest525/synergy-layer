@@ -27,10 +27,29 @@ type Props = {
   onInvalidate: () => void;
 };
 
+/** Truthful, itemised cost. Silence about credits is not the same as free. */
+function CostNote() {
+  return (
+    <div className="mt-4 space-y-1 text-xs text-muted-foreground">
+      <p>Provider API charge for committing to source: $0. GitHub writes are not metered here.</p>
+      <p>
+        Each rendered publish check spends 1 Firecrawl credit from the connected account. Nothing
+        else in this slice calls a paid provider.
+      </p>
+      <p>
+        AI build usage in Lovable is separate and is not $0: building this execution adapter used
+        27.2 credits, and the correctness pass that added base-revision enforcement, rendered proof,
+        and the atomic applied transition used a further 9.2 credits, so 36.4 credits before this
+        change. This pass adds more on top and is billed the same way.
+      </p>
+    </div>
+  );
+}
+
 /**
- * The execution surface. It separates four different facts that are easy to
- * confuse: approved, committed to source, proven live on the public page, and
- * verified against finalized Search Console data.
+ * The execution surface. It separates facts that are easy to confuse: readiness
+ * before approval, approved, committed to source, proven live on the rendered
+ * page, and verified against finalized Search Console data.
  */
 export function ExecutionCard(props: Props) {
   const queryClient = useQueryClient();
@@ -52,7 +71,7 @@ export function ExecutionCard(props: Props) {
   const execute = useMutation({
     mutationFn: () => runExecute({ data: { id: props.id } }),
     onSuccess: (result) => {
-      if (result.status === "committed" || result.status === "replayed")
+      if (result.status === "committed" || result.status === "replayed" || result.status === "reconciled")
         toast.success(result.message);
       else toast.error(result.message);
       refresh();
@@ -74,6 +93,69 @@ export function ExecutionCard(props: Props) {
   const running = execute.isPending || publishCheck.isPending;
   const committed = Boolean(data?.commitSha);
   const provenLive = Boolean(data?.publishedProofAt);
+  const decided = props.state !== "proposed";
+
+  const readinessBlock = data ? (
+    <div className="mt-4">
+      <h3 className="text-xs uppercase tracking-wide text-muted-foreground">
+        Execution readiness, checked now
+      </h3>
+      <ul className="mt-2 space-y-2">
+        {data.readiness.map((fact) => (
+          <li key={fact.label} className="flex gap-3 text-sm">
+            <span className={fact.ok ? "text-primary" : "text-muted-foreground"}>
+              {fact.ok ? "Ready" : "Blocked"}
+            </span>
+            <span>
+              <span className="text-foreground">{fact.label}</span>
+              <span className="block text-muted-foreground">{fact.detail}</span>
+            </span>
+          </li>
+        ))}
+      </ul>
+      {data.operatorCheckFailed ? (
+        <p className="mt-3 rounded-lg border border-border/60 p-3 text-sm text-muted-foreground">
+          The operator role check did not complete, so execution controls are hidden. This is not a
+          statement that you lack the role.
+        </p>
+      ) : null}
+    </div>
+  ) : (
+    <p className="mt-4 text-sm text-muted-foreground">Reading execution readiness…</p>
+  );
+
+  if (!decided) {
+    return (
+      <GlassCard className="p-5">
+        <h2 className="text-sm font-semibold text-foreground">
+          What execution would do, if you approve
+        </h2>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Nothing below runs yet. Approving does not write anything: an operator still has to press
+          Execute, and every guard is re-checked at that moment.
+        </p>
+        {readinessBlock}
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={execution.isFetching}
+            onClick={() => {
+              void execution.refetch();
+              toast.success("Re-checked stored connection facts. No provider was called.");
+            }}
+          >
+            Re-check connections
+          </Button>
+        </div>
+        <p className="mt-3 text-xs text-muted-foreground">
+          These are configuration facts only. A configured credential is not a proven working
+          credential: the first real proof is the execution attempt itself.
+        </p>
+        <CostNote />
+      </GlassCard>
+    );
+  }
 
   const stages: Stage[] = [
     {
@@ -99,10 +181,10 @@ export function ExecutionCard(props: Props) {
       done: committed,
     },
     {
-      label: "Proven live on the public page",
+      label: "Proven live on the rendered page",
       detail: provenLive
-        ? `Checked and matched on ${data?.publishedProofAt?.slice(0, 10)}.`
-        : "The public page has not been proven to serve the approved title and H1.",
+        ? `Rendered and matched on ${data?.publishedProofAt?.slice(0, 10)}.`
+        : "The rendered public page has not been proven to serve the approved title and H1.",
       done: provenLive,
     },
     {
@@ -141,11 +223,10 @@ export function ExecutionCard(props: Props) {
         <p className="mt-4 rounded-lg border border-border/60 p-3 text-xs text-muted-foreground">
           Source: {data.repo ?? "no repository recorded"} · {data.branch ?? "no branch"} ·{" "}
           {data.filePath ?? "no file"}
-          {data.executorCredentialPresent
-            ? ""
-            : " · Executor credential missing, so no write can be attempted."}
         </p>
       ) : null}
+
+      {readinessBlock}
 
       <div className="mt-4 flex flex-wrap gap-2">
         {data?.isOperator && !committed ? (
@@ -162,10 +243,12 @@ export function ExecutionCard(props: Props) {
           <Button
             variant="outline"
             size="sm"
-            disabled={running}
+            disabled={running || !data.rendererCredentialPresent || !data.targetAllowed}
             onClick={() => publishCheck.mutate()}
           >
-            Check published page
+            {data.rendererCredentialPresent
+              ? "Check rendered page (1 Firecrawl credit)"
+              : "Rendered check unavailable"}
           </Button>
         ) : null}
         {data?.commitUrl ? (
@@ -194,11 +277,7 @@ export function ExecutionCard(props: Props) {
         </Button>
       </div>
 
-      <p className="mt-4 text-xs text-muted-foreground">
-        Provider API charge: $0. Committing to source and reading the public page use no paid
-        provider credits. This does not include AI build usage in Lovable, which is billed
-        separately.
-      </p>
+      <CostNote />
 
       {props.state === "applied" ? (
         <div className="mt-5 space-y-3">

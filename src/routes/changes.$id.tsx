@@ -228,7 +228,7 @@ function ChangeRequestPage() {
         </GlassCard>
       </div>
 
-      {state === "approved" || state === "applied" || state === "verified" ? (
+      {state === "rejected" || state === "rolled_back" ? null : (
         <ExecutionCard
           id={id}
           state={state}
@@ -242,7 +242,8 @@ function ChangeRequestPage() {
           onVerify={() => mutation.mutate("verify")}
           onInvalidate={invalidate}
         />
-      ) : null}
+      )}
+
 
       <GlassCard className="p-5">
         <h2 className="text-sm font-semibold text-foreground">Outcome</h2>

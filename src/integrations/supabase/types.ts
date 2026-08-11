@@ -3166,6 +3166,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      apply_change_request_rendered_proof: {
+        Args: { _id: string; _notes: string; _proof: Json; _revision: string }
+        Returns: Json
+      }
       assert_admin_remains: {
         Args: { _excluding_user: string }
         Returns: undefined
