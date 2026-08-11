@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { toast } from "sonner";
 
 import {
@@ -51,6 +51,27 @@ export const Route = createFileRoute("/ads/advertisers")({
   }),
   component: AdvertiserReviewPage,
 });
+
+/** GlassCard with the standard titled chrome this workspace uses throughout. */
+function Section({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description: string;
+  children: ReactNode;
+}) {
+  return (
+    <GlassCard className="p-5">
+      <div className="mb-4 space-y-1">
+        <h2 className="text-sm font-semibold tracking-tight text-foreground">{title}</h2>
+        <p className="text-xs leading-relaxed text-muted-foreground">{description}</p>
+      </div>
+      {children}
+    </GlassCard>
+  );
+}
 
 function confidenceLabel(value: number | null): string {
   if (value === null) return "unscored";
@@ -175,6 +196,7 @@ function AdvertiserReviewPage() {
   return (
     <div className="space-y-6">
       <PageHeader
+        eyebrow="Paid media"
         title="Google advertiser review"
         description="Every advertiser account observed in the Google Ads Transparency Center stays a candidate until an operator confirms it. A vendor may run several advertiser accounts, so confirming links rather than replaces."
       />
@@ -189,14 +211,14 @@ function AdvertiserReviewPage() {
         />
       </div>
 
-      <GlassCard title="Provider account" description="Quota facts only. The API key is never read, returned, or stored.">
+      <Section title="Provider account" description="Quota facts only. The API key is never read, returned, or stored.">
         <div className="grid gap-1 text-sm sm:grid-cols-2">
           <DetailRow
             label="Status"
             value={
               <StatePill
                 label={account.configured ? (account.valid ? "reachable" : "unusable") : "unchecked"}
-                tone={account.configured ? (account.valid ? "positive" : "critical") : "neutral"}
+                tone={account.configured ? (account.valid ? "positive" : "danger") : "neutral"}
               />
             }
           />
@@ -219,9 +241,9 @@ function AdvertiserReviewPage() {
           The account check costs nothing. The canary buys at most one search, and only when the account is valid
           and reports at least ten searches remaining.
         </p>
-      </GlassCard>
+      </Section>
 
-      <GlassCard
+      <Section
         title={`Candidates awaiting decision (${pendingCandidates.length})`}
         description="Nothing is auto-confirmed. Each attribution of an advertiser account to a vendor is an operator judgement."
       >
@@ -242,9 +264,9 @@ function AdvertiserReviewPage() {
             ))}
           </div>
         )}
-      </GlassCard>
+      </Section>
 
-      <GlassCard title="Vendor watchlist" description="Watched domains and how far advertiser resolution has progressed.">
+      <Section title="Vendor watchlist" description="Watched domains and how far advertiser resolution has progressed.">
         {data.watchlist.length === 0 ? (
           <EmptyState title="No watched vendor domains" description="Add vendor domains to begin advertiser resolution." />
         ) : (
@@ -264,9 +286,9 @@ function AdvertiserReviewPage() {
             ))}
           </div>
         )}
-      </GlassCard>
+      </Section>
 
-      <GlassCard title="Confirmed advertisers" description="Operator-confirmed advertiser accounts and the vendor domains they are linked to.">
+      <Section title="Confirmed advertisers" description="Operator-confirmed advertiser accounts and the vendor domains they are linked to.">
         {data.advertisers.length === 0 ? (
           <EmptyState
             title="No confirmed advertiser yet"
@@ -285,9 +307,9 @@ function AdvertiserReviewPage() {
             ))}
           </div>
         )}
-      </GlassCard>
+      </Section>
 
-      <GlassCard
+      <Section
         title="Provider request ledger"
         description="Append-only record of every SerpApi call: what was reserved, what was actually charged, and what the provider returned."
       >
@@ -315,16 +337,16 @@ function AdvertiserReviewPage() {
             ))}
           </div>
         )}
-      </GlassCard>
+      </Section>
 
       {decidedCandidates.length > 0 ? (
-        <GlassCard title="Decided candidates" description="The audit trail of past advertiser attribution decisions.">
+        <Section title="Decided candidates" description="The audit trail of past advertiser attribution decisions.">
           <div className="space-y-3">
             {decidedCandidates.map((candidate) => (
               <CandidateCard key={candidate.id} candidate={candidate} busy={busy} onDecide={() => undefined} />
             ))}
           </div>
-        </GlassCard>
+        </Section>
       ) : null}
     </div>
   );
