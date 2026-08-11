@@ -32,6 +32,11 @@ export type ToolSystemRow = {
   source_reference: string | null;
   summary: string | null;
   metadata: JsonValue;
+  is_essential: boolean;
+  available_state: string;
+  enabled_state: string;
+  implemented_state: string;
+  visible_in_aoos: boolean;
 };
 
 export type ToolSystemSummary = ToolSystemRow & {
@@ -48,6 +53,7 @@ export async function fetchToolEstate() {
       .from("tool_systems")
       .select("*")
       .eq("tenant_id", tenantId!)
+      .eq("visible_in_aoos", true)
       .order("kind")
       .order("name"),
   ) as unknown as ToolSystemRow[];
@@ -85,6 +91,7 @@ export async function fetchToolSystem(stableKey: string) {
       .from("tool_systems")
       .select("*")
       .eq("tenant_id", tenantId!)
+      .eq("visible_in_aoos", true)
       .eq("stable_key", stableKey)
       .maybeSingle(),
   ) as unknown as ToolSystemRow | null;
