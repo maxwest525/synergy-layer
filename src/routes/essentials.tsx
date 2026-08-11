@@ -157,8 +157,9 @@ function EssentialsPage() {
         ? `Property ${data.property.siteUrl}, permission ${data.property.permissionLevel}. Last observed ${formatWhen(data.property.lastObservedAt)}. ${data.propertyCount} property record(s) stored.`
         : "No Search Console property record is stored for this workspace yet.",
       gap: data.property
-        ? "Only the selected property is collected. Other accessible properties are not observed."
+        ? `AOOS currently collects the selected property ${data.property.siteUrl}. ${data.propertyCount} property record(s) are stored, and nothing outside them is observed.`
         : systemGap(system("api.search_console"), "Search Console"),
+
       action: { label: "Open Search evidence", to: "/search" },
     },
     {
@@ -183,8 +184,9 @@ function EssentialsPage() {
       status: evidenceStatus(gsc.sitemapCount, false),
       evidence:
         gsc.sitemapCount > 0
-          ? `Sitemap status as Google reported it on ${gsc.latestDate ?? "the latest finalized date"}.`
+          ? `${gsc.sitemaps.count} sitemap(s) as Google reported them on ${gsc.latestDate ?? "the latest finalized date"}: ${gsc.sitemaps.submitted ?? "no"} URL(s) submitted, ${gsc.sitemaps.indexed ?? "no"} indexed, ${gsc.sitemaps.warnings ?? 0} warning(s) and ${gsc.sitemaps.errors ?? 0} error(s).`
           : "No sitemap rows were returned on the latest finalized date.",
+
       gap: "Sitemaps are read only. AOOS never submits or resubmits a sitemap.",
       action: { label: "Open Search evidence", to: "/search" },
     },
