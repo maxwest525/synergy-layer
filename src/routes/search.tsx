@@ -1,14 +1,12 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 
 import { EmptyState, GlassCard, MetricTile, PageHeader, StatePill, formatWhen } from "@/components/os/primitives";
 import type { SearchRow } from "@/lib/search.functions";
 import { getSearchWorkspace } from "@/lib/search.functions";
+import { getTenantContext } from "@/lib/tenant.functions";
 
-const workspaceQuery = {
-  queryKey: ["search-workspace"],
-  queryFn: () => getSearchWorkspace(),
-};
 
 export const Route = createFileRoute("/search")({
   // Operator-only workspace: rendering it server side without the operator
