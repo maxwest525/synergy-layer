@@ -23,32 +23,15 @@ function publishableFetch(key: string): typeof fetch {
   };
 }
 
-type CacheEntry = { db: Client; at: number };
-
-const CLIENT_TTL_MS = 60_000;
-const clientCache = new Map<string, CacheEntry>();
-
-function cachedClient(key: string, build: () => Client): Client {
-  const now = Date.now();
-  const hit = clientCache.get(key);
-  if (hit && now - hit.at < CLIENT_TTL_MS) return hit.db;
-  const db = build();
-  clientCache.set(key, { db, at: now });
-  if (clientCache.size > 50) {
-    for (const [k, v] of clientCache) if (now - v.at >= CLIENT_TTL_MS) clientCache.delete(k);
-  }
-  return db;
-}
-
 /**
  * Request-scoped Supabase client. When the caller carries a bearer token the
  * client acts as that operator, so tenant isolation is enforced by RLS rather
  * than by trusting a tenant id from the browser. Without a token the client is
  * anonymous and tenant tables simply return nothing.
  *
- * Clients are reused briefly per bearer token. A single page load makes several
- * scoped reads, and rebuilding the client each time also threw away the
- * resolved tenant, which cost extra round trips in front of every query.
+ * The client is built fresh for every call on purpose. Nothing that carries a
+ * credential is kept in module state, so a bearer token can never outlive the
+ * request that presented it or be reused by a later one.
  */
 export function createRequestClient(): { db: Client; authenticated: boolean } {
   const url = process.env["SUPABASE_URL"]!;
@@ -65,18 +48,17 @@ export function createRequestClient(): { db: Client; authenticated: boolean } {
     token = null;
   }
 
-  const db = cachedClient(token ?? "anonymous", () =>
-    createClient<Database>(url, key, {
-      auth: { storage: undefined, persistSession: false, autoRefreshToken: false },
-      global: {
-        fetch: publishableFetch(key),
-        ...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}),
-      },
-    }),
-  );
+  const db = createClient<Database>(url, key, {
+    auth: { storage: undefined, persistSession: false, autoRefreshToken: false },
+    global: {
+      fetch: publishableFetch(key),
+      ...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}),
+    },
+  });
 
   return { db, authenticated: token !== null };
 }
+
 
 
 /** Tenants the current caller may work in. Empty for anonymous requests. */
