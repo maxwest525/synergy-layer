@@ -33,20 +33,25 @@ type Props = {
 function CostNote() {
   return (
     <div className="mt-4 space-y-1 text-xs text-muted-foreground">
-      <p>Provider API charge for committing to source: $0. GitHub writes are not metered here.</p>
+      <p>
+        Provider API charge for reading from and committing to source: $0. GitHub reads and writes
+        are not metered here, and the read-only connection test costs nothing.
+      </p>
       <p>
         Each rendered publish check spends 1 Firecrawl credit from the connected account. Nothing
         else in this slice calls a paid provider.
       </p>
       <p>
-        AI build usage in Lovable is separate and is not $0: building this execution adapter used
-        27.2 credits, and the correctness pass that added base-revision enforcement, rendered proof,
-        and the atomic applied transition used a further 9.2 credits, so 36.4 credits before this
-        change. This pass adds more on top and is billed the same way.
+        Lovable build credits are separate and are not $0. Known build usage through commit
+        6b9ddb53 is 37.9 credits in total: PageSpeed slice 18.0, first execution adapter 9.2, and
+        the previous corrective pass 10.7. The current pass, which added the read-only GitHub
+        preflight and the service-only rendered-proof boundary, is not included in that 37.9
+        subtotal and is billed the same way.
       </p>
     </div>
   );
 }
+
 
 /**
  * The execution surface. It separates facts that are easy to confuse: readiness
