@@ -47,10 +47,11 @@ export const getExecutionState = createServerFn({ method: "GET" })
       publishedProofNotes: null,
       attempts: [],
     };
-    const { db, authenticated, userId } = createRequestClient();
-    if (!authenticated || !userId) return empty;
+    const { db, authenticated } = createRequestClient();
+    if (!authenticated) return empty;
 
-    const { isOperator } = await import("../os-admin.server");
+    const { data: operator } = await db.rpc("is_operator");
+
     const { data: row, error } = await db
       .from("change_requests")
       .select("*")
