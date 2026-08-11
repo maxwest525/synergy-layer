@@ -36,10 +36,17 @@ export function TenantSwitcher() {
     mutationFn: (tenantId: string) => switchFn({ data: { tenantId } }),
     onSuccess: async () => {
       setOpen(false);
-      await queryClient.invalidateQueries();
+      // Operator query keys are tenant agnostic, so merely invalidating would
+      // let a cached previous-workspace result render instantly, and a request
+      // already in flight could repopulate it afterwards. Cancel first, drop
+      // the data, then reload for the newly active workspace.
+      await queryClient.cancelQueries();
+      queryClient.removeQueries();
       await router.invalidate();
+      await queryClient.invalidateQueries();
     },
   });
+
 
   if (isLoading || !data || data.tenants.length === 0) return null;
 
