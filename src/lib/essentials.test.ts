@@ -4,6 +4,9 @@ import {
   assertRead,
   backlinkAuthority,
   changeStatus,
+  describePageSpeed,
+  pageSpeedStatus,
+  STATUS_LABELS,
   EssentialsReadError,
   evidenceStatus,
   indexingStatus,
@@ -136,5 +139,47 @@ describe("essentials status derivation", () => {
     expect(changeStatus(0, 0)).toBe("not_wired");
     expect(changeStatus(0, 2)).toBe("partial");
     expect(changeStatus(1, 1)).toBe("live");
+  });
+});
+
+describe("PageSpeed essentials truth", () => {
+  const base = {
+    implemented: true,
+    attempts: 0,
+    failures: 0,
+    successfulSnapshots: 0,
+    latestError: null,
+    latestAttemptAt: null,
+  };
+
+  it("cannot regress to Not wired once an implemented attempt is stored", () => {
+    const result = describePageSpeed({
+      ...base,
+      attempts: 2,
+      failures: 2,
+      latestError: "PageSpeed Insights returned HTTP 429",
+    });
+    expect(result.status).toBe("partial");
+    expect(STATUS_LABELS[result.status]).toBe("Partial data");
+    expect(result.evidence).toContain("HTTP 429");
+    expect(result.evidence).not.toMatch(/zero performance measurements/);
+  });
+
+  it("never claims a measurement when only failures are stored", () => {
+    const result = describePageSpeed({ ...base, attempts: 2, failures: 2 });
+    expect(result.evidence).toContain("0 stored measurement(s)");
+    expect(result.gap).toContain("No Lighthouse figure is shown");
+  });
+
+  it("stays Ready to connect when the bridge exists but nothing was attempted", () => {
+    expect(pageSpeedStatus(base)).toBe("ready");
+  });
+
+  it("is Not wired only when no bridge is implemented", () => {
+    expect(pageSpeedStatus({ ...base, implemented: false })).toBe("not_wired");
+  });
+
+  it("reports live data once a successful snapshot exists with no failures", () => {
+    expect(pageSpeedStatus({ ...base, attempts: 1, successfulSnapshots: 1 })).toBe("live");
   });
 });

@@ -206,3 +206,60 @@ export function changeStatus(proposedCount: number, totalCount: number): Essenti
   if (totalCount <= 0) return "not_wired";
   return proposedCount > 0 ? "live" : "partial";
 }
+
+/**
+ * What AOOS can prove about PageSpeed. A stored run is an attempt, not a
+ * measurement: only a stored snapshot is a result.
+ */
+export type PageSpeedFacts = {
+  /** AOOS ships an implemented manual bridge to the official v5 endpoint. */
+  implemented: boolean;
+  attempts: number;
+  failures: number;
+  successfulSnapshots: number;
+  latestError: string | null;
+  latestAttemptAt: string | null;
+};
+
+export function pageSpeedStatus(facts: PageSpeedFacts): EssentialStatus {
+  if (!facts.implemented) return "not_wired";
+  if (facts.successfulSnapshots > 0) return facts.failures > 0 ? "partial" : "live";
+  if (facts.attempts > 0) return "partial";
+  return "ready";
+}
+
+/** Card copy for PageSpeed, derived only from stored runs and snapshots. */
+export function describePageSpeed(facts: PageSpeedFacts): {
+  status: EssentialStatus;
+  evidence: string;
+  gap: string;
+} {
+  const status = pageSpeedStatus(facts);
+  if (!facts.implemented) {
+    return {
+      status,
+      evidence: "No PageSpeed bridge is implemented in AOOS, so nothing has been measured here.",
+      gap: "PageSpeed Insights would have to be implemented and called from AOOS before any figure exists.",
+    };
+  }
+  const attemptText = `${facts.attempts} stored run attempt(s), ${facts.failures} failed, ${facts.successfulSnapshots} stored measurement(s).`;
+  if (facts.successfulSnapshots > 0) {
+    return {
+      status,
+      evidence: `The AOOS PageSpeed bridge is implemented and callable. ${attemptText}`,
+      gap: "Measurements are manual and one click means one request, so there is no trend history yet.",
+    };
+  }
+  if (facts.attempts > 0) {
+    return {
+      status,
+      evidence: `The AOOS PageSpeed bridge is implemented and callable, and it has been exercised. ${attemptText} Latest provider error: ${facts.latestError ?? "not recorded"}.`,
+      gap: "No Lighthouse figure is shown because every attempt failed at the provider. The anonymous quota has to clear, or a PageSpeed API key has to be configured, before a measurement exists.",
+    };
+  }
+  return {
+    status,
+    evidence: "The AOOS PageSpeed bridge is implemented and callable. No run has been attempted yet, so nothing is measured.",
+    gap: "An operator has to run one check from Measurement before any Lighthouse figure exists here.",
+  };
+}

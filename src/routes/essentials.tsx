@@ -7,6 +7,7 @@ import { GlassCard, PageHeader, StatePill, formatWhen } from "@/components/os/pr
 import { OperatorRouteError } from "@/components/os/route-error";
 import {
   backlinkAuthority,
+  describePageSpeed,
   changeStatus,
   evidenceStatus,
   indexingStatus,
@@ -48,7 +49,7 @@ const ACTION_CLASS =
   "inline-flex items-center rounded-lg border border-primary/50 px-3 py-1.5 text-sm font-medium text-primary transition-colors hover:bg-primary/10";
 
 type Action =
-  | { label: string; to: "/search" | "/keywords" | "/competitors" | "/capabilities/systems" | "/ads/advertisers" | "/recommendations" }
+  | { label: string; to: "/search" | "/keywords" | "/competitors" | "/capabilities/systems" | "/ads/advertisers" | "/recommendations" | "/measurement" }
   | { label: string; to: "/changes/$id"; params: { id: string } }
   | { label: string; to: "/capabilities/systems/$key"; params: { key: string } };
 
@@ -140,6 +141,7 @@ function EssentialsPage() {
 
   const gsc = data.gsc;
   const system = (key: string) => data.systems[key] ?? null;
+  const pagespeed = describePageSpeed(data.pagespeed);
   const authority = backlinkAuthority({
     snapshotCount: data.backlinks.snapshots,
     referringDomains: data.backlinks.referringDomains,
@@ -224,10 +226,10 @@ function EssentialsPage() {
     {
       id: "pagespeed",
       title: "PageSpeed / Core Web Vitals",
-      status: systemStatus(system("api.pagespeed_insights")),
-      evidence: "PageSpeed Insights and Chrome UX Report are catalogued only. AOOS holds zero performance measurements.",
-      gap: "Neither is implemented or connected in AOOS, so no LCP, INP, or CLS figure exists here.",
-      action: { label: "Open the PageSpeed system record", to: "/capabilities/systems/$key" as const, params: { key: "api.pagespeed_insights" } },
+      status: pagespeed.status,
+      evidence: pagespeed.evidence,
+      gap: pagespeed.gap,
+      action: { label: "Open Measurement", to: "/measurement" as const },
     },
     {
       id: "guidance",

@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import type { SitemapSummary, SystemFacts } from "./essentials";
+import type { PageSpeedFacts, SitemapSummary, SystemFacts } from "./essentials";
 
 export type EssentialsFacts = {
   property: {
@@ -37,6 +37,7 @@ export type EssentialsFacts = {
     spamScore: number | null;
     storedSufficient: boolean | null;
   };
+  pagespeed: PageSpeedFacts;
   systems: Record<string, SystemFacts | null>;
 };
 
@@ -82,7 +83,7 @@ export const getEssentials = createServerFn({ method: "GET" })
     const propertyRows = properties.data ?? [];
     const selected = propertyRows.find((row) => row.selected) ?? propertyRows[0] ?? null;
 
-    const [gscSnapshots, changeRows, trackedKeywords, keywordCandidates, dfs, systems] =
+    const [gscSnapshots, changeRows, trackedKeywords, keywordCandidates, dfs, systems, psRuns, psSnapshots] =
       await Promise.all([
         selected
           ? db
@@ -121,6 +122,17 @@ export const getEssentials = createServerFn({ method: "GET" })
           .eq("tenant_id", tenantId)
           .eq("visible_in_aoos", true)
           .in("stable_key", SYSTEM_KEYS as unknown as string[]),
+        db
+          .from("measurement_runs")
+          .select("status, error, started_at")
+          .eq("tenant_id", tenantId)
+          .eq("provider", "pagespeed")
+          .order("started_at", { ascending: false })
+          .limit(200),
+        db
+          .from("pagespeed_snapshots")
+          .select("id", { count: "exact", head: true })
+          .eq("tenant_id", tenantId),
       ]);
 
     assertRead("Search Console snapshots", gscSnapshots);
@@ -129,6 +141,8 @@ export const getEssentials = createServerFn({ method: "GET" })
     assertRead("Keyword candidates", keywordCandidates);
     assertRead("DataForSEO snapshots", dfs);
     assertRead("Tool systems catalog", systems);
+    assertRead("PageSpeed runs", psRuns);
+    assertRead("PageSpeed snapshots", psSnapshots);
 
     const snapshots = gscSnapshots.data ?? [];
     const totals = snapshots.filter((row) => row.kind === "property_totals");
@@ -172,6 +186,19 @@ export const getEssentials = createServerFn({ method: "GET" })
         : null;
     }
 
+
+    const psRunRows = psRuns.data ?? [];
+    const psFailures = psRunRows.filter((row) => row.status !== "succeeded");
+    const pagespeed: PageSpeedFacts = {
+      // The bridge is source-controlled in AOOS, so implementation is a fact
+      // about this build rather than a provider outcome.
+      implemented: true,
+      attempts: psRunRows.length,
+      failures: psFailures.length,
+      successfulSnapshots: psSnapshots.count ?? 0,
+      latestError: psFailures[0]?.error ?? null,
+      latestAttemptAt: psRunRows[0]?.started_at ?? null,
+    };
 
     return {
       property: selected
@@ -224,6 +251,7 @@ export const getEssentials = createServerFn({ method: "GET" })
         storedSufficient,
       },
 
+      pagespeed,
       systems: systemMap,
     };
   });

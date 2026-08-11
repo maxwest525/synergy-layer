@@ -39,7 +39,7 @@ operator surfaces for Keywords and Competitors.
 
 | Capability | State | Notes |
 | --- | --- | --- |
-| PageSpeed Insights (Measurement workspace) | real, manual only | `/measurement`. One click, one v5 request, keyless. No schedule. Runs and immutable snapshots stored in `measurement_runs` / `pagespeed_snapshots`. Keyless daily quota currently exhausted (HTTP 429). |
+| PageSpeed Insights (Measurement workspace) | real, manual only | `/measurement`. One click, one v5 request, keyless. No schedule. Runs and immutable snapshots stored in `measurement_runs` / `pagespeed_snapshots`. Keyless daily quota currently exhausted (HTTP 429): 2 stored attempts, 0 stored measurements. Essentials and the tool-estate catalog derive this state from stored rows; the catalog records the implemented bridge and the runPagespeed operation. |
 | GA4 Data API | ready to connect | Property `properties/536830122`. No server credential present, so no request has ever been made and no numbers are shown. |
 | Google Search Console | real | Idempotent daily site / page / query snapshots. |
 | DataForSEO Labs | real | Keyword ideas, competitor derivation. |

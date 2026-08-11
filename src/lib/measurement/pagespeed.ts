@@ -195,3 +195,25 @@ export function assertOwnedTarget(rawUrl: string, ownedHosts: string[]): string 
   }
   return parsed.toString();
 }
+
+/**
+ * Empty state for the latest snapshot slot. Failed attempts are stored runs,
+ * so the copy must never claim nothing has been run.
+ */
+export function describeMissingSnapshot(
+  runs: { status: string; error: string | null; startedAt: string }[],
+): { title: string; description: string } {
+  if (runs.length === 0) {
+    return {
+      title: "No PageSpeed run attempted yet",
+      description:
+        "Nothing is shown until a real request returns. AOOS does not seed or estimate Lighthouse figures.",
+    };
+  }
+  const failed = runs.filter((run) => run.status !== "succeeded");
+  const latestError = failed[0]?.error ?? runs[0]?.error ?? null;
+  return {
+    title: "No successful PageSpeed snapshot yet",
+    description: `${runs.length} run attempt(s) are recorded below and ${failed.length} failed, so there is no measurement to show. A failed attempt is a stored run, not a result. Latest provider error: ${latestError ?? "not recorded"}.`,
+  };
+}
