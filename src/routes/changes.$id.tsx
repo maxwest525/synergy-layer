@@ -211,81 +211,21 @@ function ChangeRequestPage() {
       </div>
 
       {state === "approved" || state === "applied" || state === "verified" ? (
-        <GlassCard className="p-5">
-          <h2 className="text-sm font-semibold text-foreground">Execution</h2>
-          <p className="mt-2 text-sm text-muted-foreground">
-            AOOS will not alter or publish the site automatically. There is no proven write connector into the
-            site project, so a person makes this edit there and records it back here.
-          </p>
-          <div className="mt-4 flex flex-wrap gap-2">
-            {change.source_project_url ? (
-              <Button asChild variant="outline" size="sm">
-                <a href={change.source_project_url} target="_blank" rel="noreferrer">
-                  Open site project to execute
-                </a>
-              </Button>
-            ) : null}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                void navigator.clipboard.writeText(brief);
-                toast.success("Execution brief copied.");
-              }}
-            >
-              Copy execution brief
-            </Button>
-          </div>
-
-          {state === "approved" ? (
-            <div className="mt-5 space-y-3">
-              <p className="text-sm text-muted-foreground">
-                Once the edit is live in the site project, record it. Marking applied does not mean verified.
-              </p>
-              <Input
-                value={revision}
-                onChange={(event) => setRevision(event.target.value)}
-                placeholder="Resulting revision (optional)"
-              />
-              <Textarea
-                value={notes}
-                onChange={(event) => setNotes(event.target.value)}
-                placeholder="Notes (optional)"
-              />
-              <Button variant="outline" size="sm" disabled={busy} onClick={() => mutation.mutate("applied")}>
-                Mark applied
-              </Button>
-            </div>
-          ) : null}
-
-          {state === "applied" ? (
-            <div className="mt-5 space-y-3">
-              <p className="text-sm text-muted-foreground">
-                Applied on {change.applied_at?.slice(0, 10)}
-                {change.source_revision_after ? `, revision ${change.source_revision_after}` : ""}. Verification
-                is pending until post-change data is reviewed.
-              </p>
-              {data.postChangeRows.length === 0 ? (
-                <p className="rounded-lg border border-border/60 p-3 text-sm text-muted-foreground">
-                  Waiting for finalized post-change Search Console data. No data is not evidence of success.
-                </p>
-              ) : (
-                <>
-                  <Textarea
-                    value={notes}
-                    onChange={(event) => setNotes(event.target.value)}
-                    placeholder="Verification notes (optional)"
-                  />
-                  <Button variant="outline" size="sm" disabled={busy} onClick={() => mutation.mutate("verify")}>
-                    Mark verified
-                  </Button>
-                </>
-              )}
-            </div>
-          ) : null}
-
-        </GlassCard>
+        <ExecutionCard
+          id={id}
+          state={state}
+          appliedAt={change.applied_at}
+          sourceProjectUrl={change.source_project_url}
+          brief={brief}
+          postChangeCount={data.postChangeRows.length}
+          notes={notes}
+          onNotesChange={setNotes}
+          busy={busy}
+          onVerify={() => mutation.mutate("verify")}
+          onInvalidate={invalidate}
+        />
       ) : null}
+
 
       <GlassCard className="p-5">
         <h2 className="text-sm font-semibold text-foreground">Outcome</h2>
