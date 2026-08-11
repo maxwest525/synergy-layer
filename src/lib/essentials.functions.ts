@@ -37,6 +37,7 @@ export type EssentialsFacts = {
     spamScore: number | null;
     storedSufficient: boolean | null;
   };
+  pagespeed: PageSpeedFacts;
   systems: Record<string, SystemFacts | null>;
 };
 
