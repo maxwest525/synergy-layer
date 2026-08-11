@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import type { SitemapSummary, SystemFacts } from "./essentials";
+import type { PageSpeedFacts, SitemapSummary, SystemFacts } from "./essentials";
 
 export type EssentialsFacts = {
   property: {
