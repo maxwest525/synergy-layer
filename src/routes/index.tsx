@@ -204,6 +204,7 @@ const InboxCard = memo(function InboxCard({
 });
 
 function InboxPage() {
+  const [showAllCompleted, setShowAllCompleted] = useState(false);
   const { data } = useSuspenseQuery(inboxQuery);
   const queryClient = useQueryClient();
   const resolve = useServerFn(resolveInboxItem);
