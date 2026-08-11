@@ -37,7 +37,6 @@ export type EssentialsFacts = {
     spamScore: number | null;
     storedSufficient: boolean | null;
   };
-  ads: { confirmedAdvertisers: number };
   systems: Record<string, SystemFacts | null>;
 };
 
@@ -83,7 +82,7 @@ export const getEssentials = createServerFn({ method: "GET" })
     const propertyRows = properties.data ?? [];
     const selected = propertyRows.find((row) => row.selected) ?? propertyRows[0] ?? null;
 
-    const [gscSnapshots, changeRows, trackedKeywords, keywordCandidates, dfs, adAdvertisers, systems] =
+    const [gscSnapshots, changeRows, trackedKeywords, keywordCandidates, dfs, systems] =
       await Promise.all([
         selected
           ? db
@@ -114,7 +113,6 @@ export const getEssentials = createServerFn({ method: "GET" })
           .eq("tenant_id", tenantId)
           .order("collected_at", { ascending: false })
           .limit(200),
-        db.from("ad_advertisers").select("id", { count: "exact", head: true }).eq("tenant_id", tenantId).eq("is_verified", true),
         db
           .from("tool_systems")
           .select(
@@ -130,7 +128,6 @@ export const getEssentials = createServerFn({ method: "GET" })
     assertRead("Tracked keywords", trackedKeywords);
     assertRead("Keyword candidates", keywordCandidates);
     assertRead("DataForSEO snapshots", dfs);
-    assertRead("Confirmed advertisers", adAdvertisers);
     assertRead("Tool systems catalog", systems);
 
     const snapshots = gscSnapshots.data ?? [];
@@ -226,7 +223,6 @@ export const getEssentials = createServerFn({ method: "GET" })
           typeof summary['backlinks_spam_score'] === "number" ? summary['backlinks_spam_score'] : null,
         storedSufficient,
       },
-      ads: { confirmedAdvertisers: adAdvertisers.count ?? 0 },
 
       systems: systemMap,
     };

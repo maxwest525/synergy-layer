@@ -149,7 +149,7 @@ function CommandCenterPage() {
             to="/essentials"
             label="Open Essentials"
             count={18}
-            outcome="Plain-language coverage status for every marketing essential. Navigation only."
+            outcome="18 individual essentials with a plain-language coverage status each. Navigation only, not an issue count."
           />
           <QuickAction
             to="/workflows"
