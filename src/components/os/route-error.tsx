@@ -13,29 +13,27 @@ export function OperatorRouteError({ error }: { error: Error }) {
   const message = error.message ?? "";
   const signedOut = /unauthorized|no authorization header|jwt|401/i.test(message);
 
-  if (signedOut) {
-    return (
+  return (
+    <div className="space-y-4">
       <EmptyState
-        title="Your operator session expired"
-        description="Sign in again to load this workspace. Nothing was changed."
-        action={
+        title={signedOut ? "Your operator session expired" : "This workspace could not load"}
+        description={
+          signedOut
+            ? "Sign in again to load this workspace. Nothing was changed."
+            : message || "The read failed. Try again in a moment."
+        }
+      />
+      <div className="flex justify-center">
+        {signedOut ? (
           <Button variant="outline" asChild>
             <Link to="/auth">Sign in</Link>
           </Button>
-        }
-      />
-    );
-  }
-
-  return (
-    <EmptyState
-      title="This workspace could not load"
-      description={message || "The read failed. Try again in a moment."}
-      action={
-        <Button variant="outline" onClick={() => window.location.reload()}>
-          Try again
-        </Button>
-      }
-    />
+        ) : (
+          <Button variant="outline" onClick={() => window.location.reload()}>
+            Try again
+          </Button>
+        )}
+      </div>
+    </div>
   );
 }
