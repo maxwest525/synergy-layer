@@ -24,6 +24,7 @@ import { Route as SchedulerRouteImport } from './routes/scheduler'
 import { Route as WorkflowsRouteImport } from './routes/workflows'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
+import { Route as AdsAdvertisersRouteImport } from './routes/ads.advertisers'
 import { Route as AgentsIndexRouteImport } from './routes/agents.index'
 import { Route as AgentsIdRouteImport } from './routes/agents.$id'
 import { Route as AssetsIndexRouteImport } from './routes/assets.index'
@@ -121,6 +122,11 @@ const Char91DotwellKnownChar93OauthProtectedResourceRoute =
     path: '/.well-known/oauth-protected-resource',
     getParentRoute: () => rootRouteImport,
   } as any)
+const AdsAdvertisersRoute = AdsAdvertisersRouteImport.update({
+  id: '/ads/advertisers',
+  path: '/ads/advertisers',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AgentsIndexRoute = AgentsIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -236,6 +242,7 @@ export interface FileRoutesByFullPath {
   '/workflows': typeof WorkflowsRouteWithChildren
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/ads/advertisers': typeof AdsAdvertisersRoute
   '/agents/$id': typeof AgentsIdRoute
   '/assets/$id': typeof AssetsIdRoute
   '/auth/callback': typeof AuthCallbackRoute
@@ -265,6 +272,7 @@ export interface FileRoutesByTo {
   '/mcp': typeof McpRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/ads/advertisers': typeof AdsAdvertisersRoute
   '/agents/$id': typeof AgentsIdRoute
   '/assets/$id': typeof AssetsIdRoute
   '/auth/callback': typeof AuthCallbackRoute
@@ -302,6 +310,7 @@ export interface FileRoutesById {
   '/workflows': typeof WorkflowsRouteWithChildren
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/ads/advertisers': typeof AdsAdvertisersRoute
   '/agents/$id': typeof AgentsIdRoute
   '/assets/$id': typeof AssetsIdRoute
   '/auth/callback': typeof AuthCallbackRoute
@@ -340,6 +349,7 @@ export interface FileRouteTypes {
     | '/workflows'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
+    | '/ads/advertisers'
     | '/agents/$id'
     | '/assets/$id'
     | '/auth/callback'
@@ -369,6 +379,7 @@ export interface FileRouteTypes {
     | '/mcp'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
+    | '/ads/advertisers'
     | '/agents/$id'
     | '/assets/$id'
     | '/auth/callback'
@@ -405,6 +416,7 @@ export interface FileRouteTypes {
     | '/workflows'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
+    | '/ads/advertisers'
     | '/agents/$id'
     | '/assets/$id'
     | '/auth/callback'
@@ -442,6 +454,7 @@ export interface RootRouteChildren {
   WorkflowsRoute: typeof WorkflowsRouteWithChildren
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  AdsAdvertisersRoute: typeof AdsAdvertisersRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
   ApiPublicHooksDataforseoPostbackRoute: typeof ApiPublicHooksDataforseoPostbackRoute
@@ -553,6 +566,13 @@ declare module '@tanstack/react-router' {
       path: '/.well-known/oauth-protected-resource'
       fullPath: '/.well-known/oauth-protected-resource'
       preLoaderRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ads/advertisers': {
+      id: '/ads/advertisers'
+      path: '/ads/advertisers'
+      fullPath: '/ads/advertisers'
+      preLoaderRoute: typeof AdsAdvertisersRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/agents/': {
@@ -814,6 +834,7 @@ const rootRouteChildren: RootRouteChildren = {
   Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
+  AdsAdvertisersRoute: AdsAdvertisersRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
   ApiPublicHooksDataforseoPostbackRoute: ApiPublicHooksDataforseoPostbackRoute,
