@@ -165,16 +165,26 @@ function RecommendationDetailPage() {
 
           <GlassCard className="p-5">
             <h2 className="text-sm font-semibold text-foreground">Suggested action</h2>
-            <p className="mt-2 text-sm text-muted-foreground">{action.summary}</p>
-            {action.link ? (
-              <div className="mt-3 space-y-2">
-                <Button asChild variant="outline" size="sm">
-                  <Link to={action.link.to}>{action.link.label}</Link>
-                </Button>
-                <p className="text-xs text-muted-foreground">{action.link.effect}</p>
-              </div>
-            ) : null}
+            {data.changeRequest ? (
+              <p className="mt-2 text-sm text-muted-foreground">
+                The decision lives on the linked page-change request above. Approval authorizes the exact
+                before/after values there; it does not edit or publish the site.
+              </p>
+            ) : (
+              <>
+                <p className="mt-2 text-sm text-muted-foreground">{action.summary}</p>
+                {action.link ? (
+                  <div className="mt-3 space-y-2">
+                    <Button asChild variant="outline" size="sm">
+                      <Link to={action.link.to}>{action.link.label}</Link>
+                    </Button>
+                    <p className="text-xs text-muted-foreground">{action.link.effect}</p>
+                  </div>
+                ) : null}
+              </>
+            )}
           </GlassCard>
+
 
 
           <GlassCard className="p-5">
