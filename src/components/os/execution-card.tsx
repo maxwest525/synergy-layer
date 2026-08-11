@@ -185,23 +185,26 @@ export function ExecutionCard(props: Props) {
         </p>
         {readinessBlock}
         <div className="mt-4 flex flex-wrap gap-2">
+          {preflightButton}
           <Button
             variant="ghost"
             size="sm"
-            disabled={execution.isFetching}
+            disabled={execution.isFetching || running}
             onClick={() => {
               void execution.refetch();
-              toast.success("Re-checked stored connection facts. No provider was called.");
+              toast.success("Re-read stored configuration. No provider was called.");
             }}
           >
-            Re-check connections
+            Re-read stored configuration
           </Button>
         </div>
         <p className="mt-3 text-xs text-muted-foreground">
-          These are configuration facts only. A configured credential is not a proven working
-          credential: the first real proof is the execution attempt itself.
+          The connection test makes read-only GitHub requests with the configured token. It creates
+          no commit, changes no state, and leaves this request proposed. No Execute control exists
+          before approval.
         </p>
         <CostNote />
+
       </GlassCard>
     );
   }
