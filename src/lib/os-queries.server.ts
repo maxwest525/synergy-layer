@@ -364,5 +364,4 @@ export async function fetchOverview() {
     pendingApprovals: Number(payload.pendingApprovals ?? 0),
   };
 }
-}
 
