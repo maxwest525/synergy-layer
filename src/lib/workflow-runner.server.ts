@@ -458,3 +458,87 @@ async function runSerpCompetitorNode(client: Client, ref: string): Promise<NodeO
     return { ok: false, error: error instanceof Error ? error.message : String(error) };
   }
 }
+
+/**
+ * Google Ads Transparency observation nodes. Read-only: they write immutable
+ * paid-media evidence and never produce recommendations or ad copy. A pass
+ * that changes nothing is a successful step, and missing credentials stop the
+ * node with the exact blocker instead of a silent empty result.
+ */
+async function runAdsTransparencyNode(
+  client: Client,
+  ref: string,
+  runId: string,
+): Promise<NodeOutcome | null> {
+  const handled = new Set([
+    "cap.serpapi_ads_transparency",
+    "ads.advertiser_resolution",
+    "ads.creative_intelligence",
+    "ads.landing_page_intelligence",
+    "ads.live_serp_observation",
+    "ads.vendor_network_analysis",
+  ]);
+  if (!handled.has(ref)) return null;
+
+  try {
+    const { requireTenantId } = await import("./tenant.server");
+    const tenantId = await requireTenantId(client);
+
+    if (ref === "ads.vendor_network_analysis") {
+      const { analyzeVendorNetwork } = await import("./serpapi/network.server");
+      const result = await analyzeVendorNetwork(client, tenantId);
+      return { ok: true, output: { ...result } as Record<string, unknown> };
+    }
+
+    if (ref === "ads.landing_page_intelligence") {
+      const { observeAdDestinations } = await import("./serpapi/landing-pages.server");
+      const result = await observeAdDestinations(client, tenantId);
+      if (result.destinations === 0) {
+        return { ok: true, output: { noChange: true, reason: "No stored ad destination to observe yet." } };
+      }
+      return { ok: true, output: { ...result } };
+    }
+
+    const { serpApiCredentialsPresent } = await import("./serpapi/transport.server");
+    if (!serpApiCredentialsPresent()) {
+      return {
+        ok: false,
+        error:
+          "SerpApi credentials are missing. Add SERPAPI_API_KEY in Project Settings, then re-run: AOOS will not fabricate paid-media evidence.",
+      };
+    }
+
+    if (ref === "ads.advertiser_resolution") {
+      const { resolveVendorAdvertisers } = await import("./serpapi/advertisers.server");
+      const result = await resolveVendorAdvertisers(client, tenantId, { runId });
+      return { ok: true, output: { ...result } as Record<string, unknown> };
+    }
+
+    if (ref === "ads.creative_intelligence") {
+      const { ingestAdvertiserCreatives } = await import("./serpapi/creatives.server");
+      const result = await ingestAdvertiserCreatives(client, tenantId, { runId });
+      if (result.advertisers === 0) {
+        return {
+          ok: true,
+          output: { noChange: true, reason: "No confirmed advertiser yet. Resolve and confirm a vendor advertiser first." },
+        };
+      }
+      return { ok: true, output: { ...result } };
+    }
+
+    if (ref === "ads.live_serp_observation") {
+      const { observeLivePaidSerps } = await import("./serpapi/live-serp.server");
+      const result = await observeLivePaidSerps(client, tenantId, { runId });
+      if (result.keywords === 0) {
+        return { ok: false, error: "No approved keywords to observe on the paid SERP." };
+      }
+      return { ok: true, output: { ...result } as Record<string, unknown> };
+    }
+
+    const { probeSerpApiAccount } = await import("./serpapi/transport.server");
+    const account = await probeSerpApiAccount();
+    return { ok: true, output: { ...account } };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : String(error) };
+  }
+}
