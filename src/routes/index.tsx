@@ -63,6 +63,7 @@ type InboxRoute =
   | { kind: "keywords" }
   | { kind: "competitors" }
   | { kind: "adsAdvertisers" }
+  | { kind: "change"; id: string }
   | { kind: "recommendation"; id: string }
   | { kind: "agent"; id: string }
   | { kind: "workflow"; id: string }
@@ -70,7 +71,7 @@ type InboxRoute =
 
 // Compiled once at module load. Building this inside the resolver recompiled a
 // regex for every inbox row on every render.
-const detailHrefPattern = /^\/(recommendations|agents|workflows|scheduler)\/([0-9a-fA-F-]{36})$/;
+const detailHrefPattern = /^\/(changes|recommendations|agents|workflows|scheduler)\/([0-9a-fA-F-]{36})$/;
 
 function routeFromHref(href: string): InboxRoute | null {
   if (href === "/keywords") return { kind: "keywords" };
@@ -81,6 +82,7 @@ function routeFromHref(href: string): InboxRoute | null {
   if (!match) return null;
   const [, workspace, id] = match;
   if (!id) return null;
+  if (workspace === "changes") return { kind: "change", id };
   if (workspace === "recommendations") return { kind: "recommendation", id };
   if (workspace === "agents") return { kind: "agent", id };
   if (workspace === "workflows") return { kind: "workflow", id };
@@ -100,6 +102,7 @@ function reviewRouteFor(item: { actions: unknown; subject_kind: string | null; s
   }
 
   if (!item.subject_id) return null;
+  if (item.subject_kind === "change_request") return { kind: "change", id: item.subject_id };
   if (item.subject_kind === "recommendation") return { kind: "recommendation", id: item.subject_id };
   if (item.subject_kind === "agent") return { kind: "agent", id: item.subject_id };
   return null;
@@ -110,6 +113,7 @@ function InboxLink({ route, children }: { route: InboxRoute; children: React.Rea
   if (route.kind === "keywords") return <Link to="/keywords" className={className}>{children}</Link>;
   if (route.kind === "competitors") return <Link to="/competitors" className={className}>{children}</Link>;
   if (route.kind === "adsAdvertisers") return <Link to="/ads/advertisers" className={className}>{children}</Link>;
+  if (route.kind === "change") return <Link to="/changes/$id" params={{ id: route.id }} className={className}>{children}</Link>;
   if (route.kind === "recommendation") return <Link to="/recommendations/$id" params={{ id: route.id }} className={className}>{children}</Link>;
   if (route.kind === "agent") return <Link to="/agents/$id" params={{ id: route.id }} className={className}>{children}</Link>;
   if (route.kind === "workflow") return <Link to="/workflows/$id" params={{ id: route.id }} className={className}>{children}</Link>;
@@ -120,6 +124,7 @@ function InboxActionLink({ route, children }: { route: InboxRoute; children: Rea
   if (route.kind === "keywords") return <Button asChild variant="outline" size="sm"><Link to="/keywords">{children}</Link></Button>;
   if (route.kind === "competitors") return <Button asChild variant="outline" size="sm"><Link to="/competitors">{children}</Link></Button>;
   if (route.kind === "adsAdvertisers") return <Button asChild variant="outline" size="sm"><Link to="/ads/advertisers">{children}</Link></Button>;
+  if (route.kind === "change") return <Button asChild variant="outline" size="sm"><Link to="/changes/$id" params={{ id: route.id }}>{children}</Link></Button>;
   if (route.kind === "recommendation") return <Button asChild variant="outline" size="sm"><Link to="/recommendations/$id" params={{ id: route.id }}>{children}</Link></Button>;
   if (route.kind === "agent") return <Button asChild variant="outline" size="sm"><Link to="/agents/$id" params={{ id: route.id }}>{children}</Link></Button>;
   if (route.kind === "workflow") return <Button asChild variant="outline" size="sm"><Link to="/workflows/$id" params={{ id: route.id }}>{children}</Link></Button>;
@@ -136,6 +141,8 @@ function actionLabel(route: InboxRoute, lane: string): string {
       return pending ? "Review competitor candidates" : "Open competitor review";
     case "adsAdvertisers":
       return pending ? "Review advertiser candidate" : "Open advertiser review";
+    case "change":
+      return pending ? "Review the proposed change" : "Open the proposed change";
     case "recommendation":
       return pending ? "Review recommendation" : "Open recommendation";
     case "agent":
