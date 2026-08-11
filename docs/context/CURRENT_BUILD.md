@@ -8,7 +8,7 @@ It is not authoritative documentation. Provider digests under
 `docs/integrations/<provider>/DIGEST.md` and their PLAN files remain the source of
 truth for provider behaviour and must never be overwritten by this file.
 
-Last updated: 2026-08-11 (Search Console authenticated read path repaired).
+Last updated: 2026-08-11 (Phase 2 visibility slice one: Search workspace).
 
 ## 1. What AOOS is
 
@@ -148,3 +148,26 @@ second visits served from the query cache. Applied fixes:
 - **Digest is in Knowledge.** The Google Ads Transparency digest v1.0.0 is filed in
   kb.documents, tagged `cap.serpapi_ads_transparency`, pointing at
   `docs/integrations/serpapi/DIGEST.md`.
+
+## 10. Phase 2 visibility slice one: Search workspace
+
+First Phase 2 real-data surface. `/search` renders only what Google Search Console
+actually observed for `sc-domain:trumoveinc.com`, read tenant-scoped and
+authenticated through `getSearchWorkspace` in `src/lib/search.functions.ts`.
+
+Sections: Overview (property totals per finalized Pacific date), Pages, Queries,
+Page + query, Devices and countries, Indexing & sitemaps. No raw JSON, no snapshot
+IDs, no ledger rows, no derived score or trend. The evidence-limits notice states
+plainly that only three finalized dates exist and volume is sparse.
+
+Proven live values: latest finalized date 2026-08-08 with 1 click, 18 impressions,
+5.6% CTR, average position 14.9; 2026-08-06 and 2026-08-03 also stored; nine pages
+and eight disclosed queries; two sitemaps (29 and 10 submitted URLs, 0 indexed, 0
+warnings, 0 errors).
+
+Placeholder correction applied by migration: the primary marketing site asset now
+carries `https://trumoveinc.com` and the domain asset is named `trumoveinc.com`.
+The selected Search Console property was not changed.
+
+The Search Console connection controls stay on the asset detail page, which now
+links to the Search workspace for the actual metrics.

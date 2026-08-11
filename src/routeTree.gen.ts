@@ -21,6 +21,7 @@ import { Route as KnowledgeRouteImport } from './routes/knowledge'
 import { Route as McpRouteImport } from './routes/mcp'
 import { Route as RecommendationsRouteImport } from './routes/recommendations'
 import { Route as SchedulerRouteImport } from './routes/scheduler'
+import { Route as SearchRouteImport } from './routes/search'
 import { Route as WorkflowsRouteImport } from './routes/workflows'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
@@ -103,6 +104,11 @@ const RecommendationsRoute = RecommendationsRouteImport.update({
 const SchedulerRoute = SchedulerRouteImport.update({
   id: '/scheduler',
   path: '/scheduler',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SearchRoute = SearchRouteImport.update({
+  id: '/search',
+  path: '/search',
   getParentRoute: () => rootRouteImport,
 } as any)
 const WorkflowsRoute = WorkflowsRouteImport.update({
@@ -239,6 +245,7 @@ export interface FileRoutesByFullPath {
   '/mcp': typeof McpRoute
   '/recommendations': typeof RecommendationsRouteWithChildren
   '/scheduler': typeof SchedulerRouteWithChildren
+  '/search': typeof SearchRoute
   '/workflows': typeof WorkflowsRouteWithChildren
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -270,6 +277,7 @@ export interface FileRoutesByTo {
   '/competitors': typeof CompetitorsRoute
   '/keywords': typeof KeywordsRoute
   '/mcp': typeof McpRoute
+  '/search': typeof SearchRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/ads/advertisers': typeof AdsAdvertisersRoute
@@ -307,6 +315,7 @@ export interface FileRoutesById {
   '/mcp': typeof McpRoute
   '/recommendations': typeof RecommendationsRouteWithChildren
   '/scheduler': typeof SchedulerRouteWithChildren
+  '/search': typeof SearchRoute
   '/workflows': typeof WorkflowsRouteWithChildren
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -346,6 +355,7 @@ export interface FileRouteTypes {
     | '/mcp'
     | '/recommendations'
     | '/scheduler'
+    | '/search'
     | '/workflows'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
@@ -377,6 +387,7 @@ export interface FileRouteTypes {
     | '/competitors'
     | '/keywords'
     | '/mcp'
+    | '/search'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/ads/advertisers'
@@ -413,6 +424,7 @@ export interface FileRouteTypes {
     | '/mcp'
     | '/recommendations'
     | '/scheduler'
+    | '/search'
     | '/workflows'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
@@ -451,6 +463,7 @@ export interface RootRouteChildren {
   McpRoute: typeof McpRoute
   RecommendationsRoute: typeof RecommendationsRouteWithChildren
   SchedulerRoute: typeof SchedulerRouteWithChildren
+  SearchRoute: typeof SearchRoute
   WorkflowsRoute: typeof WorkflowsRouteWithChildren
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -545,6 +558,13 @@ declare module '@tanstack/react-router' {
       path: '/scheduler'
       fullPath: '/scheduler'
       preLoaderRoute: typeof SchedulerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/search': {
+      id: '/search'
+      path: '/search'
+      fullPath: '/search'
+      preLoaderRoute: typeof SearchRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/workflows': {
@@ -830,6 +850,7 @@ const rootRouteChildren: RootRouteChildren = {
   McpRoute: McpRoute,
   RecommendationsRoute: RecommendationsRouteWithChildren,
   SchedulerRoute: SchedulerRouteWithChildren,
+  SearchRoute: SearchRoute,
   WorkflowsRoute: WorkflowsRouteWithChildren,
   Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
