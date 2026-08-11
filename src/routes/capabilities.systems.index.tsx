@@ -3,12 +3,7 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 
-import {
-  EmptyState,
-  GlassCard,
-  MetricTile,
-  PageHeader,
-} from "@/components/os/primitives";
+import { EmptyState, GlassCard, MetricTile, PageHeader } from "@/components/os/primitives";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AvailabilityBadge } from "@/components/os/availability-badge";
@@ -43,7 +38,11 @@ type View = "essentials" | "all";
 
 const FILTERS: { key: EstateFilter; label: string; hint: string }[] = [
   { key: "all", label: "All", hint: "Every canonical system in this view." },
-  { key: "available", label: "Available to enable", hint: "The provider exists and could be turned on." },
+  {
+    key: "available",
+    label: "Available to enable",
+    hint: "The provider exists and could be turned on.",
+  },
   { key: "enabled", label: "Enabled", hint: "Confirmed switched on for this workspace." },
   {
     key: "credentialed",
@@ -52,7 +51,11 @@ const FILTERS: { key: EstateFilter; label: string; hint: string }[] = [
   },
   { key: "implemented", label: "Implemented", hint: "AOOS code exists for it, fully or partly." },
   { key: "callable", label: "Callable from AOOS", hint: "AOOS cloud can call it today." },
-  { key: "installed", label: "Installed locally", hint: "Present on the local workstation or workspace." },
+  {
+    key: "installed",
+    label: "Installed locally",
+    hint: "Present on the local workstation or workspace.",
+  },
   { key: "live", label: "Live proven", hint: "Observed actually working, fully or partly." },
 ];
 
@@ -117,9 +120,7 @@ function SystemsPage() {
   // Every number on this page is recalculated from what the database returned.
   const scoped = useMemo(
     () =>
-      view === "essentials"
-        ? data.systems.filter((system) => system.is_essential)
-        : data.systems,
+      view === "essentials" ? data.systems.filter((system) => system.is_essential) : data.systems,
     [data.systems, view],
   );
 
