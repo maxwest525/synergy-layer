@@ -299,6 +299,12 @@ export async function fetchOverview() {
       competitorCandidates: 0,
       trackedCompetitors: 0,
     },
+    quickActions: {
+      openInbox: 0,
+      pendingCompetitors: 0,
+      pendingAdvertisers: 0,
+      failedRuns: 0,
+    } as QuickActionCounts,
     pendingApprovals: 0,
   };
 
@@ -321,10 +327,16 @@ export async function fetchOverview() {
     runs: RunSummary[];
     activity: Awaited<ReturnType<typeof fetchActivity>>;
     evidence: typeof empty.evidence;
+    quickActions: QuickActionCounts;
     pendingApprovals: number;
   };
 
-  if (!payload.counts || typeof payload.counts !== "object" || !payload.evidence) {
+  if (
+    !payload.counts ||
+    typeof payload.counts !== "object" ||
+    !payload.evidence ||
+    !payload.quickActions
+  ) {
     throw new Error("Command Center read returned a malformed payload.");
   }
 
@@ -343,7 +355,14 @@ export async function fetchOverview() {
       spentUsd: Number(payload.evidence?.spentUsd ?? 0),
       ceilingUsd: Number(payload.evidence?.ceilingUsd ?? 0),
     },
+    quickActions: {
+      openInbox: Number(payload.quickActions.openInbox ?? 0),
+      pendingCompetitors: Number(payload.quickActions.pendingCompetitors ?? 0),
+      pendingAdvertisers: Number(payload.quickActions.pendingAdvertisers ?? 0),
+      failedRuns: Number(payload.quickActions.failedRuns ?? 0),
+    },
     pendingApprovals: Number(payload.pendingApprovals ?? 0),
   };
+}
 }
 
