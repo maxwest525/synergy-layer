@@ -222,8 +222,19 @@ export async function fetchRecommendation(id: string) {
       )
       .eq("recommendation_id", id),
   );
-  return { recommendation, dependencies };
+  // A recommendation backed by a concrete change request must lead to it, or
+  // the operator lands on a summary with no way to reach the real decision.
+  const changeRequest = unwrap(
+    await db
+      .from("change_requests")
+      .select("id, title, state, target_url")
+      .eq("recommendation_id", id)
+      .eq("tenant_id", tenantId!)
+      .maybeSingle(),
+  );
+  return { recommendation, dependencies, changeRequest };
 }
+
 
 export async function fetchSchedules() {
   const { db, tenantId, ready } = await scope();
