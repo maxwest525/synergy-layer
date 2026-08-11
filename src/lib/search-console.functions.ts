@@ -36,10 +36,13 @@ export const runSearchConsoleObservation = createServerFn({ method: "POST" })
     return observeSearchConsole(context.supabase);
   });
 
-/** Public read: connection state, selected property, and recent snapshots. */
-export const getSearchConsoleState = createServerFn({ method: "GET" }).handler(async () => {
-  const { createPublicServerClient, rows } = await import("./os.server");
-  const client = createPublicServerClient();
+/** Operator read: connection state, selected property, and recent snapshots. */
+export const getSearchConsoleState = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { rows } = await import("./os.server");
+    const client = context.supabase;
+
 
   const properties = rows(
     await client
