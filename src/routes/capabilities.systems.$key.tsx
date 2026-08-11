@@ -44,6 +44,7 @@ export const Route = createFileRoute("/capabilities/systems/$key")({
       },
     ],
   }),
+  errorComponent: OperatorRouteError,
   component: SystemDetailPage,
 });
 

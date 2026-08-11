@@ -2,6 +2,7 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 
+import { OperatorRouteError } from "@/components/os/route-error";
 import { EmptyState, GlassCard, MetricTile, PageHeader, StatePill, formatWhen } from "@/components/os/primitives";
 import type { SearchRow } from "@/lib/search.functions";
 import { getSearchWorkspace } from "@/lib/search.functions";
@@ -29,6 +30,7 @@ export const Route = createFileRoute("/search")({
       { name: "twitter:card", content: "summary" },
     ],
   }),
+  errorComponent: OperatorRouteError,
   component: SearchWorkspacePage,
 });
 

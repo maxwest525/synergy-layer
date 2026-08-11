@@ -3,6 +3,7 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 
+import { OperatorRouteError } from "@/components/os/route-error";
 import { EmptyState, GlassCard, MetricTile, PageHeader } from "@/components/os/primitives";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,6 +32,7 @@ export const Route = createFileRoute("/capabilities/systems/")({
       },
     ],
   }),
+  errorComponent: OperatorRouteError,
   component: SystemsPage,
 });
 
