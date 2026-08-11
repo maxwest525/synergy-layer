@@ -217,6 +217,7 @@ async function executeNode(client: Client, node: WorkflowNode, runId: string): P
       (await runResearchNode(client, node.ref ?? "")) ??
       (await runSeoValidationNode(client, node.ref ?? "", runId)) ??
       (await runSerpCompetitorNode(client, node.ref ?? "")) ??
+      (await runAdsTransparencyNode(client, node.ref ?? "", runId)) ??
       (await runDataForSeoNode(client, node.ref ?? "", runId));
     if (specialised && !specialised.ok) return specialised;
 
