@@ -36,25 +36,28 @@ export const runSearchConsoleObservation = createServerFn({ method: "POST" })
     return observeSearchConsole(context.supabase);
   });
 
-/** Public read: connection state, selected property, and recent snapshots. */
-export const getSearchConsoleState = createServerFn({ method: "GET" }).handler(async () => {
-  const { createPublicServerClient, rows } = await import("./os.server");
-  const client = createPublicServerClient();
+/** Operator read: connection state, selected property, and recent snapshots. */
+export const getSearchConsoleState = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { rows } = await import("./os.server");
+    const client = context.supabase;
 
-  const properties = rows(
-    await client
-      .from("search_console_properties")
-      .select("site_url, permission_level, eligible, selected, last_observed_at")
-      .order("site_url"),
-  );
+    const properties = rows(
+      await client
+        .from("search_console_properties")
+        .select("site_url, permission_level, eligible, selected, last_observed_at")
+        .order("site_url"),
+    );
 
-  const snapshots = rows(
-    await client
-      .from("search_console_snapshots")
-      .select("id, property, kind, dimensions, period_end_pt, returned_row_count, totals, collected_at")
-      .order("collected_at", { ascending: false })
-      .limit(12),
-  );
+    const snapshots = rows(
+      await client
+        .from("search_console_snapshots")
+        .select("id, property, kind, dimensions, period_end_pt, returned_row_count, totals, collected_at")
+        .order("collected_at", { ascending: false })
+        .limit(12),
+    );
 
-  return { properties, snapshots };
-});
+    return { properties, snapshots };
+  });
+

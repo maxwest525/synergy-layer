@@ -129,3 +129,21 @@ second visits served from the query cache. Applied fixes:
   connection/account/ledger detail. `/ads/advertisers` is a deep review surface
   reached from Inbox and Command Center, not a sidebar workspace. The one-credit
   canary is behind an explicit spend confirmation dialog.
+- **Search Console panel reads as the operator.** `getSearchConsoleState` used an
+  anon publishable client, so tenant-scoped RLS correctly returned nothing and the
+  panel looked empty even with rows stored. It is now behind `requireSupabaseAuth`
+  and reads through `context.supabase`. `syncProperties` upserts on
+  `(tenant_id, site_url)`, matching the real unique index.
+- **Vendor advertiser sweep.** `src/lib/serpapi/sweep.server.ts` walks unresolved
+  watchlist domains one at a time through the single-credit canary path, so each
+  request keeps its own ledger reservation, account floor check, and idempotency
+  key. It stops at the first account or credential refusal. A provider "no
+  results" reply is a successful empty observation, not a transport failure, and a
+  previously failed reservation is retried under a distinct run key.
+- **Weekly ads cadence registered.** `sch.vendor_ad_refresh`,
+  `sch.vendor_landing_page_analysis`, and `sch.vendor_message_synthesis` run
+  Tuesdays. Creative ingestion files an FYI Inbox item only on material change
+  (new creative families or retirements).
+- **Digest is in Knowledge.** The Google Ads Transparency digest v1.0.0 is filed in
+  kb.documents, tagged `cap.serpapi_ads_transparency`, pointing at
+  `docs/integrations/serpapi/DIGEST.md`.

@@ -154,10 +154,14 @@ export async function runAdvertiserCanary(
       throw new SerpApiFailure("api_error", `SerpApi returned an unreadable response [${response.status}].`);
     }
     const providerError = typeof parsed["error"] === "string" ? (parsed["error"] as string) : null;
-    if (!response.ok || providerError) {
+    // "No results" is a real, successful observation: the provider searched and
+    // found nothing. It is not a transport failure and must not stop a sweep.
+    const emptyResult = providerError !== null && /hasn't returned any results|no results/i.test(providerError);
+    if (!response.ok || (providerError && !emptyResult)) {
       throw new SerpApiFailure("api_error", providerError ?? `SerpApi request failed [${response.status}].`);
     }
-    payload = parsed;
+    payload = emptyResult ? { search_metadata: parsed["search_metadata"] ?? {}, ad_creatives: [] } : parsed;
+
   } catch (error) {
     const aborted = error instanceof Error && error.name === "AbortError";
     const reason = aborted

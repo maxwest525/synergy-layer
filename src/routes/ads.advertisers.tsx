@@ -31,6 +31,8 @@ import {
   decideAdvertiserCandidate,
   getAdsOverview,
   runAdsCanary,
+  runAdvertiserSweep,
+
   type AdsCandidateView,
 } from "@/lib/ads.functions";
 
@@ -148,6 +150,8 @@ function AdvertiserReviewPage() {
   const gate = useServerFn(checkAdsProviderGate);
   const decide = useServerFn(decideAdvertiserCandidate);
   const canary = useServerFn(runAdsCanary);
+  const sweep = useServerFn(runAdvertiserSweep);
+
   const [canaryDomain] = useState("budgetvanlines.com");
 
   const refresh = () => {
@@ -199,7 +203,32 @@ function AdvertiserReviewPage() {
     onError: (error: Error) => toast.error(error.message),
   });
 
-  const busy = gateMutation.isPending || decideMutation.isPending || canaryMutation.isPending;
+  const unresolvedDomains = data.watchlist.filter(
+    (row) => row.active && row.resolutionState === "unresolved",
+  ).length;
+
+  const sweepMutation = useMutation({
+    mutationFn: () => sweep({ data: { limit: 12 } }),
+    onSuccess: (result) => {
+      if (result.domainsSearched === 0) {
+        toast.error(result.stoppedEarly ?? "No vendor domain was searched.");
+      } else {
+        toast.success(
+          `Sweep complete: ${result.domainsSearched} domain${result.domainsSearched === 1 ? "" : "s"} searched, ${result.candidatesFiled} candidate${result.candidatesFiled === 1 ? "" : "s"} filed, ${result.chargedCredits} credit${result.chargedCredits === 1 ? "" : "s"} charged.`,
+        );
+        if (result.stoppedEarly) toast.warning(`Sweep stopped early: ${result.stoppedEarly}`);
+      }
+      refresh();
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+  const busy =
+    gateMutation.isPending ||
+    decideMutation.isPending ||
+    canaryMutation.isPending ||
+    sweepMutation.isPending;
+
   const pendingCandidates = data.candidates.filter((row) => row.reviewState === "pending");
   const decidedCandidates = data.candidates.filter((row) => row.reviewState !== "pending");
   const { account } = data;
@@ -268,7 +297,35 @@ function AdvertiserReviewPage() {
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="outline" size="sm" disabled={busy || unresolvedDomains === 0}>
+                Sweep {unresolvedDomains} unresolved vendor domain{unresolvedDomains === 1 ? "" : "s"}
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>
+                  This may charge up to {unresolvedDomains} SerpApi search credits
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                  The sweep runs one Ads Transparency search per unresolved vendor domain, one at a time,
+                  through the same metered path as the canary. It refuses to start a search when the
+                  account is invalid or below the ten search floor, and it stops at the first refusal.
+                  Every advertiser it finds is filed as a pending candidate; nothing is confirmed
+                  automatically.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={() => sweepMutation.mutate()}>
+                  Spend credits and sweep
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
+
         <p className="mt-2 text-xs text-muted-foreground">
           The account check costs nothing. The canary buys at most one search, and only when the account is valid
           and reports at least ten searches remaining.
