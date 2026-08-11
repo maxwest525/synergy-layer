@@ -141,7 +141,11 @@ function CandidateCard({
 }
 
 function AdvertiserReviewPage() {
-  const { data } = useSuspenseQuery(adsQuery);
+  const loadOverview = useServerFn(getAdsOverview);
+  const { data } = useSuspenseQuery({
+    queryKey: ["ads-overview"],
+    queryFn: () => loadOverview(),
+  });
   const queryClient = useQueryClient();
   const gate = useServerFn(checkAdsProviderGate);
   const decide = useServerFn(decideAdvertiserCandidate);
