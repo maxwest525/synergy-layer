@@ -1,7 +1,7 @@
 import { checkSourceTarget } from "./allowlist";
 import { describeGithubFailure } from "./github-error";
 import type { AttemptRecord, ExecutionStore, GithubApi } from "./execute";
-import { countOccurrences } from "./source-change";
+import { applyExactReplacements } from "./source-change";
 
 /**
  * Read-only GitHub preflight.
