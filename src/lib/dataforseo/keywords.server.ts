@@ -307,15 +307,39 @@ export async function suggestKeywords(
   }
 
   if (filed > 0) {
-    await fileInboxItem(client, {
-      tenantId,
-      lane: "pending_approval",
-      sourceModule: "dataforseo",
-      title: `${filed} keyword candidates need approval`,
-      summary: `DataForSEO Labs proposed ${filed} keywords for ${domain}. SERP observation stays idle until at least one is approved.`,
-      priority: 2,
-      actions: [{ kind: "open" }],
-    });
+    const { data: openItems } = await client
+      .from("inbox_items")
+      .select("id")
+      .eq("tenant_id", tenantId)
+      .eq("source_module", "dataforseo")
+      .is("resolved_at", null)
+      .ilike("title", "%keyword candidates%");
+    const pendingCount = await client
+      .from("keyword_candidates")
+      .select("id", { count: "exact", head: true })
+      .eq("tenant_id", tenantId)
+      .eq("review_state", "pending");
+    const remaining = pendingCount.count ?? filed;
+    const update = {
+      lane: "pending_approval" as const,
+      title: `${remaining} keyword candidates need approval`,
+      summary: `${remaining} keyword candidates are awaiting an operator decision. SERP observation runs only on approved keywords.`,
+      actions: [{ kind: "open", href: "/keywords" }] as never,
+    };
+    const ids = (openItems ?? []).map((item) => item.id);
+    if (ids.length > 0) {
+      await client.from("inbox_items").update(update).in("id", ids);
+    } else {
+      await fileInboxItem(client, {
+        tenantId,
+        lane: update.lane,
+        sourceModule: "dataforseo",
+        title: update.title,
+        summary: update.summary,
+        priority: 2,
+        actions: update.actions,
+      });
+    }
   }
 
   return { proposed: ranked.length, filed, alreadyKnown, seeds, costUsd };

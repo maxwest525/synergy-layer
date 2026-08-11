@@ -51,10 +51,65 @@ export const Route = createFileRoute("/")({
  * Some inbox items are decisions with a real review surface behind them. An
  * item the operator cannot open is a gate nobody can pass.
  */
-function reviewRouteFor(item: { source_module: string; title: string }): "/keywords" | "/competitors" | null {
-  if (item.source_module === "dataforseo" && /keyword candidates/i.test(item.title)) return "/keywords";
-  if (item.source_module === "competitor-intelligence") return "/competitors";
+type InboxRoute =
+  | { kind: "keywords" }
+  | { kind: "competitors" }
+  | { kind: "recommendation"; id: string }
+  | { kind: "agent"; id: string }
+  | { kind: "workflow"; id: string }
+  | { kind: "schedule"; id: string };
+
+const idPattern = "[0-9a-fA-F-]{36}";
+
+function routeFromHref(href: string): InboxRoute | null {
+  if (href === "/keywords") return { kind: "keywords" };
+  if (href === "/competitors") return { kind: "competitors" };
+
+  const match = href.match(new RegExp(`^/(recommendations|agents|workflows|scheduler)/(${idPattern})$`));
+  if (!match) return null;
+  const [, workspace, id] = match;
+  if (!id) return null;
+  if (workspace === "recommendations") return { kind: "recommendation", id };
+  if (workspace === "agents") return { kind: "agent", id };
+  if (workspace === "workflows") return { kind: "workflow", id };
+  if (workspace === "scheduler") return { kind: "schedule", id };
   return null;
+}
+
+function reviewRouteFor(item: { actions: unknown; subject_kind: string | null; subject_id: string | null }): InboxRoute | null {
+  if (Array.isArray(item.actions)) {
+    for (const action of item.actions) {
+      if (typeof action !== "object" || action === null) continue;
+      const href = (action as Record<string, unknown>)["href"];
+      if (typeof href !== "string") continue;
+      const route = routeFromHref(href);
+      if (route) return route;
+    }
+  }
+
+  if (!item.subject_id) return null;
+  if (item.subject_kind === "recommendation") return { kind: "recommendation", id: item.subject_id };
+  if (item.subject_kind === "agent") return { kind: "agent", id: item.subject_id };
+  return null;
+}
+
+function InboxLink({ route, children }: { route: InboxRoute; children: React.ReactNode }) {
+  const className = "text-sm font-medium text-foreground underline-offset-4 hover:text-primary hover:underline";
+  if (route.kind === "keywords") return <Link to="/keywords" className={className}>{children}</Link>;
+  if (route.kind === "competitors") return <Link to="/competitors" className={className}>{children}</Link>;
+  if (route.kind === "recommendation") return <Link to="/recommendations/$id" params={{ id: route.id }} className={className}>{children}</Link>;
+  if (route.kind === "agent") return <Link to="/agents/$id" params={{ id: route.id }} className={className}>{children}</Link>;
+  if (route.kind === "workflow") return <Link to="/workflows/$id" params={{ id: route.id }} className={className}>{children}</Link>;
+  return <Link to="/scheduler/$id" params={{ id: route.id }} className={className}>{children}</Link>;
+}
+
+function InboxActionLink({ route, children }: { route: InboxRoute; children: React.ReactNode }) {
+  if (route.kind === "keywords") return <Button asChild variant="outline" size="sm"><Link to="/keywords">{children}</Link></Button>;
+  if (route.kind === "competitors") return <Button asChild variant="outline" size="sm"><Link to="/competitors">{children}</Link></Button>;
+  if (route.kind === "recommendation") return <Button asChild variant="outline" size="sm"><Link to="/recommendations/$id" params={{ id: route.id }}>{children}</Link></Button>;
+  if (route.kind === "agent") return <Button asChild variant="outline" size="sm"><Link to="/agents/$id" params={{ id: route.id }}>{children}</Link></Button>;
+  if (route.kind === "workflow") return <Button asChild variant="outline" size="sm"><Link to="/workflows/$id" params={{ id: route.id }}>{children}</Link></Button>;
+  return <Button asChild variant="outline" size="sm"><Link to="/scheduler/$id" params={{ id: route.id }}>{children}</Link></Button>;
 }
 
 function InboxPage() {
@@ -72,7 +127,7 @@ function InboxPage() {
     onError: (error: Error) => toast.error(error.message),
   });
 
-  const open = data.filter((item) => item.lane !== "completed").length;
+  const open = data.filter((item) => item.lane !== "completed" && item.resolved_at === null).length;
 
   return (
     <div className="space-y-8">
@@ -111,12 +166,7 @@ function InboxPage() {
                             {item.subject_kind ? <StatePill label={item.subject_kind} tone="primary" /> : null}
                           </div>
                           {reviewRoute ? (
-                            <Link
-                              to={reviewRoute}
-                              className="text-sm font-medium text-foreground underline-offset-4 hover:text-primary hover:underline"
-                            >
-                              {item.title}
-                            </Link>
+                            <InboxLink route={reviewRoute}>{item.title}</InboxLink>
                           ) : (
                             <p className="text-sm font-medium text-foreground">{item.title}</p>
                           )}
@@ -128,11 +178,11 @@ function InboxPage() {
                         <div className="flex shrink-0 items-center gap-2">
                           <StatePill label={item.lane} tone={toneForState(item.lane)} />
                           {reviewRoute ? (
-                            <Button asChild variant="outline" size="sm">
-                              <Link to={reviewRoute}>Review</Link>
-                            </Button>
+                            <InboxActionLink route={reviewRoute}>
+                              {item.lane === "pending_approval" ? "Review" : "Open"}
+                            </InboxActionLink>
                           ) : null}
-                          {item.lane !== "completed" ? (
+                          {item.lane !== "completed" && item.lane !== "pending_approval" ? (
                             <Button
                               variant="outline"
                               size="sm"

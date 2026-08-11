@@ -187,10 +187,12 @@ export async function buildCompetitorProfiles(
   const classByDomain = new Map<string, "competitor" | "surface">();
   const idByDomain = new Map<string, string>();
   const metricsByDomain = new Map<string, Record<string, unknown>>();
+  const reviewStateByDomain = new Map<string, string>();
   for (const row of existing ?? []) {
     classByDomain.set(row.domain, (row.domain_class as "competitor" | "surface") ?? "competitor");
     idByDomain.set(row.domain, row.id);
     metricsByDomain.set(row.domain, (row.metrics ?? {}) as Record<string, unknown>);
+    reviewStateByDomain.set(row.domain, row.review_state);
   }
 
   const domains = new Set<string>();
@@ -342,9 +344,13 @@ export async function buildCompetitorProfiles(
 
     const id = idByDomain.get(profile.domain);
     if (id) {
+      const update: { metrics: never; review_state?: "pending" } = { metrics: payload as never };
+      if (profile.shortlisted && reviewStateByDomain.get(profile.domain) === "discovered") {
+        update.review_state = "pending";
+      }
       const { error } = await client
         .from("competitor_candidates")
-        .update({ metrics: payload as never })
+        .update(update)
         .eq("id", id);
       if (error) throw new Error(error.message);
     } else {
@@ -355,6 +361,7 @@ export async function buildCompetitorProfiles(
           domain: profile.domain,
           source: "serp.derived",
           domain_class: profile.domainClass,
+           review_state: profile.shortlisted ? "pending" : "discovered",
           metrics: payload as never,
         },
         { onConflict: "tenant_id,seed_domain,domain,source", ignoreDuplicates: false },
@@ -364,6 +371,14 @@ export async function buildCompetitorProfiles(
   }
 
   const shortlisted = profiles.filter((profile) => profile.shortlisted);
+  const completedAt = new Date().toISOString();
+  await client
+    .from("inbox_items")
+    .update({ lane: "completed", resolved_at: completedAt })
+    .eq("tenant_id", tenantId)
+    .eq("source_module", "workflows")
+    .ilike("title", "%competitor intelligence%failed%")
+    .is("resolved_at", null);
   if (shortlisted.length > 0) {
     const { fileInboxItem, logActivity } = await import("../os.server");
     const { data: openItem } = await client
@@ -385,6 +400,16 @@ export async function buildCompetitorProfiles(
         subjectKind: "competitor_candidate",
         actions: [{ kind: "review", href: "/competitors" }],
       });
+    } else {
+      await client
+        .from("inbox_items")
+        .update({
+          lane: "pending_approval",
+          title: `${shortlisted.length} competitors shortlisted for review`,
+          summary: `Profiled ${profiles.length} domains observed across ${serps.length} approved-keyword SERPs. ${shortlisted.length} business-competitor candidates cleared the significance threshold. None are tracked until you approve them.`,
+          actions: [{ kind: "review", href: "/competitors" }] as never,
+        })
+        .eq("id", openItem.id);
     }
 
     await logActivity(client, {

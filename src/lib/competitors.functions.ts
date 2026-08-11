@@ -112,6 +112,24 @@ export const decideCompetitorCandidates = createServerFn({ method: "POST" })
     const tenantId = await requireTenantId(context.supabase);
     const { logActivity } = await import("./os.server");
 
+    const domains = [...new Set(data.domains.map((domain) => domain.trim().toLowerCase()))];
+    const { data: candidates, error: candidateError } = await context.supabase
+      .from("competitor_candidates")
+      .select("id, domain, metrics")
+      .eq("tenant_id", tenantId)
+      .eq("review_state", "pending")
+      .in("domain", domains);
+    if (candidateError) throw new Error(candidateError.message);
+
+    const eligible = (candidates ?? []).filter((row) => {
+      const metrics = (row.metrics ?? {}) as Record<string, unknown>;
+      const pass = metrics["intelligence_pass"] as Record<string, unknown> | undefined;
+      return pass?.["shortlisted"] === true;
+    });
+    if (eligible.length === 0 || eligible.length !== domains.length) {
+      throw new Error("Every selected competitor must be shortlisted and pending for the active tenant.");
+    }
+
     const now = new Date().toISOString();
     const reviewState = data.decision === "approve" ? "approved" : "rejected";
 
@@ -119,9 +137,13 @@ export const decideCompetitorCandidates = createServerFn({ method: "POST" })
       .from("competitor_candidates")
       .update({ review_state: reviewState, reviewed_by: context.userId, reviewed_at: now })
       .eq("tenant_id", tenantId)
-      .in("domain", data.domains)
+      .eq("review_state", "pending")
+      .in("id", eligible.map((row) => row.id))
       .select("id, domain");
     if (error) throw new Error(error.message);
+    if ((updated ?? []).length !== eligible.length) {
+      throw new Error("The competitor selection changed during review. Refresh and try again.");
+    }
 
     let tracked = 0;
     if (data.decision === "approve") {
@@ -149,7 +171,7 @@ export const decideCompetitorCandidates = createServerFn({ method: "POST" })
       verb: `competitor.${reviewState}`,
       subjectKind: "competitor_candidate",
       summary: `Operator ${reviewState} ${(updated ?? []).length} competitor candidate${(updated ?? []).length === 1 ? "" : "s"}.`,
-      payload: { domains: data.domains.slice(0, 50) },
+      payload: { domains: domains.slice(0, 50) },
     });
 
     // Once nothing shortlisted is still pending, the review is finished.
@@ -157,7 +179,7 @@ export const decideCompetitorCandidates = createServerFn({ method: "POST" })
       .from("competitor_candidates")
       .select("id, metrics")
       .eq("tenant_id", tenantId)
-      .not("review_state", "in", "(approved,rejected)");
+      .eq("review_state", "pending");
     const pendingShortlisted = (pending ?? []).filter((row) => {
       const metrics = (row.metrics ?? {}) as Record<string, unknown>;
       const pass = metrics["intelligence_pass"] as Record<string, unknown> | undefined;
@@ -166,17 +188,29 @@ export const decideCompetitorCandidates = createServerFn({ method: "POST" })
 
     let inboxResolved = false;
     if (pendingShortlisted === 0) {
-      const { data: item } = await context.supabase
+      const { data: items } = await context.supabase
         .from("inbox_items")
         .select("id")
         .eq("tenant_id", tenantId)
         .eq("source_module", "competitor-intelligence")
-        .is("resolved_at", null)
-        .maybeSingle();
-      if (item) {
-        await context.supabase.from("inbox_items").update({ resolved_at: now }).eq("id", item.id);
+        .is("resolved_at", null);
+      const ids = (items ?? []).map((item) => item.id);
+      if (ids.length > 0) {
+        await context.supabase.from("inbox_items").update({ lane: "completed", resolved_at: now }).in("id", ids);
         inboxResolved = true;
       }
+    } else {
+      await context.supabase
+        .from("inbox_items")
+        .update({
+          lane: "pending_approval",
+          title: `${pendingShortlisted} competitors shortlisted for review`,
+          summary: `${pendingShortlisted} shortlisted competitor candidates are still awaiting an operator decision.`,
+          actions: [{ kind: "review", href: "/competitors" }] as never,
+        })
+        .eq("tenant_id", tenantId)
+        .eq("source_module", "competitor-intelligence")
+        .is("resolved_at", null);
     }
 
     return { count: (updated ?? []).length, tracked, pendingShortlisted, inboxResolved };

@@ -56,14 +56,14 @@ export async function runAgent(
       .eq("id", agentId);
 
     await fileInboxItem(client, {
-      lane: "pending_approval",
+      lane: "needs_attention",
       sourceModule: "agents",
       title: `${agent.name} requested approval`,
-      summary: agent.current_objective ?? agent.purpose ?? "Agent run requires sign-off.",
+      summary: "Approval continuation is not wired. Open the agent detail to inspect the parked request.",
       priority: 2,
       subjectKind: "agent",
       subjectId: agentId,
-      actions: [{ kind: "approve" }, { kind: "open" }],
+      actions: [{ kind: "open", href: `/agents/${agentId}` }],
     });
 
     await logActivity(client, {

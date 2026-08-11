@@ -8,8 +8,8 @@ It is not authoritative documentation. Provider digests under
 `docs/integrations/<provider>/DIGEST.md` and their PLAN files remain the source of
 truth for provider behaviour and must never be overwritten by this file.
 
-Last updated: 2026-02 (performance optimization pass complete, paid-media
-intelligence phase starting).
+Last updated: 2026-08-11 (Inbox action contract and competitor approval safety
+reconciled).
 
 ## 1. What AOOS is
 
@@ -64,9 +64,14 @@ Spend controls: DataForSEO ceiling **$300/month**, ledgered per request, alerts 
 ## 5. Pending operator approvals
 
 1. **Competitor shortlist** (6 domains: United Van Lines, Allied and others) awaits
-   human review in `/competitors`. The agent must not approve or reject these.
+   human review in `/competitors`. All six are in `pending`; none are approved,
+   rejected, or tracked. The agent must not approve or reject these.
 2. GitHub credential / `cap.github` authorization for `wf.publish`.
 3. SerpAPI credential plus plan-tier choice for `cap.serpapi_ads_transparency`. Digest and plan are done; no integration code is written until the key exists and a live auth probe passes.
+
+Legacy agent and workflow approval notices were moved to Needs attention because
+approval continuation is not wired. New notices use the same honest Open-only
+contract until a real continuation handler exists.
 
 ## 6. Active workflows
 
