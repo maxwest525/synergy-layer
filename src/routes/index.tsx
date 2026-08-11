@@ -255,6 +255,11 @@ function InboxPage() {
       <div className="space-y-6">
         {lanes.map((lane) => {
           const items = grouped.get(lane.key) ?? [];
+          // Completed only grows. Rendering every closed item forever made the
+          // Inbox slower every day for rows nobody is acting on. The newest are
+          // shown by default and the rest stay one click away.
+          const collapsed = lane.key === "completed" && !showAllCompleted && items.length > COMPLETED_PREVIEW;
+          const visible = collapsed ? items.slice(0, COMPLETED_PREVIEW) : items;
           return (
             <section key={lane.key} className="space-y-3">
               <div className="flex items-baseline justify-between gap-4">
@@ -269,7 +274,7 @@ function InboxPage() {
                 <EmptyState title="Nothing here" description={`No ${lane.label.toLowerCase()} items right now.`} />
               ) : (
                 <ul className="space-y-2">
-                  {items.map(({ item, reviewRoute }) => (
+                  {visible.map(({ item, reviewRoute }) => (
                     <li key={item.id}>
                       <InboxCard
                         item={item}
@@ -282,6 +287,12 @@ function InboxPage() {
                   ))}
                 </ul>
               )}
+
+              {lane.key === "completed" && items.length > COMPLETED_PREVIEW ? (
+                <Button variant="outline" size="sm" onClick={() => setShowAllCompleted((shown) => !shown)}>
+                  {collapsed ? `Show all ${items.length} completed items` : "Show only the most recent"}
+                </Button>
+              ) : null}
             </section>
           );
         })}
