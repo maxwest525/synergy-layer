@@ -76,7 +76,23 @@ function QuickAction({
 
 
 function CommandCenterPage() {
-  const { data } = useSuspenseQuery(overviewQuery);
+  // useServerFn routes the call through client middleware, which attaches the
+  // operator bearer token. A direct call is unauthenticated on cold load.
+  const loadTenantContext = useServerFn(getTenantContext);
+  const loadOverview = useServerFn(getOverview);
+
+  const tenant = useSuspenseQuery({
+    queryKey: ["tenant-context"],
+    queryFn: () => loadTenantContext(),
+    retry: false,
+  });
+  const activeTenantId = tenant.data.activeTenantId;
+
+  const { data } = useSuspenseQuery({
+    queryKey: ["overview", activeTenantId],
+    queryFn: () => loadOverview(),
+    retry: false,
+  });
   const failing = data.capabilities.filter((capability) => capability.health === "failing");
   const notLive = data.capabilities.filter((capability) => capability.integration_state !== "real");
   const failedRuns = data.runs.filter((run) => run.state === "failed").length;
