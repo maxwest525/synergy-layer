@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  assertRead,
   backlinkAuthority,
   changeStatus,
+  EssentialsReadError,
   evidenceStatus,
   indexingStatus,
+  summarizeSitemaps,
   systemGap,
   systemStatus,
   type SystemFacts,
@@ -64,19 +67,64 @@ describe("essentials status derivation", () => {
     expect(indexingStatus(2, true)).toBe("live");
   });
 
-  it("refuses an authority claim on an insufficient backlink sample", () => {
-    const thin = backlinkAuthority({ snapshotCount: 6, referringDomains: 1, backlinks: 1 });
+  it("refuses an authority claim without an explicit stored sufficiency signal", () => {
+    const thin = backlinkAuthority({
+      snapshotCount: 6,
+      referringDomains: 1,
+      backlinks: 1,
+      storedSufficient: null,
+    });
     expect(thin.status).toBe("partial");
     expect(thin.sufficient).toBe(false);
-    expect(thin.note).toContain("too small");
+    expect(thin.note).toContain("No stored evidence pass");
 
-    expect(backlinkAuthority({ snapshotCount: 0, referringDomains: 0, backlinks: 0 }).status).toBe(
-      "not_wired",
-    );
     expect(
-      backlinkAuthority({ snapshotCount: 4, referringDomains: 24, backlinks: 120 }).sufficient,
+      backlinkAuthority({ snapshotCount: 0, referringDomains: 0, backlinks: 0, storedSufficient: null }).status,
+    ).toBe("not_wired");
+
+    // Counts alone never promote a sample to sufficient.
+    expect(
+      backlinkAuthority({ snapshotCount: 4, referringDomains: 24, backlinks: 120, storedSufficient: null })
+        .sufficient,
+    ).toBe(false);
+    expect(
+      backlinkAuthority({ snapshotCount: 4, referringDomains: 24, backlinks: 120, storedSufficient: false })
+        .sufficient,
+    ).toBe(false);
+    expect(
+      backlinkAuthority({ snapshotCount: 4, referringDomains: 24, backlinks: 120, storedSufficient: true })
+        .sufficient,
     ).toBe(true);
   });
+
+  it("throws a source-specific error instead of zeroing a failed read", () => {
+    expect(() => assertRead("Search Console snapshots", { error: { message: "permission denied" } })).toThrow(
+      EssentialsReadError,
+    );
+    expect(() => assertRead("Search Console snapshots", { error: { message: "permission denied" } })).toThrow(
+      /Search Console snapshots could not be read: permission denied/,
+    );
+    const ok = assertRead("Tool systems", { error: null, data: [1] });
+    expect(ok.data).toEqual([1]);
+  });
+
+  it("aggregates real sitemap payload figures and reports absence as null", () => {
+    const summary = summarizeSitemaps({
+      sitemap: [
+        { path: "a.xml", warnings: 1, errors: 0, contents: [{ submitted: "10", indexed: "8" }] },
+        { path: "b.xml", warnings: 0, errors: 2, contents: [{ submitted: 5, indexed: 5 }] },
+      ],
+    });
+    expect(summary).toEqual({ count: 2, submitted: 15, indexed: 13, warnings: 1, errors: 2 });
+    expect(summarizeSitemaps(null)).toEqual({
+      count: 0,
+      submitted: null,
+      indexed: null,
+      warnings: null,
+      errors: null,
+    });
+  });
+
 
   it("grades stored evidence by rows, not by prose", () => {
     expect(evidenceStatus(0, true)).toBe("not_wired");

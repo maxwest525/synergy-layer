@@ -96,11 +96,16 @@ export type BacklinkSample = {
   snapshotCount: number;
   referringDomains: number;
   backlinks: number;
+  /**
+   * Explicit sufficiency verdict stored by the backlink evidence pass. Counts
+   * alone never establish this: only a stored boolean can.
+   */
+  storedSufficient: boolean | null;
 };
 
 /**
- * Authority claim gate. A single referring domain is not an authority signal,
- * so the screen reports the sample size instead of inventing a score.
+ * Authority claim gate. AOOS refuses to invent a sufficiency threshold from
+ * raw counts, so a sample is sufficient only when stored evidence says so.
  */
 export function backlinkAuthority(sample: BacklinkSample): {
   status: EssentialStatus;
@@ -114,20 +119,87 @@ export function backlinkAuthority(sample: BacklinkSample): {
       note: "No backlink snapshot has been collected yet.",
     };
   }
-  const sufficient = sample.referringDomains >= 10 && sample.backlinks >= 25;
-  if (sufficient) {
+  const sampleText = `The stored sample is ${sample.referringDomains} referring domain(s) and ${sample.backlinks} link(s).`;
+  if (sample.storedSufficient === true) {
     return {
       status: "partial",
       sufficient: true,
-      note: `Sample covers ${sample.referringDomains} referring domains across ${sample.backlinks} links.`,
+      note: `${sampleText} Stored backlink evidence records this sample as sufficient.`,
+    };
+  }
+  if (sample.storedSufficient === false) {
+    return {
+      status: "partial",
+      sufficient: false,
+      note: `${sampleText} Stored backlink evidence records this sample as insufficient, so no score is shown.`,
     };
   }
   return {
     status: "partial",
     sufficient: false,
-    note: `The stored sample is ${sample.referringDomains} referring domain(s) and ${sample.backlinks} link(s), which is too small to support an authority score. No score is shown.`,
+    note: `${sampleText} No stored evidence pass has judged whether this sample can support an authority score, so none is shown.`,
   };
 }
+
+/** Aggregate sitemap facts from the stored Search Console sitemap payload. */
+export type SitemapSummary = {
+  count: number;
+  submitted: number | null;
+  indexed: number | null;
+  warnings: number | null;
+  errors: number | null;
+};
+
+function sum(values: (number | null)[]): number | null {
+  const present = values.filter((value): value is number => typeof value === "number");
+  return present.length === 0 ? null : present.reduce((total, value) => total + value, 0);
+}
+
+function numeric(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && value.trim() !== "" && Number.isFinite(Number(value))) return Number(value);
+  return null;
+}
+
+export function summarizeSitemaps(payload: unknown): SitemapSummary {
+  const container = (payload ?? {}) as { sitemap?: unknown };
+  const entries = Array.isArray(container.sitemap) ? (container.sitemap as Record<string, unknown>[]) : [];
+  const submitted: (number | null)[] = [];
+  const indexed: (number | null)[] = [];
+  for (const entry of entries) {
+    const contents = Array.isArray(entry['contents']) ? (entry['contents'] as Record<string, unknown>[]) : [];
+    submitted.push(sum(contents.map((block) => numeric(block['submitted']))));
+    indexed.push(sum(contents.map((block) => numeric(block['indexed']))));
+  }
+  return {
+    count: entries.length,
+    submitted: sum(submitted),
+    indexed: sum(indexed),
+    warnings: sum(entries.map((entry) => numeric(entry['warnings']))),
+    errors: sum(entries.map((entry) => numeric(entry['errors']))),
+  };
+}
+
+/** Thrown when a stored source could not be read; never silently zeroed. */
+export class EssentialsReadError extends Error {
+  constructor(
+    readonly source: string,
+    message: string,
+  ) {
+    super(`${source} could not be read: ${message}`);
+    this.name = "EssentialsReadError";
+  }
+}
+
+/**
+ * Guards a Supabase result. A failed read must surface as an error, never as a
+ * zero count that would mislabel a capability as Not wired.
+ */
+export function assertRead<T extends { error: { message: string } | null }>(source: string, result: T): T {
+  if (result.error) throw new EssentialsReadError(source, result.error.message);
+  return result;
+}
+
 
 /** Recommended page changes: only concrete asset changes count. */
 export function changeStatus(proposedCount: number, totalCount: number): EssentialStatus {
