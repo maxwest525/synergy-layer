@@ -7,6 +7,7 @@ import { DetailRow, GlassCard, PageHeader, StatePill, formatWhen, toneForState }
 import { Button } from "@/components/ui/button";
 import { decideRecommendation } from "@/lib/os-admin.functions";
 import { getRecommendation } from "@/lib/os.functions";
+import { describeSuggestedAction, isObservationOnly } from "@/lib/recommendation-action";
 
 const recommendationQuery = (id: string) => ({
   queryKey: ["recommendation", id],
