@@ -61,6 +61,441 @@ export type Database = {
           },
         ]
       }
+      ad_advertiser_candidates: {
+        Row: {
+          ad_funded_by: string | null
+          advertiser_id: string
+          advertiser_name: string | null
+          created_at: string
+          evidence: Json
+          id: string
+          match_confidence: number | null
+          query_text: string
+          review_state: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          source_url: string | null
+          tenant_id: string
+        }
+        Insert: {
+          ad_funded_by?: string | null
+          advertiser_id: string
+          advertiser_name?: string | null
+          created_at?: string
+          evidence?: Json
+          id?: string
+          match_confidence?: number | null
+          query_text: string
+          review_state?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          source_url?: string | null
+          tenant_id: string
+        }
+        Update: {
+          ad_funded_by?: string | null
+          advertiser_id?: string
+          advertiser_name?: string | null
+          created_at?: string
+          evidence?: Json
+          id?: string
+          match_confidence?: number | null
+          query_text?: string
+          review_state?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          source_url?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ad_advertiser_candidates_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ad_advertisers: {
+        Row: {
+          ad_funded_by: string | null
+          advertiser_id: string
+          advertiser_name: string | null
+          confirmed_at: string | null
+          confirmed_by: string | null
+          created_at: string
+          id: string
+          is_verified: boolean
+          source_url: string | null
+          tenant_id: string
+          updated_at: string
+          vendor_domain: string | null
+        }
+        Insert: {
+          ad_funded_by?: string | null
+          advertiser_id: string
+          advertiser_name?: string | null
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string
+          id?: string
+          is_verified?: boolean
+          source_url?: string | null
+          tenant_id: string
+          updated_at?: string
+          vendor_domain?: string | null
+        }
+        Update: {
+          ad_funded_by?: string | null
+          advertiser_id?: string
+          advertiser_name?: string | null
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string
+          id?: string
+          is_verified?: boolean
+          source_url?: string | null
+          tenant_id?: string
+          updated_at?: string
+          vendor_domain?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ad_advertisers_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ad_creative_families: {
+        Row: {
+          advertiser_fk: string | null
+          family_key: string
+          first_detected_at: string
+          id: string
+          label: string | null
+          last_detected_at: string
+          member_count: number
+          member_creative_ids: string[]
+          representative_creative_fk: string | null
+          retired_at: string | null
+          similarity_method: string
+          tenant_id: string
+        }
+        Insert: {
+          advertiser_fk?: string | null
+          family_key: string
+          first_detected_at?: string
+          id?: string
+          label?: string | null
+          last_detected_at?: string
+          member_count?: number
+          member_creative_ids?: string[]
+          representative_creative_fk?: string | null
+          retired_at?: string | null
+          similarity_method?: string
+          tenant_id: string
+        }
+        Update: {
+          advertiser_fk?: string | null
+          family_key?: string
+          first_detected_at?: string
+          id?: string
+          label?: string | null
+          last_detected_at?: string
+          member_count?: number
+          member_creative_ids?: string[]
+          representative_creative_fk?: string | null
+          retired_at?: string | null
+          similarity_method?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ad_creative_families_advertiser_fk_fkey"
+            columns: ["advertiser_fk"]
+            isOneToOne: false
+            referencedRelation: "ad_advertisers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ad_creative_families_representative_creative_fk_fkey"
+            columns: ["representative_creative_fk"]
+            isOneToOne: false
+            referencedRelation: "ad_creatives"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ad_creative_families_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ad_creatives: {
+        Row: {
+          ad_creative_id: string
+          advertiser_fk: string
+          call_to_action: string | null
+          content_checksum: string
+          family_key: string | null
+          first_detected_at: string
+          first_shown: string | null
+          format: string | null
+          headline: string | null
+          id: string
+          image_ref: string | null
+          last_detected_at: string
+          last_shown: string | null
+          link: string | null
+          long_headline: string | null
+          messaging: Json
+          raw_payload: Json
+          regions: Json
+          retired_at: string | null
+          retrieved_at: string
+          sitelinks: Json
+          snippet: string | null
+          source_url: string | null
+          target_domain: string | null
+          tenant_id: string
+          total_days_shown: number | null
+          video_ref: string | null
+        }
+        Insert: {
+          ad_creative_id: string
+          advertiser_fk: string
+          call_to_action?: string | null
+          content_checksum: string
+          family_key?: string | null
+          first_detected_at?: string
+          first_shown?: string | null
+          format?: string | null
+          headline?: string | null
+          id?: string
+          image_ref?: string | null
+          last_detected_at?: string
+          last_shown?: string | null
+          link?: string | null
+          long_headline?: string | null
+          messaging?: Json
+          raw_payload?: Json
+          regions?: Json
+          retired_at?: string | null
+          retrieved_at?: string
+          sitelinks?: Json
+          snippet?: string | null
+          source_url?: string | null
+          target_domain?: string | null
+          tenant_id: string
+          total_days_shown?: number | null
+          video_ref?: string | null
+        }
+        Update: {
+          ad_creative_id?: string
+          advertiser_fk?: string
+          call_to_action?: string | null
+          content_checksum?: string
+          family_key?: string | null
+          first_detected_at?: string
+          first_shown?: string | null
+          format?: string | null
+          headline?: string | null
+          id?: string
+          image_ref?: string | null
+          last_detected_at?: string
+          last_shown?: string | null
+          link?: string | null
+          long_headline?: string | null
+          messaging?: Json
+          raw_payload?: Json
+          regions?: Json
+          retired_at?: string | null
+          retrieved_at?: string
+          sitelinks?: Json
+          snippet?: string | null
+          source_url?: string | null
+          target_domain?: string | null
+          tenant_id?: string
+          total_days_shown?: number | null
+          video_ref?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ad_creatives_advertiser_fk_fkey"
+            columns: ["advertiser_fk"]
+            isOneToOne: false
+            referencedRelation: "ad_advertisers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ad_creatives_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ad_destination_pages: {
+        Row: {
+          creative_fk: string | null
+          dom_hash: string | null
+          fetch_error: string | null
+          fetched_at: string
+          final_url: string | null
+          id: string
+          observations: Json
+          redirect_chain: Json
+          tenant_id: string
+          url: string
+        }
+        Insert: {
+          creative_fk?: string | null
+          dom_hash?: string | null
+          fetch_error?: string | null
+          fetched_at?: string
+          final_url?: string | null
+          id?: string
+          observations?: Json
+          redirect_chain?: Json
+          tenant_id: string
+          url: string
+        }
+        Update: {
+          creative_fk?: string | null
+          dom_hash?: string | null
+          fetch_error?: string | null
+          fetched_at?: string
+          final_url?: string | null
+          id?: string
+          observations?: Json
+          redirect_chain?: Json
+          tenant_id?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ad_destination_pages_creative_fk_fkey"
+            columns: ["creative_fk"]
+            isOneToOne: false
+            referencedRelation: "ad_creatives"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ad_destination_pages_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ad_live_serp_observations: {
+        Row: {
+          ad_count: number
+          ads_payload: Json
+          cost_usd: number
+          device: string
+          gl: string
+          hl: string
+          id: string
+          keyword: string
+          location: string | null
+          observed_at: string
+          reporting_date: string
+          request_fingerprint: string
+          source_url: string | null
+          tenant_id: string
+        }
+        Insert: {
+          ad_count?: number
+          ads_payload?: Json
+          cost_usd?: number
+          device?: string
+          gl?: string
+          hl?: string
+          id?: string
+          keyword: string
+          location?: string | null
+          observed_at?: string
+          reporting_date?: string
+          request_fingerprint: string
+          source_url?: string | null
+          tenant_id: string
+        }
+        Update: {
+          ad_count?: number
+          ads_payload?: Json
+          cost_usd?: number
+          device?: string
+          gl?: string
+          hl?: string
+          id?: string
+          keyword?: string
+          location?: string | null
+          observed_at?: string
+          reporting_date?: string
+          request_fingerprint?: string
+          source_url?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ad_live_serp_observations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ad_vendor_watchlist: {
+        Row: {
+          active: boolean
+          created_at: string
+          domain: string
+          id: string
+          label: string | null
+          note: string | null
+          resolution_state: string
+          tenant_id: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          domain: string
+          id?: string
+          label?: string | null
+          note?: string | null
+          resolution_state?: string
+          tenant_id: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          domain?: string
+          id?: string
+          label?: string | null
+          note?: string | null
+          resolution_state?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ad_vendor_watchlist_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       agent_capabilities: {
         Row: {
           agent_id: string
