@@ -68,13 +68,23 @@ export async function sweepVendorAdvertisers(
     const domain = rootDomain(vendor.domain);
     result.domainsAttempted += 1;
 
+    // A previous attempt that failed left a ledger row under the plain key, and
+    // idempotency would otherwise refuse the retry forever. A failed attempt
+    // charged nothing, so a retry under a distinct key cannot double-spend.
+    const baseKey = `${options.runKeyPrefix ?? "sweep"}:${domain}`;
+    const { data: prior } = await client
+      .from("serpapi_requests")
+      .select("state")
+      .eq("tenant_id", tenantId)
+      .eq("run_key", baseKey)
+      .maybeSingle();
+    const runKey = prior?.state === "failed" ? `${baseKey}:retry:${Date.now()}` : baseKey;
+
     let outcome: CanaryResult;
     try {
-      outcome = await runAdvertiserCanary(client, tenantId, {
-        domain,
-        runKey: `${options.runKeyPrefix ?? "sweep"}:${domain}`,
-      });
+      outcome = await runAdvertiserCanary(client, tenantId, { domain, runKey });
     } catch (cause) {
+
       const reason = cause instanceof Error ? cause.message : String(cause);
       result.outcomes.push({ domain, ran: false, blocked: reason, chargedCredits: 0, candidatesFiled: 0 });
       result.stoppedEarly = reason;
