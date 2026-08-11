@@ -116,22 +116,19 @@ export async function runGithubPreflight(input: {
     return fail(describeGithubFailure(error, `${filePath} at ${head.slice(0, 10)}`), { head });
   }
 
-  for (const change of request.changes) {
-    const before = countOccurrences(file.content, change.before);
-    if (before !== 1) {
-      return fail(
-        `Source mismatch: the approved before value for ${change.label} occurs ${before} time(s) in ${filePath}, not exactly once.`,
-        { head, fileSha: file.sha },
-      );
-    }
-    const after = countOccurrences(file.content, change.after);
-    if (after !== 0) {
-      return fail(
-        `Source mismatch: the proposed new value for ${change.label} already appears in ${filePath}, so applying it would be ambiguous.`,
-        { head, fileSha: file.sha },
-      );
-    }
+  // The exact same simulation execution would run, so a proved preflight and a
+  // refused execution can never disagree about the source.
+  const simulated = applyExactReplacements(file.content, request.changes);
+  if (!simulated.ok) {
+    return fail(`Source mismatch: ${simulated.reason}`, { head, fileSha: file.sha });
   }
+  if (simulated.value.alreadyApplied) {
+    return fail(
+      `Source mismatch: ${filePath} already contains both approved new values, so this change would not be applied again.`,
+      { head, fileSha: file.sha },
+    );
+  }
+
 
   return record(
     {
