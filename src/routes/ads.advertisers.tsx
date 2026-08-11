@@ -203,7 +203,32 @@ function AdvertiserReviewPage() {
     onError: (error: Error) => toast.error(error.message),
   });
 
-  const busy = gateMutation.isPending || decideMutation.isPending || canaryMutation.isPending;
+  const unresolvedDomains = data.watchlist.filter(
+    (row) => row.active && row.resolutionState === "unresolved",
+  ).length;
+
+  const sweepMutation = useMutation({
+    mutationFn: () => sweep({ data: { limit: 12 } }),
+    onSuccess: (result) => {
+      if (result.domainsSearched === 0) {
+        toast.error(result.stoppedEarly ?? "No vendor domain was searched.");
+      } else {
+        toast.success(
+          `Sweep complete: ${result.domainsSearched} domain${result.domainsSearched === 1 ? "" : "s"} searched, ${result.candidatesFiled} candidate${result.candidatesFiled === 1 ? "" : "s"} filed, ${result.chargedCredits} credit${result.chargedCredits === 1 ? "" : "s"} charged.`,
+        );
+        if (result.stoppedEarly) toast.warning(`Sweep stopped early: ${result.stoppedEarly}`);
+      }
+      refresh();
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+  const busy =
+    gateMutation.isPending ||
+    decideMutation.isPending ||
+    canaryMutation.isPending ||
+    sweepMutation.isPending;
+
   const pendingCandidates = data.candidates.filter((row) => row.reviewState === "pending");
   const decidedCandidates = data.candidates.filter((row) => row.reviewState !== "pending");
   const { account } = data;
