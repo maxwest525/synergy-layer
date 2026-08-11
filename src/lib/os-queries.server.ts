@@ -256,7 +256,6 @@ export type RunSummary = {
   duration_ms: number | null;
   error: string | null;
   workflow_id: string | null;
-  context: unknown;
   workflows: { id: string; key: string; name: string } | null;
 };
 
