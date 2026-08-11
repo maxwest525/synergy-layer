@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   assertOwnedTarget,
+  describeMissingSnapshot,
   normalizePageSpeed,
   PageSpeedError,
   runStatusFor,
