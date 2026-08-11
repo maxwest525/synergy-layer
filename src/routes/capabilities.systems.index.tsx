@@ -215,10 +215,11 @@ function SystemsPage() {
           hint="Individual calls these systems expose today."
         />
         <MetricTile
-          label="Duplicate registrations"
+          label="Aliases & registrations"
           value={scopedAliases}
-          hint="Aliases pointing at one canonical system."
+          hint="Other names for these systems, including included services and duplicate registrations."
         />
+
       </div>
 
       <div className="space-y-3">

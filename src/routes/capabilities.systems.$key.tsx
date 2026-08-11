@@ -17,6 +17,8 @@ import { AvailabilityBadge } from "@/components/os/availability-badge";
 import { getTenantContext } from "@/lib/tenant.functions";
 import { getToolSystem } from "@/lib/tool-estate.functions";
 import {
+  ALIAS_KIND_LABELS,
+  ALIAS_KIND_TONE,
   AVAILABLE_LABELS,
   COST_LABELS,
   CREDENTIAL_LABELS,
@@ -25,7 +27,7 @@ import {
   IMPLEMENTED_LABELS,
   KIND_LABELS,
   MODE_LABELS,
-  VERIFICATION_LABELS,
+  verificationLabel,
 } from "@/lib/tool-estate-display";
 
 export const Route = createFileRoute("/capabilities/systems/$key")({
@@ -143,10 +145,8 @@ function SystemDetailPage() {
               label="Implemented in AOOS"
               value={IMPLEMENTED_LABELS[system.implemented_state] ?? system.implemented_state}
             />
-            <DetailRow
-              label="Live proof"
-              value={VERIFICATION_LABELS[system.verification_state] ?? system.verification_state}
-            />
+            <DetailRow label="Live proof" value={verificationLabel(system)} />
+
             <DetailRow
               label="Callable from AOOS"
               value={system.aoos_connection_state === "callable" ? "Yes" : "No bridge yet"}
@@ -184,27 +184,39 @@ function SystemDetailPage() {
       {data.aliases.length > 0 ? (
         <section className="space-y-3">
           <h2 className="text-sm font-semibold text-foreground">
-            Duplicate registrations ({data.aliases.length})
+            Aliases &amp; registrations ({data.aliases.length})
           </h2>
           <p className="text-sm text-muted-foreground">
-            These are the same system registered more than once. They are kept as evidence, not
-            counted as separate systems.
+            Other names this system appears under. Each one says what it actually is. An included
+            service is part of this system, not a separate product or a duplicate.
           </p>
           <div className="grid gap-2 md:grid-cols-2">
-            {data.aliases.map((alias) => (
-              <GlassCard key={alias.id} className="p-3">
-                <p className="text-sm font-medium text-foreground">{alias.alias_label}</p>
-                <p className="text-xs text-muted-foreground">
-                  {alias.registered_in ?? "Registration source not set"}
-                </p>
-                {alias.note ? (
-                  <p className="mt-1 text-xs text-muted-foreground">{alias.note}</p>
-                ) : null}
-              </GlassCard>
-            ))}
+            {data.aliases.map((alias) => {
+              const kind = (alias as { alias_kind?: string }).alias_kind ?? "other";
+              return (
+                <GlassCard key={alias.id} className="p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-sm font-medium text-foreground">
+                      {ALIAS_KIND_LABELS[kind] ?? ALIAS_KIND_LABELS.other}: {alias.alias_label}
+                    </p>
+                    <StatePill
+                      label={ALIAS_KIND_LABELS[kind] ?? ALIAS_KIND_LABELS.other}
+                      tone={ALIAS_KIND_TONE[kind] ?? "neutral"}
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {alias.registered_in ?? "Registration source not set"}
+                  </p>
+                  {alias.note ? (
+                    <p className="mt-1 text-xs text-muted-foreground">{alias.note}</p>
+                  ) : null}
+                </GlassCard>
+              );
+            })}
           </div>
         </section>
       ) : null}
+
 
       <section className="space-y-3">
         <h2 className="text-sm font-semibold text-foreground">Operations ({operations.length})</h2>
