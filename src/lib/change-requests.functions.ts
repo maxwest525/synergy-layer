@@ -27,7 +27,7 @@ async function runTransition(
   supabase: Parameters<typeof import("./change-requests.server").transitionChangeRequest>[0],
   userId: string,
   action: "approve" | "reject" | "mark_applied" | "verify" | "roll_back",
-  data: { id: string; notes?: string | null; revision?: string | null },
+  data: { id: string; notes?: string | null | undefined; revision?: string | null | undefined },
 ) {
   const { assertOperator } = await import("./os-admin.server");
   await assertOperator(supabase, userId);
