@@ -158,13 +158,20 @@ export function createGithubApi(): GithubApi | null {
         Accept: "application/vnd.github+json",
         Authorization: `Bearer ${token}`,
         "X-GitHub-Api-Version": "2022-11-28",
+        "User-Agent": GITHUB_USER_AGENT,
         ...(init?.body ? { "Content-Type": "application/json" } : {}),
       },
     });
     if (response.status < 200 || response.status >= 300) {
-      // Deliberately no response body: it can echo request content.
-      throw new GithubStatusError(response.status, path.split("?")[0] ?? path);
+      // Deliberately no response body: it can echo request content. Only the
+      // safe rate-limit and SSO headers are carried.
+      throw new GithubStatusError(
+        response.status,
+        path.split("?")[0] ?? path,
+        readGithubResponseSignals(response.headers),
+      );
     }
+
 
     return response.text ? (JSON.parse(response.text) as unknown) : {};
   };
