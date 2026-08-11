@@ -20,6 +20,7 @@ import { Route as EssentialsRouteImport } from './routes/essentials'
 import { Route as KeywordsRouteImport } from './routes/keywords'
 import { Route as KnowledgeRouteImport } from './routes/knowledge'
 import { Route as McpRouteImport } from './routes/mcp'
+import { Route as MeasurementRouteImport } from './routes/measurement'
 import { Route as RecommendationsRouteImport } from './routes/recommendations'
 import { Route as SchedulerRouteImport } from './routes/scheduler'
 import { Route as SearchRouteImport } from './routes/search'
@@ -103,6 +104,11 @@ const KnowledgeRoute = KnowledgeRouteImport.update({
 const McpRoute = McpRouteImport.update({
   id: '/mcp',
   path: '/mcp',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MeasurementRoute = MeasurementRouteImport.update({
+  id: '/measurement',
+  path: '/measurement',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RecommendationsRoute = RecommendationsRouteImport.update({
@@ -269,6 +275,7 @@ export interface FileRoutesByFullPath {
   '/keywords': typeof KeywordsRoute
   '/knowledge': typeof KnowledgeRouteWithChildren
   '/mcp': typeof McpRoute
+  '/measurement': typeof MeasurementRoute
   '/recommendations': typeof RecommendationsRouteWithChildren
   '/scheduler': typeof SchedulerRouteWithChildren
   '/search': typeof SearchRoute
@@ -307,6 +314,7 @@ export interface FileRoutesByTo {
   '/essentials': typeof EssentialsRoute
   '/keywords': typeof KeywordsRoute
   '/mcp': typeof McpRoute
+  '/measurement': typeof MeasurementRoute
   '/search': typeof SearchRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -347,6 +355,7 @@ export interface FileRoutesById {
   '/keywords': typeof KeywordsRoute
   '/knowledge': typeof KnowledgeRouteWithChildren
   '/mcp': typeof McpRoute
+  '/measurement': typeof MeasurementRoute
   '/recommendations': typeof RecommendationsRouteWithChildren
   '/scheduler': typeof SchedulerRouteWithChildren
   '/search': typeof SearchRoute
@@ -391,6 +400,7 @@ export interface FileRouteTypes {
     | '/keywords'
     | '/knowledge'
     | '/mcp'
+    | '/measurement'
     | '/recommendations'
     | '/scheduler'
     | '/search'
@@ -429,6 +439,7 @@ export interface FileRouteTypes {
     | '/essentials'
     | '/keywords'
     | '/mcp'
+    | '/measurement'
     | '/search'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
@@ -468,6 +479,7 @@ export interface FileRouteTypes {
     | '/keywords'
     | '/knowledge'
     | '/mcp'
+    | '/measurement'
     | '/recommendations'
     | '/scheduler'
     | '/search'
@@ -511,6 +523,7 @@ export interface RootRouteChildren {
   KeywordsRoute: typeof KeywordsRoute
   KnowledgeRoute: typeof KnowledgeRouteWithChildren
   McpRoute: typeof McpRoute
+  MeasurementRoute: typeof MeasurementRoute
   RecommendationsRoute: typeof RecommendationsRouteWithChildren
   SchedulerRoute: typeof SchedulerRouteWithChildren
   SearchRoute: typeof SearchRoute
@@ -602,6 +615,13 @@ declare module '@tanstack/react-router' {
       path: '/mcp'
       fullPath: '/mcp'
       preLoaderRoute: typeof McpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/measurement': {
+      id: '/measurement'
+      path: '/measurement'
+      fullPath: '/measurement'
+      preLoaderRoute: typeof MeasurementRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/recommendations': {
@@ -932,6 +952,7 @@ const rootRouteChildren: RootRouteChildren = {
   KeywordsRoute: KeywordsRoute,
   KnowledgeRoute: KnowledgeRouteWithChildren,
   McpRoute: McpRoute,
+  MeasurementRoute: MeasurementRoute,
   RecommendationsRoute: RecommendationsRouteWithChildren,
   SchedulerRoute: SchedulerRouteWithChildren,
   SearchRoute: SearchRoute,

@@ -55,10 +55,10 @@ function QuickAction({
   count,
   outcome,
 }: {
-  to: "/" | "/competitors" | "/ads/advertisers" | "/workflows" | "/essentials";
+  to: "/" | "/competitors" | "/ads/advertisers" | "/workflows" | "/essentials" | "/measurement";
   hash?: string;
   label: string;
-  count: number;
+  count?: number;
   outcome: string;
 }) {
   return (
@@ -66,7 +66,7 @@ function QuickAction({
       <GlassCard className="h-full p-4 transition-colors hover:border-primary/40">
         <div className="flex items-baseline justify-between gap-3">
           <span className="text-sm font-medium text-foreground">{label}</span>
-          <span className="text-lg font-semibold text-primary">{count}</span>
+          {count === undefined ? null : <span className="text-lg font-semibold text-primary">{count}</span>}
         </div>
         <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{outcome}</p>
       </GlassCard>
@@ -152,12 +152,18 @@ function CommandCenterPage() {
             outcome="18 individual essentials with a plain-language coverage status each. Navigation only, not an issue count."
           />
           <QuickAction
+            to="/measurement"
+            label="Run PageSpeed on an owned page"
+            outcome="One click makes one PageSpeed Insights request. Provider cost $0, Google quota limited."
+          />
+          <QuickAction
             to="/workflows"
             hash="failed-runs"
             label="Inspect failed workflow runs"
             count={quick.failedRuns}
             outcome="Read the stored error on each failure before deciding to rerun anything."
           />
+
 
         </div>
       </section>
