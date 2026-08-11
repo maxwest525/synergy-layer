@@ -50,6 +50,10 @@ function occurrences(haystack: string, needle: string): number {
   return count;
 }
 
+/** Exact literal occurrence count, shared by execution and the read-only preflight. */
+export const countOccurrences = occurrences;
+
+
 /**
  * Apply every approved replacement, or refuse and write nothing. A value that
  * appears zero times or more than once is drift: the file no longer matches
