@@ -16,6 +16,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as CapabilitiesRouteImport } from './routes/capabilities'
 import { Route as CommandCenterRouteImport } from './routes/command-center'
 import { Route as CompetitorsRouteImport } from './routes/competitors'
+import { Route as EssentialsRouteImport } from './routes/essentials'
 import { Route as KeywordsRouteImport } from './routes/keywords'
 import { Route as KnowledgeRouteImport } from './routes/knowledge'
 import { Route as McpRouteImport } from './routes/mcp'
@@ -82,6 +83,11 @@ const CommandCenterRoute = CommandCenterRouteImport.update({
 const CompetitorsRoute = CompetitorsRouteImport.update({
   id: '/competitors',
   path: '/competitors',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EssentialsRoute = EssentialsRouteImport.update({
+  id: '/essentials',
+  path: '/essentials',
   getParentRoute: () => rootRouteImport,
 } as any)
 const KeywordsRoute = KeywordsRouteImport.update({
@@ -259,6 +265,7 @@ export interface FileRoutesByFullPath {
   '/capabilities': typeof CapabilitiesRouteWithChildren
   '/command-center': typeof CommandCenterRoute
   '/competitors': typeof CompetitorsRoute
+  '/essentials': typeof EssentialsRoute
   '/keywords': typeof KeywordsRoute
   '/knowledge': typeof KnowledgeRouteWithChildren
   '/mcp': typeof McpRoute
@@ -297,6 +304,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRouteWithChildren
   '/command-center': typeof CommandCenterRoute
   '/competitors': typeof CompetitorsRoute
+  '/essentials': typeof EssentialsRoute
   '/keywords': typeof KeywordsRoute
   '/mcp': typeof McpRoute
   '/search': typeof SearchRoute
@@ -335,6 +343,7 @@ export interface FileRoutesById {
   '/capabilities': typeof CapabilitiesRouteWithChildren
   '/command-center': typeof CommandCenterRoute
   '/competitors': typeof CompetitorsRoute
+  '/essentials': typeof EssentialsRoute
   '/keywords': typeof KeywordsRoute
   '/knowledge': typeof KnowledgeRouteWithChildren
   '/mcp': typeof McpRoute
@@ -378,6 +387,7 @@ export interface FileRouteTypes {
     | '/capabilities'
     | '/command-center'
     | '/competitors'
+    | '/essentials'
     | '/keywords'
     | '/knowledge'
     | '/mcp'
@@ -416,6 +426,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/command-center'
     | '/competitors'
+    | '/essentials'
     | '/keywords'
     | '/mcp'
     | '/search'
@@ -453,6 +464,7 @@ export interface FileRouteTypes {
     | '/capabilities'
     | '/command-center'
     | '/competitors'
+    | '/essentials'
     | '/keywords'
     | '/knowledge'
     | '/mcp'
@@ -495,6 +507,7 @@ export interface RootRouteChildren {
   CapabilitiesRoute: typeof CapabilitiesRouteWithChildren
   CommandCenterRoute: typeof CommandCenterRoute
   CompetitorsRoute: typeof CompetitorsRoute
+  EssentialsRoute: typeof EssentialsRoute
   KeywordsRoute: typeof KeywordsRoute
   KnowledgeRoute: typeof KnowledgeRouteWithChildren
   McpRoute: typeof McpRoute
@@ -561,6 +574,13 @@ declare module '@tanstack/react-router' {
       path: '/competitors'
       fullPath: '/competitors'
       preLoaderRoute: typeof CompetitorsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/essentials': {
+      id: '/essentials'
+      path: '/essentials'
+      fullPath: '/essentials'
+      preLoaderRoute: typeof EssentialsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/keywords': {
@@ -908,6 +928,7 @@ const rootRouteChildren: RootRouteChildren = {
   CapabilitiesRoute: CapabilitiesRouteWithChildren,
   CommandCenterRoute: CommandCenterRoute,
   CompetitorsRoute: CompetitorsRoute,
+  EssentialsRoute: EssentialsRoute,
   KeywordsRoute: KeywordsRoute,
   KnowledgeRoute: KnowledgeRouteWithChildren,
   McpRoute: McpRoute,
