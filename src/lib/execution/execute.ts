@@ -24,6 +24,7 @@ export type ExecutableRequest = {
   repo: string | null;
   branch: string | null;
   filePath: string | null;
+  projectId: string | null;
   baseRevision: string | null;
   changes: FieldChange[];
   commitSha: string | null;
@@ -35,7 +36,7 @@ export type AttemptRecord = {
   tenantId: string;
   changeRequestId: string;
   actorId: string;
-  kind: "source_commit" | "publish_check";
+  kind: "source_commit" | "publish_check" | "preflight";
   status:
     | "committed"
     | "reconciled"
@@ -43,12 +44,14 @@ export type AttemptRecord = {
     | "refused"
     | "failed"
     | "verified"
-    | "pending";
+    | "pending"
+    | "proved";
   commitSha?: string | null;
   commitUrl?: string | null;
   error?: string | null;
   detail?: Record<string, unknown>;
 };
+
 
 export type ExecutionStore = {
   load(id: string): Promise<ExecutableRequest | null>;
@@ -150,11 +153,17 @@ export async function executeSourceChange(input: {
     );
   }
 
-  const allowed = checkSourceTarget({ repo: request.repo, branch: request.branch });
+  const allowed = checkSourceTarget({
+    repo: request.repo,
+    branch: request.branch,
+    filePath: request.filePath,
+    projectId: request.projectId,
+  });
   if (!allowed.ok) return refuse(allowed.reason);
   if (!request.filePath) {
     return refuse("Refused without writing: this change request stores no source file.");
   }
+
   if (!request.baseRevision) {
     return refuse(
       "Refused without writing: this change request stores no observed base revision, so a stale write cannot be ruled out.",

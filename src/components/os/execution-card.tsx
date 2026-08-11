@@ -9,7 +9,9 @@ import {
   checkChangeRequestPublished,
   executeChangeRequest,
   getExecutionState,
+  testGithubConnection,
 } from "@/lib/execution/execution.functions";
+
 
 type Stage = { label: string; detail: string; done: boolean };
 
@@ -31,20 +33,25 @@ type Props = {
 function CostNote() {
   return (
     <div className="mt-4 space-y-1 text-xs text-muted-foreground">
-      <p>Provider API charge for committing to source: $0. GitHub writes are not metered here.</p>
+      <p>
+        Provider API charge for reading from and committing to source: $0. GitHub reads and writes
+        are not metered here, and the read-only connection test costs nothing.
+      </p>
       <p>
         Each rendered publish check spends 1 Firecrawl credit from the connected account. Nothing
         else in this slice calls a paid provider.
       </p>
       <p>
-        AI build usage in Lovable is separate and is not $0: building this execution adapter used
-        27.2 credits, and the correctness pass that added base-revision enforcement, rendered proof,
-        and the atomic applied transition used a further 9.2 credits, so 36.4 credits before this
-        change. This pass adds more on top and is billed the same way.
+        Lovable build credits are separate and are not $0. Known build usage through commit
+        6b9ddb53 is 37.9 credits in total: PageSpeed slice 18.0, first execution adapter 9.2, and
+        the previous corrective pass 10.7. The current pass, which added the read-only GitHub
+        preflight and the service-only rendered-proof boundary, is not included in that 37.9
+        subtotal and is billed the same way.
       </p>
     </div>
   );
 }
+
 
 /**
  * The execution surface. It separates facts that are easy to confuse: readiness
@@ -56,6 +63,8 @@ export function ExecutionCard(props: Props) {
   const loadState = useServerFn(getExecutionState);
   const runExecute = useServerFn(executeChangeRequest);
   const runPublishCheck = useServerFn(checkChangeRequestPublished);
+  const runPreflight = useServerFn(testGithubConnection);
+
 
   const execution = useQuery({
     queryKey: ["change-request-execution", props.id],
@@ -89,22 +98,66 @@ export function ExecutionCard(props: Props) {
     onError: (error: Error) => toast.error(error.message),
   });
 
+  const preflight = useMutation({
+    mutationFn: () => runPreflight({ data: { id: props.id } }),
+    onSuccess: (result) => {
+      if (result.status === "proved") toast.success(result.reason);
+      else toast.error(result.reason);
+      refresh();
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
   const data = execution.data;
-  const running = execute.isPending || publishCheck.isPending;
+  const running = execute.isPending || publishCheck.isPending || preflight.isPending;
   const committed = Boolean(data?.commitSha);
   const provenLive = Boolean(data?.publishedProofAt);
   const decided = props.state !== "proposed";
 
+  const preflightButton =
+    data?.isOperator ? (
+      <Button
+        variant="outline"
+        size="sm"
+        disabled={running || !data.executorCredentialPresent}
+        onClick={() => preflight.mutate()}
+      >
+        {data.executorCredentialPresent
+          ? "Test GitHub connection (read only)"
+          : "GitHub connection test unavailable"}
+      </Button>
+    ) : null;
+
+
+  const readinessLabel: Record<string, string> = {
+    proven: "Proven",
+    configured: "Configured, unproven",
+    stored: "Stored",
+    blocked: "Blocked",
+  };
+
   const readinessBlock = data ? (
     <div className="mt-4">
       <h3 className="text-xs uppercase tracking-wide text-muted-foreground">
-        Execution readiness, checked now
+        Stored configuration and live proof
       </h3>
+      <p className="mt-1 text-xs text-muted-foreground">
+        Stored means AOOS recorded it. Configured, unproven means a credential exists but has never
+        answered. Proven means a live read-only check succeeded at the time shown.
+      </p>
       <ul className="mt-2 space-y-2">
         {data.readiness.map((fact) => (
           <li key={fact.label} className="flex gap-3 text-sm">
-            <span className={fact.ok ? "text-primary" : "text-muted-foreground"}>
-              {fact.ok ? "Ready" : "Blocked"}
+            <span
+              className={
+                fact.state === "proven"
+                  ? "text-primary"
+                  : fact.state === "blocked"
+                    ? "text-destructive"
+                    : "text-muted-foreground"
+              }
+            >
+              {readinessLabel[fact.state] ?? fact.state}
             </span>
             <span>
               <span className="text-foreground">{fact.label}</span>
@@ -124,6 +177,7 @@ export function ExecutionCard(props: Props) {
     <p className="mt-4 text-sm text-muted-foreground">Reading execution readiness…</p>
   );
 
+
   if (!decided) {
     return (
       <GlassCard className="p-5">
@@ -136,23 +190,26 @@ export function ExecutionCard(props: Props) {
         </p>
         {readinessBlock}
         <div className="mt-4 flex flex-wrap gap-2">
+          {preflightButton}
           <Button
             variant="ghost"
             size="sm"
-            disabled={execution.isFetching}
+            disabled={execution.isFetching || running}
             onClick={() => {
               void execution.refetch();
-              toast.success("Re-checked stored connection facts. No provider was called.");
+              toast.success("Re-read stored configuration. No provider was called.");
             }}
           >
-            Re-check connections
+            Re-read stored configuration
           </Button>
         </div>
         <p className="mt-3 text-xs text-muted-foreground">
-          These are configuration facts only. A configured credential is not a proven working
-          credential: the first real proof is the execution attempt itself.
+          The connection test makes read-only GitHub requests with the configured token. It creates
+          no commit, changes no state, and leaves this request proposed. No Execute control exists
+          before approval.
         </p>
         <CostNote />
+
       </GlassCard>
     );
   }
@@ -229,7 +286,9 @@ export function ExecutionCard(props: Props) {
       {readinessBlock}
 
       <div className="mt-4 flex flex-wrap gap-2">
+        {preflightButton}
         {data?.isOperator && !committed ? (
+
           <Button
             variant="outline"
             size="sm"

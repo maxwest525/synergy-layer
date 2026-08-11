@@ -2,7 +2,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database } from "@/integrations/supabase/types";
 import type { AttemptRecord, ExecutableRequest, ExecutionStore, GithubApi, RenderedVerifier } from "./execute";
+import { GithubStatusError } from "./github-error";
 import { extractDocumentTitle, extractFirstHeading, extractMarkdownHeading, parseFieldChanges } from "./source-change";
+
 
 type Client = SupabaseClient<Database>;
 
@@ -27,11 +29,11 @@ async function boundedFetch(
 }
 
 /**
- * Store backed by the service-role client. Lifecycle writes still go through a
- * database routine, so the guard, the audit event, and the Inbox gate behave
- * exactly as they do for a manual operator action.
+ * Store backed by the service-role client. The rendered-proof transition is
+ * service-only at the database level, so the authenticated actor id is carried
+ * explicitly across that boundary for audit instead of being inferred.
  */
-export function createExecutionStore(admin: Client, rls: Client): ExecutionStore {
+export function createExecutionStore(admin: Client, rls: Client, actorId: string): ExecutionStore {
   return {
     async load(id: string): Promise<ExecutableRequest | null> {
       // Read through the operator's own client so tenant visibility is enforced.
@@ -54,6 +56,7 @@ export function createExecutionStore(admin: Client, rls: Client): ExecutionStore
         repo: text("source_repo"),
         branch: text("source_branch"),
         filePath: data.source_file,
+        projectId: text("source_project_id"),
         baseRevision: data.source_revision_before,
         changes: parseFieldChanges(data.changes),
         commitSha: text("source_commit_sha"),
@@ -98,12 +101,15 @@ export function createExecutionStore(admin: Client, rls: Client): ExecutionStore
     },
 
     async applyRenderedProof({ id, notes, revision, proof }) {
-      const { data, error } = await rls.rpc("apply_change_request_rendered_proof", {
+      // Service-only routine: a browser-authenticated client cannot invoke it,
+      // so a forged proof cannot manufacture an applied transition.
+      const { data, error } = await admin.rpc("apply_change_request_rendered_proof", {
         _id: id,
-        _proof: proof as never,
+        _actor: actorId,
+        _proof: proof,
         _notes: notes,
         _revision: revision,
-      });
+      } as never);
       if (error) throw new Error(error.message);
       const payload = data as { changed?: unknown } | null;
       if (!payload || typeof payload.changed !== "boolean") {
@@ -113,6 +119,7 @@ export function createExecutionStore(admin: Client, rls: Client): ExecutionStore
     },
   };
 }
+
 
 const API = "https://api.github.com";
 
@@ -147,8 +154,9 @@ export function createGithubApi(): GithubApi | null {
     });
     if (response.status < 200 || response.status >= 300) {
       // Deliberately no response body: it can echo request content.
-      throw new Error(`GitHub responded ${response.status} for ${path.split("?")[0]}.`);
+      throw new GithubStatusError(response.status, path.split("?")[0] ?? path);
     }
+
     return response.text ? (JSON.parse(response.text) as unknown) : {};
   };
 
@@ -272,7 +280,7 @@ export function createRenderedVerifier(): RenderedVerifier | null {
 export async function fetchExecutionAttempts(client: Client, changeRequestId: string) {
   const { data, error } = await client
     .from("change_request_executions")
-    .select("id, kind, status, commit_sha, commit_url, error, created_at")
+    .select("id, kind, status, commit_sha, commit_url, error, detail, created_at")
     .eq("change_request_id", changeRequestId)
     .order("created_at", { ascending: false })
     .limit(20);
