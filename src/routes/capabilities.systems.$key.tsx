@@ -193,16 +193,14 @@ function SystemDetailPage() {
           <div className="grid gap-2 md:grid-cols-2">
             {data.aliases.map((alias) => {
               const kind = (alias as { alias_kind?: string }).alias_kind ?? "other";
+              const kindLabel = ALIAS_KIND_LABELS[kind] ?? "Other registration";
               return (
                 <GlassCard key={alias.id} className="p-3">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <p className="text-sm font-medium text-foreground">
-                      {ALIAS_KIND_LABELS[kind] ?? ALIAS_KIND_LABELS.other}: {alias.alias_label}
+                      {kindLabel}: {alias.alias_label}
                     </p>
-                    <StatePill
-                      label={ALIAS_KIND_LABELS[kind] ?? ALIAS_KIND_LABELS.other}
-                      tone={ALIAS_KIND_TONE[kind] ?? "neutral"}
-                    />
+                    <StatePill label={kindLabel} tone={ALIAS_KIND_TONE[kind] ?? "neutral"} />
                   </div>
                   <p className="text-xs text-muted-foreground">
                     {alias.registered_in ?? "Registration source not set"}
