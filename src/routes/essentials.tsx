@@ -49,7 +49,7 @@ const ACTION_CLASS =
   "inline-flex items-center rounded-lg border border-primary/50 px-3 py-1.5 text-sm font-medium text-primary transition-colors hover:bg-primary/10";
 
 type Action =
-  | { label: string; to: "/search" | "/keywords" | "/competitors" | "/capabilities/systems" | "/ads/advertisers" | "/recommendations" }
+  | { label: string; to: "/search" | "/keywords" | "/competitors" | "/capabilities/systems" | "/ads/advertisers" | "/recommendations" | "/measurement" }
   | { label: string; to: "/changes/$id"; params: { id: string } }
   | { label: string; to: "/capabilities/systems/$key"; params: { key: string } };
 
