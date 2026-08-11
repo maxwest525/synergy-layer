@@ -156,7 +156,7 @@ export async function resolveVendorAdvertisers(
   if (result.ambiguousDomains.length > 0) {
     await fileInboxItem(client, {
       tenantId,
-      lane: "approval",
+      lane: "pending_approval",
       sourceModule: MODULE,
       title: `${result.ambiguousDomains.length} vendor domains need advertiser confirmation`,
       summary: `Several Google advertiser accounts serve ads for ${result.ambiguousDomains.join(", ")}. AOOS will not guess which account belongs to the vendor.`,
