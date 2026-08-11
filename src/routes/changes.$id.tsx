@@ -9,12 +9,10 @@ import { DetailRow, EmptyState, GlassCard, PageHeader, StatePill } from "@/compo
 
 import { OperatorRouteError } from "@/components/os/route-error";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
   approveChangeRequest,
   getChangeRequest,
-  markChangeRequestApplied,
   rejectChangeRequest,
   rollBackChangeRequest,
   verifyChangeRequest,
@@ -56,7 +54,6 @@ function ChangeRequestPage() {
   const loadTenantContext = useServerFn(getTenantContext);
   const loadChange = useServerFn(getChangeRequest);
   const queryClient = useQueryClient();
-  const [revision, setRevision] = useState("");
   const [notes, setNotes] = useState("");
 
   const tenant = useQuery({
@@ -74,7 +71,6 @@ function ChangeRequestPage() {
 
   const approve = useServerFn(approveChangeRequest);
   const reject = useServerFn(rejectChangeRequest);
-  const markApplied = useServerFn(markChangeRequestApplied);
   const verify = useServerFn(verifyChangeRequest);
   const rollBack = useServerFn(rollBackChangeRequest);
 
