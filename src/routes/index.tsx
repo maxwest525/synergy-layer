@@ -64,7 +64,9 @@ type InboxRoute =
   | { kind: "workflow"; id: string }
   | { kind: "schedule"; id: string };
 
-const idPattern = "[0-9a-fA-F-]{36}";
+// Compiled once at module load. Building this inside the resolver recompiled a
+// regex for every inbox row on every render.
+const detailHrefPattern = /^\/(recommendations|agents|workflows|scheduler)\/([0-9a-fA-F-]{36})$/;
 
 function routeFromHref(href: string): InboxRoute | null {
   if (href === "/keywords") return { kind: "keywords" };
