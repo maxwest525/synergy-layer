@@ -3167,7 +3167,13 @@ export type Database = {
     }
     Functions: {
       apply_change_request_rendered_proof: {
-        Args: { _id: string; _notes: string; _proof: Json; _revision: string }
+        Args: {
+          _actor: string
+          _id: string
+          _notes: string
+          _proof: Json
+          _revision: string
+        }
         Returns: Json
       }
       assert_admin_remains: {
