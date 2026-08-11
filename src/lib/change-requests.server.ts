@@ -2,23 +2,15 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database } from "@/integrations/supabase/types";
 import {
-  ACTION_RESULT,
-  decideTransition,
-  isChangeState,
-  recommendationStateFor,
-  type ChangeAction,
-} from "./change-request-state";
-import { logActivity } from "./os.server";
+  canVerifyWithEvidence,
+  parsePostChangeRows,
+  type PostChangeRow,
+} from "./change-request-evidence";
+import { type ChangeAction } from "./change-request-state";
 
 type Client = SupabaseClient<Database>;
 
-export type PostChangeRow = {
-  date: string;
-  query: string;
-  position: number;
-  impressions: number;
-  clicks: number;
-};
+export type { PostChangeRow };
 
 type ChangeRow = Database["public"]["Tables"]["change_requests"]["Row"];
 
@@ -40,28 +32,7 @@ async function fetchPostChangeRows(
     .order("period_start_pt", { ascending: true })
     .limit(60);
   if (error) throw new Error(error.message);
-
-  const out: PostChangeRow[] = [];
-  for (const snapshot of data ?? []) {
-    const payload = Array.isArray(snapshot.payload) ? snapshot.payload : [];
-    for (const page of payload) {
-      const pageRows = (page as { rows?: unknown })?.rows;
-      if (!Array.isArray(pageRows)) continue;
-      for (const raw of pageRows) {
-        const row = raw as { keys?: unknown[]; position?: number; impressions?: number; clicks?: number };
-        const keys = Array.isArray(row.keys) ? row.keys : [];
-        if (keys[0] !== targetUrl) continue;
-        out.push({
-          date: snapshot.period_start_pt,
-          query: typeof keys[1] === "string" ? keys[1] : "(unknown query)",
-          position: Number(row.position ?? 0),
-          impressions: Number(row.impressions ?? 0),
-          clicks: Number(row.clicks ?? 0),
-        });
-      }
-    }
-  }
-  return out;
+  return parsePostChangeRows(data ?? [], targetUrl);
 }
 
 export async function fetchChangeRequests(client: Client, tenantId: string) {
@@ -101,116 +72,49 @@ type TransitionInput = {
 };
 
 /**
- * One transition, server enforced. Invalid moves are refused, replayed clicks
- * are no-ops, and every real move writes an audited activity event carrying the
- * old state, the new state, the actor, the target URL, and the request id.
+ * One transition, executed by a single database routine so the state guard, the
+ * actor stamps, the linked recommendation, the Inbox gate, and the audit event
+ * either all land or none of them do. The routine also rechecks stored Search
+ * Console snapshots itself before allowing verification, so no browser flag can
+ * declare evidence that does not exist.
  */
 export async function transitionChangeRequest(
   client: Client,
   input: TransitionInput,
 ): Promise<{ changeRequest: ChangeRow; changed: boolean }> {
-  const { data: existing, error: readError } = await client
-    .from("change_requests")
-    .select("*")
-    .eq("id", input.id)
-    .maybeSingle();
-  if (readError) throw new Error(readError.message);
-  if (!existing) throw new Error("That change request is not visible to this account.");
-
-  const from = existing.state;
-  if (!isChangeState(from)) throw new Error(`Unrecognised change request state: ${from}`);
-
-  const decision = decideTransition(from, input.action);
-  if (decision.kind === "invalid") throw new Error(decision.reason);
-  if (decision.kind === "noop") return { changeRequest: existing, changed: false };
-
-  const now = new Date().toISOString();
-  const patch: Database["public"]["Tables"]["change_requests"]["Update"] = {
-    state: ACTION_RESULT[input.action],
-  };
-
-  if (input.action === "approve") {
-    patch.approved_by = input.userId;
-    patch.approved_at = now;
-  } else if (input.action === "reject") {
-    patch.rejected_by = input.userId;
-    patch.rejected_at = now;
-  } else if (input.action === "mark_applied") {
-    patch.applied_by = input.userId;
-    patch.applied_at = now;
-    patch.applied_notes = input.notes ?? null;
-    if (input.revision) patch.source_revision_after = input.revision;
-  } else if (input.action === "verify") {
-    patch.verified_by = input.userId;
-    patch.verified_at = now;
-    patch.verification_notes = input.notes ?? null;
-  } else {
-    patch.rolled_back_by = input.userId;
-    patch.rolled_back_at = now;
-    patch.rollback_notes = input.notes ?? null;
-  }
-
-  const { data: updated, error } = await client
-    .from("change_requests")
-    // The state guard makes the write itself idempotent: a concurrent duplicate
-    // finds the row already moved and updates nothing.
-    .update(patch)
-    .eq("id", input.id)
-    .eq("state", from)
-    .select("*")
-    .maybeSingle();
-  if (error) throw new Error(error.message);
-  if (!updated) {
-    const { data: current } = await client
+  if (input.action === "verify") {
+    const { data: existing, error: readError } = await client
       .from("change_requests")
-      .select("*")
+      .select("tenant_id, target_url, applied_at")
       .eq("id", input.id)
       .maybeSingle();
-    if (!current) throw new Error("That change request is no longer available.");
-    return { changeRequest: current, changed: false };
-  }
-
-  const nextRecommendationState = recommendationStateFor(decision.to);
-  if (updated.recommendation_id && nextRecommendationState) {
-    const recommendationPatch: Record<string, unknown> = { state: nextRecommendationState };
-    if (input.action === "approve" || input.action === "reject") {
-      recommendationPatch["approved_by"] = input.userId;
-      recommendationPatch["approved_at"] = now;
+    if (readError) throw new Error(readError.message);
+    if (!existing) throw new Error("That change request is not visible to this account.");
+    const postChangeRows = await fetchPostChangeRows(
+      client,
+      existing.tenant_id,
+      existing.target_url,
+      existing.applied_at,
+    );
+    if (!canVerifyWithEvidence({ appliedAt: existing.applied_at, postChangeRows })) {
+      throw new Error(
+        "Waiting for finalized post-change Search Console data. No data is not evidence of success.",
+      );
     }
-    const { error: recError } = await client
-      .from("recommendations")
-      .update(recommendationPatch as never)
-      .eq("id", updated.recommendation_id);
-    if (recError) throw new Error(recError.message);
   }
 
-  // The Inbox gate closes only when the change itself is decided. Application,
-  // verification, and rollback happen after the decision and leave it closed.
-  if ((input.action === "approve" || input.action === "reject") && updated.inbox_item_id) {
-    const { error: inboxError } = await client
-      .from("inbox_items")
-      .update({ lane: "completed", resolved_at: now })
-      .eq("id", updated.inbox_item_id)
-      .is("resolved_at", null);
-    if (inboxError) throw new Error(inboxError.message);
-  }
+  const args: { _id: string; _action: string; _notes?: string; _revision?: string } = {
+    _id: input.id,
+    _action: input.action,
+  };
+  if (input.notes) args._notes = input.notes;
+  if (input.revision) args._revision = input.revision;
 
-  await logActivity(client, {
-    actorKind: "user",
-    actorId: input.userId,
-    verb: `change_request.${decision.to}`,
-    subjectKind: "change_request",
-    subjectId: updated.id,
-    summary: `${updated.title}: ${from} to ${decision.to}.`,
-    payload: {
-      changeRequestId: updated.id,
-      fromState: from,
-      toState: decision.to,
-      targetUrl: updated.target_url,
-      actorId: input.userId,
-    },
-    tenantId: updated.tenant_id,
-  });
+  const { data, error } = await client.rpc("transition_change_request", args);
 
-  return { changeRequest: updated, changed: true };
+  if (error) throw new Error(error.message);
+
+  const result = (data ?? {}) as { changed?: boolean; change_request?: ChangeRow };
+  if (!result.change_request) throw new Error("That change request is no longer available.");
+  return { changeRequest: result.change_request, changed: Boolean(result.changed) };
 }

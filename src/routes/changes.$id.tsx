@@ -265,16 +265,25 @@ function ChangeRequestPage() {
                 {change.source_revision_after ? `, revision ${change.source_revision_after}` : ""}. Verification
                 is pending until post-change data is reviewed.
               </p>
-              <Textarea
-                value={notes}
-                onChange={(event) => setNotes(event.target.value)}
-                placeholder="Verification notes (optional)"
-              />
-              <Button variant="outline" size="sm" disabled={busy} onClick={() => mutation.mutate("verify")}>
-                Mark verified
-              </Button>
+              {data.postChangeRows.length === 0 ? (
+                <p className="rounded-lg border border-border/60 p-3 text-sm text-muted-foreground">
+                  Waiting for finalized post-change Search Console data. No data is not evidence of success.
+                </p>
+              ) : (
+                <>
+                  <Textarea
+                    value={notes}
+                    onChange={(event) => setNotes(event.target.value)}
+                    placeholder="Verification notes (optional)"
+                  />
+                  <Button variant="outline" size="sm" disabled={busy} onClick={() => mutation.mutate("verify")}>
+                    Mark verified
+                  </Button>
+                </>
+              )}
             </div>
           ) : null}
+
         </GlassCard>
       ) : null}
 

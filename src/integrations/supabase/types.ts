@@ -2980,6 +2980,15 @@ export type Database = {
         Args: { target_tenant: string }
         Returns: undefined
       }
+      transition_change_request: {
+        Args: {
+          _action: string
+          _id: string
+          _notes?: string
+          _revision?: string
+        }
+        Returns: Json
+      }
     }
     Enums: {
       app_role: "admin" | "operator" | "viewer"

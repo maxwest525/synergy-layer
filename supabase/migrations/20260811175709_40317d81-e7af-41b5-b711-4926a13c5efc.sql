@@ -1,0 +1,156 @@
+CREATE OR REPLACE FUNCTION public.transition_change_request(
+  _id uuid,
+  _action text,
+  _notes text DEFAULT NULL,
+  _revision text DEFAULT NULL
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_uid uuid := auth.uid();
+  v_row public.change_requests%ROWTYPE;
+  v_to text;
+  v_now timestamptz := now();
+  v_rec_state text;
+  v_has_evidence boolean;
+BEGIN
+  IF v_uid IS NULL THEN
+    RAISE EXCEPTION 'Not authenticated.';
+  END IF;
+
+  SELECT * INTO v_row FROM public.change_requests WHERE id = _id;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'That change request is not available.';
+  END IF;
+
+  IF NOT public.is_tenant_member(v_row.tenant_id) THEN
+    RAISE EXCEPTION 'That change request is not visible to this account.';
+  END IF;
+
+  IF NOT (public.has_role(v_uid, 'admin'::app_role) OR public.has_role(v_uid, 'operator'::app_role)) THEN
+    RAISE EXCEPTION 'Only an operator or admin can decide a change request.';
+  END IF;
+
+  v_to := CASE _action
+    WHEN 'approve' THEN 'approved'
+    WHEN 'reject' THEN 'rejected'
+    WHEN 'mark_applied' THEN 'applied'
+    WHEN 'verify' THEN 'verified'
+    WHEN 'roll_back' THEN 'rolled_back'
+    ELSE NULL
+  END;
+  IF v_to IS NULL THEN
+    RAISE EXCEPTION 'Unrecognised action: %', _action;
+  END IF;
+
+  -- Replay of a completed transition: true no-op, current row returned.
+  IF v_row.state = v_to THEN
+    RETURN jsonb_build_object('changed', false, 'change_request', to_jsonb(v_row));
+  END IF;
+
+  IF NOT (
+    (v_row.state = 'proposed' AND _action IN ('approve','reject')) OR
+    (v_row.state = 'approved' AND _action = 'mark_applied') OR
+    (v_row.state = 'applied' AND _action IN ('verify','roll_back')) OR
+    (v_row.state = 'verified' AND _action = 'roll_back')
+  ) THEN
+    RAISE EXCEPTION 'A change request that is % cannot move to %.', v_row.state, v_to;
+  END IF;
+
+  IF _action = 'verify' THEN
+    IF v_row.applied_at IS NULL THEN
+      RAISE EXCEPTION 'A change request cannot be verified before it is applied.';
+    END IF;
+    SELECT EXISTS (
+      SELECT 1
+      FROM public.search_console_snapshots s,
+           LATERAL jsonb_array_elements(COALESCE(s.payload -> 'rows', '[]'::jsonb)) AS r
+      WHERE s.tenant_id = v_row.tenant_id
+        AND s.kind = 'page_query'
+        AND s.period_start_pt > v_row.applied_at::date
+        AND (r -> 'keys' ->> 0) = v_row.target_url
+    ) INTO v_has_evidence;
+    IF NOT v_has_evidence THEN
+      RAISE EXCEPTION 'Waiting for finalized post-change Search Console data. No data is not evidence of success.';
+    END IF;
+  END IF;
+
+  UPDATE public.change_requests SET
+    state = v_to,
+    approved_by = CASE WHEN _action = 'approve' THEN v_uid ELSE approved_by END,
+    approved_at = CASE WHEN _action = 'approve' THEN v_now ELSE approved_at END,
+    rejected_by = CASE WHEN _action = 'reject' THEN v_uid ELSE rejected_by END,
+    rejected_at = CASE WHEN _action = 'reject' THEN v_now ELSE rejected_at END,
+    applied_by = CASE WHEN _action = 'mark_applied' THEN v_uid ELSE applied_by END,
+    applied_at = CASE WHEN _action = 'mark_applied' THEN v_now ELSE applied_at END,
+    applied_notes = CASE WHEN _action = 'mark_applied' THEN _notes ELSE applied_notes END,
+    source_revision_after = CASE
+      WHEN _action = 'mark_applied' AND _revision IS NOT NULL AND _revision <> '' THEN _revision
+      ELSE source_revision_after END,
+    verified_by = CASE WHEN _action = 'verify' THEN v_uid ELSE verified_by END,
+    verified_at = CASE WHEN _action = 'verify' THEN v_now ELSE verified_at END,
+    verification_notes = CASE WHEN _action = 'verify' THEN _notes ELSE verification_notes END,
+    rolled_back_by = CASE WHEN _action = 'roll_back' THEN v_uid ELSE rolled_back_by END,
+    rolled_back_at = CASE WHEN _action = 'roll_back' THEN v_now ELSE rolled_back_at END,
+    rollback_notes = CASE WHEN _action = 'roll_back' THEN _notes ELSE rollback_notes END
+  WHERE id = _id AND state = v_row.state
+  RETURNING * INTO v_row;
+
+  IF NOT FOUND THEN
+    SELECT * INTO v_row FROM public.change_requests WHERE id = _id;
+    RETURN jsonb_build_object('changed', false, 'change_request', to_jsonb(v_row));
+  END IF;
+
+  v_rec_state := CASE v_to
+    WHEN 'approved' THEN 'approved'
+    WHEN 'rejected' THEN 'rejected'
+    WHEN 'applied' THEN 'applied'
+    WHEN 'verified' THEN 'verified'
+    WHEN 'rolled_back' THEN 'rolled_back'
+    ELSE NULL
+  END;
+
+  IF v_row.recommendation_id IS NOT NULL AND v_rec_state IS NOT NULL THEN
+    UPDATE public.recommendations
+      SET state = v_rec_state::recommendation_state,
+          approved_by = CASE WHEN _action = 'approve' THEN v_uid ELSE approved_by END,
+          approved_at = CASE WHEN _action = 'approve' THEN v_now ELSE approved_at END
+      WHERE id = v_row.recommendation_id;
+  END IF;
+
+  IF _action IN ('approve','reject') AND v_row.inbox_item_id IS NOT NULL THEN
+    UPDATE public.inbox_items
+      SET lane = 'completed'::inbox_lane, resolved_at = v_now
+      WHERE id = v_row.inbox_item_id AND resolved_at IS NULL;
+  END IF;
+
+  INSERT INTO public.activity_events (
+    tenant_id, actor_kind, actor_id, verb, subject_kind, subject_id, summary, payload
+  ) VALUES (
+    v_row.tenant_id,
+    'user',
+    v_uid::text,
+    'change_request.' || v_to,
+    'change_request',
+    v_row.id,
+    v_row.title || ': ' || v_to || '.',
+    jsonb_build_object(
+      'changeRequestId', v_row.id,
+      'toState', v_to,
+      'targetUrl', v_row.target_url,
+      'actorId', v_uid
+    )
+  );
+
+  RETURN jsonb_build_object('changed', true, 'change_request', to_jsonb(v_row));
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.transition_change_request(uuid, text, text, text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.transition_change_request(uuid, text, text, text) TO authenticated;
+
+DROP POLICY IF EXISTS "Operators update change requests" ON public.change_requests;
+REVOKE UPDATE ON public.change_requests FROM authenticated;
