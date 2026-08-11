@@ -18,6 +18,35 @@ export async function decide(
   decision: "approved" | "rejected",
   userId: string,
 ) {
+  const { describeSuggestedAction, isObservationOnly } = await import("./recommendation-action");
+
+  const { data: existing, error: readError } = await client
+    .from("recommendations")
+    .select("id, title, state, metadata, suggested_action")
+    .eq("id", id)
+    .maybeSingle();
+  if (readError) throw new Error(readError.message);
+  if (!existing) throw new Error("That recommendation is not visible to this account.");
+
+  // Facts are not approvals. An observation records what the SERP showed; it
+  // is not a proposal, so it can never be approved or rejected.
+  if (isObservationOnly(existing.metadata)) {
+    throw new Error(
+      "This row is observed evidence, not a proposal. Observations cannot be approved or rejected.",
+    );
+  }
+  if (existing.state === "observed") {
+    throw new Error("Observed evidence cannot be approved or rejected.");
+  }
+  if (existing.state === "approved" || existing.state === "rejected") {
+    throw new Error(`This recommendation was already ${existing.state}.`);
+  }
+  if (!describeSuggestedAction(existing.suggested_action).executable) {
+    throw new Error(
+      "No executable handler is connected to this suggested action, so approving it would record a decision that runs nothing.",
+    );
+  }
+
   const { data: recommendation, error } = await client
     .from("recommendations")
     .update({ state: decision, approved_by: userId, approved_at: new Date().toISOString() })
@@ -26,11 +55,12 @@ export async function decide(
     .single();
   if (error) throw new Error(error.message);
 
-  await client
+  const { error: inboxError } = await client
     .from("inbox_items")
     .update({ lane: "completed", resolved_at: new Date().toISOString() })
     .eq("subject_id", id)
     .is("resolved_at", null);
+  if (inboxError) throw new Error(inboxError.message);
 
   await logActivity(client, {
     actorKind: "user",
@@ -44,24 +74,23 @@ export async function decide(
   return recommendation;
 }
 
-export async function resolveItem(client: Client, id: string, userId: string) {
-  const { data, error } = await client
-    .from("inbox_items")
-    .update({ lane: "completed", resolved_at: new Date().toISOString() })
-    .eq("id", id)
-    .select("*")
-    .single();
+/**
+ * Clearing is one atomic operator action in the database: it preserves the
+ * prior lane, records who cleared it, and logs the event. Pending approvals are
+ * rejected there, not here, so no client can route around the gate.
+ */
+export async function resolveItem(client: Client, id: string) {
+  const { data, error } = await client.rpc("clear_inbox_item", { _item_id: id });
   if (error) throw new Error(error.message);
+  if (!data) throw new Error("Clearing the inbox item returned no row.");
+  return data;
+}
 
-  await logActivity(client, {
-    actorKind: "user",
-    actorId: userId,
-    verb: "inbox.resolved",
-    subjectKind: "inbox_item",
-    subjectId: id,
-    summary: `Inbox item "${data.title}" was cleared.`,
-  });
-
+/** Undo a manual clear. Approved, rejected, and system completed items stay closed. */
+export async function reopenItem(client: Client, id: string) {
+  const { data, error } = await client.rpc("reopen_inbox_item", { _item_id: id });
+  if (error) throw new Error(error.message);
+  if (!data) throw new Error("Reopening the inbox item returned no row.");
   return data;
 }
 
