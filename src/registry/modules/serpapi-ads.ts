@@ -11,7 +11,9 @@ export const definition: ModuleDefinition = {
   capabilities: [
     {
       key: "cap.serpapi_ads_transparency",
-      name: "SerpApi Ads Transparency",
+      // Operator-facing name is the product, not the vendor. SerpApi appears
+      // only inside connection, account, and ledger detail.
+      name: "Google Ads Transparency",
       kind: "api",
       category: "Paid",
       description:
@@ -37,7 +39,7 @@ export const definition: ModuleDefinition = {
     },
     {
       key: "ads.advertiser_resolution",
-      name: "Advertiser resolution",
+      name: "Lead vendor advertiser review",
       kind: "internal_module",
       category: "Paid",
       description:
