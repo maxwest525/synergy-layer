@@ -280,7 +280,7 @@ export function createRenderedVerifier(): RenderedVerifier | null {
 export async function fetchExecutionAttempts(client: Client, changeRequestId: string) {
   const { data, error } = await client
     .from("change_request_executions")
-    .select("id, kind, status, commit_sha, commit_url, error, created_at")
+    .select("id, kind, status, commit_sha, commit_url, error, detail, created_at")
     .eq("change_request_id", changeRequestId)
     .order("created_at", { ascending: false })
     .limit(20);
