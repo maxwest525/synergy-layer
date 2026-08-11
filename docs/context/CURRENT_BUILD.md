@@ -8,8 +8,7 @@ It is not authoritative documentation. Provider digests under
 `docs/integrations/<provider>/DIGEST.md` and their PLAN files remain the source of
 truth for provider behaviour and must never be overwritten by this file.
 
-Last updated: 2026-08-11 (Inbox action contract and competitor approval safety
-reconciled).
+Last updated: 2026-08-11 (Search Console authenticated read path repaired).
 
 ## 1. What AOOS is
 
@@ -132,7 +131,9 @@ second visits served from the query cache. Applied fixes:
 - **Search Console panel reads as the operator.** `getSearchConsoleState` used an
   anon publishable client, so tenant-scoped RLS correctly returned nothing and the
   panel looked empty even with rows stored. It is now behind `requireSupabaseAuth`
-  and reads through `context.supabase`. `syncProperties` upserts on
+  and reads through `context.supabase`. The panel invokes that protected read via
+  `useServerFn`, ensuring the global bearer-token middleware runs before each
+  query. `syncProperties` upserts on
   `(tenant_id, site_url)`, matching the real unique index.
 - **Vendor advertiser sweep.** `src/lib/serpapi/sweep.server.ts` walks unresolved
   watchlist domains one at a time through the single-credit canary path, so each
