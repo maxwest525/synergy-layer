@@ -161,3 +161,19 @@ describe("ga4Window", () => {
     });
   });
 });
+
+describe("missing snapshot copy", () => {
+  it("does not claim nothing was run when failed attempts are stored", () => {
+    const copy = describeMissingSnapshot([
+      { status: "failed", error: "PageSpeed Insights returned HTTP 429", startedAt: "2026-08-11T20:00:00Z" },
+      { status: "failed", error: "PageSpeed Insights returned HTTP 429", startedAt: "2026-08-11T19:00:00Z" },
+    ]);
+    expect(copy.title).toBe("No successful PageSpeed snapshot yet");
+    expect(copy.description).toContain("2 run attempt(s)");
+    expect(copy.description).toContain("HTTP 429");
+  });
+
+  it("says nothing was attempted only when there are no stored runs", () => {
+    expect(describeMissingSnapshot([]).title).toBe("No PageSpeed run attempted yet");
+  });
+});
