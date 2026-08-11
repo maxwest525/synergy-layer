@@ -272,3 +272,22 @@ export const runAdsCanary = createServerFn({ method: "POST" })
     const { runAdvertiserCanary } = await import("./serpapi/canary.server");
     return runAdvertiserCanary(context.supabase, tenantId, data);
   });
+
+/**
+ * Bounded metered sweep across the still-unresolved watchlist. Each domain
+ * goes through the same single-credit canary path, so every request keeps its
+ * own ledger reservation, account floor check, and idempotency key. Nothing is
+ * confirmed: every advertiser lands pending for operator review.
+ */
+export const runAdvertiserSweep = createServerFn({ method: "POST" })
+  .inputValidator((data) => z.object({ limit: z.number().int().min(1).max(12).optional() }).parse(data ?? {}))
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context, data }) => {
+    const { assertOperator } = await import("./os-admin.server");
+    await assertOperator(context.supabase, context.userId);
+    const { requireTenantId } = await import("./tenant.server");
+    const tenantId = await requireTenantId(context.supabase);
+
+    const { sweepVendorAdvertisers } = await import("./serpapi/sweep.server");
+    return sweepVendorAdvertisers(context.supabase, tenantId, { limit: data.limit ?? 12 });
+  });
