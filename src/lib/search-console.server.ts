@@ -106,18 +106,19 @@ export async function listProperties(): Promise<PropertyEntry[]> {
 
 export async function syncProperties(client: Client): Promise<PropertyEntry[]> {
   const entries = await listProperties();
+  const tenantId = await requireTenantId(client);
   for (const entry of entries) {
     const { error } = await client
       .from("search_console_properties")
       .upsert(
         {
-          tenant_id: await requireTenantId(client),
+          tenant_id: tenantId,
           site_url: entry.siteUrl,
           permission_level: entry.permissionLevel,
           eligible: entry.eligible,
           last_observed_at: new Date().toISOString(),
         },
-        { onConflict: "site_url" },
+        { onConflict: "tenant_id,site_url" },
       );
     if (error) throw new SearchConsoleFailure("persistence", error.message);
   }
