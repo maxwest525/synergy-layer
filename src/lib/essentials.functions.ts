@@ -194,7 +194,9 @@ export const getEssentials = createServerFn({ method: "GET" })
         latestImpressions: num(latestTotals['impressions']),
         pageRows: latest.find((row) => dimensionMatch(row, "page"))?.returned_row_count ?? 0,
         queryRows: latest.find((row) => dimensionMatch(row, "query"))?.returned_row_count ?? 0,
-        sitemapCount: latest.find((row) => dimensionMatch(row, "sitemap"))?.returned_row_count ?? 0,
+        sitemapCount: sitemapRow?.returned_row_count ?? 0,
+        sitemaps,
+
       },
       changes: {
         total: changes.length,
