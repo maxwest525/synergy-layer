@@ -140,6 +140,7 @@ function EssentialsPage() {
 
   const gsc = data.gsc;
   const system = (key: string) => data.systems[key] ?? null;
+  const pagespeed = describePageSpeed(data.pagespeed);
   const authority = backlinkAuthority({
     snapshotCount: data.backlinks.snapshots,
     referringDomains: data.backlinks.referringDomains,
@@ -224,10 +225,10 @@ function EssentialsPage() {
     {
       id: "pagespeed",
       title: "PageSpeed / Core Web Vitals",
-      status: systemStatus(system("api.pagespeed_insights")),
-      evidence: "PageSpeed Insights and Chrome UX Report are catalogued only. AOOS holds zero performance measurements.",
-      gap: "Neither is implemented or connected in AOOS, so no LCP, INP, or CLS figure exists here.",
-      action: { label: "Open the PageSpeed system record", to: "/capabilities/systems/$key" as const, params: { key: "api.pagespeed_insights" } },
+      status: pagespeed.status,
+      evidence: pagespeed.evidence,
+      gap: pagespeed.gap,
+      action: { label: "Open Measurement", to: "/measurement" as const },
     },
     {
       id: "guidance",
