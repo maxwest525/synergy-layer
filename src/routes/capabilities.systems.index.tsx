@@ -6,11 +6,10 @@ import { useServerFn } from "@tanstack/react-start";
 import { EmptyState, GlassCard, MetricTile, PageHeader, StatePill } from "@/components/os/primitives";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { AvailabilityBadge } from "@/components/os/availability-badge";
 import { getTenantContext } from "@/lib/tenant.functions";
 import { getToolEstate } from "@/lib/tool-estate.functions";
 import {
-  availabilityLabel,
-  availabilityTone,
   KIND_LABELS,
   type EstateFilter,
 } from "@/lib/tool-estate-display";
@@ -180,7 +179,7 @@ function SystemsPage() {
                       {system.version ? ` · ${system.version}` : ""}
                     </p>
                   </div>
-                  <StatePill label={availabilityLabel(system)} tone={availabilityTone(system)} />
+                  <AvailabilityBadge system={system} />
                 </div>
                 {system.summary ? (
                   <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">{system.summary}</p>

@@ -1,5 +1,6 @@
 import type { Tone } from "@/components/os/primitives";
 
+
 export type EstateFilter = "all" | "discovered" | "installed" | "credentialed" | "live" | "callable";
 
 export const KIND_LABELS: Record<string, string> = {
@@ -66,3 +67,12 @@ export function availabilityTone(system: AvailabilityInput): Tone {
   if (system.installed_state === "installed") return "warning";
   return "neutral";
 }
+
+/** Sentence-case availability text. StatePill title-cases its label, which reads wrong for a full sentence. */
+export const AVAILABILITY_TONE_CLASS: Record<Tone, string> = {
+  neutral: "text-muted-foreground",
+  positive: "text-success",
+  warning: "text-warning",
+  danger: "text-destructive",
+  primary: "text-primary",
+};

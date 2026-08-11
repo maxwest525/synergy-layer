@@ -6,11 +6,10 @@ import { useServerFn } from "@tanstack/react-start";
 import { DetailRow, EmptyState, GlassCard, PageHeader, StatePill } from "@/components/os/primitives";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { AvailabilityBadge } from "@/components/os/availability-badge";
 import { getTenantContext } from "@/lib/tenant.functions";
 import { getToolSystem } from "@/lib/tool-estate.functions";
 import {
-  availabilityLabel,
-  availabilityTone,
   COST_LABELS,
   CREDENTIAL_LABELS,
   INSTALLED_LABELS,
@@ -105,7 +104,7 @@ function SystemDetailPage() {
         <GlassCard className="p-5">
           <h2 className="text-sm font-semibold text-foreground">What is true today</h2>
           <div className="mt-2">
-            <StatePill label={availabilityLabel(system)} tone={availabilityTone(system)} />
+            <AvailabilityBadge system={system} />
           </div>
           <dl className="mt-3">
             <DetailRow label="Install" value={INSTALLED_LABELS[system.installed_state] ?? system.installed_state} />
