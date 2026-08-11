@@ -893,6 +893,63 @@ export type Database = {
           },
         ]
       }
+      change_request_executions: {
+        Row: {
+          actor_id: string | null
+          change_request_id: string
+          commit_sha: string | null
+          commit_url: string | null
+          created_at: string
+          detail: Json
+          error: string | null
+          id: string
+          kind: string
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          actor_id?: string | null
+          change_request_id: string
+          commit_sha?: string | null
+          commit_url?: string | null
+          created_at?: string
+          detail?: Json
+          error?: string | null
+          id?: string
+          kind: string
+          status: string
+          tenant_id: string
+        }
+        Update: {
+          actor_id?: string | null
+          change_request_id?: string
+          commit_sha?: string | null
+          commit_url?: string | null
+          created_at?: string
+          detail?: Json
+          error?: string | null
+          id?: string
+          kind?: string
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "change_request_executions_change_request_id_fkey"
+            columns: ["change_request_id"]
+            isOneToOne: false
+            referencedRelation: "change_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "change_request_executions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       change_requests: {
         Row: {
           applied_at: string | null
@@ -911,6 +968,8 @@ export type Database = {
           implementation_method: string
           inbox_item_id: string | null
           proposed_at: string
+          published_proof_at: string | null
+          published_proof_notes: string | null
           rationale: string
           recommendation_id: string | null
           rejected_at: string | null
@@ -919,10 +978,15 @@ export type Database = {
           rollback_notes: string | null
           rolled_back_at: string | null
           rolled_back_by: string | null
+          source_branch: string | null
+          source_commit_sha: string | null
+          source_commit_url: string | null
+          source_committed_at: string | null
           source_file: string | null
           source_project_id: string | null
           source_project_name: string | null
           source_project_url: string | null
+          source_repo: string | null
           source_revision_after: string | null
           source_revision_before: string | null
           state: string
@@ -953,6 +1017,8 @@ export type Database = {
           implementation_method?: string
           inbox_item_id?: string | null
           proposed_at?: string
+          published_proof_at?: string | null
+          published_proof_notes?: string | null
           rationale: string
           recommendation_id?: string | null
           rejected_at?: string | null
@@ -961,10 +1027,15 @@ export type Database = {
           rollback_notes?: string | null
           rolled_back_at?: string | null
           rolled_back_by?: string | null
+          source_branch?: string | null
+          source_commit_sha?: string | null
+          source_commit_url?: string | null
+          source_committed_at?: string | null
           source_file?: string | null
           source_project_id?: string | null
           source_project_name?: string | null
           source_project_url?: string | null
+          source_repo?: string | null
           source_revision_after?: string | null
           source_revision_before?: string | null
           state?: string
@@ -995,6 +1066,8 @@ export type Database = {
           implementation_method?: string
           inbox_item_id?: string | null
           proposed_at?: string
+          published_proof_at?: string | null
+          published_proof_notes?: string | null
           rationale?: string
           recommendation_id?: string | null
           rejected_at?: string | null
@@ -1003,10 +1076,15 @@ export type Database = {
           rollback_notes?: string | null
           rolled_back_at?: string | null
           rolled_back_by?: string | null
+          source_branch?: string | null
+          source_commit_sha?: string | null
+          source_commit_url?: string | null
+          source_committed_at?: string | null
           source_file?: string | null
           source_project_id?: string | null
           source_project_name?: string | null
           source_project_url?: string | null
+          source_repo?: string | null
           source_revision_after?: string | null
           source_revision_before?: string | null
           state?: string
