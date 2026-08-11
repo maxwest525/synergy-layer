@@ -36,10 +36,8 @@ import {
   type AdsCandidateView,
 } from "@/lib/ads.functions";
 
-const adsQuery = {
-  queryKey: ["ads-overview"],
-  queryFn: () => getAdsOverview(),
-};
+export const Route = createFileRoute("/ads/advertisers")({
+
 
 export const Route = createFileRoute("/ads/advertisers")({
   // Operator-only surface. Rendering it on the server without the operator
