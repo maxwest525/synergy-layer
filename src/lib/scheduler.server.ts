@@ -98,5 +98,41 @@ export async function tickScheduler(client: Client, now = new Date()): Promise<T
     result.ran.push({ schedule: schedule.key, state });
   }
 
+  await collectSerpBacklog(client);
+
   return result;
+}
+
+/**
+ * Sweeps queued SERP tasks whose postback never arrived. It only retrieves
+ * task IDs already paid for at post time and never reposts a task, so a slow
+ * provider costs nothing extra and no result is silently lost.
+ */
+async function collectSerpBacklog(client: Client): Promise<void> {
+  const { data: queued } = await client
+    .from("dataforseo_serp_tasks")
+    .select("tenant_id")
+    .eq("state", "queued");
+  const tenantIds = [...new Set((queued ?? []).map((row) => row.tenant_id))];
+  if (tenantIds.length === 0) return;
+
+  const { collectReadySerpTasks } = await import("./dataforseo/serp.server");
+  for (const tenantId of tenantIds) {
+    try {
+      const collected = await collectReadySerpTasks(client, tenantId);
+      if (collected.collected > 0) {
+        await logActivity(client, {
+          tenantId,
+          actorKind: "system",
+          actorId: "scheduler",
+          verb: "dataforseo.serp_backlog_collected",
+          subjectKind: "capability",
+          summary: `Collected ${collected.collected} delayed SERP task result(s); ${collected.stillQueued} still queued at the provider.`,
+          payload: { ...collected },
+        });
+      }
+    } catch {
+      // A provider hiccup during backlog collection must not fail the tick.
+    }
+  }
 }
