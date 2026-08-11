@@ -2216,6 +2216,7 @@ export type Database = {
       tool_aliases: {
         Row: {
           alias_key: string
+          alias_kind: string
           alias_label: string
           created_at: string
           id: string
@@ -2226,6 +2227,7 @@ export type Database = {
         }
         Insert: {
           alias_key: string
+          alias_kind?: string
           alias_label: string
           created_at?: string
           id?: string
@@ -2236,6 +2238,7 @@ export type Database = {
         }
         Update: {
           alias_key?: string
+          alias_kind?: string
           alias_label?: string
           created_at?: string
           id?: string
@@ -2815,6 +2818,10 @@ export type Database = {
         }
       }
       revoke_operator: { Args: { _email: string }; Returns: string }
+      seed_tool_estate_for_tenant: {
+        Args: { target_tenant: string }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "admin" | "operator" | "viewer"
