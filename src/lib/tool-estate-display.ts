@@ -1,7 +1,14 @@
 import type { Tone } from "@/components/os/primitives";
 
 export type EstateFilter =
-  "all" | "discovered" | "installed" | "credentialed" | "live" | "callable";
+  | "all"
+  | "available"
+  | "enabled"
+  | "credentialed"
+  | "implemented"
+  | "callable"
+  | "installed"
+  | "live";
 
 export const KIND_LABELS: Record<string, string> = {
   local_app: "Local application",
