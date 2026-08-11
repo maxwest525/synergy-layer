@@ -2213,6 +2213,197 @@ export type Database = {
         }
         Relationships: []
       }
+      tool_aliases: {
+        Row: {
+          alias_key: string
+          alias_label: string
+          created_at: string
+          id: string
+          note: string | null
+          registered_in: string | null
+          system_id: string
+          tenant_id: string
+        }
+        Insert: {
+          alias_key: string
+          alias_label: string
+          created_at?: string
+          id?: string
+          note?: string | null
+          registered_in?: string | null
+          system_id: string
+          tenant_id: string
+        }
+        Update: {
+          alias_key?: string
+          alias_label?: string
+          created_at?: string
+          id?: string
+          note?: string | null
+          registered_in?: string | null
+          system_id?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tool_aliases_system_id_fkey"
+            columns: ["system_id"]
+            isOneToOne: false
+            referencedRelation: "tool_systems"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tool_aliases_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tool_operations: {
+        Row: {
+          cost_model: string
+          created_at: string
+          display_name: string
+          http_method: string | null
+          id: string
+          mcp_tool_name: string | null
+          metadata: Json
+          mutates_external_state: boolean
+          notes: string | null
+          operation_key: string
+          operation_mode: string
+          source_reference: string | null
+          system_id: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          cost_model?: string
+          created_at?: string
+          display_name: string
+          http_method?: string | null
+          id?: string
+          mcp_tool_name?: string | null
+          metadata?: Json
+          mutates_external_state?: boolean
+          notes?: string | null
+          operation_key: string
+          operation_mode: string
+          source_reference?: string | null
+          system_id: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          cost_model?: string
+          created_at?: string
+          display_name?: string
+          http_method?: string | null
+          id?: string
+          mcp_tool_name?: string | null
+          metadata?: Json
+          mutates_external_state?: boolean
+          notes?: string | null
+          operation_key?: string
+          operation_mode?: string
+          source_reference?: string | null
+          system_id?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tool_operations_system_id_fkey"
+            columns: ["system_id"]
+            isOneToOne: false
+            referencedRelation: "tool_systems"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tool_operations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tool_systems: {
+        Row: {
+          aoos_connection_state: string
+          created_at: string
+          credential_state: string
+          discovered_from: string | null
+          execution_location: string
+          id: string
+          installed_state: string
+          kind: string
+          last_verified_at: string | null
+          metadata: Json
+          name: string
+          provider: string | null
+          source_reference: string | null
+          stable_key: string
+          summary: string | null
+          tenant_id: string
+          updated_at: string
+          verification_state: string
+          version: string | null
+        }
+        Insert: {
+          aoos_connection_state?: string
+          created_at?: string
+          credential_state?: string
+          discovered_from?: string | null
+          execution_location?: string
+          id?: string
+          installed_state?: string
+          kind: string
+          last_verified_at?: string | null
+          metadata?: Json
+          name: string
+          provider?: string | null
+          source_reference?: string | null
+          stable_key: string
+          summary?: string | null
+          tenant_id: string
+          updated_at?: string
+          verification_state?: string
+          version?: string | null
+        }
+        Update: {
+          aoos_connection_state?: string
+          created_at?: string
+          credential_state?: string
+          discovered_from?: string | null
+          execution_location?: string
+          id?: string
+          installed_state?: string
+          kind?: string
+          last_verified_at?: string | null
+          metadata?: Json
+          name?: string
+          provider?: string | null
+          source_reference?: string | null
+          stable_key?: string
+          summary?: string | null
+          tenant_id?: string
+          updated_at?: string
+          verification_state?: string
+          version?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tool_systems_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tracked_competitors: {
         Row: {
           active: boolean
