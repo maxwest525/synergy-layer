@@ -299,7 +299,12 @@ export async function fetchOverview() {
   // level security still answers as the calling operator; the page simply stops
   // paying twenty separate HTTP round trips for the same numbers.
   const { data, error } = await db.rpc("command_center_overview", { _tenant_id: tenantId! });
-  if (error || !data) return empty;
+  if (error) {
+    throw new Error(`Command Center read failed: ${error.message}`);
+  }
+  if (!data || typeof data !== "object" || Array.isArray(data)) {
+    throw new Error("Command Center read returned a malformed payload.");
+  }
 
   const payload = data as unknown as {
     counts: Record<string, number>;
@@ -309,6 +314,11 @@ export async function fetchOverview() {
     evidence: typeof empty.evidence;
     pendingApprovals: number;
   };
+
+  if (!payload.counts || typeof payload.counts !== "object" || !payload.evidence) {
+    throw new Error("Command Center read returned a malformed payload.");
+  }
+
 
   for (const key of Object.keys(counts)) counts[key] = Number(payload.counts?.[key] ?? 0);
 
