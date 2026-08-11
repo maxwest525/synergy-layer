@@ -4,8 +4,34 @@ import { useServerFn } from "@tanstack/react-start";
 import { memo, useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 
-import { EmptyState, GlassCard, PageHeader, StatePill, formatWhen, toneForState } from "@/components/os/primitives";
+import {
+  EmptyState,
+  GlassCard,
+  PageHeader,
+  StatePill,
+  formatWhen,
+  toneForState,
+} from "@/components/os/primitives";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import {
+  actionCenterFieldChanges,
+  actionCenterLane,
+  actionCenterStage,
+  type ActionCenterLane,
+} from "@/lib/action-center";
+import { approveChangeRequest, rejectChangeRequest } from "@/lib/change-requests.functions";
+import { executeChangeRequest } from "@/lib/execution/execution.functions";
 import { reopenInboxItem, resolveInboxItem } from "@/lib/os-admin.functions";
 import { getInbox } from "@/lib/os.functions";
 
@@ -20,6 +46,11 @@ const COMPLETED_PREVIEW = 5;
 const lanes = [
   { key: "needs_attention", label: "Needs attention", hint: "Broken, blocked, or drifting." },
   { key: "pending_approval", label: "Pending approval", hint: "Waiting on a human decision." },
+  {
+    key: "in_progress",
+    label: "In progress",
+    hint: "Approved work that still needs execution or proof.",
+  },
   { key: "scheduled", label: "Scheduled", hint: "Queued to run." },
   { key: "completed", label: "Completed", hint: "Closed in the last cycle." },
   { key: "fyi", label: "FYI", hint: "Context, no action needed." },
@@ -39,13 +70,13 @@ export const Route = createFileRoute("/")({
   },
   head: () => ({
     meta: [
-      { title: "Inbox — AOOS Marketing Operating System" },
+      { title: "Action Center — AOOS Marketing Operating System" },
       {
         name: "description",
         content:
           "The operational center of AOOS: everything that needs attention, approval, or awareness across every marketing asset, agent, and workflow.",
       },
-      { property: "og:title", content: "Inbox — AOOS Marketing Operating System" },
+      { property: "og:title", content: "Action Center — AOOS Marketing Operating System" },
       {
         property: "og:description",
         content: "One queue for every decision the marketing operating system needs from you.",
@@ -71,7 +102,8 @@ type InboxRoute =
 
 // Compiled once at module load. Building this inside the resolver recompiled a
 // regex for every inbox row on every render.
-const detailHrefPattern = /^\/(changes|recommendations|agents|workflows|scheduler)\/([0-9a-fA-F-]{36})$/;
+const detailHrefPattern =
+  /^\/(changes|recommendations|agents|workflows|scheduler)\/([0-9a-fA-F-]{36})$/;
 
 function routeFromHref(href: string): InboxRoute | null {
   if (href === "/keywords") return { kind: "keywords" };
@@ -90,7 +122,11 @@ function routeFromHref(href: string): InboxRoute | null {
   return null;
 }
 
-function reviewRouteFor(item: { actions: unknown; subject_kind: string | null; subject_id: string | null }): InboxRoute | null {
+function reviewRouteFor(item: {
+  actions: unknown;
+  subject_kind: string | null;
+  subject_id: string | null;
+}): InboxRoute | null {
   if (Array.isArray(item.actions)) {
     for (const action of item.actions) {
       if (typeof action !== "object" || action === null) continue;
@@ -103,32 +139,122 @@ function reviewRouteFor(item: { actions: unknown; subject_kind: string | null; s
 
   if (!item.subject_id) return null;
   if (item.subject_kind === "change_request") return { kind: "change", id: item.subject_id };
-  if (item.subject_kind === "recommendation") return { kind: "recommendation", id: item.subject_id };
+  if (item.subject_kind === "recommendation")
+    return { kind: "recommendation", id: item.subject_id };
   if (item.subject_kind === "agent") return { kind: "agent", id: item.subject_id };
   return null;
 }
 
 function InboxLink({ route, children }: { route: InboxRoute; children: React.ReactNode }) {
-  const className = "text-sm font-medium text-foreground underline-offset-4 hover:text-primary hover:underline";
-  if (route.kind === "keywords") return <Link to="/keywords" className={className}>{children}</Link>;
-  if (route.kind === "competitors") return <Link to="/competitors" className={className}>{children}</Link>;
-  if (route.kind === "adsAdvertisers") return <Link to="/ads/advertisers" className={className}>{children}</Link>;
-  if (route.kind === "change") return <Link to="/changes/$id" params={{ id: route.id }} className={className}>{children}</Link>;
-  if (route.kind === "recommendation") return <Link to="/recommendations/$id" params={{ id: route.id }} className={className}>{children}</Link>;
-  if (route.kind === "agent") return <Link to="/agents/$id" params={{ id: route.id }} className={className}>{children}</Link>;
-  if (route.kind === "workflow") return <Link to="/workflows/$id" params={{ id: route.id }} className={className}>{children}</Link>;
-  return <Link to="/scheduler/$id" params={{ id: route.id }} className={className}>{children}</Link>;
+  const className =
+    "text-sm font-medium text-foreground underline-offset-4 hover:text-primary hover:underline";
+  if (route.kind === "keywords")
+    return (
+      <Link to="/keywords" className={className}>
+        {children}
+      </Link>
+    );
+  if (route.kind === "competitors")
+    return (
+      <Link to="/competitors" className={className}>
+        {children}
+      </Link>
+    );
+  if (route.kind === "adsAdvertisers")
+    return (
+      <Link to="/ads/advertisers" className={className}>
+        {children}
+      </Link>
+    );
+  if (route.kind === "change")
+    return (
+      <Link to="/changes/$id" params={{ id: route.id }} className={className}>
+        {children}
+      </Link>
+    );
+  if (route.kind === "recommendation")
+    return (
+      <Link to="/recommendations/$id" params={{ id: route.id }} className={className}>
+        {children}
+      </Link>
+    );
+  if (route.kind === "agent")
+    return (
+      <Link to="/agents/$id" params={{ id: route.id }} className={className}>
+        {children}
+      </Link>
+    );
+  if (route.kind === "workflow")
+    return (
+      <Link to="/workflows/$id" params={{ id: route.id }} className={className}>
+        {children}
+      </Link>
+    );
+  return (
+    <Link to="/scheduler/$id" params={{ id: route.id }} className={className}>
+      {children}
+    </Link>
+  );
 }
 
 function InboxActionLink({ route, children }: { route: InboxRoute; children: React.ReactNode }) {
-  if (route.kind === "keywords") return <Button asChild variant="outline" size="sm"><Link to="/keywords">{children}</Link></Button>;
-  if (route.kind === "competitors") return <Button asChild variant="outline" size="sm"><Link to="/competitors">{children}</Link></Button>;
-  if (route.kind === "adsAdvertisers") return <Button asChild variant="outline" size="sm"><Link to="/ads/advertisers">{children}</Link></Button>;
-  if (route.kind === "change") return <Button asChild variant="outline" size="sm"><Link to="/changes/$id" params={{ id: route.id }}>{children}</Link></Button>;
-  if (route.kind === "recommendation") return <Button asChild variant="outline" size="sm"><Link to="/recommendations/$id" params={{ id: route.id }}>{children}</Link></Button>;
-  if (route.kind === "agent") return <Button asChild variant="outline" size="sm"><Link to="/agents/$id" params={{ id: route.id }}>{children}</Link></Button>;
-  if (route.kind === "workflow") return <Button asChild variant="outline" size="sm"><Link to="/workflows/$id" params={{ id: route.id }}>{children}</Link></Button>;
-  return <Button asChild variant="outline" size="sm"><Link to="/scheduler/$id" params={{ id: route.id }}>{children}</Link></Button>;
+  if (route.kind === "keywords")
+    return (
+      <Button asChild variant="outline" size="sm">
+        <Link to="/keywords">{children}</Link>
+      </Button>
+    );
+  if (route.kind === "competitors")
+    return (
+      <Button asChild variant="outline" size="sm">
+        <Link to="/competitors">{children}</Link>
+      </Button>
+    );
+  if (route.kind === "adsAdvertisers")
+    return (
+      <Button asChild variant="outline" size="sm">
+        <Link to="/ads/advertisers">{children}</Link>
+      </Button>
+    );
+  if (route.kind === "change")
+    return (
+      <Button asChild variant="outline" size="sm">
+        <Link to="/changes/$id" params={{ id: route.id }}>
+          {children}
+        </Link>
+      </Button>
+    );
+  if (route.kind === "recommendation")
+    return (
+      <Button asChild variant="outline" size="sm">
+        <Link to="/recommendations/$id" params={{ id: route.id }}>
+          {children}
+        </Link>
+      </Button>
+    );
+  if (route.kind === "agent")
+    return (
+      <Button asChild variant="outline" size="sm">
+        <Link to="/agents/$id" params={{ id: route.id }}>
+          {children}
+        </Link>
+      </Button>
+    );
+  if (route.kind === "workflow")
+    return (
+      <Button asChild variant="outline" size="sm">
+        <Link to="/workflows/$id" params={{ id: route.id }}>
+          {children}
+        </Link>
+      </Button>
+    );
+  return (
+    <Button asChild variant="outline" size="sm">
+      <Link to="/scheduler/$id" params={{ id: route.id }}>
+        {children}
+      </Link>
+    </Button>
+  );
 }
 
 /** Descriptive link text. A button that only says "Open" tells an operator nothing. */
@@ -154,7 +280,53 @@ function actionLabel(route: InboxRoute, lane: string): string {
   }
 }
 
+function changeActionLabel(change: InboxItem["changeRequest"]): string {
+  if (!change) return "Review details";
+  if (change.state === "proposed") return "Review full request";
+  if (change.state === "approved" && !change.source_commit_sha) return "Review execution details";
+  if (change.state === "approved") return "Check publishing status";
+  if (change.state === "applied") return "Track outcome";
+  return "Review decision record";
+}
+
 type InboxItem = Awaited<ReturnType<typeof getInbox>>[number];
+type ChangeDecision = "approve" | "ignore";
+
+function ConfirmQuickAction({
+  trigger,
+  title,
+  description,
+  confirm,
+  disabled,
+  onConfirm,
+}: {
+  trigger: string;
+  title: string;
+  description: string;
+  confirm: string;
+  disabled: boolean;
+  onConfirm: () => void;
+}) {
+  return (
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        <Button variant="outline" size="sm" disabled={disabled}>
+          {trigger}
+        </Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{title}</AlertDialogTitle>
+          <AlertDialogDescription>{description}</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction onClick={onConfirm}>{confirm}</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
 
 /**
  * One card per inbox row. Memoized so a mutation toggling the busy flag, or a
@@ -164,43 +336,155 @@ type InboxItem = Awaited<ReturnType<typeof getInbox>>[number];
 const InboxCard = memo(function InboxCard({
   item,
   reviewRoute,
+  lane,
   busy,
   onClear,
   onReopen,
+  onDecision,
+  onExecute,
 }: {
   item: InboxItem;
   reviewRoute: InboxRoute | null;
+  lane: ActionCenterLane;
   busy: boolean;
   onClear: (id: string) => void;
   onReopen: (id: string) => void;
+  onDecision: (id: string, decision: ChangeDecision) => void;
+  onExecute: (id: string) => void;
 }) {
+  const change = item.changeRequest;
+  const fields = actionCenterFieldChanges(change?.changes);
+
   return (
-    <GlassCard className="flex flex-col gap-3 p-4 md:flex-row md:items-center md:justify-between">
-      <div className="min-w-0 space-y-1">
+    <GlassCard className="overflow-hidden p-0">
+      <div className="space-y-4 p-4 md:p-5">
         <div className="flex flex-wrap items-center gap-2">
           <StatePill label={item.source_module} />
           <StatePill label={`P${item.priority}`} tone={item.priority <= 1 ? "danger" : "neutral"} />
-          {item.subject_kind ? <StatePill label={item.subject_kind} tone="primary" /> : null}
+          {item.subject_kind ? (
+            <StatePill label={item.subject_kind.replaceAll("_", " ")} tone="primary" />
+          ) : null}
+          <StatePill label={lane.replaceAll("_", " ")} tone={toneForState(lane)} />
+          {change ? <StatePill label={actionCenterStage(change)} tone="primary" /> : null}
         </div>
-        {reviewRoute ? (
-          <InboxLink route={reviewRoute}>{item.title}</InboxLink>
-        ) : (
-          <p className="text-sm font-medium text-foreground">{item.title}</p>
-        )}
-        {item.summary ? <p className="text-sm text-muted-foreground">{item.summary}</p> : null}
+
+        <div className="space-y-1">
+          {reviewRoute ? (
+            <InboxLink route={reviewRoute}>{item.title}</InboxLink>
+          ) : (
+            <p className="text-sm font-medium text-foreground">{item.title}</p>
+          )}
+          {item.summary ? <p className="text-sm text-muted-foreground">{item.summary}</p> : null}
+        </div>
+
+        {change ? (
+          <div className="space-y-3 rounded-xl border border-border/60 bg-background/35 p-3">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                  Proposed change
+                </p>
+                <p className="mt-1 text-sm text-foreground">{change.target_url}</p>
+              </div>
+              <Button asChild variant="ghost" size="sm">
+                <a href={change.target_url} target="_blank" rel="noreferrer">
+                  Open page
+                </a>
+              </Button>
+            </div>
+
+            {fields.length > 0 ? (
+              <div className="grid gap-2 xl:grid-cols-2">
+                {fields.map((field) => (
+                  <div
+                    key={field.field}
+                    className="rounded-lg border border-border/60 bg-card/60 p-3"
+                  >
+                    <p className="text-xs font-medium text-foreground">{field.label}</p>
+                    <div className="mt-2 grid gap-2 text-sm sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] sm:items-center">
+                      <div className="rounded-md bg-muted/50 px-2.5 py-2 text-muted-foreground">
+                        <span className="mb-1 block text-[10px] uppercase tracking-wide">
+                          Before
+                        </span>
+                        {field.before}
+                      </div>
+                      <span aria-hidden className="hidden text-muted-foreground sm:block">
+                        →
+                      </span>
+                      <div className="rounded-md border border-primary/25 bg-primary/5 px-2.5 py-2 text-foreground">
+                        <span className="mb-1 block text-[10px] uppercase tracking-wide text-primary">
+                          After
+                        </span>
+                        {field.after}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                No exact before-and-after values are attached.
+              </p>
+            )}
+
+            <div className="grid gap-2 text-xs text-muted-foreground lg:grid-cols-2">
+              <p>
+                <span className="text-foreground">Why:</span> {change.rationale}
+              </p>
+              <p>
+                <span className="text-foreground">Evidence:</span> {change.evidence_summary}
+              </p>
+            </div>
+          </div>
+        ) : null}
+
         <p className="text-xs text-muted-foreground">Filed {formatWhen(item.created_at)}</p>
       </div>
-      <div className="flex shrink-0 items-center gap-2">
-        <StatePill label={item.lane} tone={toneForState(item.lane)} />
-        {reviewRoute ? (
-          <InboxActionLink route={reviewRoute}>{actionLabel(reviewRoute, item.lane)}</InboxActionLink>
+
+      <div className="flex flex-wrap items-center gap-2 border-t border-border/60 bg-background/25 px-4 py-3 md:px-5">
+        {change?.state === "proposed" ? (
+          <>
+            <Button size="sm" disabled={busy} onClick={() => onDecision(change.id, "approve")}>
+              Approve
+            </Button>
+            <ConfirmQuickAction
+              trigger="Ignore"
+              title="Ignore this proposed change?"
+              description="This records a rejection and closes the action. It does not change the website."
+              confirm="Ignore proposed change"
+              disabled={busy}
+              onConfirm={() => onDecision(change.id, "ignore")}
+            />
+          </>
         ) : null}
-        {item.lane !== "completed" && item.lane !== "pending_approval" ? (
+        {change?.state === "approved" && !change.source_commit_sha ? (
+          <ConfirmQuickAction
+            trigger="Execute approved change"
+            title="Commit this exact approved change?"
+            description="AOOS will re-check the stored repository, branch, file, base revision, and exact before values, then commit only the approved replacements. It will not publish the site."
+            confirm="Commit approved change"
+            disabled={busy}
+            onConfirm={() => onExecute(change.id)}
+          />
+        ) : null}
+        {change?.source_commit_url ? (
+          <Button asChild variant="outline" size="sm">
+            <a href={change.source_commit_url} target="_blank" rel="noreferrer">
+              View source commit
+            </a>
+          </Button>
+        ) : null}
+        {reviewRoute ? (
+          <InboxActionLink route={reviewRoute}>
+            {change ? changeActionLabel(change) : actionLabel(reviewRoute, item.lane)}
+          </InboxActionLink>
+        ) : null}
+        {!change && lane !== "completed" && lane !== "pending_approval" ? (
           <Button variant="outline" size="sm" disabled={busy} onClick={() => onClear(item.id)}>
             Clear
           </Button>
         ) : null}
-        {item.lane === "completed" && item.cleared_from_lane !== null ? (
+        {lane === "completed" && item.cleared_from_lane !== null ? (
           <Button variant="outline" size="sm" disabled={busy} onClick={() => onReopen(item.id)}>
             Unclear
           </Button>
@@ -216,13 +500,22 @@ function InboxPage() {
   const queryClient = useQueryClient();
   const resolve = useServerFn(resolveInboxItem);
   const reopen = useServerFn(reopenInboxItem);
+  const approve = useServerFn(approveChangeRequest);
+  const reject = useServerFn(rejectChangeRequest);
+  const execute = useServerFn(executeChangeRequest);
+
+  const refresh = () => {
+    void queryClient.invalidateQueries({ queryKey: ["inbox"] });
+    void queryClient.invalidateQueries({ queryKey: ["overview"] });
+    void queryClient.invalidateQueries({ queryKey: ["change-request"] });
+    void queryClient.invalidateQueries({ queryKey: ["change-request-execution"] });
+  };
 
   const mutation = useMutation({
     mutationFn: (id: string) => resolve({ data: { id } }),
     onSuccess: () => {
       toast.success("Item cleared. You can undo this from Completed.");
-      void queryClient.invalidateQueries({ queryKey: ["inbox"] });
-      void queryClient.invalidateQueries({ queryKey: ["overview"] });
+      refresh();
     },
     onError: (error: Error) => toast.error(error.message),
   });
@@ -231,13 +524,49 @@ function InboxPage() {
     mutationFn: (id: string) => reopen({ data: { id } }),
     onSuccess: () => {
       toast.success("Item reopened into its previous lane.");
-      void queryClient.invalidateQueries({ queryKey: ["inbox"] });
-      void queryClient.invalidateQueries({ queryKey: ["overview"] });
+      refresh();
     },
     onError: (error: Error) => toast.error(error.message),
   });
 
-  const busy = mutation.isPending || reopenMutation.isPending;
+  const decisionMutation = useMutation({
+    mutationFn: ({ id, decision }: { id: string; decision: ChangeDecision }) => {
+      const payload = {
+        id,
+        notes: decision === "ignore" ? "Ignored from the Action Center." : null,
+        revision: null,
+      };
+      return decision === "approve" ? approve({ data: payload }) : reject({ data: payload });
+    },
+    onSuccess: (result, variables) => {
+      toast.success(
+        result.changed
+          ? variables.decision === "approve"
+            ? "Approved. The change remains here until it is executed and tracked."
+            : "Ignored. No website change was made."
+          : "Nothing changed. This request was already decided.",
+      );
+      refresh();
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+  const executeMutation = useMutation({
+    mutationFn: (id: string) => execute({ data: { id } }),
+    onSuccess: (result) => {
+      if (["committed", "replayed", "reconciled"].includes(result.status))
+        toast.success(result.message);
+      else toast.error(result.message);
+      refresh();
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+  const busy =
+    mutation.isPending ||
+    reopenMutation.isPending ||
+    decisionMutation.isPending ||
+    executeMutation.isPending;
 
   const clear = useCallback((id: string) => mutation.mutate(id), [mutation]);
   const restore = useCallback((id: string) => reopenMutation.mutate(id), [reopenMutation]);
@@ -245,12 +574,16 @@ function InboxPage() {
   // One pass over the rows instead of a full-array filter per lane plus a route
   // resolve per card on every render.
   const { open, grouped } = useMemo(() => {
-    const buckets = new Map<string, { item: InboxItem; reviewRoute: InboxRoute | null }[]>();
+    const buckets = new Map<
+      string,
+      { item: InboxItem; reviewRoute: InboxRoute | null; lane: ActionCenterLane }[]
+    >();
     for (const lane of lanes) buckets.set(lane.key, []);
     let openCount = 0;
     for (const item of data) {
-      if (item.lane !== "completed" && item.resolved_at === null) openCount += 1;
-      buckets.get(item.lane)?.push({ item, reviewRoute: reviewRouteFor(item) });
+      const lane = actionCenterLane(item.lane, item.changeRequest);
+      if (lane !== "completed") openCount += 1;
+      buckets.get(lane)?.push({ item, reviewRoute: reviewRouteFor(item), lane });
     }
     return { open: openCount, grouped: buckets };
   }, [data]);
@@ -259,8 +592,8 @@ function InboxPage() {
     <div className="space-y-8">
       <PageHeader
         eyebrow="Operational center"
-        title="Inbox"
-        description={`${open} open items across every workspace. Work flows here first, then out to the module that owns it.`}
+        title="Action Center"
+        description={`${open} open actions across every workspace. Each card shows what is being requested and the decisions you can take now.`}
       />
 
       <div className="space-y-6">
@@ -269,30 +602,39 @@ function InboxPage() {
           // Completed only grows. Rendering every closed item forever made the
           // Inbox slower every day for rows nobody is acting on. The newest are
           // shown by default and the rest stay one click away.
-          const collapsed = lane.key === "completed" && !showAllCompleted && items.length > COMPLETED_PREVIEW;
+          const collapsed =
+            lane.key === "completed" && !showAllCompleted && items.length > COMPLETED_PREVIEW;
           const visible = collapsed ? items.slice(0, COMPLETED_PREVIEW) : items;
           return (
             <section key={lane.key} className="space-y-3">
               <div className="flex items-baseline justify-between gap-4">
                 <h2 className="text-sm font-semibold tracking-tight text-foreground">
                   {lane.label}
-                  <span className="ml-2 text-xs font-normal text-muted-foreground">{items.length}</span>
+                  <span className="ml-2 text-xs font-normal text-muted-foreground">
+                    {items.length}
+                  </span>
                 </h2>
                 <p className="text-xs text-muted-foreground">{lane.hint}</p>
               </div>
 
               {items.length === 0 ? (
-                <EmptyState title="Nothing here" description={`No ${lane.label.toLowerCase()} items right now.`} />
+                <EmptyState
+                  title="Nothing here"
+                  description={`No ${lane.label.toLowerCase()} items right now.`}
+                />
               ) : (
                 <ul className="space-y-2">
-                  {visible.map(({ item, reviewRoute }) => (
+                  {visible.map(({ item, reviewRoute, lane: itemLane }) => (
                     <li key={item.id}>
                       <InboxCard
                         item={item}
                         reviewRoute={reviewRoute}
+                        lane={itemLane}
                         busy={busy}
                         onClear={clear}
                         onReopen={restore}
+                        onDecision={(id, decision) => decisionMutation.mutate({ id, decision })}
+                        onExecute={(id) => executeMutation.mutate(id)}
                       />
                     </li>
                   ))}
@@ -300,8 +642,14 @@ function InboxPage() {
               )}
 
               {lane.key === "completed" && items.length > COMPLETED_PREVIEW ? (
-                <Button variant="outline" size="sm" onClick={() => setShowAllCompleted((shown) => !shown)}>
-                  {collapsed ? `Show all ${items.length} completed items` : "Show only the most recent"}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowAllCompleted((shown) => !shown)}
+                >
+                  {collapsed
+                    ? `Show all ${items.length} completed items`
+                    : "Show only the most recent"}
                 </Button>
               ) : null}
             </section>
@@ -310,7 +658,9 @@ function InboxPage() {
       </div>
 
       <p className="text-xs text-muted-foreground">
-        Looking for system-wide state? Open the{" "}
+        Inline editing and AI re-generation are backlogged until revisions can invalidate approval
+        and require a fresh decision. They are not shown as fake controls. Looking for system-wide
+        state? Open the{" "}
         <Link to="/command-center" className="text-primary underline-offset-4 hover:underline">
           Command Center
         </Link>

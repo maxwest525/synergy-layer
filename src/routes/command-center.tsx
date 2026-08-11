@@ -44,7 +44,7 @@ const tiles = [
   { key: "workflows", label: "Workflows", to: "/workflows" },
   { key: "recommendations", label: "Recommendations", to: "/recommendations" },
   { key: "schedules", label: "Schedules", to: "/scheduler" },
-  { key: "inbox_items", label: "Inbox items", to: "/" },
+  { key: "inbox_items", label: "Action Center items", to: "/" },
 ] as const;
 
 /** Safe navigation only. Nothing here runs a workflow or spends provider credit. */
@@ -73,7 +73,6 @@ function QuickAction({
     </Link>
   );
 }
-
 
 function CommandCenterPage() {
   // useServerFn routes the call through client middleware, which attaches the
@@ -129,7 +128,7 @@ function CommandCenterPage() {
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <QuickAction
             to="/"
-            label="Review Inbox"
+            label="Open Action Center"
             count={quick.openInbox}
             outcome="Open items waiting on you across every workspace."
           />
@@ -225,7 +224,7 @@ function CommandCenterPage() {
           <p className="mt-4 text-sm text-muted-foreground">
             {data.pendingApprovals} decisions are waiting on you.{" "}
             <Link to="/" className="text-primary underline-offset-4 hover:underline">
-              Open the Inbox
+              Open the Action Center
             </Link>
             .
           </p>

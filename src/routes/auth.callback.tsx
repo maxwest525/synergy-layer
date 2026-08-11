@@ -132,7 +132,7 @@ function CallbackPage() {
         ) : null}
 
         {result.data?.canOperate ? (
-          <p className="text-sm text-primary">Operator access confirmed. Taking you to the Inbox.</p>
+          <p className="text-sm text-primary">Operator access confirmed. Taking you to the Action Center.</p>
         ) : null}
       </GlassCard>
     </div>

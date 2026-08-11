@@ -43,7 +43,7 @@ export const definition: ModuleDefinition = {
     {
       key: "growth.weekly_scan",
       name: "Weekly Growth Scan",
-      description: "Scan assets, rank opportunities, and file recommendations to the Inbox.",
+      description: "Scan assets, rank opportunities, and file recommendations to the Action Center.",
       triggerKind: "schedule",
       graph: {
         nodes: [

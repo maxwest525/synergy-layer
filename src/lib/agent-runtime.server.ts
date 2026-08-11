@@ -78,7 +78,7 @@ export async function runAgent(
     return {
       agent: agent.name,
       state: "awaiting_approval",
-      summary: "Run parked for approval and filed to the Inbox.",
+      summary: "Run parked for approval and filed to the Action Center.",
     };
   }
 

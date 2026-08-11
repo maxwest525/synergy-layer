@@ -20,7 +20,7 @@ import { useOperatorSession } from "@/hooks/use-operator-session";
 import { cn } from "@/lib/utils";
 
 const workspaces = [
-  { to: "/", label: "Inbox", icon: Inbox, hint: "What needs you now" },
+  { to: "/", label: "Action Center", icon: Inbox, hint: "Decide and execute" },
   { to: "/command-center", label: "Command Center", icon: LayoutDashboard, hint: "System state" },
   { to: "/assets", label: "Assets", icon: Boxes, hint: "Everything we own" },
   { to: "/search", label: "Search", icon: Search, hint: "What Google observed" },

@@ -43,7 +43,7 @@ export const definition: ModuleDefinition = {
       kind: "internal_module",
       category: "Paid",
       description:
-        "Resolves a vendor domain to Google advertiser candidates. The provider does not disambiguate, so a domain served by several advertiser accounts becomes an operator decision filed to the Inbox. Only a single unambiguous advertiser resolves on its own.",
+        "Resolves a vendor domain to Google advertiser candidates. The provider does not disambiguate, so a domain served by several advertiser accounts becomes an operator decision filed to the Action Center. Only a single unambiguous advertiser resolves on its own.",
       integrationState: "pending",
       operations: [
         { name: "advertisers.resolve", description: "Search each watchlist domain and group rows by advertiser ID.", mutates: false },
@@ -111,7 +111,7 @@ export const definition: ModuleDefinition = {
       key: "wf.vendor_ad_discovery",
       name: "Vendor ad discovery",
       description:
-        "Resolves each watchlist vendor domain to Google advertiser candidates, then ingests creatives for the advertisers already confirmed. Ambiguous domains stop at an Inbox approval instead of being guessed.",
+        "Resolves each watchlist vendor domain to Google advertiser candidates, then ingests creatives for the advertisers already confirmed. Ambiguous domains stop at an Action Center approval instead of being guessed.",
       triggerKind: "manual",
       graph: {
         nodes: [

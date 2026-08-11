@@ -316,7 +316,7 @@ function ChangeRequestPage() {
       </details>
 
       <Link to="/" className="text-sm text-primary underline-offset-4 hover:underline">
-        Back to Inbox
+        Back to Action Center
       </Link>
     </div>
   );

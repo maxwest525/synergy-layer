@@ -320,7 +320,6 @@ async function runResearchNode(client: Client, ref: string): Promise<NodeOutcome
     return { ok: false, error: error instanceof Error ? error.message : String(error) };
   }
 }
-
 /**
  * SEO validation runs the real rule engine over stored Search Console
  * snapshots. Zero findings is a successful step, not a failure.
@@ -401,7 +400,7 @@ async function runDataForSeoNode(
         return {
           ok: false,
           error:
-            "No approved keywords to observe. Run keyword discovery and approve a set in the Inbox first: AOOS will not queue a keyword nobody chose.",
+            "No approved keywords to observe. Run keyword discovery and approve a set in the Action Center first: AOOS will not queue a keyword nobody chose.",
         };
       }
       const result = await queueSerpTasks(client, tenantId, keywords, PUBLIC_ORIGIN, {

@@ -147,7 +147,7 @@ export const definition: ModuleDefinition = {
       key: "dfs-keyword-discovery",
       name: "DataForSEO keyword discovery",
       description:
-        "Proposes a keyword set for the owned domain from provider associations and the property's own Search Console queries, then files it to the Inbox for approval. Nothing is observed until a human approves it.",
+        "Proposes a keyword set for the owned domain from provider associations and the property's own Search Console queries, then files it to the Action Center for approval. Nothing is observed until a human approves it.",
       triggerKind: "manual",
       graph: {
         nodes: [{ key: "suggest", kind: "capability", ref: "cap.dataforseo_labs" }],

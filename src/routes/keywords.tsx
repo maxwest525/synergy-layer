@@ -201,7 +201,7 @@ function KeywordReviewPage() {
       <p className="text-xs text-muted-foreground">
         Approved keywords become tracked keywords and unblock SERP observation. Back to the{" "}
         <Link to="/" className="text-primary underline-offset-4 hover:underline">
-          Inbox
+          Action Center
         </Link>
         .
       </p>

@@ -20,7 +20,7 @@ async function scope() {
 export async function fetchInbox() {
   const { db, tenantId, ready } = await scope();
   if (!ready) return [];
-  return rows(
+  const inbox = rows(
     await db
       .from("inbox_items")
       .select("*")
@@ -29,6 +29,36 @@ export async function fetchInbox() {
       .order("created_at", { ascending: false })
       .limit(200),
   );
+
+  const changeRequestIds = [
+    ...new Set(
+      inbox.flatMap((item) =>
+        item.subject_kind === "change_request" && item.subject_id ? [item.subject_id] : [],
+      ),
+    ),
+  ];
+
+  const changeRequests =
+    changeRequestIds.length === 0
+      ? []
+      : rows(
+          await db
+            .from("change_requests")
+            .select(
+              "id, state, title, target_url, changes, rationale, evidence_summary, evidence_limitations, risk_note, approved_at, applied_at, verified_at, source_repo, source_branch, source_file, source_revision_before, source_commit_sha, source_commit_url, published_proof_at",
+            )
+            .eq("tenant_id", tenantId!)
+            .in("id", changeRequestIds),
+        );
+  const changeRequestsById = new Map(changeRequests.map((change) => [change.id, change]));
+
+  return inbox.map((item) => ({
+    ...item,
+    changeRequest:
+      item.subject_kind === "change_request" && item.subject_id
+        ? (changeRequestsById.get(item.subject_id) ?? null)
+        : null,
+  }));
 }
 
 export async function fetchActivity(limit = 40) {
@@ -47,7 +77,9 @@ export async function fetchActivity(limit = 40) {
 export async function fetchAssets() {
   const { db, tenantId, ready } = await scope();
   if (!ready) return [];
-  return rows(await db.from("assets").select("*").eq("tenant_id", tenantId!).order("kind").order("name"));
+  return rows(
+    await db.from("assets").select("*").eq("tenant_id", tenantId!).order("kind").order("name"),
+  );
 }
 
 export async function fetchAsset(id: string) {
@@ -117,7 +149,9 @@ export async function fetchKnowledge() {
 export async function fetchKnowledgeCollection(id: string) {
   const { db, tenantId, ready } = await scope();
   if (!ready) return { collection: null, entries: [] };
-  const collection = unwrap(await db.from("knowledge_collections").select("*").eq("id", id).maybeSingle());
+  const collection = unwrap(
+    await db.from("knowledge_collections").select("*").eq("id", id).maybeSingle(),
+  );
   const entries = rows(
     await db
       .from("knowledge_entries")
@@ -212,7 +246,12 @@ export async function fetchRecommendation(id: string) {
   const { db, tenantId, ready } = await scope();
   if (!ready) return { recommendation: null, dependencies: [], changeRequest: null };
   const recommendation = unwrap(
-    await db.from("recommendations").select("*").eq("id", id).eq("tenant_id", tenantId!).maybeSingle(),
+    await db
+      .from("recommendations")
+      .select("*")
+      .eq("id", id)
+      .eq("tenant_id", tenantId!)
+      .maybeSingle(),
   );
   const dependencies = rows(
     await db
@@ -235,12 +274,15 @@ export async function fetchRecommendation(id: string) {
   return { recommendation, dependencies, changeRequest };
 }
 
-
 export async function fetchSchedules() {
   const { db, tenantId, ready } = await scope();
   if (!ready) return { schedules: [], dependencies: [] };
   const schedules = rows(
-    await db.from("schedules").select("*").or(`tenant_id.eq.${tenantId},tenant_id.is.null`).order("cron"),
+    await db
+      .from("schedules")
+      .select("*")
+      .or(`tenant_id.eq.${tenantId},tenant_id.is.null`)
+      .order("cron"),
   );
   const dependencies = rows(await db.from("schedule_dependencies").select("*"));
   return { schedules, dependencies };
@@ -361,7 +403,6 @@ export async function fetchOverview() {
     throw new Error("Command Center read returned a malformed payload.");
   }
 
-
   for (const key of Object.keys(counts)) counts[key] = Number(payload.counts?.[key] ?? 0);
 
   return {
@@ -385,4 +426,3 @@ export async function fetchOverview() {
     pendingApprovals: Number(payload.pendingApprovals ?? 0),
   };
 }
-
