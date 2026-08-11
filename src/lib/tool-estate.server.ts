@@ -12,7 +12,8 @@ async function scope() {
   return { db, tenantId, ready: authenticated && tenantId !== null };
 }
 
-export type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
+export type JsonValue =
+  string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
 
 export type ToolSystemRow = {
   id: string;
@@ -61,7 +62,8 @@ export async function fetchToolEstate() {
   const opCounts = new Map<string, number>();
   for (const row of operations) opCounts.set(row.system_id, (opCounts.get(row.system_id) ?? 0) + 1);
   const aliasCounts = new Map<string, number>();
-  for (const row of aliases) aliasCounts.set(row.system_id, (aliasCounts.get(row.system_id) ?? 0) + 1);
+  for (const row of aliases)
+    aliasCounts.set(row.system_id, (aliasCounts.get(row.system_id) ?? 0) + 1);
 
   return {
     systems: systems.map((system) => ({

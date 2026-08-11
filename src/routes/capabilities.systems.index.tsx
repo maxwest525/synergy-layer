@@ -3,16 +3,19 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 
-import { EmptyState, GlassCard, MetricTile, PageHeader, StatePill } from "@/components/os/primitives";
+import {
+  EmptyState,
+  GlassCard,
+  MetricTile,
+  PageHeader,
+  StatePill,
+} from "@/components/os/primitives";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AvailabilityBadge } from "@/components/os/availability-badge";
 import { getTenantContext } from "@/lib/tenant.functions";
 import { getToolEstate } from "@/lib/tool-estate.functions";
-import {
-  KIND_LABELS,
-  type EstateFilter,
-} from "@/lib/tool-estate-display";
+import { KIND_LABELS, type EstateFilter } from "@/lib/tool-estate-display";
 
 export const Route = createFileRoute("/capabilities/systems/")({
   // Operator-only surface: rendering it on the server without the operator
@@ -29,7 +32,8 @@ export const Route = createFileRoute("/capabilities/systems/")({
       { property: "og:title", content: "Systems & operations — AOOS" },
       {
         property: "og:description",
-        content: "Discovered, installed, credentialed, live proven, and callable are independent facts.",
+        content:
+          "Discovered, installed, credentialed, live proven, and callable are independent facts.",
       },
     ],
   }),
@@ -40,13 +44,22 @@ const FILTERS: { key: EstateFilter; label: string; hint: string }[] = [
   { key: "all", label: "All", hint: "Every canonical system in the inventory." },
   { key: "discovered", label: "Discovered", hint: "Seen during discovery, install not confirmed." },
   { key: "installed", label: "Installed", hint: "Present on the local workstation or workspace." },
-  { key: "credentialed", label: "Credentialed", hint: "Configuration metadata observed. No values are stored." },
+  {
+    key: "credentialed",
+    label: "Credentialed",
+    hint: "Configuration metadata observed. No values are stored.",
+  },
   { key: "live", label: "Live proven", hint: "Observed actually working, fully or partly." },
   { key: "callable", label: "Callable from AOOS", hint: "AOOS cloud can call it today." },
 ];
 
 function matches(
-  system: { installed_state: string; credential_state: string; verification_state: string; aoos_connection_state: string },
+  system: {
+    installed_state: string;
+    credential_state: string;
+    verification_state: string;
+    aoos_connection_state: string;
+  },
   filter: EstateFilter,
 ): boolean {
   switch (filter) {
@@ -57,7 +70,10 @@ function matches(
     case "credentialed":
       return system.credential_state === "configured";
     case "live":
-      return system.verification_state === "live_proven" || system.verification_state === "partially_live_proven";
+      return (
+        system.verification_state === "live_proven" ||
+        system.verification_state === "partially_live_proven"
+      );
     case "callable":
       return system.aoos_connection_state === "callable";
     default:
@@ -96,7 +112,8 @@ function SystemsPage() {
     };
     for (const system of data.systems) {
       for (const item of FILTERS) {
-        if (item.key !== "all" && matches(system, item.key)) base[item.key] = (base[item.key] ?? 0) + 1;
+        if (item.key !== "all" && matches(system, item.key))
+          base[item.key] = (base[item.key] ?? 0) + 1;
       }
     }
     return base;
@@ -129,9 +146,21 @@ function SystemsPage() {
       />
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        <MetricTile label="Canonical systems" value={data.systems.length} hint="Duplicate registrations are folded into aliases." />
-        <MetricTile label="Catalogued operations" value={data.operationCount} hint="Individual calls the local systems expose." />
-        <MetricTile label="Duplicate registrations" value={data.aliasCount} hint="Aliases pointing at one canonical system." />
+        <MetricTile
+          label="Canonical systems"
+          value={data.systems.length}
+          hint="Duplicate registrations are folded into aliases."
+        />
+        <MetricTile
+          label="Catalogued operations"
+          value={data.operationCount}
+          hint="Individual calls the local systems expose."
+        />
+        <MetricTile
+          label="Duplicate registrations"
+          value={data.aliasCount}
+          hint="Aliases pointing at one canonical system."
+        />
       </div>
 
       <div className="space-y-3">
@@ -156,11 +185,16 @@ function SystemsPage() {
           aria-label="Search systems"
           className="max-w-md"
         />
-        <p className="text-xs text-muted-foreground">{FILTERS.find((item) => item.key === filter)?.hint}</p>
+        <p className="text-xs text-muted-foreground">
+          {FILTERS.find((item) => item.key === filter)?.hint}
+        </p>
       </div>
 
       {visible.length === 0 ? (
-        <EmptyState title="No systems match" description="Clear the search or choose a different filter." />
+        <EmptyState
+          title="No systems match"
+          description="Clear the search or choose a different filter."
+        />
       ) : (
         <div className="grid gap-3 md:grid-cols-2">
           {visible.map((system) => (
@@ -182,7 +216,9 @@ function SystemsPage() {
                   <AvailabilityBadge system={system} />
                 </div>
                 {system.summary ? (
-                  <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">{system.summary}</p>
+                  <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">
+                    {system.summary}
+                  </p>
                 ) : null}
                 <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                   <span>{system.operationCount} operations</span>

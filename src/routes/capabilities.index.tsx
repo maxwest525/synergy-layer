@@ -3,7 +3,14 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 
-import { EmptyState, GlassCard, PageHeader, StatePill, formatWhen, toneForState } from "@/components/os/primitives";
+import {
+  EmptyState,
+  GlassCard,
+  PageHeader,
+  StatePill,
+  formatWhen,
+  toneForState,
+} from "@/components/os/primitives";
 import { Button } from "@/components/ui/button";
 import { syncRegistry } from "@/lib/os-admin.functions";
 import { getCapabilities } from "@/lib/os.functions";
@@ -29,7 +36,10 @@ export const Route = createFileRoute("/capabilities/")({
           "Every MCP, API, connector, skill, model, repository, and internal module the operating system can call, with its true integration state.",
       },
       { property: "og:title", content: "Capability Registry — AOOS" },
-      { property: "og:description", content: "What the operating system can actually do, and what is only declared." },
+      {
+        property: "og:description",
+        content: "What the operating system can actually do, and what is only declared.",
+      },
     ],
   }),
   component: CapabilitiesPage,
@@ -62,15 +72,22 @@ function CapabilitiesPage() {
             <Button variant="outline" asChild>
               <Link to="/capabilities/systems">Systems &amp; operations</Link>
             </Button>
-          <Button variant="outline" onClick={() => mutation.mutate()} disabled={mutation.isPending}>
-            {mutation.isPending ? "Syncing" : "Sync from modules"}
-          </Button>
+            <Button
+              variant="outline"
+              onClick={() => mutation.mutate()}
+              disabled={mutation.isPending}
+            >
+              {mutation.isPending ? "Syncing" : "Sync from modules"}
+            </Button>
           </>
         }
       />
 
       {data.length === 0 ? (
-        <EmptyState title="No capabilities registered" description="Add a module definition, then sync the registry." />
+        <EmptyState
+          title="No capabilities registered"
+          description="Add a module definition, then sync the registry."
+        />
       ) : (
         kinds.map((kind) => (
           <section key={kind} className="space-y-3">
@@ -90,7 +107,9 @@ function CapabilitiesPage() {
                     <GlassCard className="h-full p-4 transition-colors hover:border-primary/40">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                          <p className="truncate text-sm font-medium text-foreground">{capability.name}</p>
+                          <p className="truncate text-sm font-medium text-foreground">
+                            {capability.name}
+                          </p>
                           <p className="truncate text-xs text-muted-foreground">{capability.key}</p>
                         </div>
                         <StatePill
@@ -99,10 +118,15 @@ function CapabilitiesPage() {
                         />
                       </div>
                       {capability.description ? (
-                        <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">{capability.description}</p>
+                        <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">
+                          {capability.description}
+                        </p>
                       ) : null}
                       <div className="mt-3 flex flex-wrap items-center gap-2">
-                        <StatePill label={capability.health} tone={toneForState(capability.health)} />
+                        <StatePill
+                          label={capability.health}
+                          tone={toneForState(capability.health)}
+                        />
                         {capability.auth_kind ? <StatePill label={capability.auth_kind} /> : null}
                         <span className="text-xs text-muted-foreground">
                           Last run {formatWhen(capability.last_run_at)}

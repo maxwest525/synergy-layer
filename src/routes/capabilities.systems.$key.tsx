@@ -3,7 +3,13 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 
-import { DetailRow, EmptyState, GlassCard, PageHeader, StatePill } from "@/components/os/primitives";
+import {
+  DetailRow,
+  EmptyState,
+  GlassCard,
+  PageHeader,
+  StatePill,
+} from "@/components/os/primitives";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AvailabilityBadge } from "@/components/os/availability-badge";
@@ -78,7 +84,12 @@ function SystemDetailPage() {
   }, [operations, search]);
 
   if (!data.system) {
-    return <EmptyState title="System not found" description="That system is not in this workspace inventory." />;
+    return (
+      <EmptyState
+        title="System not found"
+        description="That system is not in this workspace inventory."
+      />
+    );
   }
 
   const system = data.system;
@@ -107,7 +118,10 @@ function SystemDetailPage() {
             <AvailabilityBadge system={system} />
           </div>
           <dl className="mt-3">
-            <DetailRow label="Install" value={INSTALLED_LABELS[system.installed_state] ?? system.installed_state} />
+            <DetailRow
+              label="Install"
+              value={INSTALLED_LABELS[system.installed_state] ?? system.installed_state}
+            />
             <DetailRow
               label="Credentials"
               value={CREDENTIAL_LABELS[system.credential_state] ?? system.credential_state}
@@ -142,9 +156,10 @@ function SystemDetailPage() {
         <GlassCard className="p-5">
           <h2 className="text-sm font-semibold text-foreground">Safety gate</h2>
           <p className="mt-2 text-sm text-muted-foreground">
-            Every external change is planned first. Draft operations only prepare a plan, and nothing outside
-            AOOS changes until the single write operation is run. That write operation defaults to a dry run,
-            and the local install requires a dry run before anything is applied.
+            Every external change is planned first. Draft operations only prepare a plan, and
+            nothing outside AOOS changes until the single write operation is run. That write
+            operation defaults to a dry run, and the local install requires a dry run before
+            anything is applied.
           </p>
         </GlassCard>
       ) : null}
@@ -155,8 +170,8 @@ function SystemDetailPage() {
             Duplicate registrations ({data.aliases.length})
           </h2>
           <p className="text-sm text-muted-foreground">
-            These are the same system registered more than once. They are kept as evidence, not counted as
-            separate systems.
+            These are the same system registered more than once. They are kept as evidence, not
+            counted as separate systems.
           </p>
           <div className="grid gap-2 md:grid-cols-2">
             {data.aliases.map((alias) => (
@@ -165,7 +180,9 @@ function SystemDetailPage() {
                 <p className="text-xs text-muted-foreground">
                   {alias.registered_in ?? "Registration source not set"}
                 </p>
-                {alias.note ? <p className="mt-1 text-xs text-muted-foreground">{alias.note}</p> : null}
+                {alias.note ? (
+                  <p className="mt-1 text-xs text-muted-foreground">{alias.note}</p>
+                ) : null}
               </GlassCard>
             ))}
           </div>
@@ -217,7 +234,10 @@ function SystemDetailPage() {
                 </GlassCard>
               ))}
               {visible.length === 0 ? (
-                <EmptyState title="No operations match" description="Clear the search to see the full list." />
+                <EmptyState
+                  title="No operations match"
+                  description="Clear the search to see the full list."
+                />
               ) : null}
             </div>
           </>
