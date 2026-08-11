@@ -7,7 +7,6 @@ import {
   Inbox,
   LayoutDashboard,
   Lightbulb,
-  Megaphone,
   Plug,
   Workflow,
 } from "lucide-react";
