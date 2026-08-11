@@ -144,7 +144,9 @@ function EssentialsPage() {
     snapshotCount: data.backlinks.snapshots,
     referringDomains: data.backlinks.referringDomains,
     backlinks: data.backlinks.backlinks,
+    storedSufficient: data.backlinks.storedSufficient,
   });
+
 
   const searchConsole: Concern[] = [
     {
