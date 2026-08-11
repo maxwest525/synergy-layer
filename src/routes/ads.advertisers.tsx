@@ -297,7 +297,35 @@ function AdvertiserReviewPage() {
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="outline" size="sm" disabled={busy || unresolvedDomains === 0}>
+                Sweep {unresolvedDomains} unresolved vendor domain{unresolvedDomains === 1 ? "" : "s"}
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>
+                  This may charge up to {unresolvedDomains} SerpApi search credits
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                  The sweep runs one Ads Transparency search per unresolved vendor domain, one at a time,
+                  through the same metered path as the canary. It refuses to start a search when the
+                  account is invalid or below the ten search floor, and it stops at the first refusal.
+                  Every advertiser it finds is filed as a pending candidate; nothing is confirmed
+                  automatically.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={() => sweepMutation.mutate()}>
+                  Spend credits and sweep
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
+
         <p className="mt-2 text-xs text-muted-foreground">
           The account check costs nothing. The canary buys at most one search, and only when the account is valid
           and reports at least ten searches remaining.
