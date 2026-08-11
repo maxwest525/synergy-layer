@@ -42,12 +42,12 @@ function CostNote() {
         else in this slice calls a paid provider.
       </p>
       <p>
-        Lovable build credits are separate and are not $0. Known build usage through commit
-        6b9ddb53 is 37.9 credits in total: PageSpeed slice 18.0, first execution adapter 9.2, and
-        the previous corrective pass 10.7. The current pass, which added the read-only GitHub
-        preflight and the service-only rendered-proof boundary, is not included in that 37.9
-        subtotal and is billed the same way.
+        Lovable build credits are separate and are not $0. Known build usage through the work before
+        this pass is 51.7 credits in total: PageSpeed slice 18.0, first execution adapter 9.2,
+        corrective adapter pass 10.7, preflight and security pass 11.2, and runtime verification
+        pass 2.6. The current pass is not included in that 51.7 subtotal and is billed the same way.
       </p>
+
     </div>
   );
 }

@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database } from "@/integrations/supabase/types";
 import type { AttemptRecord, ExecutableRequest, ExecutionStore, GithubApi, RenderedVerifier } from "./execute";
-import { GithubStatusError } from "./github-error";
+import { GithubStatusError, readGithubResponseSignals } from "./github-error";
 import { extractDocumentTitle, extractFirstHeading, extractMarkdownHeading, parseFieldChanges } from "./source-change";
 
 
@@ -15,7 +15,7 @@ const MAX_RESPONSE_CHARS = 2_000_000;
 async function boundedFetch(
   url: string,
   init: RequestInit & { label: string },
-): Promise<{ status: number; text: string }> {
+): Promise<{ status: number; text: string; headers: Headers }> {
   const { label, ...rest } = init;
   let response: Response;
   try {
@@ -25,8 +25,9 @@ async function boundedFetch(
     throw new Error(`${label} request ${reason} after ${REQUEST_TIMEOUT_MS / 1000}s.`);
   }
   const text = (await response.text()).slice(0, MAX_RESPONSE_CHARS);
-  return { status: response.status, text };
+  return { status: response.status, text, headers: response.headers };
 }
+
 
 /**
  * Store backed by the service-role client. The rendered-proof transition is
@@ -123,6 +124,14 @@ export function createExecutionStore(admin: Client, rls: Client, actorId: string
 
 const API = "https://api.github.com";
 
+/**
+ * GitHub REST requires a valid User-Agent. Node/undici supplies one locally,
+ * but the deployed worker runtime does not, which GitHub answers with 403.
+ * Sending it explicitly makes both environments behave identically.
+ */
+export const GITHUB_USER_AGENT = "AOOS-Marketing-OS/1.0";
+
+
 function decodeBase64(value: string): string {
   const binary = atob(value.replace(/\n/g, ""));
   const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
@@ -149,13 +158,20 @@ export function createGithubApi(): GithubApi | null {
         Accept: "application/vnd.github+json",
         Authorization: `Bearer ${token}`,
         "X-GitHub-Api-Version": "2022-11-28",
+        "User-Agent": GITHUB_USER_AGENT,
         ...(init?.body ? { "Content-Type": "application/json" } : {}),
       },
     });
     if (response.status < 200 || response.status >= 300) {
-      // Deliberately no response body: it can echo request content.
-      throw new GithubStatusError(response.status, path.split("?")[0] ?? path);
+      // Deliberately no response body: it can echo request content. Only the
+      // safe rate-limit and SSO headers are carried.
+      throw new GithubStatusError(
+        response.status,
+        path.split("?")[0] ?? path,
+        readGithubResponseSignals(response.headers),
+      );
     }
+
 
     return response.text ? (JSON.parse(response.text) as unknown) : {};
   };
