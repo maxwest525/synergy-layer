@@ -14,6 +14,7 @@ import {
   StatePill,
   toneForState,
 } from "@/components/os/primitives";
+import { OperatorRouteError } from "@/components/os/route-error";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,15 +37,11 @@ import {
   type AdsCandidateView,
 } from "@/lib/ads.functions";
 
-const adsQuery = {
-  queryKey: ["ads-overview"],
-  queryFn: () => getAdsOverview(),
-};
-
 export const Route = createFileRoute("/ads/advertisers")({
   // Operator-only surface. Rendering it on the server without the operator
   // bearer token yields an empty tree the client immediately replaces.
   ssr: false,
+  errorComponent: OperatorRouteError,
   head: () => ({
     meta: [
       { title: "Google advertiser review — AOOS Marketing Operating System" },
@@ -145,7 +142,11 @@ function CandidateCard({
 }
 
 function AdvertiserReviewPage() {
-  const { data } = useSuspenseQuery(adsQuery);
+  const loadOverview = useServerFn(getAdsOverview);
+  const { data } = useSuspenseQuery({
+    queryKey: ["ads-overview"],
+    queryFn: () => loadOverview(),
+  });
   const queryClient = useQueryClient();
   const gate = useServerFn(checkAdsProviderGate);
   const decide = useServerFn(decideAdvertiserCandidate);
