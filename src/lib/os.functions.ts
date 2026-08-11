@@ -31,7 +31,8 @@ export const getCapabilities = createServerFn({ method: "GET" }).handler(async (
 });
 
 export const getCapability = createServerFn({ method: "GET" })
-  .inputValidator(idInput)
+  // Capabilities are addressable by uuid or registry key, so no uuid constraint here.
+  .inputValidator((data: unknown) => z.object({ id: z.string().min(1) }).parse(data))
   .handler(async ({ data }) => {
     const { fetchCapability } = await import("./os-queries.server");
     return fetchCapability(data.id);
