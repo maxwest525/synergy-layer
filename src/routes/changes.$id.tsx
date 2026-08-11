@@ -5,7 +5,13 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { ExecutionCard } from "@/components/os/execution-card";
-import { DetailRow, EmptyState, GlassCard, PageHeader, StatePill } from "@/components/os/primitives";
+import {
+  DetailRow,
+  EmptyState,
+  GlassCard,
+  PageHeader,
+  StatePill,
+} from "@/components/os/primitives";
 
 import { OperatorRouteError } from "@/components/os/route-error";
 import { Button } from "@/components/ui/button";
@@ -34,7 +40,8 @@ export const Route = createFileRoute("/changes/$id")({
       { property: "og:title", content: "Proposed page change — AOOS" },
       {
         property: "og:description",
-        content: "Approve a concrete asset change, then track application and verification separately.",
+        content:
+          "Approve a concrete asset change, then track application and verification separately.",
       },
       { name: "robots", content: "noindex" },
     ],
@@ -43,7 +50,12 @@ export const Route = createFileRoute("/changes/$id")({
 });
 
 type FieldChange = { field?: string; label?: string; before?: string; after?: string };
-type EvidenceRow = { query?: string; date?: string; average_position?: number; impressions?: number };
+type EvidenceRow = {
+  query?: string;
+  date?: string;
+  average_position?: number;
+  impressions?: number;
+};
 
 function asArray<T>(value: unknown): T[] {
   return Array.isArray(value) ? (value as T[]) : [];
@@ -129,7 +141,9 @@ function ChangeRequestPage() {
     `Source file: ${change.source_file ?? "unknown"}`,
     `Source revision observed: ${change.source_revision_before ?? "unknown"}`,
     "",
-    ...fields.map((f) => `${f.label ?? f.field}:\n  BEFORE: ${f.before ?? ""}\n  AFTER:  ${f.after ?? ""}`),
+    ...fields.map(
+      (f) => `${f.label ?? f.field}:\n  BEFORE: ${f.before ?? ""}\n  AFTER:  ${f.after ?? ""}`,
+    ),
     "",
     `Why: ${change.rationale}`,
     `Evidence: ${change.evidence_summary}`,
@@ -142,19 +156,23 @@ function ChangeRequestPage() {
         eyebrow="Proposed page change"
         title={change.title}
         description="One concrete change to one page. Approving authorizes the change. It does not approve the Search Console data, edit the public site, or publish anything."
-        actions={<StatePill label={humanState(state)} tone={state === "rejected" ? "danger" : "primary"} />}
+        actions={
+          <StatePill label={humanState(state)} tone={state === "rejected" ? "danger" : "primary"} />
+        }
       />
 
       <GlassCard className="p-5">
         <h2 className="text-sm font-semibold text-foreground">What you are approving</h2>
         <p className="mt-2 text-sm text-muted-foreground">
-          Two text changes on <span className="text-foreground">{change.target_url}</span>. Nothing else on
-          the page, the site, or the workspace changes.
+          Two text changes on <span className="text-foreground">{change.target_url}</span>. Nothing
+          else on the page, the site, or the workspace changes.
         </p>
         <ul className="mt-4 space-y-3">
           {fields.map((field) => (
             <li key={field.field ?? field.label} className="rounded-xl border border-border/60 p-3">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">{field.label ?? field.field}</p>
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                {field.label ?? field.field}
+              </p>
               <p className="mt-2 text-sm text-muted-foreground">
                 Before: <span className="text-foreground">{field.before}</span>
               </p>
@@ -196,7 +214,10 @@ function ChangeRequestPage() {
           ) : (
             <ul className="mt-3 space-y-2">
               {evidence.map((row, index) => (
-                <li key={`${row.query}-${row.date}-${index}`} className="text-sm text-muted-foreground">
+                <li
+                  key={`${row.query}-${row.date}-${index}`}
+                  className="text-sm text-muted-foreground"
+                >
                   <span className="text-foreground">{row.query}</span> — average position{" "}
                   {row.average_position} on {row.date}, {row.impressions} impression
                   {row.impressions === 1 ? "" : "s"}
@@ -223,7 +244,6 @@ function ChangeRequestPage() {
         />
       ) : null}
 
-
       <GlassCard className="p-5">
         <h2 className="text-sm font-semibold text-foreground">Outcome</h2>
         <p className="mt-2 text-sm text-muted-foreground">{outcome.message}</p>
@@ -236,9 +256,12 @@ function ChangeRequestPage() {
         {data.postChangeRows.length > 0 ? (
           <ul className="mt-3 space-y-2">
             {data.postChangeRows.map((row, index) => (
-              <li key={`${row.query}-${row.date}-${index}`} className="text-sm text-muted-foreground">
-                <span className="text-foreground">{row.query}</span> — position {row.position} on {row.date},{" "}
-                {row.impressions} impressions
+              <li
+                key={`${row.query}-${row.date}-${index}`}
+                className="text-sm text-muted-foreground"
+              >
+                <span className="text-foreground">{row.query}</span> — position {row.position} on{" "}
+                {row.date}, {row.impressions} impressions
               </li>
             ))}
           </ul>
@@ -257,12 +280,18 @@ function ChangeRequestPage() {
           <ul className="mt-3 space-y-2">
             {fields.map((field) => (
               <li key={`rollback-${field.field}`} className="text-sm text-muted-foreground">
-                {field.label ?? field.field}: <span className="text-foreground">{field.before}</span>
+                {field.label ?? field.field}:{" "}
+                <span className="text-foreground">{field.before}</span>
               </li>
             ))}
           </ul>
           <div className="mt-4">
-            <Button variant="ghost" size="sm" disabled={busy} onClick={() => mutation.mutate("rollback")}>
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={busy}
+              onClick={() => mutation.mutate("rollback")}
+            >
               Mark rolled back
             </Button>
           </div>
@@ -270,12 +299,17 @@ function ChangeRequestPage() {
       ) : null}
 
       <details className="rounded-xl border border-border/60 p-4">
-        <summary className="cursor-pointer text-sm text-muted-foreground">Implementation detail</summary>
+        <summary className="cursor-pointer text-sm text-muted-foreground">
+          Implementation detail
+        </summary>
         <dl className="mt-3">
           <DetailRow label="Source project" value={change.source_project_name ?? "Unknown"} />
           <DetailRow label="Source file" value={change.source_file ?? "Unknown"} />
           <DetailRow label="Revision observed" value={change.source_revision_before ?? "Unknown"} />
-          <DetailRow label="Revision after" value={change.source_revision_after ?? "Not recorded"} />
+          <DetailRow
+            label="Revision after"
+            value={change.source_revision_after ?? "Not recorded"}
+          />
           <DetailRow label="Method" value={change.implementation_method} />
         </dl>
       </details>

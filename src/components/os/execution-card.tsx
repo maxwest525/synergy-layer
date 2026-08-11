@@ -52,7 +52,8 @@ export function ExecutionCard(props: Props) {
   const execute = useMutation({
     mutationFn: () => runExecute({ data: { id: props.id } }),
     onSuccess: (result) => {
-      if (result.status === "committed" || result.status === "replayed") toast.success(result.message);
+      if (result.status === "committed" || result.status === "replayed")
+        toast.success(result.message);
       else toast.error(result.message);
       refresh();
     },
@@ -118,8 +119,8 @@ export function ExecutionCard(props: Props) {
     <GlassCard className="p-5">
       <h2 className="text-sm font-semibold text-foreground">Execution</h2>
       <p className="mt-2 text-sm text-muted-foreground">
-        AOOS can commit this exact edit to the source file it recorded. It cannot publish the site, and a
-        commit is not proof that the public page changed.
+        AOOS can commit this exact edit to the source file it recorded. It cannot publish the site,
+        and a commit is not proof that the public page changed.
       </p>
 
       <ol className="mt-4 space-y-2">
@@ -140,7 +141,9 @@ export function ExecutionCard(props: Props) {
         <p className="mt-4 rounded-lg border border-border/60 p-3 text-xs text-muted-foreground">
           Source: {data.repo ?? "no repository recorded"} · {data.branch ?? "no branch"} ·{" "}
           {data.filePath ?? "no file"}
-          {data.executorCredentialPresent ? "" : " · Executor credential missing, so no write can be attempted."}
+          {data.executorCredentialPresent
+            ? ""
+            : " · Executor credential missing, so no write can be attempted."}
         </p>
       ) : null}
 
@@ -156,7 +159,12 @@ export function ExecutionCard(props: Props) {
           </Button>
         ) : null}
         {data?.isOperator && committed ? (
-          <Button variant="outline" size="sm" disabled={running} onClick={() => publishCheck.mutate()}>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={running}
+            onClick={() => publishCheck.mutate()}
+          >
             Check published page
           </Button>
         ) : null}
@@ -187,8 +195,9 @@ export function ExecutionCard(props: Props) {
       </div>
 
       <p className="mt-4 text-xs text-muted-foreground">
-        Provider API charge: $0. Committing to source and reading the public page use no paid provider
-        credits. This does not include AI build usage in Lovable, which is billed separately.
+        Provider API charge: $0. Committing to source and reading the public page use no paid
+        provider credits. This does not include AI build usage in Lovable, which is billed
+        separately.
       </p>
 
       {props.state === "applied" ? (
@@ -198,7 +207,8 @@ export function ExecutionCard(props: Props) {
           </p>
           {props.postChangeCount === 0 ? (
             <p className="rounded-lg border border-border/60 p-3 text-sm text-muted-foreground">
-              Waiting for finalized post-change Search Console data. No data is not evidence of success.
+              Waiting for finalized post-change Search Console data. No data is not evidence of
+              success.
             </p>
           ) : (
             <>
@@ -219,8 +229,8 @@ export function ExecutionCard(props: Props) {
         <ul className="mt-5 space-y-2">
           {data.attempts.map((attempt) => (
             <li key={attempt.id} className="text-xs text-muted-foreground">
-              {attempt.createdAt.slice(0, 16).replace("T", " ")} · {attempt.kind.replace("_", " ")} ·{" "}
-              <span className="text-foreground">{attempt.status}</span>
+              {attempt.createdAt.slice(0, 16).replace("T", " ")} · {attempt.kind.replace("_", " ")}{" "}
+              · <span className="text-foreground">{attempt.status}</span>
               {attempt.error ? ` — ${attempt.error}` : ""}
             </li>
           ))}

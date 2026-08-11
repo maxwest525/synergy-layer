@@ -120,7 +120,9 @@ export async function executeSourceChange(input: {
     );
   }
   if (!request.repo || !request.branch || !request.filePath) {
-    return refuse("Refused without writing: this change request stores no repository, branch, or file.");
+    return refuse(
+      "Refused without writing: this change request stores no repository, branch, or file.",
+    );
   }
 
   let head: string;

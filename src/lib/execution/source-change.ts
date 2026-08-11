@@ -61,11 +61,15 @@ export function applyExactReplacements(
   changes: FieldChange[],
 ): ExecutionResult<{ content: string; replaced: number; alreadyApplied: boolean }> {
   if (changes.length === 0) {
-    return { ok: false, reason: "This change request stores no exact before/after values to apply." };
+    return {
+      ok: false,
+      reason: "This change request stores no exact before/after values to apply.",
+    };
   }
 
   const alreadyApplied = changes.every(
-    (change) => occurrences(content, change.before) === 0 && occurrences(content, change.after) === 1,
+    (change) =>
+      occurrences(content, change.before) === 0 && occurrences(content, change.after) === 1,
   );
   if (alreadyApplied) {
     return { ok: true, value: { content, replaced: 0, alreadyApplied: true } };
@@ -121,7 +125,9 @@ function decodeEntities(value: string): string {
 }
 
 function normalize(value: string): string {
-  return decodeEntities(value.replace(/<[^>]*>/g, " ")).replace(/\s+/g, " ").trim();
+  return decodeEntities(value.replace(/<[^>]*>/g, " "))
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 export function extractDocumentTitle(html: string): string | null {

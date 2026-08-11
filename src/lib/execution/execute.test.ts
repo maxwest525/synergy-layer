@@ -1,10 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  applyExactReplacements,
-  parseFieldChanges,
-  verifyPublishedHtml,
-} from "./source-change";
+import { applyExactReplacements, parseFieldChanges, verifyPublishedHtml } from "./source-change";
 import {
   checkPublishedPage,
   executeSourceChange,
