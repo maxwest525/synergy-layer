@@ -52,7 +52,11 @@ function CompetitorReviewPage() {
   const [selected, setSelected] = useState<string[]>([]);
   const [expanded, setExpanded] = useState<string | null>(null);
 
-  const pending = data.shortlist.filter((row) => row.reviewState === "pending");
+  // A candidate is reviewable until an operator has decided on it. The
+  // derivation step files rows as "discovered", so gating on "pending" alone
+  // left every checkbox disabled and the gate unpassable.
+  const isReviewable = (state: string) => state !== "approved" && state !== "rejected";
+  const pending = data.shortlist.filter((row) => isReviewable(row.reviewState));
   const allSelected = pending.length > 0 && selected.length === pending.length;
 
   const mutation = useMutation({
@@ -201,7 +205,9 @@ function CompetitorRow({ row, busy, checked, expanded, onToggleSelect, onToggleE
                 <StatePill label={`Outranks us on ${row.outranksOwned}`} />
                 <StatePill label={`We outrank on ${row.ownedOutranks}`} />
                 <StatePill label={`Confidence ${pct(row.confidence)}`} />
-                {row.reviewState !== "pending" ? <StatePill label={row.reviewState} /> : null}
+                {row.reviewState === "approved" || row.reviewState === "rejected" ? (
+                  <StatePill label={row.reviewState} />
+                ) : null}
               </div>
               {row.shortlistReason ? (
                 <p className="text-xs text-muted-foreground">{row.shortlistReason}</p>
