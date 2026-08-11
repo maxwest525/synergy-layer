@@ -893,6 +893,164 @@ export type Database = {
           },
         ]
       }
+      change_requests: {
+        Row: {
+          applied_at: string | null
+          applied_by: string | null
+          applied_notes: string | null
+          approved_at: string | null
+          approved_by: string | null
+          asset_id: string | null
+          changes: Json
+          created_at: string
+          evidence: Json
+          evidence_limitations: string
+          evidence_summary: string
+          id: string
+          idempotency_key: string
+          implementation_method: string
+          inbox_item_id: string | null
+          proposed_at: string
+          rationale: string
+          recommendation_id: string | null
+          rejected_at: string | null
+          rejected_by: string | null
+          risk_note: string | null
+          rollback_notes: string | null
+          rolled_back_at: string | null
+          rolled_back_by: string | null
+          source_file: string | null
+          source_project_id: string | null
+          source_project_name: string | null
+          source_project_url: string | null
+          source_revision_after: string | null
+          source_revision_before: string | null
+          state: string
+          target_url: string
+          tenant_id: string
+          title: string
+          updated_at: string
+          verification_baseline: Json
+          verification_followup: string | null
+          verification_notes: string | null
+          verified_at: string | null
+          verified_by: string | null
+        }
+        Insert: {
+          applied_at?: string | null
+          applied_by?: string | null
+          applied_notes?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          asset_id?: string | null
+          changes?: Json
+          created_at?: string
+          evidence?: Json
+          evidence_limitations?: string
+          evidence_summary?: string
+          id?: string
+          idempotency_key: string
+          implementation_method?: string
+          inbox_item_id?: string | null
+          proposed_at?: string
+          rationale: string
+          recommendation_id?: string | null
+          rejected_at?: string | null
+          rejected_by?: string | null
+          risk_note?: string | null
+          rollback_notes?: string | null
+          rolled_back_at?: string | null
+          rolled_back_by?: string | null
+          source_file?: string | null
+          source_project_id?: string | null
+          source_project_name?: string | null
+          source_project_url?: string | null
+          source_revision_after?: string | null
+          source_revision_before?: string | null
+          state?: string
+          target_url: string
+          tenant_id: string
+          title: string
+          updated_at?: string
+          verification_baseline?: Json
+          verification_followup?: string | null
+          verification_notes?: string | null
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Update: {
+          applied_at?: string | null
+          applied_by?: string | null
+          applied_notes?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          asset_id?: string | null
+          changes?: Json
+          created_at?: string
+          evidence?: Json
+          evidence_limitations?: string
+          evidence_summary?: string
+          id?: string
+          idempotency_key?: string
+          implementation_method?: string
+          inbox_item_id?: string | null
+          proposed_at?: string
+          rationale?: string
+          recommendation_id?: string | null
+          rejected_at?: string | null
+          rejected_by?: string | null
+          risk_note?: string | null
+          rollback_notes?: string | null
+          rolled_back_at?: string | null
+          rolled_back_by?: string | null
+          source_file?: string | null
+          source_project_id?: string | null
+          source_project_name?: string | null
+          source_project_url?: string | null
+          source_revision_after?: string | null
+          source_revision_before?: string | null
+          state?: string
+          target_url?: string
+          tenant_id?: string
+          title?: string
+          updated_at?: string
+          verification_baseline?: Json
+          verification_followup?: string | null
+          verification_notes?: string | null
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "change_requests_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "change_requests_inbox_item_id_fkey"
+            columns: ["inbox_item_id"]
+            isOneToOne: false
+            referencedRelation: "inbox_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "change_requests_recommendation_id_fkey"
+            columns: ["recommendation_id"]
+            isOneToOne: false
+            referencedRelation: "recommendations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "change_requests_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       competitor_candidates: {
         Row: {
           created_at: string
