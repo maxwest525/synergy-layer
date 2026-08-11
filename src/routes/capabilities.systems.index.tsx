@@ -39,42 +39,55 @@ export const Route = createFileRoute("/capabilities/systems/")({
   component: SystemsPage,
 });
 
+type View = "essentials" | "all";
+
 const FILTERS: { key: EstateFilter; label: string; hint: string }[] = [
-  { key: "all", label: "All", hint: "Every canonical system in the inventory." },
-  { key: "discovered", label: "Discovered", hint: "Seen during discovery, install not confirmed." },
-  { key: "installed", label: "Installed", hint: "Present on the local workstation or workspace." },
+  { key: "all", label: "All", hint: "Every canonical system in this view." },
+  { key: "available", label: "Available to enable", hint: "The provider exists and could be turned on." },
+  { key: "enabled", label: "Enabled", hint: "Confirmed switched on for this workspace." },
   {
     key: "credentialed",
     label: "Credentialed",
     hint: "Configuration metadata observed. No values are stored.",
   },
-  { key: "live", label: "Live proven", hint: "Observed actually working, fully or partly." },
+  { key: "implemented", label: "Implemented", hint: "AOOS code exists for it, fully or partly." },
   { key: "callable", label: "Callable from AOOS", hint: "AOOS cloud can call it today." },
+  { key: "installed", label: "Installed locally", hint: "Present on the local workstation or workspace." },
+  { key: "live", label: "Live proven", hint: "Observed actually working, fully or partly." },
 ];
 
-function matches(
-  system: {
-    installed_state: string;
-    credential_state: string;
-    verification_state: string;
-    aoos_connection_state: string;
-  },
-  filter: EstateFilter,
-): boolean {
+type ReadinessInput = {
+  installed_state: string;
+  credential_state: string;
+  verification_state: string;
+  aoos_connection_state: string;
+  available_state: string;
+  enabled_state: string;
+  implemented_state: string;
+};
+
+function matches(system: ReadinessInput, filter: EstateFilter): boolean {
   switch (filter) {
-    case "discovered":
-      return system.installed_state === "discovered";
-    case "installed":
-      return system.installed_state === "installed";
+    case "available":
+      return system.available_state === "available_to_enable";
+    case "enabled":
+      return system.enabled_state === "enabled";
     case "credentialed":
       return system.credential_state === "configured";
+    case "implemented":
+      return (
+        system.implemented_state === "implemented" ||
+        system.implemented_state === "partially_implemented"
+      );
+    case "callable":
+      return system.aoos_connection_state === "callable";
+    case "installed":
+      return system.installed_state === "installed";
     case "live":
       return (
         system.verification_state === "live_proven" ||
         system.verification_state === "partially_live_proven"
       );
-    case "callable":
-      return system.aoos_connection_state === "callable";
     default:
       return true;
   }
@@ -97,30 +110,51 @@ function SystemsPage() {
     retry: false,
   });
 
+  const [view, setView] = useState<View>("essentials");
   const [filter, setFilter] = useState<EstateFilter>("all");
   const [search, setSearch] = useState("");
 
+  // Every number on this page is recalculated from what the database returned.
+  const scoped = useMemo(
+    () =>
+      view === "essentials"
+        ? data.systems.filter((system) => system.is_essential)
+        : data.systems,
+    [data.systems, view],
+  );
+
+  const scopedOperations = useMemo(
+    () => scoped.reduce((total, system) => total + system.operationCount, 0),
+    [scoped],
+  );
+  const scopedAliases = useMemo(
+    () => scoped.reduce((total, system) => total + system.aliasCount, 0),
+    [scoped],
+  );
+
   const counts = useMemo(() => {
     const base: Record<EstateFilter, number> = {
-      all: data.systems.length,
-      discovered: 0,
-      installed: 0,
+      all: scoped.length,
+      available: 0,
+      enabled: 0,
       credentialed: 0,
-      live: 0,
+      implemented: 0,
       callable: 0,
+      installed: 0,
+      live: 0,
     };
-    for (const system of data.systems) {
+    for (const system of scoped) {
       for (const item of FILTERS) {
         if (item.key !== "all" && matches(system, item.key))
           base[item.key] = (base[item.key] ?? 0) + 1;
       }
     }
     return base;
-  }, [data.systems]);
+  }, [scoped]);
 
   const visible = useMemo(() => {
     const needle = search.trim().toLowerCase();
-    return data.systems.filter((system) => {
+    return scoped.filter((system) => {
       if (!matches(system, filter)) return false;
       if (!needle) return true;
       return (
@@ -129,14 +163,14 @@ function SystemsPage() {
         (system.provider ?? "").toLowerCase().includes(needle)
       );
     });
-  }, [data.systems, filter, search]);
+  }, [scoped, filter, search]);
 
   return (
     <div className="space-y-8">
       <PageHeader
         eyebrow="Tool estate"
         title="Systems & operations"
-        description="A frozen discovery snapshot from August 11, 2026. Discovered, installed, credentialed, live proven, and callable from AOOS are five independent facts. A system existing on a workstation does not make it callable from AOOS."
+        description="Available to enable, enabled, credentialed, implemented, and callable from AOOS are separate facts. A system existing on a workstation, or a credential existing for it, does not make it callable from AOOS."
         actions={
           <Button variant="outline" asChild>
             <Link to="/capabilities">Back to capabilities</Link>
@@ -144,20 +178,42 @@ function SystemsPage() {
         }
       />
 
+      <div className="flex flex-wrap gap-2">
+        {(
+          [
+            { key: "essentials", label: "Essentials" },
+            { key: "all", label: "All systems" },
+          ] as { key: View; label: string }[]
+        ).map((tab) => (
+          <Button
+            key={tab.key}
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setView(tab.key);
+              setFilter("all");
+            }}
+            className={view === tab.key ? "border-primary/60 text-primary" : undefined}
+          >
+            {tab.label}
+          </Button>
+        ))}
+      </div>
+
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <MetricTile
-          label="Canonical systems"
-          value={data.systems.length}
+          label={view === "essentials" ? "Essential systems" : "Canonical systems"}
+          value={scoped.length}
           hint="Duplicate registrations are folded into aliases."
         />
         <MetricTile
           label="Catalogued operations"
-          value={data.operationCount}
-          hint="Individual calls the local systems expose."
+          value={scopedOperations}
+          hint="Individual calls these systems expose today."
         />
         <MetricTile
           label="Duplicate registrations"
-          value={data.aliasCount}
+          value={scopedAliases}
           hint="Aliases pointing at one canonical system."
         />
       </div>
@@ -185,6 +241,9 @@ function SystemsPage() {
           className="max-w-md"
         />
         <p className="text-xs text-muted-foreground">
+          {view === "essentials"
+            ? "The foundational systems this operation runs on. Switch to All systems for the full catalog."
+            : "The full catalog after duplicates are folded in and excluded systems are removed."}{" "}
           {FILTERS.find((item) => item.key === filter)?.hint}
         </p>
       </div>
