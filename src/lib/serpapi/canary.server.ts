@@ -70,7 +70,7 @@ function blocked(reason: string, account: AccountStatus | null): CanaryResult {
 export async function runAdvertiserCanary(
   client: Client,
   tenantId: string,
-  input: { domain: string; runKey?: string },
+  input: { domain: string; runKey?: string | undefined },
 ): Promise<CanaryResult> {
   const domain = rootDomain(input.domain);
 
