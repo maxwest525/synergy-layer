@@ -6,6 +6,7 @@ import {
 } from "@/lib/tool-estate-display";
 
 type AvailabilityInput = {
+  kind?: string;
   installed_state: string;
   aoos_connection_state: string;
   verification_state: string;
