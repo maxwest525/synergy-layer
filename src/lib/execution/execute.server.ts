@@ -15,7 +15,7 @@ const MAX_RESPONSE_CHARS = 2_000_000;
 async function boundedFetch(
   url: string,
   init: RequestInit & { label: string },
-): Promise<{ status: number; text: string }> {
+): Promise<{ status: number; text: string; headers: Headers }> {
   const { label, ...rest } = init;
   let response: Response;
   try {
@@ -25,8 +25,9 @@ async function boundedFetch(
     throw new Error(`${label} request ${reason} after ${REQUEST_TIMEOUT_MS / 1000}s.`);
   }
   const text = (await response.text()).slice(0, MAX_RESPONSE_CHARS);
-  return { status: response.status, text };
+  return { status: response.status, text, headers: response.headers };
 }
+
 
 /**
  * Store backed by the service-role client. The rendered-proof transition is
