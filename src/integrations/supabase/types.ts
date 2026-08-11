@@ -2376,6 +2376,7 @@ export type Database = {
         Args: { _excluding_user: string }
         Returns: undefined
       }
+      command_center_overview: { Args: { _tenant_id: string }; Returns: Json }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

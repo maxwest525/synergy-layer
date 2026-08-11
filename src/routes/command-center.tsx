@@ -21,7 +21,11 @@ export const Route = createFileRoute("/command-center")({
   ssr: false,
   // A transient data failure must not turn SSR into a 500 blank screen; the
   // client-side suspense query retries and surfaces the error in the boundary.
-  loader: ({ context }) => context.queryClient.ensureQueryData(overviewQuery).catch(() => undefined),
+  loader: ({ context }) => {
+    // Warm the cache without blocking navigation; the suspense boundary
+    // renders the pending surface immediately.
+    void context.queryClient.prefetchQuery(overviewQuery);
+  },
   head: () => ({
     meta: [
       { title: "Command Center — AOOS" },

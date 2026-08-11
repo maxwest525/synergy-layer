@@ -28,7 +28,11 @@ export const Route = createFileRoute("/")({
   ssr: false,
   // A transient data failure must not turn SSR into a 500 blank screen; the
   // client-side suspense query retries and surfaces the error in the boundary.
-  loader: ({ context }) => context.queryClient.ensureQueryData(inboxQuery).catch(() => undefined),
+  loader: ({ context }) => {
+    // Warm the cache without blocking navigation; the suspense boundary
+    // renders the pending surface immediately.
+    void context.queryClient.prefetchQuery(inboxQuery);
+  },
   head: () => ({
     meta: [
       { title: "Inbox — AOOS Marketing Operating System" },

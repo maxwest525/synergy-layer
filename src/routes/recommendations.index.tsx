@@ -11,7 +11,11 @@ export const Route = createFileRoute("/recommendations/")({
   // server without the operator bearer token produced an empty tree that the
   // client immediately replaced. Render it client side and skip that mismatch.
   ssr: false,
-  loader: ({ context }) => context.queryClient.ensureQueryData(recommendationsQuery),
+  loader: ({ context }) => {
+    // Warm the cache without blocking navigation; the suspense boundary
+    // renders the pending surface immediately.
+    void context.queryClient.prefetchQuery(recommendationsQuery);
+  },
   head: () => ({
     meta: [
       { title: "Recommendation Queue — AOOS" },
