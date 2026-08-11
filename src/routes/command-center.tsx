@@ -216,7 +216,13 @@ function CommandCenterPage() {
                 key={capability.key}
                 className="flex items-center justify-between gap-3 border-b border-border/50 pb-2 last:border-b-0"
               >
-                <span className="truncate text-sm text-foreground">{capability.name}</span>
+                <Link
+                  to="/capabilities/$id"
+                  params={{ id: capability.id }}
+                  className="truncate text-sm text-foreground underline-offset-4 hover:text-primary hover:underline"
+                >
+                  {capability.name}
+                </Link>
                 <span className="flex shrink-0 items-center gap-2">
                   <StatePill
                     label={capability.integration_state}
@@ -241,19 +247,40 @@ function CommandCenterPage() {
               <p className="mt-3 text-sm text-muted-foreground">No workflow runs recorded yet.</p>
             ) : (
               <ul className="mt-3 space-y-2">
-                {data.runs.slice(0, 8).map((run) => (
-                  <li
-                    key={run.id}
-                    className="flex flex-wrap items-center justify-between gap-2 border-b border-border/50 pb-2 text-sm last:border-b-0 last:pb-0"
-                  >
-                    <span className="truncate text-foreground">{run.workflows?.name ?? run.workflows?.key ?? "Workflow"}</span>
-                    <span className="flex items-center gap-3">
-                      <StatePill label={run.state} tone={toneForState(run.state)} />
-                      <span className="text-xs text-muted-foreground">{run.trigger_source}</span>
-                      <span className="text-xs text-muted-foreground">{formatWhen(run.created_at)}</span>
-                    </span>
-                  </li>
-                ))}
+                {data.runs.slice(0, 8).map((run) => {
+                  const label = run.workflows?.name ?? run.workflows?.key ?? "Workflow";
+                  const workflowId = run.workflows?.id ?? run.workflow_id;
+                  return (
+                    <li
+                      key={run.id}
+                      className="space-y-1 border-b border-border/50 pb-2 text-sm last:border-b-0 last:pb-0"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        {workflowId ? (
+                          <Link
+                            to="/workflows/$id"
+                            params={{ id: workflowId }}
+                            className="truncate text-foreground underline-offset-4 hover:text-primary hover:underline"
+                          >
+                            {label}
+                          </Link>
+                        ) : (
+                          <span className="truncate text-foreground">{label}</span>
+                        )}
+                        <span className="flex items-center gap-3">
+                          <StatePill label={run.state} tone={toneForState(run.state)} />
+                          <span className="text-xs text-muted-foreground">{run.trigger_source}</span>
+                          <span className="text-xs text-muted-foreground">{formatWhen(run.created_at)}</span>
+                        </span>
+                      </div>
+                      {run.state === "failed" ? (
+                        <p className="text-xs text-destructive">
+                          {run.error ?? "The run failed without recording an error message."}
+                        </p>
+                      ) : null}
+                    </li>
+                  );
+                })}
               </ul>
             )}
             <Link
