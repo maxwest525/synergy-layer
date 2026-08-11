@@ -194,7 +194,7 @@ function CompetitorRow({ row, busy, checked, expanded, onToggleSelect, onToggleE
               onCheckedChange={onToggleSelect}
               aria-label={`Select ${row.domain}`}
               className="mt-1"
-              disabled={row.reviewState !== "pending"}
+              disabled={row.reviewState === "approved" || row.reviewState === "rejected"}
             />
             <div className="min-w-0 space-y-1">
               <p className="text-sm font-medium text-foreground">{row.domain}</p>
