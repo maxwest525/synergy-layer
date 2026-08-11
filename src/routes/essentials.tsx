@@ -255,9 +255,9 @@ function EssentialsPage() {
       title: "Organic search visibility",
       status: evidenceStatus(data.serp.snapshots, false),
       evidence: `${data.serp.snapshots} stored organic SERP snapshot(s) from DataForSEO, latest ${formatWhen(data.serp.latestAt)}.`,
-      gap: "Snapshots are one-off observations, not a tracked rank history, so position changes over time are not available.",
-      action: { label: "Open competitor evidence", to: "/competitors" },
+      gap: "Snapshots are one-off observations, not a tracked rank history, and no page in AOOS displays them yet.",
     },
+
     {
       id: "keywords",
       title: "Keywords",
@@ -290,16 +290,14 @@ function EssentialsPage() {
       title: "Off-page SEO",
       status: evidenceStatus(data.backlinks.snapshots, false),
       evidence: `${data.backlinks.snapshots} stored backlink snapshot(s), latest ${formatWhen(data.backlinks.latestAt)}.`,
-      gap: "Off-page work is observation only today. No outreach, disavow, or link acquisition runs from AOOS.",
-      action: { label: "Open competitor evidence", to: "/competitors" },
+      gap: "Off-page work is observation only today, and no page in AOOS displays these stored snapshots yet.",
     },
     {
       id: "backlinks",
       title: "Backlinks",
       status: evidenceStatus(data.backlinks.snapshots, false),
       evidence: `${data.backlinks.referringDomains} referring domain(s) and ${data.backlinks.backlinks} link(s) in the stored summary${data.backlinks.spamScore === null ? "" : `, provider spam score ${data.backlinks.spamScore}`}.`,
-      gap: "The stored sample is small and was collected once, so it is a baseline rather than a monitored profile.",
-      action: { label: "Open competitor evidence", to: "/competitors" },
+      gap: "The stored sample is small and was collected once, so it is a baseline rather than a monitored profile. There is no backlink evidence page to open yet.",
     },
     {
       id: "authority",
@@ -308,10 +306,10 @@ function EssentialsPage() {
       evidence: authority.note,
       gap: authority.sufficient
         ? "No authority trend exists yet because only one collection has been stored."
-        : "AOOS will not display an authority score until the backlink sample is large enough to support one.",
-      action: { label: "Open competitor evidence", to: "/competitors" },
+        : "AOOS will not display an authority score until stored backlink evidence explicitly records the sample as sufficient.",
     },
   ];
+
 
   const measurement: Concern[] = [
     {
@@ -326,10 +324,11 @@ function EssentialsPage() {
       id: "google-ads",
       title: "Google Ads",
       status: systemStatus(system("api.google_ads_v25")),
-      evidence: `No Google Ads account, campaign, or spend row is stored in AOOS. Separately, ${data.ads.pendingCandidates} public ad transparency candidate(s) await review and ${data.ads.confirmedAdvertisers} advertiser(s) are confirmed.`,
+      evidence: "No Google Ads account, campaign, or spend row is stored in AOOS.",
       gap: systemGap(system("api.google_ads_v25"), "Google Ads API"),
-      action: { label: "Open advertiser review", to: "/ads/advertisers" },
+      action: { label: "Open the Google Ads system record", to: "/capabilities/systems/$key" as const, params: { key: "api.google_ads_v25" } },
     },
+
   ];
 
   return (
