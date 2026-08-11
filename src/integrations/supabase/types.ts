@@ -1259,6 +1259,8 @@ export type Database = {
         Row: {
           actions: Json
           assignee_label: string | null
+          cleared_by: string | null
+          cleared_from_lane: Database["public"]["Enums"]["inbox_lane"] | null
           created_at: string
           due_at: string | null
           id: string
@@ -1277,6 +1279,8 @@ export type Database = {
         Insert: {
           actions?: Json
           assignee_label?: string | null
+          cleared_by?: string | null
+          cleared_from_lane?: Database["public"]["Enums"]["inbox_lane"] | null
           created_at?: string
           due_at?: string | null
           id?: string
@@ -1295,6 +1299,8 @@ export type Database = {
         Update: {
           actions?: Json
           assignee_label?: string | null
+          cleared_by?: string | null
+          cleared_from_lane?: Database["public"]["Enums"]["inbox_lane"] | null
           created_at?: string
           due_at?: string | null
           id?: string
@@ -2525,6 +2531,35 @@ export type Database = {
         Args: { _excluding_user: string }
         Returns: undefined
       }
+      clear_inbox_item: {
+        Args: { _item_id: string }
+        Returns: {
+          actions: Json
+          assignee_label: string | null
+          cleared_by: string | null
+          cleared_from_lane: Database["public"]["Enums"]["inbox_lane"] | null
+          created_at: string
+          due_at: string | null
+          id: string
+          lane: Database["public"]["Enums"]["inbox_lane"]
+          metadata: Json
+          priority: number
+          resolved_at: string | null
+          source_module: string
+          subject_id: string | null
+          subject_kind: string | null
+          summary: string | null
+          tenant_id: string
+          title: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "inbox_items"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       command_center_overview: { Args: { _tenant_id: string }; Returns: Json }
       decide_ad_advertiser_candidate: {
         Args: { _candidate_id: string; _decision: string }
@@ -2543,6 +2578,35 @@ export type Database = {
       provision_operator_from_allowlist: {
         Args: { _auth_user_id: string }
         Returns: string
+      }
+      reopen_inbox_item: {
+        Args: { _item_id: string }
+        Returns: {
+          actions: Json
+          assignee_label: string | null
+          cleared_by: string | null
+          cleared_from_lane: Database["public"]["Enums"]["inbox_lane"] | null
+          created_at: string
+          due_at: string | null
+          id: string
+          lane: Database["public"]["Enums"]["inbox_lane"]
+          metadata: Json
+          priority: number
+          resolved_at: string | null
+          source_module: string
+          subject_id: string | null
+          subject_kind: string | null
+          summary: string | null
+          tenant_id: string
+          title: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "inbox_items"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       revoke_operator: { Args: { _email: string }; Returns: string }
     }
@@ -2606,6 +2670,7 @@ export type Database = {
         | "verified"
         | "failed"
         | "rolled_back"
+        | "observed"
       run_state:
         | "queued"
         | "running"
@@ -2803,6 +2868,7 @@ export const Constants = {
         "verified",
         "failed",
         "rolled_back",
+        "observed",
       ],
       run_state: [
         "queued",
