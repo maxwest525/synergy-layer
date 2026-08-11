@@ -153,11 +153,17 @@ export async function executeSourceChange(input: {
     );
   }
 
-  const allowed = checkSourceTarget({ repo: request.repo, branch: request.branch });
+  const allowed = checkSourceTarget({
+    repo: request.repo,
+    branch: request.branch,
+    filePath: request.filePath,
+    projectId: request.projectId,
+  });
   if (!allowed.ok) return refuse(allowed.reason);
   if (!request.filePath) {
     return refuse("Refused without writing: this change request stores no source file.");
   }
+
   if (!request.baseRevision) {
     return refuse(
       "Refused without writing: this change request stores no observed base revision, so a stale write cannot be ruled out.",
