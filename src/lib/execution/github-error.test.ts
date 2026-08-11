@@ -86,7 +86,7 @@ describe("safe 403 classification", () => {
   it("names the primary rate limit with a human UTC reset time", () => {
     const message = describe403({ rateLimitRemaining: 0, rateLimitReset: 1786483200 });
     expect(message).toContain("primary rate limit");
-    expect(message).toContain("2026-08-11 16:00 UTC");
+    expect(message).toContain("2026-08-11 21:20 UTC");
   });
 
   it("names the primary rate limit even with no reset header", () => {
