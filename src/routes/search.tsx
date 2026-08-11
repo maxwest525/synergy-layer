@@ -140,8 +140,28 @@ function SectionCard({
 }
 
 function SearchWorkspacePage() {
-  const { data } = useSuspenseQuery(workspaceQuery);
+  // Both reads are protected server functions, so they go through useServerFn
+  // and the client middleware that attaches the operator bearer token.
+  const loadTenantContext = useServerFn(getTenantContext);
+  const loadWorkspace = useServerFn(getSearchWorkspace);
+
+  // Reuses the tenant context the shell already caches under ["tenant-context"].
+  const tenant = useSuspenseQuery({
+    queryKey: ["tenant-context"],
+    queryFn: () => loadTenantContext(),
+    retry: false,
+  });
+  const activeTenantId = tenant.data.activeTenantId;
+
+  // Tenant scoped key: a workspace switch can never serve the previous
+  // client's Search Console evidence from cache.
+  const { data } = useSuspenseQuery({
+    queryKey: ["search-workspace", activeTenantId],
+    queryFn: () => loadWorkspace(),
+    retry: false,
+  });
   const latest = data.dailyTotals[0];
+
 
   return (
     <div className="space-y-6">
