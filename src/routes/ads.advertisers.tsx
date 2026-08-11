@@ -37,10 +37,10 @@ import {
 } from "@/lib/ads.functions";
 
 export const Route = createFileRoute("/ads/advertisers")({
-
   // Operator-only surface. Rendering it on the server without the operator
   // bearer token yields an empty tree the client immediately replaces.
   ssr: false,
+  errorComponent: OperatorRouteError,
   head: () => ({
     meta: [
       { title: "Google advertiser review — AOOS Marketing Operating System" },
