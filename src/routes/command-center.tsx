@@ -55,7 +55,7 @@ function QuickAction({
   count,
   outcome,
 }: {
-  to: "/" | "/competitors" | "/ads/advertisers" | "/workflows";
+  to: "/" | "/competitors" | "/ads/advertisers" | "/workflows" | "/essentials";
   hash?: string;
   label: string;
   count: number;
@@ -144,6 +144,12 @@ function CommandCenterPage() {
             label="Review Google Ads advertiser candidate"
             count={quick.pendingAdvertisers}
             outcome="Confirming links an observed advertiser account to a watched vendor domain."
+          />
+          <QuickAction
+            to="/essentials"
+            label="Open Essentials"
+            count={18}
+            outcome="Plain-language coverage status for every marketing essential. Navigation only."
           />
           <QuickAction
             to="/workflows"
