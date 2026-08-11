@@ -9,7 +9,9 @@ import {
   checkChangeRequestPublished,
   executeChangeRequest,
   getExecutionState,
+  testGithubConnection,
 } from "@/lib/execution/execution.functions";
+
 
 type Stage = { label: string; detail: string; done: boolean };
 
@@ -56,6 +58,8 @@ export function ExecutionCard(props: Props) {
   const loadState = useServerFn(getExecutionState);
   const runExecute = useServerFn(executeChangeRequest);
   const runPublishCheck = useServerFn(checkChangeRequestPublished);
+  const runPreflight = useServerFn(testGithubConnection);
+
 
   const execution = useQuery({
     queryKey: ["change-request-execution", props.id],
@@ -89,11 +93,36 @@ export function ExecutionCard(props: Props) {
     onError: (error: Error) => toast.error(error.message),
   });
 
+  const preflight = useMutation({
+    mutationFn: () => runPreflight({ data: { id: props.id } }),
+    onSuccess: (result) => {
+      if (result.status === "proved") toast.success(result.reason);
+      else toast.error(result.reason);
+      refresh();
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
   const data = execution.data;
-  const running = execute.isPending || publishCheck.isPending;
+  const running = execute.isPending || publishCheck.isPending || preflight.isPending;
   const committed = Boolean(data?.commitSha);
   const provenLive = Boolean(data?.publishedProofAt);
   const decided = props.state !== "proposed";
+
+  const preflightButton =
+    data?.isOperator ? (
+      <Button
+        variant="outline"
+        size="sm"
+        disabled={running || !data.executorCredentialPresent}
+        onClick={() => preflight.mutate()}
+      >
+        {data.executorCredentialPresent
+          ? "Test GitHub connection (read only)"
+          : "GitHub connection test unavailable"}
+      </Button>
+    ) : null;
+
 
   const readinessLabel: Record<string, string> = {
     proven: "Proven",
