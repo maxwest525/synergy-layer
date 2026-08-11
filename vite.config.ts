@@ -14,6 +14,9 @@ export default defineConfig({
     server: { entry: "server" },
   },
   vite: {
-    plugins: [mcpPlugin()],
+    // mcp-js 0.26 compares a POSIX repository path with a Windows-resolved
+    // routes path and aborts before Vite can build. Lovable builds on Linux,
+    // where the plugin remains enabled; local Windows checks skip only it.
+    plugins: process.platform === "win32" ? [] : [mcpPlugin()],
   },
 });

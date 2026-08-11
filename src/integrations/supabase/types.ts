@@ -3271,6 +3271,10 @@ export type Database = {
         }
         Returns: Json
       }
+      verify_scheduler_hook_token: {
+        Args: { _token: string }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role: "admin" | "operator" | "viewer"

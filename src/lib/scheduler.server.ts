@@ -13,11 +13,20 @@ export type TickResult = {
   ran: { schedule: string; state: string }[];
 };
 
+export type SchedulerTickOptions = {
+  onlyKeys?: string[];
+  collectSerpBacklog?: boolean;
+};
+
 /**
  * Claims every due schedule, respecting dependency edges so chains run in
  * order instead of as isolated jobs.
  */
-export async function tickScheduler(client: Client, now = new Date()): Promise<TickResult> {
+export async function tickScheduler(
+  client: Client,
+  now = new Date(),
+  options: SchedulerTickOptions = {},
+): Promise<TickResult> {
   const { data: schedules, error } = await client.from("schedules").select("*").eq("enabled", true);
   if (error) throw new Error(error.message);
 
@@ -26,10 +35,15 @@ export async function tickScheduler(client: Client, now = new Date()): Promise<T
     .select("*");
   if (dependencyError) throw new Error(dependencyError.message);
 
-  const byId = new Map((schedules ?? []).map((schedule) => [schedule.id, schedule]));
+  const allSchedules = schedules ?? [];
+  const allowedKeys = options.onlyKeys ? new Set(options.onlyKeys) : null;
+  const selectedSchedules = allowedKeys
+    ? allSchedules.filter((schedule) => allowedKeys.has(schedule.key))
+    : allSchedules;
+  const byId = new Map(allSchedules.map((schedule) => [schedule.id, schedule]));
   const result: TickResult = { claimed: 0, blocked: 0, ran: [] };
 
-  for (const schedule of schedules ?? []) {
+  for (const schedule of selectedSchedules) {
     const due = schedule.next_run_at === null || new Date(schedule.next_run_at) <= now;
     if (!due) continue;
 
@@ -83,7 +97,7 @@ export async function tickScheduler(client: Client, now = new Date()): Promise<T
     }
 
     const next = nextRunAt(schedule.cron, now);
-    await client
+    const { error: updateError } = await client
       .from("schedules")
       .update({
         last_run_at: now.toISOString(),
@@ -94,11 +108,12 @@ export async function tickScheduler(client: Client, now = new Date()): Promise<T
         health: state === "failed" ? "failing" : "healthy",
       })
       .eq("id", schedule.id);
+    if (updateError) throw new Error(updateError.message);
 
     result.ran.push({ schedule: schedule.key, state });
   }
 
-  await collectSerpBacklog(client);
+  if (options.collectSerpBacklog !== false) await collectSerpBacklog(client);
 
   return result;
 }

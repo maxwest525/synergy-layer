@@ -233,6 +233,11 @@ function ChangeRequestPage() {
           id={id}
           state={state}
           appliedAt={change.applied_at}
+          sourceCommitSha={change.source_commit_sha}
+          sourceCommitUrl={change.source_commit_url}
+          sourceCommittedAt={change.source_committed_at}
+          publishedProofAt={change.published_proof_at}
+          publishedProofNotes={change.published_proof_notes}
           sourceProjectUrl={change.source_project_url}
           brief={brief}
           postChangeCount={data.postChangeRows.length}

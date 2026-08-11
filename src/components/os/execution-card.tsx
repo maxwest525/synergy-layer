@@ -11,6 +11,7 @@ import {
   getExecutionState,
   testGithubConnection,
 } from "@/lib/execution/execution.functions";
+import { reconcileExecutionFacts } from "@/lib/execution/timeline";
 
 
 type Stage = { label: string; detail: string; done: boolean };
@@ -19,6 +20,11 @@ type Props = {
   id: string;
   state: string;
   appliedAt: string | null;
+  sourceCommitSha: string | null;
+  sourceCommitUrl: string | null;
+  sourceCommittedAt: string | null;
+  publishedProofAt: string | null;
+  publishedProofNotes: string | null;
   sourceProjectUrl: string | null;
   brief: string;
   postChangeCount: number;
@@ -109,9 +115,19 @@ export function ExecutionCard(props: Props) {
   });
 
   const data = execution.data;
+  const facts = reconcileExecutionFacts(
+    {
+      sourceCommitSha: props.sourceCommitSha,
+      sourceCommitUrl: props.sourceCommitUrl,
+      sourceCommittedAt: props.sourceCommittedAt,
+      publishedProofAt: props.publishedProofAt,
+      publishedProofNotes: props.publishedProofNotes,
+    },
+    data,
+  );
   const running = execute.isPending || publishCheck.isPending || preflight.isPending;
-  const committed = Boolean(data?.commitSha);
-  const provenLive = Boolean(data?.publishedProofAt);
+  const committed = Boolean(facts.commitSha);
+  const provenLive = Boolean(facts.publishedProofAt);
   const decided = props.state !== "proposed";
 
   const preflightButton =
@@ -173,6 +189,11 @@ export function ExecutionCard(props: Props) {
         </p>
       ) : null}
     </div>
+  ) : execution.isError ? (
+    <p className="mt-4 rounded-lg border border-border/60 p-3 text-sm text-muted-foreground">
+      Readiness and attempt details could not be refreshed. The lifecycle stages above still use
+      the commit and publication proof stored on this change request.
+    </p>
   ) : (
     <p className="mt-4 text-sm text-muted-foreground">Reading execution readiness…</p>
   );
@@ -233,14 +254,14 @@ export function ExecutionCard(props: Props) {
     {
       label: "Source committed",
       detail: committed
-        ? `Commit ${data?.commitSha?.slice(0, 10)} on ${data?.branch ?? "the source branch"}.`
+        ? `Commit ${facts.commitSha?.slice(0, 10)} on ${data?.branch ?? "the source branch"}.`
         : "No commit exists for this change request yet.",
       done: committed,
     },
     {
       label: "Proven live on the rendered page",
       detail: provenLive
-        ? `Rendered and matched on ${data?.publishedProofAt?.slice(0, 10)}.`
+        ? `Rendered and matched on ${facts.publishedProofAt?.slice(0, 10)}.`
         : "The rendered public page has not been proven to serve the approved title and H1.",
       done: provenLive,
     },
@@ -258,8 +279,8 @@ export function ExecutionCard(props: Props) {
     <GlassCard className="p-5">
       <h2 className="text-sm font-semibold text-foreground">Execution</h2>
       <p className="mt-2 text-sm text-muted-foreground">
-        AOOS can commit this exact edit to the source file it recorded. It cannot publish the site,
-        and a commit is not proof that the public page changed.
+        AOOS can commit this exact edit to the source file it recorded. Publishing and rendered-page
+        proof remain separate steps; a commit alone is not proof that the public page changed.
       </p>
 
       <ol className="mt-4 space-y-2">
@@ -298,7 +319,7 @@ export function ExecutionCard(props: Props) {
             {data.executorCredentialPresent ? "Execute this change" : "Execute unavailable"}
           </Button>
         ) : null}
-        {data?.isOperator && committed ? (
+        {data?.isOperator && committed && !provenLive ? (
           <Button
             variant="outline"
             size="sm"
@@ -310,9 +331,9 @@ export function ExecutionCard(props: Props) {
               : "Rendered check unavailable"}
           </Button>
         ) : null}
-        {data?.commitUrl ? (
+        {facts.commitUrl ? (
           <Button asChild variant="ghost" size="sm">
-            <a href={data.commitUrl} target="_blank" rel="noreferrer">
+            <a href={facts.commitUrl} target="_blank" rel="noreferrer">
               View commit
             </a>
           </Button>
