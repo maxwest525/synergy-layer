@@ -97,7 +97,7 @@ function SystemsPage() {
     };
     for (const system of data.systems) {
       for (const item of FILTERS) {
-        if (item.key !== "all" && matches(system, item.key)) base[item.key] += 1;
+        if (item.key !== "all" && matches(system, item.key)) base[item.key] = (base[item.key] ?? 0) + 1;
       }
     }
     return base;

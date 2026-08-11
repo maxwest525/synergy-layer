@@ -58,9 +58,14 @@ function CapabilitiesPage() {
         title="Capability Registry"
         description="MCPs, APIs, connectors, skills, models, repositories, and internal modules. Integration state is never assumed."
         actions={
+          <>
+            <Button variant="outline" asChild>
+              <Link to="/capabilities/systems">Systems &amp; operations</Link>
+            </Button>
           <Button variant="outline" onClick={() => mutation.mutate()} disabled={mutation.isPending}>
             {mutation.isPending ? "Syncing" : "Sync from modules"}
           </Button>
+          </>
         }
       />
 
