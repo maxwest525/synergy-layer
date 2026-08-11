@@ -152,8 +152,9 @@ export function createGithubApi(): GithubApi | null {
     });
     if (response.status < 200 || response.status >= 300) {
       // Deliberately no response body: it can echo request content.
-      throw new Error(`GitHub responded ${response.status} for ${path.split("?")[0]}.`);
+      throw new GithubStatusError(response.status, path.split("?")[0] ?? path);
     }
+
     return response.text ? (JSON.parse(response.text) as unknown) : {};
   };
 
