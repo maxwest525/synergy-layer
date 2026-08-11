@@ -43,6 +43,7 @@ import { Route as WorkflowsIndexRouteImport } from './routes/workflows.index'
 import { Route as WorkflowsIdRouteImport } from './routes/workflows.$id'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
+import { Route as CapabilitiesSystemsIndexRouteImport } from './routes/capabilities.systems.index'
 import { Route as ApiPublicHooksDataforseoPostbackRouteImport } from './routes/api/public/hooks/dataforseo-postback'
 import { Route as ApiPublicHooksSchedulerTickRouteImport } from './routes/api/public/hooks/scheduler-tick'
 
@@ -219,6 +220,12 @@ const Char91DotmcpChar93InvokeToolToolRoute =
     path: '/.mcp/invoke-tool/$tool',
     getParentRoute: () => rootRouteImport,
   } as any)
+const CapabilitiesSystemsIndexRoute =
+  CapabilitiesSystemsIndexRouteImport.update({
+    id: '/systems/',
+    path: '/systems/',
+    getParentRoute: () => CapabilitiesRoute,
+  } as any)
 const ApiPublicHooksDataforseoPostbackRoute =
   ApiPublicHooksDataforseoPostbackRouteImport.update({
     id: '/api/public/hooks/dataforseo-postback',
@@ -267,6 +274,7 @@ export interface FileRoutesByFullPath {
   '/workflows/': typeof WorkflowsIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/capabilities/systems/': typeof CapabilitiesSystemsIndexRoute
   '/api/public/hooks/dataforseo-postback': typeof ApiPublicHooksDataforseoPostbackRoute
   '/api/public/hooks/scheduler-tick': typeof ApiPublicHooksSchedulerTickRoute
 }
@@ -298,6 +306,7 @@ export interface FileRoutesByTo {
   '/workflows': typeof WorkflowsIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/capabilities/systems': typeof CapabilitiesSystemsIndexRoute
   '/api/public/hooks/dataforseo-postback': typeof ApiPublicHooksDataforseoPostbackRoute
   '/api/public/hooks/scheduler-tick': typeof ApiPublicHooksSchedulerTickRoute
 }
@@ -337,6 +346,7 @@ export interface FileRoutesById {
   '/workflows/': typeof WorkflowsIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/capabilities/systems/': typeof CapabilitiesSystemsIndexRoute
   '/api/public/hooks/dataforseo-postback': typeof ApiPublicHooksDataforseoPostbackRoute
   '/api/public/hooks/scheduler-tick': typeof ApiPublicHooksSchedulerTickRoute
 }
@@ -377,6 +387,7 @@ export interface FileRouteTypes {
     | '/workflows/'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
+    | '/capabilities/systems/'
     | '/api/public/hooks/dataforseo-postback'
     | '/api/public/hooks/scheduler-tick'
   fileRoutesByTo: FileRoutesByTo
@@ -408,6 +419,7 @@ export interface FileRouteTypes {
     | '/workflows'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
+    | '/capabilities/systems'
     | '/api/public/hooks/dataforseo-postback'
     | '/api/public/hooks/scheduler-tick'
   id:
@@ -446,6 +458,7 @@ export interface FileRouteTypes {
     | '/workflows/'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
+    | '/capabilities/systems/'
     | '/api/public/hooks/dataforseo-postback'
     | '/api/public/hooks/scheduler-tick'
   fileRoutesById: FileRoutesById
@@ -714,6 +727,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Char91DotmcpChar93InvokeToolToolRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/capabilities/systems/': {
+      id: '/capabilities/systems/'
+      path: '/systems'
+      fullPath: '/capabilities/systems/'
+      preLoaderRoute: typeof CapabilitiesSystemsIndexRouteImport
+      parentRoute: typeof CapabilitiesRoute
+    }
     '/api/public/hooks/dataforseo-postback': {
       id: '/api/public/hooks/dataforseo-postback'
       path: '/api/public/hooks/dataforseo-postback'
@@ -770,11 +790,13 @@ const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
 interface CapabilitiesRouteChildren {
   CapabilitiesIdRoute: typeof CapabilitiesIdRoute
   CapabilitiesIndexRoute: typeof CapabilitiesIndexRoute
+  CapabilitiesSystemsIndexRoute: typeof CapabilitiesSystemsIndexRoute
 }
 
 const CapabilitiesRouteChildren: CapabilitiesRouteChildren = {
   CapabilitiesIdRoute: CapabilitiesIdRoute,
   CapabilitiesIndexRoute: CapabilitiesIndexRoute,
+  CapabilitiesSystemsIndexRoute: CapabilitiesSystemsIndexRoute,
 }
 
 const CapabilitiesRouteWithChildren = CapabilitiesRoute._addFileChildren(
