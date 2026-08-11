@@ -484,6 +484,32 @@ async function runAdsTransparencyNode(
     const { requireTenantId } = await import("./tenant.server");
     const tenantId = await requireTenantId(client);
 
+    // Fail closed on the registry state. cap.serpapi_ads_transparency is the
+    // single exception: its only action is the free account probe, which is
+    // exactly how a pending gate is meant to become reachable. Every other Ads
+    // node stays unrunnable by the normal runner until it is promoted, so a
+    // bulk workflow can never quietly start spending on a pending stage.
+    if (ref !== "cap.serpapi_ads_transparency") {
+      const { data: capability, error: capabilityError } = await client
+        .from("capabilities")
+        .select("integration_state")
+        .eq("key", ref)
+        .maybeSingle();
+      if (capabilityError) {
+        return { ok: false, error: `Capability state read failed: ${capabilityError.message}` };
+      }
+      if (!capability) {
+        return { ok: false, error: `Capability ${ref} is not registered.` };
+      }
+      if (capability.integration_state === "pending") {
+        return {
+          ok: false,
+          error: `${ref} is still pending. Validate the provider gate and complete operator review before running this stage.`,
+        };
+      }
+    }
+
+
     if (ref === "ads.vendor_network_analysis") {
       const { analyzeVendorNetwork } = await import("./serpapi/network.server");
       const result = await analyzeVendorNetwork(client, tenantId);

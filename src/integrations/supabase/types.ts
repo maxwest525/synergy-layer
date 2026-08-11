@@ -76,6 +76,7 @@ export type Database = {
           reviewed_by: string | null
           source_url: string | null
           tenant_id: string
+          watchlist_id: string | null
         }
         Insert: {
           ad_funded_by?: string | null
@@ -91,6 +92,7 @@ export type Database = {
           reviewed_by?: string | null
           source_url?: string | null
           tenant_id: string
+          watchlist_id?: string | null
         }
         Update: {
           ad_funded_by?: string | null
@@ -106,6 +108,7 @@ export type Database = {
           reviewed_by?: string | null
           source_url?: string | null
           tenant_id?: string
+          watchlist_id?: string | null
         }
         Relationships: [
           {
@@ -113,6 +116,13 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ad_advertiser_candidates_watchlist_id_fkey"
+            columns: ["watchlist_id"]
+            isOneToOne: false
+            referencedRelation: "ad_vendor_watchlist"
             referencedColumns: ["id"]
           },
         ]
@@ -451,6 +461,68 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ad_vendor_advertisers: {
+        Row: {
+          advertiser_fk: string
+          candidate_id: string | null
+          created_at: string
+          id: string
+          linked_at: string
+          linked_by: string | null
+          tenant_id: string
+          watchlist_id: string
+        }
+        Insert: {
+          advertiser_fk: string
+          candidate_id?: string | null
+          created_at?: string
+          id?: string
+          linked_at?: string
+          linked_by?: string | null
+          tenant_id: string
+          watchlist_id: string
+        }
+        Update: {
+          advertiser_fk?: string
+          candidate_id?: string | null
+          created_at?: string
+          id?: string
+          linked_at?: string
+          linked_by?: string | null
+          tenant_id?: string
+          watchlist_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ad_vendor_advertisers_advertiser_fk_fkey"
+            columns: ["advertiser_fk"]
+            isOneToOne: false
+            referencedRelation: "ad_advertisers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ad_vendor_advertisers_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "ad_advertiser_candidates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ad_vendor_advertisers_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ad_vendor_advertisers_watchlist_id_fkey"
+            columns: ["watchlist_id"]
+            isOneToOne: false
+            referencedRelation: "ad_vendor_watchlist"
             referencedColumns: ["id"]
           },
         ]
@@ -1943,6 +2015,83 @@ export type Database = {
           },
         ]
       }
+      serpapi_requests: {
+        Row: {
+          account_searches_left_after: number | null
+          account_searches_left_before: number | null
+          charged_credits: number
+          created_at: string
+          duration_ms: number | null
+          engine: string
+          failure_reason: string | null
+          finished_at: string | null
+          id: string
+          module: string
+          provider_search_id: string | null
+          provider_status: string | null
+          query_text: string | null
+          request_fingerprint: string
+          reserved_credits: number
+          run_key: string
+          source_url: string | null
+          started_at: string
+          state: string
+          tenant_id: string
+        }
+        Insert: {
+          account_searches_left_after?: number | null
+          account_searches_left_before?: number | null
+          charged_credits?: number
+          created_at?: string
+          duration_ms?: number | null
+          engine: string
+          failure_reason?: string | null
+          finished_at?: string | null
+          id?: string
+          module: string
+          provider_search_id?: string | null
+          provider_status?: string | null
+          query_text?: string | null
+          request_fingerprint: string
+          reserved_credits?: number
+          run_key: string
+          source_url?: string | null
+          started_at?: string
+          state?: string
+          tenant_id: string
+        }
+        Update: {
+          account_searches_left_after?: number | null
+          account_searches_left_before?: number | null
+          charged_credits?: number
+          created_at?: string
+          duration_ms?: number | null
+          engine?: string
+          failure_reason?: string | null
+          finished_at?: string | null
+          id?: string
+          module?: string
+          provider_search_id?: string | null
+          provider_status?: string | null
+          query_text?: string | null
+          request_fingerprint?: string
+          reserved_credits?: number
+          run_key?: string
+          source_url?: string | null
+          started_at?: string
+          state?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "serpapi_requests_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenant_connections: {
         Row: {
           capability_key: string
@@ -2377,6 +2526,10 @@ export type Database = {
         Returns: undefined
       }
       command_center_overview: { Args: { _tenant_id: string }; Returns: Json }
+      decide_ad_advertiser_candidate: {
+        Args: { _candidate_id: string; _decision: string }
+        Returns: Json
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
