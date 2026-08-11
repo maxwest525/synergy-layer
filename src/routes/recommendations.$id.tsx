@@ -97,7 +97,25 @@ function RecommendationDetailPage() {
         }
       />
 
+      {data.changeRequest ? (
+        <GlassCard className="p-5">
+          <h2 className="text-sm font-semibold text-foreground">This is a concrete page change</h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            The exact before and after values, the evidence, and the approval live on the change request for{" "}
+            {data.changeRequest.target_url}.
+          </p>
+          <div className="mt-3">
+            <Button asChild variant="outline" size="sm">
+              <Link to="/changes/$id" params={{ id: data.changeRequest.id }}>
+                Open the proposed change
+              </Link>
+            </Button>
+          </div>
+        </GlassCard>
+      ) : null}
+
       {observation ? (
+
         <GlassCard className="p-5">
           <h2 className="text-sm font-semibold text-foreground">This is an observation, not a proposal</h2>
           <dl className="mt-3">
