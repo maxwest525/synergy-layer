@@ -64,21 +64,33 @@ export const getEssentials = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<EssentialsFacts> => {
     const { requireTenantId } = await import("./tenant.server");
+    const { assertRead, summarizeSitemaps } = await import("./essentials");
     const tenantId = await requireTenantId(context.supabase);
     const db = context.supabase;
 
-    const [properties, gscSnapshots, changeRows, trackedKeywords, keywordCandidates, dfs, adCandidates, adAdvertisers, systems] =
+    // The selected property decides which snapshots belong to this screen, so
+    // it is resolved before the snapshot read rather than filtered afterwards.
+    const properties = assertRead(
+      "Search Console properties",
+      await db
+        .from("search_console_properties")
+        .select("site_url, permission_level, selected, last_observed_at")
+        .eq("tenant_id", tenantId),
+    );
+    const propertyRows = properties.data ?? [];
+    const selected = propertyRows.find((row) => row.selected) ?? propertyRows[0] ?? null;
+
+    const [gscSnapshots, changeRows, trackedKeywords, keywordCandidates, dfs, adAdvertisers, systems] =
       await Promise.all([
-        db
-          .from("search_console_properties")
-          .select("site_url, permission_level, selected, last_observed_at")
-          .eq("tenant_id", tenantId),
-        db
-          .from("search_console_snapshots")
-          .select("kind, dimensions, period_end_pt, returned_row_count, totals, collected_at")
-          .eq("tenant_id", tenantId)
-          .order("period_end_pt", { ascending: false })
-          .limit(200),
+        selected
+          ? db
+              .from("search_console_snapshots")
+              .select("kind, dimensions, period_end_pt, returned_row_count, totals, collected_at, payload")
+              .eq("tenant_id", tenantId)
+              .eq("property", selected.site_url)
+              .order("period_end_pt", { ascending: false })
+              .limit(500)
+          : Promise.resolve({ data: [], error: null } as const),
         db
           .from("change_requests")
           .select("id, title, target_url, state, proposed_at")
@@ -99,12 +111,6 @@ export const getEssentials = createServerFn({ method: "GET" })
           .eq("tenant_id", tenantId)
           .order("collected_at", { ascending: false })
           .limit(200),
-        db
-          .from("ad_advertiser_candidates")
-          .select("created_at, review_state")
-          .eq("tenant_id", tenantId)
-          .order("created_at", { ascending: false })
-          .limit(200),
         db.from("ad_advertisers").select("id", { count: "exact", head: true }).eq("tenant_id", tenantId).eq("is_verified", true),
         db
           .from("tool_systems")
@@ -116,18 +122,23 @@ export const getEssentials = createServerFn({ method: "GET" })
           .in("stable_key", SYSTEM_KEYS as unknown as string[]),
       ]);
 
-    const propertyRows = properties.data ?? [];
-    const selected = propertyRows.find((row) => row.selected) ?? propertyRows[0] ?? null;
+    assertRead("Search Console snapshots", gscSnapshots);
+    assertRead("Change requests", changeRows);
+    assertRead("Tracked keywords", trackedKeywords);
+    assertRead("Keyword candidates", keywordCandidates);
+    assertRead("DataForSEO snapshots", dfs);
+    assertRead("Confirmed advertisers", adAdvertisers);
+    assertRead("Tool systems catalog", systems);
 
-    const snapshots = (gscSnapshots.data ?? []).filter(
-      (row) => !selected || row.kind !== null,
-    );
+    const snapshots = gscSnapshots.data ?? [];
     const totals = snapshots.filter((row) => row.kind === "property_totals");
     const latestDate = totals[0]?.period_end_pt ?? snapshots[0]?.period_end_pt ?? null;
     const latestTotals = (totals[0]?.totals ?? {}) as Record<string, unknown>;
     const latest = snapshots.filter((row) => row.period_end_pt === latestDate);
     const dimensionMatch = (row: (typeof snapshots)[number], dimension: string) =>
       row.kind === "dimensional_rows" && (row.dimensions ?? []).length === 1 && (row.dimensions ?? [])[0] === dimension;
+    const sitemapRow = latest.find((row) => dimensionMatch(row, "sitemap")) ?? null;
+    const sitemaps = summarizeSitemaps(sitemapRow?.payload ?? null);
 
     const changes = changeRows.data ?? [];
     const proposed = changes.filter((row) => row.state === "proposed");
@@ -137,8 +148,13 @@ export const getEssentials = createServerFn({ method: "GET" })
     const serpRows = dfsRows.filter((row) => row.kind === "serp_organic");
     const backlinkRows = dfsRows.filter((row) => row.kind.startsWith("backlinks_"));
     const summary = (backlinkRows.find((row) => row.kind === "backlinks_summary")?.totals ?? {}) as Record<string, unknown>;
-
-    const candidates = adCandidates.data ?? [];
+    const evidenceTotals = (backlinkRows.find((row) => row.kind === "backlinks_evidence")?.totals ?? null) as
+      | Record<string, unknown>
+      | null;
+    const storedSufficient =
+      evidenceTotals && typeof evidenceTotals['sufficient'] === "boolean"
+        ? (evidenceTotals['sufficient'] as boolean)
+        : null;
 
     const systemMap: Record<string, SystemFacts | null> = {};
     for (const key of SYSTEM_KEYS) {
@@ -155,6 +171,7 @@ export const getEssentials = createServerFn({ method: "GET" })
           }
         : null;
     }
+
 
     return {
       property: selected
