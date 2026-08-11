@@ -124,6 +124,14 @@ export function createExecutionStore(admin: Client, rls: Client, actorId: string
 
 const API = "https://api.github.com";
 
+/**
+ * GitHub REST requires a valid User-Agent. Node/undici supplies one locally,
+ * but the deployed worker runtime does not, which GitHub answers with 403.
+ * Sending it explicitly makes both environments behave identically.
+ */
+export const GITHUB_USER_AGENT = "AOOS-Marketing-OS/1.0";
+
+
 function decodeBase64(value: string): string {
   const binary = atob(value.replace(/\n/g, ""));
   const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
