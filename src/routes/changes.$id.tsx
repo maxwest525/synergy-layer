@@ -86,11 +86,10 @@ function ChangeRequestPage() {
   };
 
   const mutation = useMutation({
-    mutationFn: async (action: "approve" | "reject" | "applied" | "verify" | "rollback") => {
-      const payload = { id, notes: notes.trim() || null, revision: revision.trim() || null };
+    mutationFn: async (action: "approve" | "reject" | "verify" | "rollback") => {
+      const payload = { id, notes: notes.trim() || null, revision: null };
       if (action === "approve") return approve({ data: payload });
       if (action === "reject") return reject({ data: payload });
-      if (action === "applied") return markApplied({ data: payload });
       if (action === "verify") return verify({ data: payload });
       return rollBack({ data: payload });
     },
@@ -101,9 +100,9 @@ function ChangeRequestPage() {
           : "Nothing changed. This request was already in that state.",
       );
       setNotes("");
-      setRevision("");
       invalidate();
     },
+
     onError: (error: Error) => toast.error(error.message),
   });
 
