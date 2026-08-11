@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   Lightbulb,
   Plug,
+  Search,
   Workflow,
 } from "lucide-react";
 import type { ReactNode } from "react";
@@ -20,6 +21,7 @@ const workspaces = [
   { to: "/", label: "Inbox", icon: Inbox, hint: "What needs you now" },
   { to: "/command-center", label: "Command Center", icon: LayoutDashboard, hint: "System state" },
   { to: "/assets", label: "Assets", icon: Boxes, hint: "Everything we own" },
+  { to: "/search", label: "Search", icon: Search, hint: "What Google observed" },
   { to: "/capabilities", label: "Capabilities", icon: Plug, hint: "What the OS can do" },
   { to: "/knowledge", label: "Knowledge", icon: BrainCircuit, hint: "What the OS knows" },
   { to: "/agents", label: "Agents", icon: Activity, hint: "Who does the work" },
