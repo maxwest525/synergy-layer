@@ -15,6 +15,7 @@ import {
   toneForState,
 } from "@/components/os/primitives";
 import { OperatorRouteError } from "@/components/os/route-error";
+import { describeMissingSnapshot } from "@/lib/measurement/pagespeed";
 import { Button } from "@/components/ui/button";
 import {
   getMeasurementState,
@@ -272,8 +273,8 @@ function MeasurementPage() {
         <SnapshotCard snapshot={latest} />
       ) : (
         <EmptyState
-          title="No PageSpeed run stored yet"
-          description="Nothing is shown until a real request returns. AOOS does not seed or estimate Lighthouse figures."
+          title={describeMissingSnapshot(data.runs).title}
+          description={describeMissingSnapshot(data.runs).description}
         />
       )}
 
