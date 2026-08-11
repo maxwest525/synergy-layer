@@ -20,10 +20,11 @@ export function SearchConsolePanel() {
   const listProperties = useServerFn(listSearchConsoleProperties);
   const selectProperty = useServerFn(selectSearchConsoleProperty);
   const runObservation = useServerFn(runSearchConsoleObservation);
+  const getState = useServerFn(getSearchConsoleState);
 
   const state = useQuery({
     queryKey: ["search-console", "state"],
-    queryFn: () => getSearchConsoleState(),
+    queryFn: () => getState(),
   });
 
   const invalidate = () => {
@@ -103,7 +104,11 @@ export function SearchConsolePanel() {
 
       <GlassCard className="p-5">
         <h2 className="text-sm font-semibold text-foreground">Accessible properties</h2>
-        {properties.length === 0 ? (
+        {state.isError ? (
+          <p className="mt-2 text-sm text-destructive">
+            Search Console state could not be loaded. {state.error.message}
+          </p>
+        ) : properties.length === 0 ? (
           <p className="mt-2 text-sm text-muted-foreground">
             No properties recorded yet. Run a check to list what the connected Google account can reach.
           </p>
