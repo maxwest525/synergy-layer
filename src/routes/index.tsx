@@ -5,7 +5,7 @@ import { toast } from "sonner";
 
 import { EmptyState, GlassCard, PageHeader, StatePill, formatWhen, toneForState } from "@/components/os/primitives";
 import { Button } from "@/components/ui/button";
-import { resolveInboxItem } from "@/lib/os-admin.functions";
+import { reopenInboxItem, resolveInboxItem } from "@/lib/os-admin.functions";
 import { getInbox } from "@/lib/os.functions";
 
 const inboxQuery = {
