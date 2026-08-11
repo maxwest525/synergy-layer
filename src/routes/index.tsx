@@ -73,7 +73,7 @@ function routeFromHref(href: string): InboxRoute | null {
   if (href === "/competitors") return { kind: "competitors" };
   if (href === "/ads/advertisers") return { kind: "adsAdvertisers" };
 
-  const match = href.match(new RegExp(`^/(recommendations|agents|workflows|scheduler)/(${idPattern})$`));
+  const match = href.match(detailHrefPattern);
   if (!match) return null;
   const [, workspace, id] = match;
   if (!id) return null;
