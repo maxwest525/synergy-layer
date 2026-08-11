@@ -95,16 +95,35 @@ export function ExecutionCard(props: Props) {
   const provenLive = Boolean(data?.publishedProofAt);
   const decided = props.state !== "proposed";
 
+  const readinessLabel: Record<string, string> = {
+    proven: "Proven",
+    configured: "Configured, unproven",
+    stored: "Stored",
+    blocked: "Blocked",
+  };
+
   const readinessBlock = data ? (
     <div className="mt-4">
       <h3 className="text-xs uppercase tracking-wide text-muted-foreground">
-        Execution readiness, checked now
+        Stored configuration and live proof
       </h3>
+      <p className="mt-1 text-xs text-muted-foreground">
+        Stored means AOOS recorded it. Configured, unproven means a credential exists but has never
+        answered. Proven means a live read-only check succeeded at the time shown.
+      </p>
       <ul className="mt-2 space-y-2">
         {data.readiness.map((fact) => (
           <li key={fact.label} className="flex gap-3 text-sm">
-            <span className={fact.ok ? "text-primary" : "text-muted-foreground"}>
-              {fact.ok ? "Ready" : "Blocked"}
+            <span
+              className={
+                fact.state === "proven"
+                  ? "text-primary"
+                  : fact.state === "blocked"
+                    ? "text-destructive"
+                    : "text-muted-foreground"
+              }
+            >
+              {readinessLabel[fact.state] ?? fact.state}
             </span>
             <span>
               <span className="text-foreground">{fact.label}</span>
@@ -123,6 +142,7 @@ export function ExecutionCard(props: Props) {
   ) : (
     <p className="mt-4 text-sm text-muted-foreground">Reading execution readiness…</p>
   );
+
 
   if (!decided) {
     return (
