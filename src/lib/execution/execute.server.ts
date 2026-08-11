@@ -1,15 +1,35 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database } from "@/integrations/supabase/types";
-import type { AttemptRecord, ExecutableRequest, ExecutionStore, GithubApi } from "./execute";
-import { parseFieldChanges } from "./source-change";
+import type { AttemptRecord, ExecutableRequest, ExecutionStore, GithubApi, RenderedVerifier } from "./execute";
+import { extractDocumentTitle, extractFirstHeading, extractMarkdownHeading, parseFieldChanges } from "./source-change";
 
 type Client = SupabaseClient<Database>;
 
+const REQUEST_TIMEOUT_MS = 20_000;
+const MAX_RESPONSE_CHARS = 2_000_000;
+
+/** Bounded, timed fetch. Never lets a provider hang or flood the worker. */
+async function boundedFetch(
+  url: string,
+  init: RequestInit & { label: string },
+): Promise<{ status: number; text: string }> {
+  const { label, ...rest } = init;
+  let response: Response;
+  try {
+    response = await fetch(url, { ...rest, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
+  } catch (error) {
+    const reason = error instanceof Error && error.name === "TimeoutError" ? "timed out" : "failed";
+    throw new Error(`${label} request ${reason} after ${REQUEST_TIMEOUT_MS / 1000}s.`);
+  }
+  const text = (await response.text()).slice(0, MAX_RESPONSE_CHARS);
+  return { status: response.status, text };
+}
+
 /**
- * Store backed by the service-role client. Lifecycle writes still go through
- * the transition routine, so the guard, the audit event, and the Inbox gate
- * behave exactly as they do for a manual operator action.
+ * Store backed by the service-role client. Lifecycle writes still go through a
+ * database routine, so the guard, the audit event, and the Inbox gate behave
+ * exactly as they do for a manual operator action.
  */
 export function createExecutionStore(admin: Client, rls: Client): ExecutionStore {
   return {
@@ -58,7 +78,7 @@ export function createExecutionStore(admin: Client, rls: Client): ExecutionStore
     },
 
     async saveCommit({ id, commitSha, commitUrl }) {
-      const { error } = await admin
+      const { data, error } = await admin
         .from("change_requests")
         .update({
           source_commit_sha: commitSha,
@@ -66,29 +86,30 @@ export function createExecutionStore(admin: Client, rls: Client): ExecutionStore
           source_committed_at: new Date().toISOString(),
           source_revision_after: commitSha,
         } as never)
-        .eq("id", id);
+        .eq("id", id)
+        .is("source_commit_sha", null)
+        .select("id");
       if (error) throw new Error(error.message);
+      if ((data ?? []).length !== 1) {
+        throw new Error(
+          `Recording commit ${commitSha.slice(0, 10)} changed ${(data ?? []).length} rows instead of exactly one. The commit exists in GitHub but AOOS has not recorded it.`,
+        );
+      }
     },
 
-    async savePublishedProof({ id, notes }) {
-      const { error } = await admin
-        .from("change_requests")
-        .update({
-          published_proof_at: new Date().toISOString(),
-          published_proof_notes: notes,
-        } as never)
-        .eq("id", id);
-      if (error) throw new Error(error.message);
-    },
-
-    async markApplied({ id, notes, revision }) {
-      const { error } = await rls.rpc("transition_change_request", {
+    async applyRenderedProof({ id, notes, revision, proof }) {
+      const { data, error } = await rls.rpc("apply_change_request_rendered_proof", {
         _id: id,
-        _action: "mark_applied",
+        _proof: proof as never,
         _notes: notes,
         _revision: revision,
       });
       if (error) throw new Error(error.message);
+      const payload = data as { changed?: unknown } | null;
+      if (!payload || typeof payload.changed !== "boolean") {
+        throw new Error("The publish-proof routine returned an unreadable result. Nothing was assumed.");
+      }
+      return { changed: payload.changed };
     },
   };
 }
@@ -114,8 +135,9 @@ export function createGithubApi(): GithubApi | null {
   if (!token) return null;
 
   const call = async (path: string, init?: RequestInit): Promise<unknown> => {
-    const response = await fetch(`${API}${path}`, {
+    const response = await boundedFetch(`${API}${path}`, {
       ...init,
+      label: "GitHub",
       headers: {
         Accept: "application/vnd.github+json",
         Authorization: `Bearer ${token}`,
@@ -123,11 +145,11 @@ export function createGithubApi(): GithubApi | null {
         ...(init?.body ? { "Content-Type": "application/json" } : {}),
       },
     });
-    const text = await response.text();
-    if (!response.ok) {
-      throw new Error(`GitHub responded ${response.status}: ${text.slice(0, 400)}`);
+    if (response.status < 200 || response.status >= 300) {
+      // Deliberately no response body: it can echo request content.
+      throw new Error(`GitHub responded ${response.status} for ${path.split("?")[0]}.`);
     }
-    return text ? (JSON.parse(text) as unknown) : {};
+    return response.text ? (JSON.parse(response.text) as unknown) : {};
   };
 
   return {
@@ -147,6 +169,20 @@ export function createGithubApi(): GithubApi | null {
         throw new Error(`File ${path} was not readable on ${ref}.`);
       }
       return { sha: data.sha, content: decodeBase64(data.content) };
+    },
+    async findCommitByMarker({ repo, branch, path, marker }) {
+      const data = (await call(
+        `/repos/${repo}/commits?sha=${encodeURIComponent(branch)}&path=${encodeURIComponent(path)}&per_page=30`,
+      )) as { sha?: string; html_url?: string; commit?: { message?: string } }[];
+      if (!Array.isArray(data)) {
+        throw new Error("GitHub returned an unreadable commit list, so no reconciliation was attempted.");
+      }
+      const hit = data.find((entry) => (entry.commit?.message ?? "").includes(marker));
+      if (!hit?.sha) return null;
+      return {
+        commitSha: hit.sha,
+        commitUrl: hit.html_url ?? `https://github.com/${repo}/commit/${hit.sha}`,
+      };
     },
     async commitFile({ repo, branch, path, content, fileSha, message }) {
       const data = (await call(
@@ -171,11 +207,66 @@ export function createGithubApi(): GithubApi | null {
   };
 }
 
-export async function fetchPublicPage(url: string): Promise<{ status: number; html: string }> {
-  const response = await fetch(url, {
-    headers: { "User-Agent": "AOOS-change-verifier", Accept: "text/html" },
-  });
-  return { status: response.status, html: await response.text() };
+const FIRECRAWL_URL = "https://api.firecrawl.dev/v2/scrape";
+
+/**
+ * The target site renders its title and H1 in the browser, so the origin's raw
+ * HTML is only an application shell. Proof therefore needs a renderer.
+ * Returns null when no Firecrawl credential is configured.
+ */
+export function createRenderedVerifier(): RenderedVerifier | null {
+  const key = process.env["FIRECRAWL_API_KEY"];
+  if (!key) return null;
+
+  return {
+    name: "Firecrawl",
+    async render(url) {
+      const response = await boundedFetch(FIRECRAWL_URL, {
+        method: "POST",
+        label: "Firecrawl",
+        headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          url,
+          formats: ["rawHtml", "markdown"],
+          onlyMainContent: false,
+          waitFor: 3000,
+        }),
+      });
+      if (response.status < 200 || response.status >= 300) {
+        throw new Error(`Firecrawl responded ${response.status}, so nothing was proven.`);
+      }
+      let parsed: {
+        success?: boolean;
+        error?: string;
+        data?: {
+          rawHtml?: string;
+          markdown?: string;
+          metadata?: { title?: string; sourceURL?: string; url?: string; statusCode?: number };
+        };
+      };
+      try {
+        parsed = JSON.parse(response.text) as typeof parsed;
+      } catch {
+        throw new Error("Firecrawl returned an unreadable response, so nothing was proven.");
+      }
+      if (parsed.success === false) {
+        throw new Error(`Firecrawl could not render the page: ${parsed.error ?? "no reason given"}.`);
+      }
+      const status = parsed.data?.metadata?.statusCode;
+      if (typeof status === "number" && (status < 200 || status >= 300)) {
+        throw new Error(`The public page returned HTTP ${status} when rendered, so nothing was proven.`);
+      }
+      const html = parsed.data?.rawHtml ?? "";
+      const markdown = parsed.data?.markdown ?? "";
+      const metaTitle = parsed.data?.metadata?.title?.trim();
+      return {
+        finalUrl: parsed.data?.metadata?.sourceURL ?? parsed.data?.metadata?.url ?? url,
+        title: extractDocumentTitle(html) ?? (metaTitle ? metaTitle : null),
+        heading: extractFirstHeading(html) ?? extractMarkdownHeading(markdown),
+        renderedBy: "Firecrawl",
+      };
+    },
+  };
 }
 
 export async function fetchExecutionAttempts(client: Client, changeRequestId: string) {

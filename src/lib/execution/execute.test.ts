@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { applyExactReplacements, parseFieldChanges, verifyPublishedHtml } from "./source-change";
+import { GOVERNED_BRANCH, GOVERNED_REPO } from "./allowlist";
+import { applyExactReplacements, parseFieldChanges, verifyRenderedPage } from "./source-change";
 import {
   checkPublishedPage,
   executeSourceChange,
@@ -8,6 +9,7 @@ import {
   type ExecutableRequest,
   type ExecutionStore,
   type GithubApi,
+  type RenderedVerifier,
 } from "./execute";
 
 const changes = parseFieldChanges([
@@ -36,9 +38,9 @@ function makeRequest(overrides: Partial<ExecutableRequest> = {}): ExecutableRequ
     tenantId: "22222222-2222-4222-8222-222222222222",
     state: "approved",
     title: "Retitle page",
-    targetUrl: "https://example.com/page",
-    repo: "acme/site",
-    branch: "main",
+    targetUrl: "https://trumoveinc.com/services/corporate-relocation",
+    repo: GOVERNED_REPO,
+    branch: GOVERNED_BRANCH,
     filePath: "src/data.ts",
     baseRevision: "base-sha",
     changes,
@@ -60,27 +62,41 @@ function makeStore(request: ExecutableRequest | null) {
     saveCommit: async (input) => {
       saved.push({ kind: "commit", ...input });
     },
-    savePublishedProof: async (input) => {
-      saved.push({ kind: "proof", ...input });
-    },
-    markApplied: async (input) => {
-      saved.push({ kind: "applied", ...input });
+    applyRenderedProof: async (input) => {
+      saved.push({ kind: "applied", id: input.id, notes: input.notes, revision: input.revision });
+      return { changed: true };
     },
   };
   return { store, attempts, saved };
 }
 
-function makeGithub(content: string) {
+function makeGithub(
+  content: string,
+  options: { head?: string; markerHit?: { commitSha: string; commitUrl: string } | null } = {},
+) {
   const writes: unknown[] = [];
   const github: GithubApi = {
-    branchHead: async () => "base-sha",
+    branchHead: async () => options.head ?? "base-sha",
     readFile: async () => ({ sha: "file-sha", content }),
+    findCommitByMarker: async () => options.markerHit ?? null,
     commitFile: async (input) => {
       writes.push(input);
       return { commitSha: "new-sha", commitUrl: "https://github.com/acme/site/commit/new-sha" };
     },
   };
   return { github, writes };
+}
+
+function makeRenderer(page: { title: string | null; heading: string | null; finalUrl?: string }): RenderedVerifier {
+  return {
+    name: "TestRenderer",
+    render: async (url) => ({
+      finalUrl: page.finalUrl ?? url,
+      title: page.title,
+      heading: page.heading,
+      renderedBy: "TestRenderer",
+    }),
+  };
 }
 
 describe("applyExactReplacements", () => {
@@ -113,6 +129,52 @@ describe("executeSourceChange", () => {
     expect(writes).toHaveLength(1);
     expect(saved[0]).toMatchObject({ kind: "commit", commitSha: "new-sha" });
     expect(attempts[0]?.status).toBe("committed");
+  });
+
+  it("refuses when the branch head no longer matches the observed base revision", async () => {
+    const { store, attempts } = makeStore(makeRequest());
+    const { github, writes } = makeGithub(file, { head: "someone-elses-sha" });
+    const outcome = await executeSourceChange({
+      store,
+      github,
+      requestId: "x",
+      actorId: "operator",
+    });
+    expect(outcome.status).toBe("refused");
+    expect(outcome.message).toContain("branch head");
+    expect(writes).toHaveLength(0);
+    expect(attempts[0]?.status).toBe("refused");
+  });
+
+  it("refuses a repository or branch outside the allowlist", async () => {
+    const { store } = makeStore(makeRequest({ repo: "someone/else", branch: "main" }));
+    const { github, writes } = makeGithub(file);
+    const outcome = await executeSourceChange({
+      store,
+      github,
+      requestId: "x",
+      actorId: "operator",
+    });
+    expect(outcome.status).toBe("refused");
+    expect(writes).toHaveLength(0);
+  });
+
+  it("reconciles an unrecorded commit instead of writing a second time", async () => {
+    const { store, attempts, saved } = makeStore(makeRequest());
+    const { github, writes } = makeGithub(file, {
+      head: "advanced-sha",
+      markerHit: { commitSha: "found-sha", commitUrl: "https://github.com/x/y/commit/found-sha" },
+    });
+    const outcome = await executeSourceChange({
+      store,
+      github,
+      requestId: "x",
+      actorId: "operator",
+    });
+    expect(outcome.status).toBe("reconciled");
+    expect(writes).toHaveLength(0);
+    expect(saved[0]).toMatchObject({ kind: "commit", commitSha: "found-sha" });
+    expect(attempts[0]?.status).toBe("reconciled");
   });
 
   it("refuses and writes nothing when the source has drifted", async () => {
@@ -169,36 +231,54 @@ describe("executeSourceChange", () => {
   });
 });
 
-describe("verifyPublishedHtml", () => {
+describe("verifyRenderedPage", () => {
   it("only passes on an exact match of both values", () => {
-    const html =
-      "<html><head><title>Employee Relocation Movers | TruMove</title></head><body><h1>Employee Relocation Moving Services</h1></body></html>";
-    expect(verifyPublishedHtml(html, changes).ok).toBe(true);
-    expect(verifyPublishedHtml("<title>Old</title><h1>Old</h1>", changes).ok).toBe(false);
+    const page = {
+      finalUrl: "https://trumoveinc.com/services/corporate-relocation",
+      title: "Employee Relocation Movers | TruMove",
+      heading: "Employee Relocation Moving Services",
+      renderedBy: "TestRenderer",
+    };
+    expect(verifyRenderedPage(page, changes).ok).toBe(true);
+    expect(verifyRenderedPage({ ...page, title: "Old" }, changes).ok).toBe(false);
+  });
+
+  it("treats an unrendered shell as unproven, not as a failure of the change", () => {
+    const proof = verifyRenderedPage(
+      {
+        finalUrl: "https://trumoveinc.com/services/corporate-relocation",
+        title: "TruMove, AI-Powered Moving Made Simple",
+        heading: null,
+        renderedBy: "TestRenderer",
+      },
+      changes,
+    );
+    expect(proof.ok).toBe(false);
+    expect(proof.reason).toContain("application shell");
   });
 });
 
 describe("checkPublishedPage", () => {
-  it("marks applied only when the live page proves the change", async () => {
+  it("marks applied through one atomic routine when the rendered page proves the change", async () => {
     const { store, saved } = makeStore(makeRequest({ commitSha: "new-sha" }));
     const outcome = await checkPublishedPage({
       store,
-      fetchPage: async () => ({
-        status: 200,
-        html: "<title>Employee Relocation Movers | TruMove</title><h1>Employee Relocation Moving Services</h1>",
+      renderer: makeRenderer({
+        title: "Employee Relocation Movers | TruMove",
+        heading: "Employee Relocation Moving Services",
       }),
       requestId: "x",
       actorId: "operator",
     });
     expect(outcome.status).toBe("verified");
-    expect(saved.map((row) => row["kind"])).toEqual(["proof", "applied"]);
+    expect(saved.map((row) => row["kind"])).toEqual(["applied"]);
   });
 
   it("stays pending and does not mark applied when the page is unchanged", async () => {
     const { store, saved } = makeStore(makeRequest({ commitSha: "new-sha" }));
     const outcome = await checkPublishedPage({
       store,
-      fetchPage: async () => ({ status: 200, html: "<title>Old</title><h1>Old</h1>" }),
+      renderer: makeRenderer({ title: "Old", heading: "Old" }),
       requestId: "x",
       actorId: "operator",
     });
@@ -206,11 +286,52 @@ describe("checkPublishedPage", () => {
     expect(saved).toHaveLength(0);
   });
 
+  it("refuses when no rendered verifier is connected", async () => {
+    const { store } = makeStore(makeRequest({ commitSha: "new-sha" }));
+    const outcome = await checkPublishedPage({
+      store,
+      renderer: null,
+      requestId: "x",
+      actorId: "operator",
+    });
+    expect(outcome.status).toBe("refused");
+    expect(outcome.message).toContain("FIRECRAWL_API_KEY");
+  });
+
+  it("refuses a target URL outside the allowlisted site", async () => {
+    const { store } = makeStore(
+      makeRequest({ commitSha: "new-sha", targetUrl: "https://example.com/page" }),
+    );
+    const outcome = await checkPublishedPage({
+      store,
+      renderer: makeRenderer({ title: "x", heading: "y" }),
+      requestId: "x",
+      actorId: "operator",
+    });
+    expect(outcome.status).toBe("refused");
+  });
+
+  it("fails when the rendered page redirects off the allowlisted site", async () => {
+    const { store, saved } = makeStore(makeRequest({ commitSha: "new-sha" }));
+    const outcome = await checkPublishedPage({
+      store,
+      renderer: makeRenderer({
+        title: "Employee Relocation Movers | TruMove",
+        heading: "Employee Relocation Moving Services",
+        finalUrl: "https://elsewhere.example/page",
+      }),
+      requestId: "x",
+      actorId: "operator",
+    });
+    expect(outcome.status).toBe("failed");
+    expect(saved).toHaveLength(0);
+  });
+
   it("refuses a publish check when no commit exists", async () => {
     const { store } = makeStore(makeRequest());
     const outcome = await checkPublishedPage({
       store,
-      fetchPage: async () => ({ status: 200, html: "" }),
+      renderer: makeRenderer({ title: "x", heading: "y" }),
       requestId: "x",
       actorId: "operator",
     });

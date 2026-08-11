@@ -111,7 +111,21 @@ export type PublishedProof = {
   expectedHeading: string | null;
   foundTitle: string | null;
   foundHeading: string | null;
+  renderedBy: string;
+  finalUrl: string;
   reason: string;
+};
+
+/**
+ * One rendered page, after JavaScript has run. The target site ships a single
+ * page application shell, so raw HTML from the origin cannot carry the page's
+ * real title or H1 and can never be proof.
+ */
+export type RenderedPage = {
+  finalUrl: string;
+  title: string | null;
+  heading: string | null;
+  renderedBy: string;
 };
 
 function decodeEntities(value: string): string {
@@ -132,45 +146,66 @@ function normalize(value: string): string {
 
 export function extractDocumentTitle(html: string): string | null {
   const match = /<title[^>]*>([\s\S]*?)<\/title>/i.exec(html);
-  return match?.[1] ? normalize(match[1]) : null;
+  const text = match?.[1] ? normalize(match[1]) : null;
+  return text ? text : null;
 }
 
 export function extractFirstHeading(html: string): string | null {
   const match = /<h1[^>]*>([\s\S]*?)<\/h1>/i.exec(html);
-  return match?.[1] ? normalize(match[1]) : null;
+  const text = match?.[1] ? normalize(match[1]) : null;
+  return text ? text : null;
+}
+
+/** First markdown H1 (`# text`), used when a renderer returns markdown only. */
+export function extractMarkdownHeading(markdown: string): string | null {
+  const match = /^[ \t]*#[ \t]+(.+)$/m.exec(markdown);
+  const text = match?.[1] ? normalize(match[1]) : null;
+  return text ? text : null;
 }
 
 /**
- * A commit is not a live page. Only an exact match of both approved values on
- * the public URL counts as proof that the change actually shipped.
+ * A commit is not a live page, and a rendered page is the only thing that can
+ * show what a visitor actually receives. Only an exact match of both approved
+ * values counts as proof.
  */
-export function verifyPublishedHtml(html: string, changes: FieldChange[]): PublishedProof {
+export function verifyRenderedPage(page: RenderedPage, changes: FieldChange[]): PublishedProof {
   const expectedTitle = changes.find((c) => c.field === "seo_title")?.after ?? null;
   const expectedHeading = changes.find((c) => c.field === "page_heading")?.after ?? null;
-  const foundTitle = extractDocumentTitle(html);
-  const foundHeading = extractFirstHeading(html);
+  const base = {
+    expectedTitle,
+    expectedHeading,
+    foundTitle: page.title,
+    foundHeading: page.heading,
+    renderedBy: page.renderedBy,
+    finalUrl: page.finalUrl,
+  };
 
   if (!expectedTitle || !expectedHeading) {
     return {
+      ...base,
       ok: false,
-      expectedTitle,
-      expectedHeading,
-      foundTitle,
-      foundHeading,
       reason: "This change request does not store both an SEO title and a page heading to prove.",
     };
   }
 
-  const titleOk = foundTitle === normalize(expectedTitle);
-  const headingOk = foundHeading === normalize(expectedHeading);
+  if (!page.title || !page.heading) {
+    const missing = [!page.title ? "document title" : null, !page.heading ? "H1" : null]
+      .filter(Boolean)
+      .join(" and ");
+    return {
+      ...base,
+      ok: false,
+      reason: `The rendered page returned no ${missing}. That is an unrendered application shell, not proof either way.`,
+    };
+  }
+
+  const titleOk = page.title === normalize(expectedTitle);
+  const headingOk = page.heading === normalize(expectedHeading);
   if (titleOk && headingOk) {
     return {
+      ...base,
       ok: true,
-      expectedTitle,
-      expectedHeading,
-      foundTitle,
-      foundHeading,
-      reason: "The public page serves the exact approved title and heading.",
+      reason: `The rendered page at ${page.finalUrl} serves the exact approved title and heading, as rendered by ${page.renderedBy}.`,
     };
   }
 
@@ -178,11 +213,9 @@ export function verifyPublishedHtml(html: string, changes: FieldChange[]): Publi
     .filter(Boolean)
     .join(" and ");
   return {
+    ...base,
     ok: false,
-    expectedTitle,
-    expectedHeading,
-    foundTitle,
-    foundHeading,
-    reason: `The public page does not yet serve the approved ${missing}. The commit may exist while the site publish or sync is still pending.`,
+    reason: `The rendered page does not yet serve the approved ${missing}. The commit may exist while the site publish or sync is still pending.`,
   };
 }
+
