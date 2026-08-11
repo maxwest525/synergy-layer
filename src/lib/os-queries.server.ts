@@ -210,7 +210,7 @@ export async function fetchRecommendations() {
 
 export async function fetchRecommendation(id: string) {
   const { db, tenantId, ready } = await scope();
-  if (!ready) return { recommendation: null, dependencies: [] };
+  if (!ready) return { recommendation: null, dependencies: [], changeRequest: null };
   const recommendation = unwrap(
     await db.from("recommendations").select("*").eq("id", id).eq("tenant_id", tenantId!).maybeSingle(),
   );
