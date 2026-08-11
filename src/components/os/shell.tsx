@@ -7,6 +7,7 @@ import {
   Inbox,
   LayoutDashboard,
   Lightbulb,
+  Megaphone,
   Plug,
   Workflow,
 } from "lucide-react";
@@ -26,6 +27,7 @@ const workspaces = [
   { to: "/workflows", label: "Workflows", icon: Workflow, hint: "How work runs" },
   { to: "/recommendations", label: "Recommendations", icon: Lightbulb, hint: "What to do next" },
   { to: "/scheduler", label: "Scheduler", icon: CalendarClock, hint: "When work runs" },
+  { to: "/ads/advertisers", label: "Ads advertisers", icon: Megaphone, hint: "Who advertises against us" },
 ] as const;
 
 export function Shell({ children }: { children: ReactNode }) {

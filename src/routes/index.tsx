@@ -58,6 +58,7 @@ export const Route = createFileRoute("/")({
 type InboxRoute =
   | { kind: "keywords" }
   | { kind: "competitors" }
+  | { kind: "adsAdvertisers" }
   | { kind: "recommendation"; id: string }
   | { kind: "agent"; id: string }
   | { kind: "workflow"; id: string }
@@ -68,6 +69,7 @@ const idPattern = "[0-9a-fA-F-]{36}";
 function routeFromHref(href: string): InboxRoute | null {
   if (href === "/keywords") return { kind: "keywords" };
   if (href === "/competitors") return { kind: "competitors" };
+  if (href === "/ads/advertisers") return { kind: "adsAdvertisers" };
 
   const match = href.match(new RegExp(`^/(recommendations|agents|workflows|scheduler)/(${idPattern})$`));
   if (!match) return null;
@@ -101,6 +103,7 @@ function InboxLink({ route, children }: { route: InboxRoute; children: React.Rea
   const className = "text-sm font-medium text-foreground underline-offset-4 hover:text-primary hover:underline";
   if (route.kind === "keywords") return <Link to="/keywords" className={className}>{children}</Link>;
   if (route.kind === "competitors") return <Link to="/competitors" className={className}>{children}</Link>;
+  if (route.kind === "adsAdvertisers") return <Link to="/ads/advertisers" className={className}>{children}</Link>;
   if (route.kind === "recommendation") return <Link to="/recommendations/$id" params={{ id: route.id }} className={className}>{children}</Link>;
   if (route.kind === "agent") return <Link to="/agents/$id" params={{ id: route.id }} className={className}>{children}</Link>;
   if (route.kind === "workflow") return <Link to="/workflows/$id" params={{ id: route.id }} className={className}>{children}</Link>;
@@ -110,6 +113,7 @@ function InboxLink({ route, children }: { route: InboxRoute; children: React.Rea
 function InboxActionLink({ route, children }: { route: InboxRoute; children: React.ReactNode }) {
   if (route.kind === "keywords") return <Button asChild variant="outline" size="sm"><Link to="/keywords">{children}</Link></Button>;
   if (route.kind === "competitors") return <Button asChild variant="outline" size="sm"><Link to="/competitors">{children}</Link></Button>;
+  if (route.kind === "adsAdvertisers") return <Button asChild variant="outline" size="sm"><Link to="/ads/advertisers">{children}</Link></Button>;
   if (route.kind === "recommendation") return <Button asChild variant="outline" size="sm"><Link to="/recommendations/$id" params={{ id: route.id }}>{children}</Link></Button>;
   if (route.kind === "agent") return <Button asChild variant="outline" size="sm"><Link to="/agents/$id" params={{ id: route.id }}>{children}</Link></Button>;
   if (route.kind === "workflow") return <Button asChild variant="outline" size="sm"><Link to="/workflows/$id" params={{ id: route.id }}>{children}</Link></Button>;
