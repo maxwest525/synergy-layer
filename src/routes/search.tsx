@@ -1,11 +1,30 @@
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
+import { useState } from "react";
+import { toast } from "sonner";
 
 import { OperatorRouteError } from "@/components/os/route-error";
 import { EmptyState, GlassCard, MetricTile, PageHeader, StatePill, formatWhen } from "@/components/os/primitives";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import type { SearchRow } from "@/lib/search.functions";
 import { getSearchWorkspace } from "@/lib/search.functions";
+import {
+  inspectSearchConsoleUrl,
+  runSearchConsoleObservation,
+  submitSearchConsoleSitemap,
+} from "@/lib/search-console.functions";
 import { getTenantContext } from "@/lib/tenant.functions";
 
 
@@ -38,12 +57,12 @@ function fmtInt(value: number): string {
   return Math.round(value).toLocaleString();
 }
 
-function fmtCtr(value: number): string {
-  return `${(value * 100).toFixed(1)}%`;
+function fmtCtr(value: number | null): string {
+  return value === null ? "—" : `${(value * 100).toFixed(1)}%`;
 }
 
-function fmtPosition(value: number): string {
-  return value === 0 ? "—" : value.toFixed(1);
+function fmtPosition(value: number | null): string {
+  return value === null || value === 0 ? "—" : value.toFixed(1);
 }
 
 function fmtDate(value: string | null): string {
@@ -52,6 +71,21 @@ function fmtDate(value: string | null): string {
 
 function trimUrl(value: string): string {
   return value.replace(/^https?:\/\//, "").replace(/\/$/, "") || value;
+}
+
+function defaultOwnedUrl(property: string | null): string {
+  if (!property) return "";
+  return property.toLowerCase().startsWith("sc-domain:")
+    ? `https://${property.slice("sc-domain:".length)}/`
+    : property;
+}
+
+function signed(value: number, suffix = ""): string {
+  return `${value > 0 ? "+" : ""}${value.toFixed(1)}${suffix}`;
+}
+
+function percentChange(value: number | null): string {
+  return value === null ? "No prior-volume baseline" : signed(value, "%");
 }
 
 function RowTable({
@@ -146,6 +180,10 @@ function SearchWorkspacePage() {
   // and the client middleware that attaches the operator bearer token.
   const loadTenantContext = useServerFn(getTenantContext);
   const loadWorkspace = useServerFn(getSearchWorkspace);
+  const collectEvidence = useServerFn(runSearchConsoleObservation);
+  const inspectUrl = useServerFn(inspectSearchConsoleUrl);
+  const submitSitemap = useServerFn(submitSearchConsoleSitemap);
+  const queryClient = useQueryClient();
 
   // Reuses the tenant context the shell already caches under ["tenant-context"].
   const tenant = useSuspenseQuery({
@@ -163,6 +201,61 @@ function SearchWorkspacePage() {
     retry: false,
   });
   const latest = data.dailyTotals[0];
+  const ownedRoot = defaultOwnedUrl(data.property?.siteUrl ?? null);
+  const [inspectionUrl, setInspectionUrl] = useState(ownedRoot);
+  const [sitemapUrl, setSitemapUrl] = useState(
+    data.sitemaps[0]?.path ?? `${ownedRoot.replace(/\/$/, "")}/sitemap.xml`,
+  );
+  const [pendingSitemap, setPendingSitemap] = useState<string | null>(null);
+
+  const refreshWorkspace = () => {
+    void queryClient.invalidateQueries({ queryKey: ["search-workspace", activeTenantId] });
+    void queryClient.invalidateQueries({ queryKey: ["inbox"] });
+    void queryClient.invalidateQueries({ queryKey: ["change-request"] });
+    void queryClient.invalidateQueries({ queryKey: ["overview"] });
+  };
+
+  const collectionMutation = useMutation({
+    mutationFn: async () => {
+      const result = await collectEvidence();
+      if (!result.ok) throw new Error(result.error ?? "Search Console collection failed.");
+      return result;
+    },
+    onSuccess: (result) => {
+      toast.success(
+        result.reportingDate
+          ? `GSC evidence refreshed through ${result.reportingDate}.`
+          : "GSC returned no finalized date; no evidence was invented.",
+      );
+      refreshWorkspace();
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+  const inspectionMutation = useMutation({
+    mutationFn: (url: string) => inspectUrl({ data: { url } }),
+    onSuccess: (result) => {
+      toast.success(`URL Inspection stored: ${result.inspection.verdict}.`);
+      refreshWorkspace();
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+  const sitemapMutation = useMutation({
+    mutationFn: (url: string) => submitSitemap({ data: { sitemapUrl: url } }),
+    onSuccess: () => {
+      toast.success("Sitemap submitted to Google. This does not guarantee indexing.");
+      refreshWorkspace();
+    },
+    onError: (error: Error) => toast.error(error.message),
+    onSettled: () => {
+      setPendingSitemap(null);
+      refreshWorkspace();
+    },
+  });
+
+  const busy =
+    collectionMutation.isPending || inspectionMutation.isPending || sitemapMutation.isPending;
 
 
   return (
@@ -172,12 +265,20 @@ function SearchWorkspacePage() {
         title="What Search Console observed"
         description="Stored, finalized Google Search Console evidence for the selected property. Nothing here is modelled, scored, or projected."
         actions={
-          <Link
-            to="/capabilities"
-            className="rounded-lg border border-primary/50 px-3 py-1.5 text-sm font-medium text-primary transition-colors hover:bg-primary/10"
-          >
-            Capabilities
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={busy || !data.property}
+              onClick={() => collectionMutation.mutate()}
+            >
+              {collectionMutation.isPending ? "Collecting…" : "Collect latest GSC data"}
+            </Button>
+            <Button asChild size="sm" variant="outline">
+              <Link to="/capabilities">Capabilities</Link>
+            </Button>
+          </div>
         }
       />
 
@@ -201,9 +302,10 @@ function SearchWorkspacePage() {
               <StatePill label={data.property.eligible ? "eligible" : "not eligible"} tone={data.property.eligible ? "positive" : "warning"} />
             </div>
             <p className="mt-4 rounded-xl border border-border/60 bg-muted/20 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
-              Evidence limits: only {data.dailyTotals.length} finalized Pacific dates are stored, and Search
-              Console volume for this property is currently sparse. That is too little to read as a trend.
-              No traffic estimate, score, or recommendation is derived from it.
+              {data.comparison.status === "ready"
+                ? "Two complete 28-day calendar windows are stored for an equal-period comparison."
+                : `Only ${data.comparison.availableDays} of ${data.comparison.requiredDays} required calendar days are stored, so no trend is shown yet.`}{" "}
+              No traffic estimate, score, or recommendation is derived from this evidence.
             </p>
           </GlassCard>
 
@@ -225,6 +327,71 @@ function SearchWorkspacePage() {
                 value={latest ? fmtPosition(latest.position) : "—"}
                 hint="Lower is better"
               />
+            </div>
+
+            <div className="mt-4 rounded-xl border border-border/60 p-4">
+              <h3 className="text-sm font-semibold text-foreground">28 days vs previous 28 days</h3>
+              {data.comparison.status === "insufficient" ? (
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Waiting for a complete 56-day calendar history. {data.comparison.availableDays} of{" "}
+                  {data.comparison.requiredDays} required dates are stored through{" "}
+                  {fmtDate(data.comparison.latestDate)}.
+                </p>
+              ) : (
+                <div className="mt-3 overflow-x-auto">
+                  <table className="w-full min-w-[38rem] text-sm">
+                    <thead>
+                      <tr className="border-b border-border/60 text-left text-xs uppercase tracking-[0.14em] text-muted-foreground">
+                        <th className="py-2 pr-4 font-medium" scope="col">Metric</th>
+                        <th className="py-2 pr-4 text-right font-medium" scope="col">
+                          Previous ({data.comparison.previous.startDate}–{data.comparison.previous.endDate})
+                        </th>
+                        <th className="py-2 pr-4 text-right font-medium" scope="col">
+                          Current ({data.comparison.current.startDate}–{data.comparison.current.endDate})
+                        </th>
+                        <th className="py-2 text-right font-medium" scope="col">Change</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr className="border-b border-border/40">
+                        <td className="py-2 pr-4 text-foreground">Clicks</td>
+                        <td className="py-2 pr-4 text-right tabular-nums">{fmtInt(data.comparison.previous.clicks)}</td>
+                        <td className="py-2 pr-4 text-right tabular-nums">{fmtInt(data.comparison.current.clicks)}</td>
+                        <td className="py-2 text-right text-muted-foreground">{percentChange(data.comparison.change.clicksPercent)}</td>
+                      </tr>
+                      <tr className="border-b border-border/40">
+                        <td className="py-2 pr-4 text-foreground">Impressions</td>
+                        <td className="py-2 pr-4 text-right tabular-nums">{fmtInt(data.comparison.previous.impressions)}</td>
+                        <td className="py-2 pr-4 text-right tabular-nums">{fmtInt(data.comparison.current.impressions)}</td>
+                        <td className="py-2 text-right text-muted-foreground">{percentChange(data.comparison.change.impressionsPercent)}</td>
+                      </tr>
+                      <tr className="border-b border-border/40">
+                        <td className="py-2 pr-4 text-foreground">CTR</td>
+                        <td className="py-2 pr-4 text-right tabular-nums">{fmtCtr(data.comparison.previous.ctr)}</td>
+                        <td className="py-2 pr-4 text-right tabular-nums">{fmtCtr(data.comparison.current.ctr)}</td>
+                        <td className="py-2 text-right text-muted-foreground">
+                          {data.comparison.change.ctrPoints === null
+                            ? "No comparison"
+                            : signed(data.comparison.change.ctrPoints, " points")}
+                        </td>
+                      </tr>
+                      <tr>
+                        <td className="py-2 pr-4 text-foreground">Avg position</td>
+                        <td className="py-2 pr-4 text-right tabular-nums">{fmtPosition(data.comparison.previous.position)}</td>
+                        <td className="py-2 pr-4 text-right tabular-nums">{fmtPosition(data.comparison.current.position)}</td>
+                        <td className="py-2 text-right text-muted-foreground">
+                          {data.comparison.change.position === null
+                            ? "No comparison"
+                            : `${Math.abs(data.comparison.change.position).toFixed(1)} ${data.comparison.change.position <= 0 ? "better" : "worse"}`}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    CTR is recomputed from total clicks and impressions. Average position is impression-weighted; lower is better.
+                  </p>
+                </div>
+              )}
             </div>
 
             <div className="mt-4 overflow-x-auto">
@@ -304,59 +471,215 @@ function SearchWorkspacePage() {
 
           <SectionCard
             id="indexing"
-            title="Indexing & sitemaps"
-            description="Sitemap status exactly as Search Console reports it. Indexed counts lag submission and are often reported as zero."
+            title="URL indexing & sitemaps"
+            description="Inspect Google's indexed version of one owned page, or explicitly submit a sitemap. These are separate actions with separate evidence."
           >
-            {data.sitemaps.length === 0 ? (
-              <EmptyState
-                title="No sitemap status stored"
-                description="The latest observation did not include a sitemap payload for this property."
-              />
-            ) : (
-              <ul className="space-y-3">
-                {data.sitemaps.map((sitemap) => (
-                  <li key={sitemap.path} className="border-b border-border/40 pb-3 last:border-b-0 last:pb-0">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <p className="text-sm font-medium text-foreground">{trimUrl(sitemap.path)}</p>
-                      <StatePill
-                        label={sitemap.isPending ? "pending" : (sitemap.errors ?? 0) > 0 ? "errors" : "processed"}
-                        tone={sitemap.isPending ? "warning" : (sitemap.errors ?? 0) > 0 ? "danger" : "positive"}
-                      />
-                    </div>
-                    <dl className="mt-2 grid gap-x-6 gap-y-1 text-xs text-muted-foreground sm:grid-cols-3">
-                      <div>
-                        <dt className="inline">Submitted URLs: </dt>
-                        <dd className="inline text-foreground">{sitemap.submitted ?? "—"}</dd>
-                      </div>
-                      <div>
-                        <dt className="inline">Indexed URLs: </dt>
-                        <dd className="inline text-foreground">{sitemap.indexed ?? "—"}</dd>
-                      </div>
-                      <div>
-                        <dt className="inline">Type: </dt>
-                        <dd className="inline text-foreground">{sitemap.type ?? "—"}</dd>
-                      </div>
-                      <div>
-                        <dt className="inline">Warnings: </dt>
-                        <dd className="inline text-foreground">{sitemap.warnings ?? "—"}</dd>
-                      </div>
-                      <div>
-                        <dt className="inline">Errors: </dt>
-                        <dd className="inline text-foreground">{sitemap.errors ?? "—"}</dd>
-                      </div>
-                      <div>
-                        <dt className="inline">Last submitted: </dt>
-                        <dd className="inline text-foreground">{formatWhen(sitemap.lastSubmitted)}</dd>
-                      </div>
-                      <div>
-                        <dt className="inline">Last downloaded: </dt>
-                        <dd className="inline text-foreground">{formatWhen(sitemap.lastDownloaded)}</dd>
-                      </div>
-                    </dl>
-                  </li>
-                ))}
-              </ul>
-            )}
+            <div className="space-y-6">
+              <section aria-labelledby="url-inspection-heading">
+                <h3 id="url-inspection-heading" className="text-sm font-semibold text-foreground">
+                  Inspect one page
+                </h3>
+                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                  This read-only call reports the version Google has indexed. It does not test the live page and it does not request indexing.
+                </p>
+                <form
+                  className="mt-3 flex flex-col gap-2 sm:flex-row"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    const url = inspectionUrl.trim();
+                    if (!url) {
+                      toast.error("Enter a page URL to inspect.");
+                      return;
+                    }
+                    inspectionMutation.mutate(url);
+                  }}
+                >
+                  <Input
+                    aria-label="Owned page URL to inspect"
+                    type="url"
+                    value={inspectionUrl}
+                    onChange={(event) => setInspectionUrl(event.target.value)}
+                    placeholder={ownedRoot}
+                    disabled={busy}
+                  />
+                  <Button type="submit" disabled={busy || inspectionUrl.trim() === ""}>
+                    {inspectionMutation.isPending ? "Inspecting…" : "Inspect URL"}
+                  </Button>
+                </form>
+
+                {data.recentInspections.length === 0 ? (
+                  <p className="mt-3 rounded-lg border border-dashed border-border/60 p-3 text-xs text-muted-foreground">
+                    No page has been inspected from AOOS yet.
+                  </p>
+                ) : (
+                  <ul className="mt-3 space-y-3">
+                    {data.recentInspections.map((inspection) => (
+                      <li key={inspection.id} className="rounded-xl border border-border/60 p-3">
+                        <div className="flex flex-wrap items-start justify-between gap-2">
+                          <div>
+                            <p className="break-all text-sm font-medium text-foreground">
+                              {trimUrl(inspection.inspectedUrl)}
+                            </p>
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              Inspected {formatWhen(inspection.inspectedAt)} · last crawled {formatWhen(inspection.lastCrawlTime)}
+                            </p>
+                          </div>
+                          <StatePill
+                            label={inspection.verdict.toLowerCase()}
+                            tone={inspection.verdict === "PASS" ? "positive" : inspection.verdict === "FAIL" ? "danger" : "neutral"}
+                          />
+                        </div>
+                        <dl className="mt-3 grid gap-x-6 gap-y-1 text-xs text-muted-foreground sm:grid-cols-2 lg:grid-cols-4">
+                          <div><dt className="inline">Coverage: </dt><dd className="inline text-foreground">{inspection.coverageState ?? "—"}</dd></div>
+                          <div><dt className="inline">Fetch: </dt><dd className="inline text-foreground">{inspection.pageFetchState ?? "—"}</dd></div>
+                          <div><dt className="inline">Indexing: </dt><dd className="inline text-foreground">{inspection.indexingState ?? "—"}</dd></div>
+                          <div><dt className="inline">robots.txt: </dt><dd className="inline text-foreground">{inspection.robotsTxtState ?? "—"}</dd></div>
+                          <div><dt className="inline">Crawled as: </dt><dd className="inline text-foreground">{inspection.crawledAs ?? "—"}</dd></div>
+                          <div className="sm:col-span-2"><dt className="inline">Google canonical: </dt><dd className="inline break-all text-foreground">{inspection.googleCanonical ?? "—"}</dd></div>
+                          <div className="sm:col-span-2"><dt className="inline">Declared canonical: </dt><dd className="inline break-all text-foreground">{inspection.userCanonical ?? "—"}</dd></div>
+                        </dl>
+                        {inspection.inspectionResultLink ? (
+                          <a
+                            href={inspection.inspectionResultLink}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="mt-3 inline-flex text-xs font-medium text-primary hover:underline"
+                          >
+                            Open this result in Search Console
+                          </a>
+                        ) : null}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+
+              <section aria-labelledby="sitemap-heading" className="border-t border-border/60 pt-5">
+                <h3 id="sitemap-heading" className="text-sm font-semibold text-foreground">Submit or resubmit a sitemap</h3>
+                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                  Submission asks Google to process the sitemap; it does not guarantee crawling or indexing. Nothing is sent until you confirm the exact URL.
+                </p>
+                <form
+                  className="mt-3 flex flex-col gap-2 sm:flex-row"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    const url = sitemapUrl.trim();
+                    if (!url) {
+                      toast.error("Enter a sitemap URL.");
+                      return;
+                    }
+                    setPendingSitemap(url);
+                  }}
+                >
+                  <Input
+                    aria-label="Owned sitemap URL"
+                    type="url"
+                    value={sitemapUrl}
+                    onChange={(event) => setSitemapUrl(event.target.value)}
+                    placeholder={`${ownedRoot.replace(/\/$/, "")}/sitemap.xml`}
+                    disabled={busy}
+                  />
+                  <Button type="submit" variant="outline" disabled={busy || sitemapUrl.trim() === ""}>
+                    Submit sitemap
+                  </Button>
+                </form>
+
+                {data.sitemaps.length === 0 ? (
+                  <EmptyState
+                    title="No sitemap status stored"
+                    description="The latest observation did not include a sitemap payload for this property."
+                  />
+                ) : (
+                  <ul className="mt-4 space-y-3">
+                    {data.sitemaps.map((sitemap) => (
+                      <li key={sitemap.path} className="border-b border-border/40 pb-3 last:border-b-0 last:pb-0">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <p className="break-all text-sm font-medium text-foreground">{trimUrl(sitemap.path)}</p>
+                          <div className="flex items-center gap-2">
+                            <StatePill
+                              label={sitemap.isPending ? "pending" : (sitemap.errors ?? 0) > 0 ? "errors" : "processed"}
+                              tone={sitemap.isPending ? "warning" : (sitemap.errors ?? 0) > 0 ? "danger" : "positive"}
+                            />
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              disabled={busy}
+                              onClick={() => {
+                                setSitemapUrl(sitemap.path);
+                                setPendingSitemap(sitemap.path);
+                              }}
+                            >
+                              Resubmit
+                            </Button>
+                          </div>
+                        </div>
+                        <dl className="mt-2 grid gap-x-6 gap-y-1 text-xs text-muted-foreground sm:grid-cols-3">
+                          <div><dt className="inline">Submitted URLs: </dt><dd className="inline text-foreground">{sitemap.submitted ?? "—"}</dd></div>
+                          <div><dt className="inline">Indexed URLs: </dt><dd className="inline text-foreground">{sitemap.indexed ?? "—"}</dd></div>
+                          <div><dt className="inline">Type: </dt><dd className="inline text-foreground">{sitemap.type ?? "—"}</dd></div>
+                          <div><dt className="inline">Warnings: </dt><dd className="inline text-foreground">{sitemap.warnings ?? "—"}</dd></div>
+                          <div><dt className="inline">Errors: </dt><dd className="inline text-foreground">{sitemap.errors ?? "—"}</dd></div>
+                          <div><dt className="inline">Last submitted: </dt><dd className="inline text-foreground">{formatWhen(sitemap.lastSubmitted)}</dd></div>
+                          <div><dt className="inline">Last downloaded: </dt><dd className="inline text-foreground">{formatWhen(sitemap.lastDownloaded)}</dd></div>
+                        </dl>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
+                {data.sitemapSubmissions.length > 0 ? (
+                  <div className="mt-4 rounded-xl border border-border/60 p-3">
+                    <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">AOOS submission history</h4>
+                    <ul className="mt-2 space-y-2 text-xs">
+                      {data.sitemapSubmissions.slice(0, 5).map((submission) => (
+                        <li key={submission.id} className="flex flex-wrap items-start justify-between gap-2">
+                          <span className="break-all text-foreground">{trimUrl(submission.sitemapUrl)}</span>
+                          <span className={submission.status === "submitted" ? "text-emerald-600" : "text-destructive"}>
+                            {submission.status} · {formatWhen(submission.submittedAt)}
+                          </span>
+                          {submission.failureReason ? (
+                            <span className="w-full text-destructive">{submission.failureReason}</span>
+                          ) : null}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+
+                <p className="mt-3 text-xs text-muted-foreground">
+                  Google provider charge: $0 per request. Google API quota still applies. This direct screen action does not run Lovable AI.
+                </p>
+              </section>
+            </div>
+
+            <AlertDialog
+              open={pendingSitemap !== null}
+              onOpenChange={(open) => {
+                if (!open && !sitemapMutation.isPending) setPendingSitemap(null);
+              }}
+            >
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Submit this sitemap to Google?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    AOOS will send one Search Console sitemap submission for {pendingSitemap ?? "the selected URL"}.
+                    Google may accept the request without crawling or indexing every URL. The attempt and any error will be retained in AOOS.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel disabled={sitemapMutation.isPending}>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    disabled={sitemapMutation.isPending || !pendingSitemap}
+                    onClick={() => {
+                      if (pendingSitemap) sitemapMutation.mutate(pendingSitemap);
+                    }}
+                  >
+                    {sitemapMutation.isPending ? "Submitting…" : "Submit to Google"}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </SectionCard>
         </>
       )}

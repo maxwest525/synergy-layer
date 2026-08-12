@@ -57,3 +57,30 @@ export function canVerifyWithEvidence(input: {
 }): boolean {
   return input.appliedAt !== null && input.postChangeRows.length > 0;
 }
+
+export type OutcomeEvidenceSummary =
+  | { ready: false; rowCount: 0 }
+  | {
+      ready: true;
+      rowCount: number;
+      firstDate: string;
+      latestDate: string;
+      summary: string;
+    };
+
+/** Availability is actionable, but it is deliberately not a success verdict. */
+export function summarizeOutcomeEvidence(
+  rows: readonly PostChangeRow[],
+): OutcomeEvidenceSummary {
+  if (rows.length === 0) return { ready: false, rowCount: 0 };
+  const dates = rows.map((row) => row.date).sort();
+  const firstDate = dates[0]!;
+  const latestDate = dates.at(-1)!;
+  return {
+    ready: true,
+    rowCount: rows.length,
+    firstDate,
+    latestDate,
+    summary: `${rows.length} finalized post-change page/query ${rows.length === 1 ? "row is" : "rows are"} available from ${firstDate} through ${latestDate}. Review the evidence; availability alone does not prove the change succeeded.`,
+  };
+}

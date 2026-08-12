@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database } from "@/integrations/supabase/types";
 import { fileInboxItem, logActivity } from "./os.server";
+import { reconcileAppliedChangeEvidence } from "./change-requests.server";
 import { evaluateSnapshots, type RuleRunResult } from "./search-console-rules.server";
 import { SearchConsoleFailure, collectDaily, getSelectedProperty } from "./search-console.server";
 
@@ -25,6 +26,7 @@ export type ObserveResult = {
   reportingDate: string | null;
   emptyResult: boolean;
   rules: RuleRunResult | null;
+  outcomes: { waiting: number; ready: number; newlyReady: number } | null;
   error?: string;
   reason?: string;
 };
@@ -53,10 +55,12 @@ export async function observeSearchConsole(client: Client): Promise<ObserveResul
         reportingDate: null,
         emptyResult: true,
         rules: null,
+        outcomes: null,
       };
     }
 
     const rules = await evaluateSnapshots(client, property, collection.reportingDate);
+    const outcomes = await reconcileAppliedChangeEvidence(client);
     await setHealth(client, "healthy");
 
     return {
@@ -65,6 +69,7 @@ export async function observeSearchConsole(client: Client): Promise<ObserveResul
       reportingDate: collection.reportingDate,
       emptyResult: collection.emptyResult,
       rules,
+      outcomes,
     };
   } catch (error) {
     const failure =
@@ -95,6 +100,7 @@ export async function observeSearchConsole(client: Client): Promise<ObserveResul
       reportingDate: null,
       emptyResult: false,
       rules: null,
+      outcomes: null,
       error: failure.message,
       reason: failure.reason,
     };

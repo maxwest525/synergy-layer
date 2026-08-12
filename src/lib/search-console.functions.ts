@@ -36,6 +36,34 @@ export const runSearchConsoleObservation = createServerFn({ method: "POST" })
     return observeSearchConsole(context.supabase);
   });
 
+/** Read-only provider action: inspect Google's indexed version of one owned URL. */
+export const inspectSearchConsoleUrl = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => z.object({ url: z.string().min(1).max(2048) }).parse(data))
+  .handler(async ({ data, context }) => {
+    const { assertOperator } = await import("./os-admin.server");
+    await assertOperator(context.supabase, context.userId);
+    const { getSelectedProperty, inspectUrl } = await import("./search-console.server");
+    const property = await getSelectedProperty(context.supabase);
+    if (!property) throw new Error("Select a Search Console property before inspecting a URL.");
+    return { inspection: await inspectUrl(context.supabase, property, data.url, context.userId) };
+  });
+
+/** Explicit provider write: submit or resubmit one owned sitemap after UI confirmation. */
+export const submitSearchConsoleSitemap = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => z.object({ sitemapUrl: z.string().min(1).max(2048) }).parse(data))
+  .handler(async ({ data, context }) => {
+    const { assertOperator } = await import("./os-admin.server");
+    await assertOperator(context.supabase, context.userId);
+    const { getSelectedProperty, submitSitemap } = await import("./search-console.server");
+    const property = await getSelectedProperty(context.supabase);
+    if (!property) throw new Error("Select a Search Console property before submitting a sitemap.");
+    return {
+      submission: await submitSitemap(context.supabase, property, data.sitemapUrl, context.userId),
+    };
+  });
+
 /** Operator read: connection state, selected property, and recent snapshots. */
 export const getSearchConsoleState = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])

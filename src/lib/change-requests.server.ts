@@ -4,6 +4,7 @@ import type { Database } from "@/integrations/supabase/types";
 import {
   canVerifyWithEvidence,
   parsePostChangeRows,
+  summarizeOutcomeEvidence,
   type PostChangeRow,
 } from "./change-request-evidence";
 import { type ChangeAction } from "./change-request-state";
@@ -61,6 +62,116 @@ export async function fetchChangeRequest(client: Client, tenantId: string, id: s
     data.applied_at,
   );
   return { changeRequest: data, postChangeRows };
+}
+
+/**
+ * After each GSC collection, turn an applied change's existing Action Center
+ * item from "waiting" into "evidence ready" as soon as finalized page/query
+ * rows exist. This never marks the change successful or verified.
+ */
+export async function reconcileAppliedChangeEvidence(client: Client): Promise<{
+  waiting: number;
+  ready: number;
+  newlyReady: number;
+}> {
+  const { requireTenantId } = await import("./tenant.server");
+  const { logActivity } = await import("./os.server");
+  const tenantId = await requireTenantId(client);
+  const { data: changes, error: changeError } = await client
+    .from("change_requests")
+    .select("id, title, target_url, applied_at, inbox_item_id")
+    .eq("tenant_id", tenantId)
+    .eq("state", "applied")
+    .not("applied_at", "is", null)
+    .not("inbox_item_id", "is", null);
+  if (changeError) throw new Error(changeError.message);
+  if (!changes || changes.length === 0) return { waiting: 0, ready: 0, newlyReady: 0 };
+
+  const firstAppliedDay = changes
+    .map((change) => change.applied_at!.slice(0, 10))
+    .sort()[0]!;
+  const { data: snapshots, error: snapshotError } = await client
+    .from("search_console_snapshots")
+    .select("period_start_pt, payload")
+    .eq("tenant_id", tenantId)
+    .eq("kind", "page_query")
+    .gt("period_start_pt", firstAppliedDay)
+    .order("period_start_pt", { ascending: true })
+    .limit(120);
+  if (snapshotError) throw new Error(snapshotError.message);
+
+  let ready = 0;
+  let newlyReady = 0;
+  for (const change of changes) {
+    const appliedDay = change.applied_at!.slice(0, 10);
+    const relevantSnapshots = (snapshots ?? []).filter(
+      (snapshot) => snapshot.period_start_pt > appliedDay,
+    );
+    const outcome = summarizeOutcomeEvidence(
+      parsePostChangeRows(relevantSnapshots, change.target_url),
+    );
+    if (!outcome.ready) continue;
+    ready += 1;
+
+    const { data: current, error: itemError } = await client
+      .from("inbox_items")
+      .select("title, metadata")
+      .eq("tenant_id", tenantId)
+      .eq("id", change.inbox_item_id!)
+      .maybeSingle();
+    if (itemError) throw new Error(itemError.message);
+    if (!current) continue;
+    const alreadyReady = current.title.startsWith("Review outcome evidence:");
+    const metadata =
+      current.metadata && typeof current.metadata === "object" && !Array.isArray(current.metadata)
+        ? current.metadata
+        : {};
+    const { error: updateError } = await client
+      .from("inbox_items")
+      .update({
+        lane: "needs_attention",
+        resolved_at: null,
+        title: `Review outcome evidence: ${change.title}`,
+        summary: outcome.summary,
+        actions: [
+          {
+            kind: "review",
+            label: "Review outcome evidence",
+            href: `/changes/${change.id}`,
+          },
+        ],
+        metadata: {
+          ...metadata,
+          outcomeEvidence: {
+            rowCount: outcome.rowCount,
+            firstDate: outcome.firstDate,
+            latestDate: outcome.latestDate,
+            ready: true,
+          },
+        },
+      })
+      .eq("tenant_id", tenantId)
+      .eq("id", change.inbox_item_id!);
+    if (updateError) throw new Error(updateError.message);
+
+    if (!alreadyReady) {
+      newlyReady += 1;
+      await logActivity(client, {
+        verb: "change_request.outcome_evidence_ready",
+        subjectKind: "change_request",
+        subjectId: change.id,
+        summary: outcome.summary,
+        payload: {
+          targetUrl: change.target_url,
+          rowCount: outcome.rowCount,
+          firstDate: outcome.firstDate,
+          latestDate: outcome.latestDate,
+        },
+      });
+    }
+  }
+
+  return { waiting: changes.length - ready, ready, newlyReady };
 }
 
 type TransitionInput = {

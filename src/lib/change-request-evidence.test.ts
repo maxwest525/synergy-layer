@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { canVerifyWithEvidence, parsePostChangeRows } from "./change-request-evidence";
+import {
+  canVerifyWithEvidence,
+  parsePostChangeRows,
+  summarizeOutcomeEvidence,
+} from "./change-request-evidence";
 
 const TARGET = "https://trumoveinc.com/services/corporate-relocation";
 
@@ -66,5 +70,27 @@ describe("verification evidence gate", () => {
 
   it("allows verification once at least one row exists", () => {
     expect(canVerifyWithEvidence({ appliedAt: "2026-08-11T00:00:00Z", postChangeRows: [{}] })).toBe(true);
+  });
+});
+
+describe("automatic outcome evidence notice", () => {
+  it("identifies the first and latest finalized dates without declaring success", () => {
+    expect(
+      summarizeOutcomeEvidence([
+        { date: "2026-08-14", query: "corporate movers", position: 31, impressions: 2, clicks: 0 },
+        { date: "2026-08-13", query: "employee relocation", position: 22, impressions: 4, clicks: 1 },
+      ]),
+    ).toEqual({
+      ready: true,
+      rowCount: 2,
+      firstDate: "2026-08-13",
+      latestDate: "2026-08-14",
+      summary:
+        "2 finalized post-change page/query rows are available from 2026-08-13 through 2026-08-14. Review the evidence; availability alone does not prove the change succeeded.",
+    });
+  });
+
+  it("keeps the change waiting when no finalized rows exist", () => {
+    expect(summarizeOutcomeEvidence([])).toEqual({ ready: false, rowCount: 0 });
   });
 });

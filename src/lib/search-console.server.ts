@@ -4,6 +4,11 @@ import { requireTenantId } from "./tenant.server";
 
 import type { Database } from "@/integrations/supabase/types";
 import { logActivity } from "./os.server";
+import {
+  materializeDailyTotals,
+  normalizeInspection,
+  normalizeOwnedUrl,
+} from "./search-console";
 
 type Client = SupabaseClient<Database>;
 
@@ -68,7 +73,16 @@ async function gateway<T>(path: string, init?: RequestInit): Promise<T> {
       `Search Console request failed [${response.status}]: ${await response.text()}`,
     );
   }
-  return (await response.json()) as T;
+  const body = await response.text();
+  if (body.trim() === "") return undefined as T;
+  try {
+    return JSON.parse(body) as T;
+  } catch {
+    throw new SearchConsoleFailure(
+      "api_error",
+      "Search Console returned a successful response that was not valid JSON.",
+    );
+  }
 }
 
 export function checksum(value: unknown): string {
@@ -186,6 +200,147 @@ export async function getSelectedProperty(client: Client): Promise<string | null
   return data?.site_url ?? null;
 }
 
+type InspectionRow = Database["public"]["Tables"]["search_console_url_inspections"]["Row"];
+type SitemapSubmissionRow =
+  Database["public"]["Tables"]["search_console_sitemap_submissions"]["Row"];
+
+/** Run Google's indexed-version URL Inspection for one page covered by the selected property. */
+export async function inspectUrl(
+  client: Client,
+  property: string,
+  candidateUrl: string,
+  actorId: string,
+): Promise<InspectionRow> {
+  const inspectedUrl = normalizeOwnedUrl(property, candidateUrl);
+  const payload = await gateway<unknown>("/v1/urlInspection/index:inspect", {
+    method: "POST",
+    body: JSON.stringify({ inspectionUrl: inspectedUrl, siteUrl: property, languageCode: "en-US" }),
+  });
+  const inspection = normalizeInspection(payload);
+  const { data, error } = await client
+    .from("search_console_url_inspections")
+    .insert({
+      tenant_id: await requireTenantId(client),
+      property,
+      inspected_url: inspectedUrl,
+      verdict: inspection.verdict,
+      coverage_state: inspection.coverageState,
+      robots_txt_state: inspection.robotsTxtState,
+      indexing_state: inspection.indexingState,
+      page_fetch_state: inspection.pageFetchState,
+      last_crawl_time: inspection.lastCrawlTime,
+      google_canonical: inspection.googleCanonical,
+      user_canonical: inspection.userCanonical,
+      crawled_as: inspection.crawledAs,
+      sitemaps: inspection.sitemaps,
+      referring_urls: inspection.referringUrls,
+      inspection_result_link: inspection.inspectionResultLink,
+      mobile_usability_verdict: inspection.mobileUsabilityVerdict,
+      rich_results_verdict: inspection.richResultsVerdict,
+      raw_payload: payload as never,
+      requested_by: actorId,
+    })
+    .select("*")
+    .single();
+  if (error) throw new SearchConsoleFailure("persistence", error.message);
+
+  await logActivity(client, {
+    actorKind: "user",
+    actorId,
+    verb: "search_console.url_inspected",
+    subjectKind: "url",
+    summary: `Inspected Google's indexed version of ${inspectedUrl}: ${inspection.verdict}.`,
+    payload: {
+      property,
+      inspectedUrl,
+      verdict: inspection.verdict,
+      coverageState: inspection.coverageState,
+    },
+  });
+  return data;
+}
+
+async function recordSitemapSubmission(
+  client: Client,
+  input: {
+    property: string;
+    sitemapUrl: string;
+    actorId: string;
+    status: "submitted" | "failed";
+    failureReason?: string | null;
+  },
+): Promise<SitemapSubmissionRow> {
+  const { data, error } = await client
+    .from("search_console_sitemap_submissions")
+    .insert({
+      tenant_id: await requireTenantId(client),
+      property: input.property,
+      sitemap_url: input.sitemapUrl,
+      status: input.status,
+      failure_reason: input.failureReason ?? null,
+      requested_by: input.actorId,
+    })
+    .select("*")
+    .single();
+  if (error) throw new SearchConsoleFailure("persistence", error.message);
+  return data;
+}
+
+/** Explicit write: ask Google to process one owned sitemap and retain an audit record. */
+export async function submitSitemap(
+  client: Client,
+  property: string,
+  candidateUrl: string,
+  actorId: string,
+): Promise<SitemapSubmissionRow> {
+  const sitemapUrl = normalizeOwnedUrl(property, candidateUrl);
+  try {
+    await gateway<void>(
+      `/webmasters/v3/sites/${encodeURIComponent(property)}/sitemaps/${encodeURIComponent(sitemapUrl)}`,
+      { method: "PUT" },
+    );
+  } catch (error) {
+    const failureReason = error instanceof Error ? error.message : String(error);
+    await recordSitemapSubmission(client, {
+      property,
+      sitemapUrl,
+      actorId,
+      status: "failed",
+      failureReason,
+    });
+    await logActivity(client, {
+      actorKind: "user",
+      actorId,
+      verb: "search_console.sitemap_submission_failed",
+      subjectKind: "sitemap",
+      summary: `Google did not accept sitemap ${sitemapUrl}: ${failureReason}`,
+      payload: { property, sitemapUrl, failureReason },
+    });
+    throw error;
+  }
+
+  const submission = await recordSitemapSubmission(client, {
+    property,
+    sitemapUrl,
+    actorId,
+    status: "submitted",
+  });
+  await logActivity(client, {
+    actorKind: "user",
+    actorId,
+    verb: "search_console.sitemap_submitted",
+    subjectKind: "sitemap",
+    subjectId: submission.id,
+    summary: `Submitted sitemap ${sitemapUrl} to Google Search Console.`,
+    payload: {
+      property,
+      sitemapUrl,
+      guarantee: "Submission asks Google to process the sitemap; it does not guarantee indexing.",
+    },
+  });
+  return submission;
+}
+
 type QueryBody = {
   startDate: string;
   endDate: string;
@@ -239,7 +394,7 @@ type SnapshotInput = {
 };
 
 async function persistSnapshot(client: Client, input: SnapshotInput): Promise<string> {
-
+  const tenantId = await requireTenantId(client);
   const definition = {
     property: input.property,
     kind: input.kind,
@@ -253,7 +408,7 @@ async function persistSnapshot(client: Client, input: SnapshotInput): Promise<st
   const { data, error } = await client
     .from("search_console_snapshots")
     .insert({
-      tenant_id: await requireTenantId(client),
+      tenant_id: tenantId,
       property: input.property,
       kind: input.kind,
       search_type: "web",
@@ -278,6 +433,18 @@ async function persistSnapshot(client: Client, input: SnapshotInput): Promise<st
     })
     .select("id")
     .single();
+  if (error?.code === "23505" && input.kind === "property_totals") {
+    const { data: existing, error: existingError } = await client
+      .from("search_console_snapshots")
+      .select("id")
+      .eq("tenant_id", tenantId)
+      .eq("property", input.property)
+      .eq("kind", "property_totals")
+      .eq("period_start_pt", input.periodStart)
+      .single();
+    if (existingError) throw new SearchConsoleFailure("persistence", existingError.message);
+    return existing.id;
+  }
   if (error) throw new SearchConsoleFailure("persistence", error.message);
   return data.id;
 }
@@ -364,6 +531,71 @@ export async function collectPageQuery(
   return { snapshotId, rows: rows.length, created: true };
 }
 
+const COMPARISON_HISTORY_DAYS = 56;
+
+/** One provider query backfills the two complete 28-day comparison windows. */
+async function collectDailyTotalsHistory(
+  client: Client,
+  property: string,
+  reportingDate: string,
+): Promise<string[]> {
+  const periodStart = shiftDate(reportingDate, -(COMPARISON_HISTORY_DAYS - 1));
+  const response = await query(property, {
+    startDate: periodStart,
+    endDate: reportingDate,
+    dimensions: ["date"],
+    rowLimit: 250,
+  });
+  const days = materializeDailyTotals(response.rows ?? [], periodStart, reportingDate);
+  const { data: existing, error } = await client
+    .from("search_console_snapshots")
+    .select("period_start_pt")
+    .eq("property", property)
+    .eq("kind", "property_totals")
+    .gte("period_start_pt", periodStart)
+    .lte("period_start_pt", reportingDate);
+  if (error) throw new SearchConsoleFailure("persistence", error.message);
+  const existingDates = new Set((existing ?? []).map((row) => row.period_start_pt));
+  const snapshotIds: string[] = [];
+
+  for (const day of days) {
+    if (existingDates.has(day.date)) continue;
+    const rows: QueryRow[] =
+      day.impressions > 0
+        ? [
+            {
+              keys: [day.date],
+              clicks: day.clicks,
+              impressions: day.impressions,
+              ctr: day.ctr ?? 0,
+              position: day.position ?? 0,
+            },
+          ]
+        : [];
+    snapshotIds.push(
+      await persistSnapshot(client, {
+        property,
+        kind: "property_totals",
+        dimensions: [],
+        aggregationType: "auto",
+        responseAggregationType: response.responseAggregationType ?? null,
+        rowLimit: 1,
+        paginatedRequestCount: 1,
+        periodStart: day.date,
+        periodEnd: day.date,
+        rows,
+        totals: {
+          clicks: day.clicks,
+          impressions: day.impressions,
+          ctr: day.ctr,
+          position: day.position,
+        },
+      }),
+    );
+  }
+  return snapshotIds;
+}
+
 export async function collectDaily(client: Client, property: string): Promise<CollectionResult> {
   const reportingDate = await latestFinalDate(property);
 
@@ -379,12 +611,16 @@ export async function collectDaily(client: Client, property: string): Promise<Co
     .eq("kind", "property_totals");
   if (existingError) throw new SearchConsoleFailure("persistence", existingError.message);
   if ((existing ?? []).length > 0) {
+    const historyIds = await collectDailyTotalsHistory(client, property, reportingDate);
     // Still ensure the page+query snapshot exists for this finalized date.
     const backfilled = await collectPageQuery(client, property, reportingDate);
     return {
       property,
       reportingDate,
-      snapshotIds: backfilled.created && backfilled.snapshotId ? [backfilled.snapshotId] : [],
+      snapshotIds: [
+        ...historyIds,
+        ...(backfilled.created && backfilled.snapshotId ? [backfilled.snapshotId] : []),
+      ],
       emptyResult: false,
     };
   }
@@ -474,6 +710,8 @@ export async function collectDaily(client: Client, property: string): Promise<Co
     payload: sitemaps as never,
   });
   if (sitemapError) throw new SearchConsoleFailure("persistence", sitemapError.message);
+
+  snapshotIds.push(...(await collectDailyTotalsHistory(client, property, reportingDate)));
 
   const emptyResult = totals.impressions === 0;
 

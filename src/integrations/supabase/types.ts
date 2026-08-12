@@ -2451,6 +2451,127 @@ export type Database = {
           },
         ]
       }
+      search_console_sitemap_submissions: {
+        Row: {
+          failure_reason: string | null
+          id: string
+          property: string
+          requested_by: string | null
+          sitemap_url: string
+          status: string
+          submitted_at: string
+          tenant_id: string
+        }
+        Insert: {
+          failure_reason?: string | null
+          id?: string
+          property: string
+          requested_by?: string | null
+          sitemap_url: string
+          status: string
+          submitted_at?: string
+          tenant_id: string
+        }
+        Update: {
+          failure_reason?: string | null
+          id?: string
+          property?: string
+          requested_by?: string | null
+          sitemap_url?: string
+          status?: string
+          submitted_at?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "search_console_sitemap_submissions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      search_console_url_inspections: {
+        Row: {
+          coverage_state: string | null
+          crawled_as: string | null
+          google_canonical: string | null
+          id: string
+          indexing_state: string | null
+          inspected_at: string
+          inspected_url: string
+          inspection_result_link: string | null
+          last_crawl_time: string | null
+          mobile_usability_verdict: string | null
+          page_fetch_state: string | null
+          property: string
+          raw_payload: Json
+          referring_urls: string[]
+          requested_by: string | null
+          rich_results_verdict: string | null
+          robots_txt_state: string | null
+          sitemaps: string[]
+          tenant_id: string
+          user_canonical: string | null
+          verdict: string
+        }
+        Insert: {
+          coverage_state?: string | null
+          crawled_as?: string | null
+          google_canonical?: string | null
+          id?: string
+          indexing_state?: string | null
+          inspected_at?: string
+          inspected_url: string
+          inspection_result_link?: string | null
+          last_crawl_time?: string | null
+          mobile_usability_verdict?: string | null
+          page_fetch_state?: string | null
+          property: string
+          raw_payload?: Json
+          referring_urls?: string[]
+          requested_by?: string | null
+          rich_results_verdict?: string | null
+          robots_txt_state?: string | null
+          sitemaps?: string[]
+          tenant_id: string
+          user_canonical?: string | null
+          verdict?: string
+        }
+        Update: {
+          coverage_state?: string | null
+          crawled_as?: string | null
+          google_canonical?: string | null
+          id?: string
+          indexing_state?: string | null
+          inspected_at?: string
+          inspected_url?: string
+          inspection_result_link?: string | null
+          last_crawl_time?: string | null
+          mobile_usability_verdict?: string | null
+          page_fetch_state?: string | null
+          property?: string
+          raw_payload?: Json
+          referring_urls?: string[]
+          requested_by?: string | null
+          rich_results_verdict?: string | null
+          robots_txt_state?: string | null
+          sitemaps?: string[]
+          tenant_id?: string
+          user_canonical?: string | null
+          verdict?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "search_console_url_inspections_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       serpapi_requests: {
         Row: {
           account_searches_left_after: number | null
