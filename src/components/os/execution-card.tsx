@@ -11,7 +11,10 @@ import {
   getExecutionState,
   testGithubConnection,
 } from "@/lib/execution/execution.functions";
-import { reconcileExecutionFacts } from "@/lib/execution/timeline";
+import {
+  reconcileExecutionFacts,
+  reconcileReadinessFacts,
+} from "@/lib/execution/timeline";
 
 
 type Stage = { label: string; detail: string; done: boolean };
@@ -128,6 +131,7 @@ export function ExecutionCard(props: Props) {
   const running = execute.isPending || publishCheck.isPending || preflight.isPending;
   const committed = Boolean(facts.commitSha);
   const provenLive = Boolean(facts.publishedProofAt);
+  const readiness = reconcileReadinessFacts(data?.readiness ?? [], facts);
   const decided = props.state !== "proposed";
 
   const preflightButton =
@@ -162,7 +166,7 @@ export function ExecutionCard(props: Props) {
         answered. Proven means a live read-only check succeeded at the time shown.
       </p>
       <ul className="mt-2 space-y-2">
-        {data.readiness.map((fact) => (
+        {readiness.map((fact) => (
           <li key={fact.label} className="flex gap-3 text-sm">
             <span
               className={

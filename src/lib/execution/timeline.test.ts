@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { reconcileExecutionFacts } from "./timeline";
+import { reconcileExecutionFacts, reconcileReadinessFacts } from "./timeline";
 
 describe("reconcileExecutionFacts", () => {
   it("uses lifecycle facts from the loaded change while the secondary execution query is pending", () => {
@@ -45,6 +45,33 @@ describe("reconcileExecutionFacts", () => {
     ).toMatchObject({
       commitSha: "fresh-sha",
       publishedProofAt: "2026-08-11T23:05:00.000Z",
+    });
+  });
+});
+
+describe("reconcileReadinessFacts", () => {
+  it("replaces stale unproven render copy when publication proof is stored", () => {
+    const [renderFact] = reconcileReadinessFacts(
+      [
+        {
+          label: "Rendered-page verification",
+          state: "configured",
+          detail: "No paid render call has been authorized, so proof has not been attempted.",
+        },
+      ],
+      {
+        commitSha: "commit-sha",
+        commitUrl: null,
+        committedAt: "2026-08-11T22:23:10.079Z",
+        publishedProofAt: "2026-08-11T22:57:55.672Z",
+        publishedProofNotes: "Rendered title and H1 matched.",
+      },
+    );
+
+    expect(renderFact).toEqual({
+      label: "Rendered-page verification",
+      state: "proven",
+      detail: "Rendered title and H1 matched.",
     });
   });
 });
