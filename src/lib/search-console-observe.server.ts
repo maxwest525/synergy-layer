@@ -20,6 +20,14 @@ async function setHealth(
     .eq("key", CAPABILITY_KEY);
 }
 
+async function markPropertyObserved(client: Client, property: string, observedAt: string): Promise<void> {
+  const { error } = await client
+    .from("search_console_properties")
+    .update({ last_observed_at: observedAt })
+    .eq("site_url", property);
+  if (error) throw new SearchConsoleFailure("persistence", error.message);
+}
+
 export type ObserveResult = {
   ok: boolean;
   property: string | null;
@@ -46,8 +54,22 @@ export async function observeSearchConsole(client: Client): Promise<ObserveResul
     }
 
     const collection = await collectDaily(client, property);
+    const observedAt = new Date().toISOString();
+    await markPropertyObserved(client, property, observedAt);
 
     if (!collection.reportingDate) {
+      await logActivity(client, {
+        verb: "capability.observation_completed",
+        subjectKind: "capability",
+        summary: `Search Console observation completed for ${property}; Google returned no finalized reporting date.`,
+        payload: {
+          property,
+          reportingDate: null,
+          emptyResult: true,
+          snapshotsAdded: collection.snapshotIds.length,
+          outcomeEvidenceReady: 0,
+        },
+      });
       await setHealth(client, "healthy");
       return {
         ok: true,
@@ -61,6 +83,19 @@ export async function observeSearchConsole(client: Client): Promise<ObserveResul
 
     const rules = await evaluateSnapshots(client, property, collection.reportingDate);
     const outcomes = await reconcileAppliedChangeEvidence(client);
+    await logActivity(client, {
+      verb: "capability.observation_completed",
+      subjectKind: "capability",
+      summary: `Search Console observation completed for ${property} through ${collection.reportingDate}.`,
+      payload: {
+        property,
+        reportingDate: collection.reportingDate,
+        emptyResult: collection.emptyResult,
+        snapshotsAdded: collection.snapshotIds.length,
+        outcomeEvidenceReady: outcomes.newlyReady,
+        outcomeEvidenceWaiting: outcomes.waiting,
+      },
+    });
     await setHealth(client, "healthy");
 
     return {
