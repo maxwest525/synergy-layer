@@ -1,6 +1,6 @@
 # Title and H1 Proposal Workflow
 
-Date: 2026-08-13  
+Date: 2026-08-13
 Status: Approved design awaiting implementation-plan review
 
 ## Purpose
