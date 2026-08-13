@@ -118,7 +118,7 @@ export async function runWorkflow(
         .eq("id", step.id);
       finalState = "awaiting_approval";
       await fileInboxItem(client, {
-        lane: "needs_attention",
+        lane: "pending_approval",
         sourceModule: "workflows",
         title: `Approval required: ${workflow.name}`,
         summary: `Approval continuation is not wired. Open the parent workflow detail to inspect the run parked at "${node.key}".`,

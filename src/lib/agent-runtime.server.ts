@@ -56,7 +56,7 @@ export async function runAgent(
       .eq("id", agentId);
 
     await fileInboxItem(client, {
-      lane: "needs_attention",
+      lane: "pending_approval",
       sourceModule: "agents",
       title: `${agent.name} requested approval`,
       summary: "Approval continuation is not wired. Open the agent detail to inspect the parked request.",
