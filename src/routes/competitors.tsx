@@ -7,7 +7,17 @@ import { toast } from "sonner";
 import { EmptyState, GlassCard, MetricTile, PageHeader, StatePill } from "@/components/os/primitives";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { decideCompetitorCandidates, listCompetitorShortlist } from "@/lib/competitors.functions";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  COMPANY_CLASSIFICATIONS,
+  COMPANY_CLASSIFICATION_LABELS,
+  type CompanyClassification,
+} from "@/lib/company-classification.server";
+import {
+  decideCompetitorCandidates,
+  listCompetitorShortlist,
+  updateCompanyClassification,
+} from "@/lib/competitors.functions";
 
 const shortlistQuery = {
   queryKey: ["competitor-shortlist"],
@@ -49,6 +59,7 @@ function CompetitorReviewPage() {
   const { data } = useSuspenseQuery(shortlistQuery);
   const queryClient = useQueryClient();
   const decide = useServerFn(decideCompetitorCandidates);
+  const classify = useServerFn(updateCompanyClassification);
   const [selected, setSelected] = useState<string[]>([]);
   const [expanded, setExpanded] = useState<string | null>(null);
 
@@ -67,6 +78,19 @@ function CompetitorReviewPage() {
       void queryClient.invalidateQueries({ queryKey: ["competitor-shortlist"] });
       void queryClient.invalidateQueries({ queryKey: ["inbox"] });
       void queryClient.invalidateQueries({ queryKey: ["overview"] });
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+  const classificationMutation = useMutation({
+    mutationFn: (input: { candidateId: string; classification: CompanyClassification }) => classify({ data: input }),
+    onSuccess: (result) => {
+      toast.success(
+        result.changed
+          ? `${result.domain} is now ${COMPANY_CLASSIFICATION_LABELS[(result.classification ?? "unclassified") as CompanyClassification]}.`
+          : `${result.domain} is already ${COMPANY_CLASSIFICATION_LABELS[(result.classification ?? "unclassified") as CompanyClassification]}.`,
+      );
+      void queryClient.invalidateQueries({ queryKey: ["competitor-shortlist"] });
     },
     onError: (error: Error) => toast.error(error.message),
   });
@@ -128,12 +152,13 @@ function CompetitorReviewPage() {
               <CompetitorRow
                 key={row.id}
                 row={row}
-                busy={busy}
+                busy={busy || classificationMutation.isPending}
                 checked={selected.includes(row.domain)}
                 expanded={expanded === row.id}
                 onToggleSelect={() => toggle(row.domain)}
                 onToggleExpand={() => setExpanded(expanded === row.id ? null : row.id)}
                 onDecide={(decision) => act([row.domain], decision)}
+                onClassify={(classification) => classificationMutation.mutate({ candidateId: row.id, classification })}
               />
             ))}
           </ul>
@@ -175,10 +200,12 @@ type RowProps = {
   onToggleSelect: () => void;
   onToggleExpand: () => void;
   onDecide: (decision: "approve" | "reject") => void;
+  onClassify: (classification: CompanyClassification) => void;
 };
 
-function CompetitorRow({ row, busy, checked, expanded, onToggleSelect, onToggleExpand, onDecide }: RowProps) {
+function CompetitorRow({ row, busy, checked, expanded, onToggleSelect, onToggleExpand, onDecide, onClassify }: RowProps) {
   const page = row.pageEvidence;
+  const classification = (row.companyClassification ?? "unclassified") as CompanyClassification;
   return (
     <li>
       <GlassCard className="space-y-3 p-4">
@@ -195,6 +222,7 @@ function CompetitorRow({ row, busy, checked, expanded, onToggleSelect, onToggleE
               <p className="text-sm font-medium text-foreground">{row.domain}</p>
               <div className="flex flex-wrap items-center gap-2">
                 <StatePill label={row.domainClass === "competitor" ? "Business competitor" : "Surface"} tone="primary" />
+                <StatePill label={`Company: ${COMPANY_CLASSIFICATION_LABELS[classification]}`} />
                 <StatePill label={`SERP share ${pct(row.serpShare)}`} />
                 <StatePill label={`Median position ${row.medianPosition || "—"}`} />
                 <StatePill label={`Outranks us on ${row.outranksOwned}`} />
@@ -210,6 +238,18 @@ function CompetitorRow({ row, busy, checked, expanded, onToggleSelect, onToggleE
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-2">
+            <Select value={classification} disabled={busy} onValueChange={(value) => onClassify(value as CompanyClassification)}>
+              <SelectTrigger aria-label={`Classify ${row.domain}`} className="w-48">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {COMPANY_CLASSIFICATIONS.map((value) => (
+                  <SelectItem key={value} value={value}>
+                    {COMPANY_CLASSIFICATION_LABELS[value]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Button variant="outline" size="sm" onClick={onToggleExpand}>
               {expanded ? "Hide evidence" : "Evidence"}
             </Button>
@@ -261,6 +301,11 @@ function CompetitorRow({ row, busy, checked, expanded, onToggleSelect, onToggleE
             </div>
           </div>
         ) : null}
+        {row.classificationUpdatedAt ? (
+          <p className="text-xs text-muted-foreground">Classification last changed {new Date(row.classificationUpdatedAt).toLocaleString()}.</p>
+        ) : (
+          <p className="text-xs text-muted-foreground">No business classification has been assigned by an operator.</p>
+        )}
       </GlassCard>
     </li>
   );

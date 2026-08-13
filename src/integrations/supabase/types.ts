@@ -1131,6 +1131,9 @@ export type Database = {
       }
       competitor_candidates: {
         Row: {
+          classification_updated_at: string | null
+          classification_updated_by: string | null
+          company_classification: string | null
           created_at: string
           discovered_at: string
           domain: string
@@ -1146,6 +1149,9 @@ export type Database = {
           tenant_id: string
         }
         Insert: {
+          classification_updated_at?: string | null
+          classification_updated_by?: string | null
+          company_classification?: string | null
           created_at?: string
           discovered_at?: string
           domain: string
@@ -1161,6 +1167,9 @@ export type Database = {
           tenant_id: string
         }
         Update: {
+          classification_updated_at?: string | null
+          classification_updated_by?: string | null
+          company_classification?: string | null
           created_at?: string
           discovered_at?: string
           domain?: string

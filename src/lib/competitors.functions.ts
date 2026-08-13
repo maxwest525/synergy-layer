@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { COMPANY_CLASSIFICATIONS, setCompanyClassification } from "./company-classification.server";
 
 
 /** Client-safe mirror of the stored page observation shape. */
@@ -41,7 +42,9 @@ export const listCompetitorShortlist = createServerFn({ method: "POST" })
 
     const { data, error } = await context.supabase
       .from("competitor_candidates")
-      .select("id, domain, domain_class, review_state, metrics, discovered_at")
+      .select(
+        "id, domain, domain_class, review_state, metrics, discovered_at, company_classification, classification_updated_at",
+      )
       .eq("tenant_id", tenantId)
       .order("discovered_at", { ascending: false })
       .limit(500);
@@ -60,6 +63,8 @@ export const listCompetitorShortlist = createServerFn({ method: "POST" })
         id: row.id,
         domain: row.domain,
         domainClass: row.domain_class,
+        companyClassification: row.company_classification,
+        classificationUpdatedAt: row.classification_updated_at,
         reviewState: row.review_state,
         shortlisted: Boolean(pass?.["shortlisted"]),
         significanceScore: Number(pass?.["significance_score"] ?? 0),
@@ -93,6 +98,31 @@ export const listCompetitorShortlist = createServerFn({ method: "POST" })
       tracked: tracked ?? [],
       serpsAnalysed: rows.reduce((max, row) => Math.max(max, row.serpsAnalysed), 0),
     };
+  });
+
+export const updateCompanyClassification = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((data: unknown) =>
+    z
+      .object({
+        candidateId: z.string().uuid(),
+        classification: z.enum(COMPANY_CLASSIFICATIONS),
+      })
+      .parse(data),
+  )
+  .handler(async ({ data, context }) => {
+    const { assertOperator } = await import("./os-admin.server");
+    await assertOperator(context.supabase, context.userId);
+    const { requireTenantId } = await import("./tenant.server");
+    const tenantId = await requireTenantId(context.supabase);
+
+    return setCompanyClassification({
+      client: context.supabase,
+      tenantId,
+      actorId: context.userId,
+      candidateId: data.candidateId,
+      classification: data.classification,
+    });
   });
 
 export const decideCompetitorCandidates = createServerFn({ method: "POST" })
