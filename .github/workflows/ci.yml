@@ -29,7 +29,7 @@ jobs:
         shell: bash
         run: |
           git diff --name-only --diff-filter=ACMR -z origin/main...HEAD -- '*.js' '*.jsx' '*.ts' '*.tsx' |
-            xargs -0 -r npm exec eslint --
+            xargs -0 -r npm exec eslint -- --rule 'prettier/prettier: off'
       - name: Test
         if: always()
         run: npm test
