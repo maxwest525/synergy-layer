@@ -48,7 +48,7 @@ operator surfaces for Keywords and Competitors.
 | Firecrawl / Web Research (Perplexity) | real | Page inspection and cited research. |
 | Competitor intelligence | real | Built on 39 completed SERP snapshots, 71 observed domains. |
 | MCP read tools | real | Guarded by `src/lib/mcp/guard.ts` (auth + audit). |
-| SerpAPI Ads Transparency | pending | Digest + plan complete (`docs/integrations/serpapi/`). Blocked on credential and plan-tier approval. |
+| SerpAPI Ads Transparency | pending gate, proven canary history | Direct account/canary code exists and 11 successful canary ledger rows are stored. The free provider gate must be revalidated; creative and live paid-SERP stages remain pending. |
 | GitHub (`cap.github`) | not connected | Blocks `wf.publish`. Do not connect without approval. |
 
 Spend controls: DataForSEO ceiling **$300/month**, ledgered per request, alerts at
@@ -68,7 +68,7 @@ Spend controls: DataForSEO ceiling **$300/month**, ledgered per request, alerts 
    human review in `/competitors`. All six are in `pending`; none are approved,
    rejected, or tracked. The agent must not approve or reject these.
 2. GitHub credential / `cap.github` authorization for `wf.publish`.
-3. SerpAPI credential plus plan-tier choice for `cap.serpapi_ads_transparency`. Digest and plan are done; no integration code is written until the key exists and a live auth probe passes.
+3. Revalidate the free SerpAPI account gate for `cap.serpapi_ads_transparency`. Direct canary code and prior advertiser evidence exist; downstream creative and live paid-SERP capabilities remain separately pending.
 
 Legacy agent and workflow approval notices were moved to Needs attention because
 approval continuation is not wired. New notices use the same honest Open-only
@@ -143,10 +143,7 @@ second visits served from the query cache. Applied fixes:
   key. It stops at the first account or credential refusal. A provider "no
   results" reply is a successful empty observation, not a transport failure, and a
   previously failed reservation is retried under a distinct run key.
-- **Weekly ads cadence registered.** `sch.vendor_ad_refresh`,
-  `sch.vendor_landing_page_analysis`, and `sch.vendor_message_synthesis` run
-  Tuesdays. Creative ingestion files an FYI Inbox item only on material change
-  (new creative families or retirements).
+- **Ads schedules are registry declarations only.** The runtime allowlist and production rows keep every ads cadence disabled. Creative or live paid-SERP work remains manual and capability-gated.
 - **Digest is in Knowledge.** The Google Ads Transparency digest v1.0.0 is filed in
   kb.documents, tagged `cap.serpapi_ads_transparency`, pointing at
   `docs/integrations/serpapi/DIGEST.md`.
@@ -201,3 +198,24 @@ secret paths are stored.
 - Migration: `change_requests.source_repo/source_branch/source_commit_*/published_proof_*` and `public.change_request_executions` (tenant read, server write).
 - Applied now means proven live on the public URL; the manual "Mark applied" button is gone. Verification still requires finalized post-change Search Console rows.
 - Blocker: `GITHUB_EXECUTOR_TOKEN` is not configured, so no real commit has been attempted. The UI names this exactly and refuses without writing.
+
+
+## Direct measurement truth (2026-08-14)
+
+- **GA4 Data API is implemented as an operator-triggered read.** It uses
+  `properties/536830122`, a 28-complete-day window, and the official
+  `runReport` endpoint. The stored inventory is keyed by hostname, exact page
+  path plus query string, and event name. Every attempt opens and closes a
+  `measurement_runs` row; only successful provider responses create immutable
+  `ga4_snapshots`.
+- **Credential presence is not connection proof.** AOOS accepts either
+  `GA4_SERVICE_ACCOUNT_JSON` or the complete OAuth refresh-token trio. The UI
+  says Configured until a successful snapshot exists, then Connected. A browser
+  measurement ID can emit events but cannot authorize reporting reads.
+- **No background analytics loop exists.** Refresh is an operator action. GA4 is
+  measurement-only and never blocks proposal generation.
+- **SerpAPI stays separate from DataForSEO.** Only the free
+  `cap.serpapi_ads_transparency` account check may run while pending. Advertiser
+  resolution, creative intelligence, and live paid-SERP observation remain
+  blocked until their own registry states become real. All ads schedules remain
+  disabled.

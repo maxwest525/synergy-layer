@@ -41,7 +41,7 @@ export type Ga4SnapshotView = {
   property: string;
   startDate: string;
   endDate: string;
-  metrics: Record<string, number>;
+  metrics: Record<string, unknown>;
   collectedAt: string;
 };
 
@@ -64,15 +64,25 @@ export const getMeasurementState = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<MeasurementState> => {
     const { requireTenantId } = await import("./tenant.server");
-    const { describeGa4Connection, readGa4EnvPresence, GA4_PROPERTY } = await import("./measurement/ga4");
+    const { describeGa4Connection, readGa4EnvPresence, GA4_PROPERTY } =
+      await import("./measurement/ga4");
     const tenantId = await requireTenantId(context.supabase);
 
     const [roles, assets, runs, snapshots, ga4Rows] = await Promise.all([
-      context.supabase.from("user_roles").select("role").eq("user_id", context.userId),
-      context.supabase.from("assets").select("external_ref").eq("tenant_id", tenantId).eq("kind", "website"),
+      context.supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", context.userId),
+      context.supabase
+        .from("assets")
+        .select("external_ref")
+        .eq("tenant_id", tenantId)
+        .eq("kind", "website"),
       context.supabase
         .from("measurement_runs")
-        .select("id, provider, target, strategy, status, error, http_status, started_at, finished_at, duration_ms")
+        .select(
+          "id, provider, target, strategy, status, error, http_status, started_at, finished_at, duration_ms",
+        )
         .eq("tenant_id", tenantId)
         .order("started_at", { ascending: false })
         .limit(50),
@@ -98,7 +108,8 @@ export const getMeasurementState = createServerFn({ method: "POST" })
       ["PageSpeed snapshots", snapshots],
       ["GA4 snapshots", ga4Rows],
     ] as const) {
-      if (result.error) throw new Error(`Could not read ${label}: ${result.error.message}`);
+      if (result.error)
+        throw new Error(`Could not read ${label}: ${result.error.message}`);
     }
 
     const ownedUrls = (assets.data ?? [])
@@ -133,7 +144,9 @@ export const getMeasurementState = createServerFn({ method: "POST" })
     const ga4Row = (ga4Rows.data ?? [])[0] ?? null;
 
     return {
-      isOperator: (roles.data ?? []).some((row) => row.role === "admin" || row.role === "operator"),
+      isOperator: (roles.data ?? []).some(
+        (row) => row.role === "admin" || row.role === "operator",
+      ),
       defaultUrl: ownedUrls[0] ?? "https://trumoveinc.com",
       ownedUrls,
       runs: allRuns.filter((row) => row.provider === "pagespeed"),
@@ -150,20 +163,25 @@ export const getMeasurementState = createServerFn({ method: "POST" })
         cls: row.cls === null ? null : Number(row.cls),
         tbtMs: row.tbt_ms === null ? null : Number(row.tbt_ms),
         fcpMs: row.fcp_ms === null ? null : Number(row.fcp_ms),
-        speedIndexMs: row.speed_index_ms === null ? null : Number(row.speed_index_ms),
-        opportunities: (row.opportunities ?? []) as unknown as PageSpeedOpportunity[],
+        speedIndexMs:
+          row.speed_index_ms === null ? null : Number(row.speed_index_ms),
+        opportunities: (row.opportunities ??
+          []) as unknown as PageSpeedOpportunity[],
         collectedAt: row.collected_at,
       })),
       ga4: {
         property: GA4_PROPERTY,
-        connection: describeGa4Connection(readGa4EnvPresence(process.env)),
+        connection: describeGa4Connection(
+          readGa4EnvPresence(process.env),
+          Boolean(ga4Row),
+        ),
         latest: ga4Row
           ? {
               id: ga4Row.id,
               property: ga4Row.property,
               startDate: ga4Row.start_date,
               endDate: ga4Row.end_date,
-              metrics: (ga4Row.metrics ?? {}) as Record<string, number>,
+              metrics: (ga4Row.metrics ?? {}) as Record<string, unknown>,
               collectedAt: ga4Row.collected_at,
             }
           : null,
@@ -177,7 +195,10 @@ export const runPageSpeedCheck = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) =>
     z
-      .object({ url: z.string().url().max(2000), strategy: z.enum(["mobile", "desktop"]) })
+      .object({
+        url: z.string().url().max(2000),
+        strategy: z.enum(["mobile", "desktop"]),
+      })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
@@ -186,7 +207,8 @@ export const runPageSpeedCheck = createServerFn({ method: "POST" })
     const { requireTenantId } = await import("./tenant.server");
     const tenantId = await requireTenantId(context.supabase);
 
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { supabaseAdmin } =
+      await import("@/integrations/supabase/client.server");
     const { runPageSpeed } = await import("./measurement/pagespeed.server");
 
     const result = await runPageSpeed(context.supabase, supabaseAdmin, {
@@ -214,17 +236,23 @@ export const refreshGa4 = createServerFn({ method: "POST" })
   .handler(async ({ context }) => {
     const { assertOperator } = await import("./os-admin.server");
     await assertOperator(context.supabase, context.userId);
-    const { describeGa4Connection, readGa4EnvPresence } = await import("./measurement/ga4");
+    const { describeGa4Connection, readGa4EnvPresence } =
+      await import("./measurement/ga4");
 
     const connection = describeGa4Connection(readGa4EnvPresence(process.env));
-    if (!connection.connected) {
+    if (!connection.configured) {
       throw new Error(
-        `GA4 is not connected, so no request was made. ${connection.requirements.join(" ")}`.trim(),
+        `GA4 is not configured, so no request was made. ${connection.requirements.join(" ")}`.trim(),
       );
     }
-    // A credential exists but the reporting call is not built yet, so nothing is
-    // stored and nothing is claimed.
-    throw new Error(
-      "A GA4 credential is now present. The reporting call has not been enabled yet, so no data was fetched or stored.",
-    );
+
+    const { requireTenantId } = await import("./tenant.server");
+    const tenantId = await requireTenantId(context.supabase);
+    const { supabaseAdmin } =
+      await import("@/integrations/supabase/client.server");
+    const { runGa4Inventory } = await import("./measurement/ga4.server");
+    return runGa4Inventory(supabaseAdmin, {
+      tenantId,
+      actorId: context.userId,
+    });
   });
