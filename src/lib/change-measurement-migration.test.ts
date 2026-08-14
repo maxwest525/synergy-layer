@@ -23,7 +23,7 @@ describe("change measurement database contract", () => {
     expect(sql).toMatch(/WHEN 'dataforseo_organic' THEN 'enrichment'/);
     expect(sql).toMatch(/WHEN 'serpapi_paid_serp' THEN 'corroboration'/);
     expect(sql).toMatch(/WHEN 'knowledge' THEN 'devils_advocate'/);
-    expect(sql).toMatch(/_source_role IS DISTINCT FROM \\(CASE _provider[\\s\\S]*END\\) THEN/);
+    expect(sql).toMatch(/_source_role IS DISTINCT FROM \(CASE _provider[\s\S]*END\) THEN/);
   });
 
   it("anchors live_at only from rendered proof and never grants the append RPC to browsers", () => {
