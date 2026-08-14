@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   assertCompleteEvidence,
+  assertSameCanonicalProposalPage,
   buildTitleH1Prompt,
   selectRelevantCompetitorEvidence,
   type ProposalEvidence,
@@ -121,5 +122,27 @@ describe("title/H1 proposal evidence contract", () => {
     );
     expect(prompt).toContain('"id": "guide-1"');
     expect(prompt).toContain('"sourceRef": "books/seo-playbook.md"');
+  });
+});
+
+describe("rendered proposal redirect boundary", () => {
+  const requested = "https://trumoveinc.com/services/corporate-relocation";
+
+  it("refuses an off-origin rendered redirect before generation", () => {
+    expect(() =>
+      assertSameCanonicalProposalPage(requested, "https://attacker.example/corporate-relocation"),
+    ).toThrow(/rendered redirect|governed origin/i);
+  });
+
+  it("refuses a different same-origin rendered path before generation", () => {
+    expect(() =>
+      assertSameCanonicalProposalPage(requested, "https://trumoveinc.com/services/residential-moving"),
+    ).toThrow(/same canonical page/i);
+  });
+
+  it("allows only the explicit trailing-slash canonical equivalent", () => {
+    expect(() =>
+      assertSameCanonicalProposalPage(requested, `${requested}/`),
+    ).not.toThrow();
   });
 });
