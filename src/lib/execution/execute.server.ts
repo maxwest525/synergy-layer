@@ -11,6 +11,19 @@ type Client = SupabaseClient<Database>;
 const REQUEST_TIMEOUT_MS = 20_000;
 const MAX_RESPONSE_CHARS = 2_000_000;
 
+export async function captureMeasurementFollowupWarning(
+  followup: () => Promise<void>,
+): Promise<string | undefined> {
+  try {
+    await followup();
+    return undefined;
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "The measurement anchor could not be recorded.";
+    return `Measurement anchor follow-up failed: ${message}`;
+  }
+}
+
 /** Bounded, timed fetch. Never lets a provider hang or flood the worker. */
 async function boundedFetch(
   url: string,
@@ -115,6 +128,13 @@ export function createExecutionStore(admin: Client, rls: Client, actorId: string
       const payload = data as { changed?: unknown } | null;
       if (!payload || typeof payload.changed !== "boolean") {
         throw new Error("The publish-proof routine returned an unreadable result. Nothing was assumed.");
+      }
+      if (payload.changed) {
+        const warning = await captureMeasurementFollowupWarning(async () => {
+          const { recordRenderedLiveAnchor } = await import("../change-measurements.server");
+          await recordRenderedLiveAnchor(admin, id, actorId, proof);
+        });
+        if (warning) return { changed: true, warning };
       }
       return { changed: payload.changed };
     },

@@ -1,0 +1,31 @@
+import { readFileSync } from "node:fs";
+import { describe, expect, it } from "vitest";
+
+const sql = readFileSync(
+  new URL("../../supabase/migrations/20260814123000_change_measurement_engine.sql", import.meta.url),
+  "utf8",
+);
+
+describe("change measurement database contract", () => {
+  it("keeps all lifecycle tables tenant-consistent and read-only to authenticated users", () => {
+    expect(sql).toMatch(/FOREIGN KEY \(cycle_id, tenant_id\)/g);
+    expect(sql.match(/FOR SELECT TO authenticated/g)?.length).toBe(4);
+    expect(sql).toMatch(/REVOKE ALL ON public\.change_measurement_cycles[\s\S]*FROM PUBLIC, anon, authenticated/);
+    expect(sql).not.toMatch(/GRANT (INSERT|UPDATE|DELETE).*authenticated/i);
+  });
+
+  it("makes history append-only and provider roles deterministic", () => {
+    expect(sql).toMatch(/BEFORE UPDATE OR DELETE ON public\.change_measurement_observations/);
+    expect(sql).toMatch(/BEFORE UPDATE OR DELETE ON public\.change_measurement_revisions/);
+    expect(sql).toMatch(/WHEN 'ga4' THEN 'source_of_truth'/);
+    expect(sql).toMatch(/WHEN 'dataforseo_organic' THEN 'enrichment'/);
+    expect(sql).toMatch(/WHEN 'serpapi_paid_serp' THEN 'corroboration'/);
+    expect(sql).toMatch(/WHEN 'knowledge' THEN 'devils_advocate'/);
+  });
+
+  it("anchors live_at only from rendered proof and never grants the append RPC to browsers", () => {
+    expect(sql).toMatch(/OLD\.published_proof_at IS NULL AND NEW\.published_proof_at IS NOT NULL[\s\S]*NEW\.live_at := NEW\.published_proof_at/);
+    expect(sql).toMatch(/REVOKE ALL ON FUNCTION public\.append_change_measurement_observation[\s\S]*authenticated/);
+    expect(sql).toMatch(/GRANT EXECUTE ON FUNCTION public\.append_change_measurement_observation[\s\S]*TO service_role/);
+  });
+});

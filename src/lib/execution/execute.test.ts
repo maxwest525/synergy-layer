@@ -11,6 +11,7 @@ import {
   type GithubApi,
   type RenderedVerifier,
 } from "./execute";
+import { captureMeasurementFollowupWarning } from "./execute.server";
 
 const changes = parseFieldChanges([
   {
@@ -53,7 +54,10 @@ function makeRequest(overrides: Partial<ExecutableRequest> = {}): ExecutableRequ
 }
 
 
-function makeStore(request: ExecutableRequest | null) {
+function makeStore(
+  request: ExecutableRequest | null,
+  options: { proofResult?: { changed: boolean; warning?: string } } = {},
+) {
   const attempts: AttemptRecord[] = [];
   const saved: Record<string, unknown>[] = [];
   const store: ExecutionStore = {
@@ -66,7 +70,7 @@ function makeStore(request: ExecutableRequest | null) {
     },
     applyRenderedProof: async (input) => {
       saved.push({ kind: "applied", id: input.id, notes: input.notes, revision: input.revision });
-      return { changed: true };
+      return options.proofResult ?? { changed: true };
     },
   };
   return { store, attempts, saved };
@@ -261,6 +265,16 @@ describe("verifyRenderedPage", () => {
 });
 
 describe("checkPublishedPage", () => {
+  it("turns a failed measurement-anchor follow-up into a warning", async () => {
+    const warning = await captureMeasurementFollowupWarning(async () => {
+      throw new Error("temporary database error");
+    });
+
+    expect(warning).toBe(
+      "Measurement anchor follow-up failed: temporary database error",
+    );
+  });
+
   it("marks applied through one atomic routine when the rendered page proves the change", async () => {
     const { store, saved } = makeStore(makeRequest({ commitSha: "new-sha" }));
     const outcome = await checkPublishedPage({
@@ -274,6 +288,28 @@ describe("checkPublishedPage", () => {
     });
     expect(outcome.status).toBe("verified");
     expect(saved.map((row) => row["kind"])).toEqual(["applied"]);
+  });
+
+  it("keeps a proven change verified when measurement follow-up needs a retry", async () => {
+    const warning = "Measurement anchor follow-up failed: temporary database error";
+    const { store, attempts, saved } = makeStore(makeRequest({ commitSha: "new-sha" }), {
+      proofResult: { changed: true, warning },
+    });
+    const outcome = await checkPublishedPage({
+      store,
+      renderer: makeRenderer({
+        title: "Employee Relocation Movers | TruMove",
+        heading: "Employee Relocation Moving Services",
+      }),
+      requestId: "x",
+      actorId: "operator",
+    });
+
+    expect(outcome.status).toBe("verified");
+    expect(outcome.warning).toBe(warning);
+    expect(outcome.message).toContain("measurement follow-up needs a retry");
+    expect(saved.map((row) => row["kind"])).toEqual(["applied"]);
+    expect(attempts.at(-1)?.detail).toMatchObject({ measurementFollowupWarning: warning });
   });
 
   it("stays pending and does not mark applied when the page is unchanged", async () => {

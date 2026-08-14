@@ -67,7 +67,7 @@ export type ExecutionStore = {
     notes: string;
     revision: string;
     proof: PublishedProof;
-  }): Promise<{ changed: boolean }>;
+  }): Promise<{ changed: boolean; warning?: string }>;
 };
 
 export type GithubApi = {
@@ -284,6 +284,7 @@ export type PublishCheckOutcome = {
   status: "verified" | "pending" | "refused" | "failed";
   message: string;
   proof?: PublishedProof;
+  warning?: string;
 };
 
 export async function checkPublishedPage(input: {
@@ -356,6 +357,7 @@ export async function checkPublishedPage(input: {
   }
 
   let changed = false;
+  let warning: string | undefined;
   if (!request.publishedProofAt) {
     const result = await input.store.applyRenderedProof({
       id: request.id,
@@ -364,6 +366,7 @@ export async function checkPublishedPage(input: {
       proof,
     });
     changed = result.changed;
+    warning = result.warning;
   }
 
   await record({
@@ -375,12 +378,16 @@ export async function checkPublishedPage(input: {
       foundHeading: proof.foundHeading,
       renderedBy: proof.renderedBy,
       appliedNow: changed,
+      ...(warning ? { measurementFollowupWarning: warning } : {}),
     },
   });
   return {
     status: "verified",
-    message:
-      "The rendered public page serves the approved title and H1. The post-change Search Console window starts now. Outcome is not verified until finalized data arrives.",
+    message: warning
+      ? `The rendered public page serves the approved title and H1. The change is applied, but measurement follow-up needs a retry: ${warning}`
+      : "The rendered public page serves the approved title and H1. The post-change Search Console window starts now. Outcome is not verified until finalized data arrives.",
     proof,
+    ...(warning ? { warning } : {}),
   };
 }
+

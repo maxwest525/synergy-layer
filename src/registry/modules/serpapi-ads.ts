@@ -17,13 +17,25 @@ export const definition: ModuleDefinition = {
       kind: "api",
       category: "Paid",
       description:
-        "Credentialed gate over every SerpApi call: Ads Transparency Center listings, ad detail, and the live Google ads block. One successful request costs one search credit, so cache stays on and forced refresh is operator gated. Transparency answers what an advertiser has run, never how it performed.",
+        "Credentialed gate over every SerpApi call: Ads Transparency Center listings, ad detail, and the live Google ads block. One successful request costs one search credit, so cache stays on and forced refresh is operator gated. Transparency answers what an advertiser has run, never how it performed. While pending, only the free account-status probe is runnable; no search credit can be spent.",
       integrationState: "pending",
       authKind: "api_key",
       operations: [
-        { name: "ads.search", description: "List creatives by advertiser or free text.", mutates: false },
-        { name: "ads.detail", description: "Full payload for one unseen creative.", mutates: false },
-        { name: "ads.live_serp", description: "Point-in-time paid SERP observation.", mutates: false },
+        {
+          name: "ads.search",
+          description: "List creatives by advertiser or free text.",
+          mutates: false,
+        },
+        {
+          name: "ads.detail",
+          description: "Full payload for one unseen creative.",
+          mutates: false,
+        },
+        {
+          name: "ads.live_serp",
+          description: "Point-in-time paid SERP observation.",
+          mutates: false,
+        },
       ],
       config: {
         mutating: false,
@@ -32,9 +44,15 @@ export const definition: ModuleDefinition = {
         evidenceLabel: "observed",
         cachePolicy: "provider_cache_on",
         maxSearchesPerRun: 120,
+        pendingGateAction: "free_account_probe_only",
         digest: "docs/integrations/serpapi/DIGEST.md",
         plan: "docs/integrations/serpapi/PLAN.md",
-        prohibited: ["spend_inference", "performance_inference", "ad_generation", "ad_deployment"],
+        prohibited: [
+          "spend_inference",
+          "performance_inference",
+          "ad_generation",
+          "ad_deployment",
+        ],
       },
     },
     {
@@ -46,9 +64,18 @@ export const definition: ModuleDefinition = {
         "Resolves a vendor domain to Google advertiser candidates. The provider does not disambiguate, so a domain served by several advertiser accounts becomes an operator decision filed to the Action Center. Only a single unambiguous advertiser resolves on its own.",
       integrationState: "pending",
       operations: [
-        { name: "advertisers.resolve", description: "Search each watchlist domain and group rows by advertiser ID.", mutates: false },
+        {
+          name: "advertisers.resolve",
+          description:
+            "Search each watchlist domain and group rows by advertiser ID.",
+          mutates: false,
+        },
       ],
-      config: { mutating: false, requiresApproval: "ambiguous_advertisers", evidenceLabel: "observed" },
+      config: {
+        mutating: false,
+        requiresApproval: "ambiguous_advertisers",
+        evidenceLabel: "observed",
+      },
     },
     {
       key: "ads.creative_intelligence",
@@ -59,10 +86,22 @@ export const definition: ModuleDefinition = {
         "Immutable creative snapshots per confirmed advertiser, normalized messaging fields, checksum change detection, and clustering into creative families so copy variants do not read as separate strategies. Detail is fetched once per unseen creative ID. Long-running creatives are a durability signal only.",
       integrationState: "pending",
       operations: [
-        { name: "creatives.ingest", description: "Paginate creatives, normalize, checksum, cluster.", mutates: false },
-        { name: "creatives.families", description: "Rebuild creative families from stored evidence.", mutates: false },
+        {
+          name: "creatives.ingest",
+          description: "Paginate creatives, normalize, checksum, cluster.",
+          mutates: false,
+        },
+        {
+          name: "creatives.families",
+          description: "Rebuild creative families from stored evidence.",
+          mutates: false,
+        },
       ],
-      config: { mutating: false, evidenceLabel: "observed", contentCopying: "prohibited" },
+      config: {
+        mutating: false,
+        evidenceLabel: "observed",
+        contentCopying: "prohibited",
+      },
     },
     {
       key: "ads.landing_page_intelligence",
@@ -74,9 +113,19 @@ export const definition: ModuleDefinition = {
       integrationState: "real",
       authKind: "api_key",
       operations: [
-        { name: "destination.observe", description: "Fetch and normalise one destination per unique ad link.", mutates: false },
+        {
+          name: "destination.observe",
+          description:
+            "Fetch and normalise one destination per unique ad link.",
+          mutates: false,
+        },
       ],
-      config: { mutating: false, provider: "firecrawl", evidenceLabel: "observed", contentCopying: "prohibited" },
+      config: {
+        mutating: false,
+        provider: "firecrawl",
+        evidenceLabel: "observed",
+        contentCopying: "prohibited",
+      },
     },
     {
       key: "ads.live_serp_observation",
@@ -88,9 +137,18 @@ export const definition: ModuleDefinition = {
       integrationState: "pending",
       authKind: "api_key",
       operations: [
-        { name: "paid_serp.observe", description: "Sweep approved keywords and store the ads block.", mutates: false },
+        {
+          name: "paid_serp.observe",
+          description: "Sweep approved keywords and store the ads block.",
+          mutates: false,
+        },
       ],
-      config: { mutating: false, scope: "approved_keywords_only", evidenceLabel: "observed", historical: false },
+      config: {
+        mutating: false,
+        scope: "approved_keywords_only",
+        evidenceLabel: "observed",
+        historical: false,
+      },
     },
     {
       key: "ads.vendor_network_analysis",
@@ -101,7 +159,12 @@ export const definition: ModuleDefinition = {
         "Derived from stored evidence with no provider call and no cost. Reports shared destination domains, shared ad funders, repeated offers, and dominant funnel types across advertisers. Shared infrastructure is an observation, never an accusation.",
       integrationState: "real",
       operations: [
-        { name: "network.analyze", description: "Recompute overlap across stored advertisers and creatives.", mutates: false },
+        {
+          name: "network.analyze",
+          description:
+            "Recompute overlap across stored advertisers and creatives.",
+          mutates: false,
+        },
       ],
       config: { mutating: false, costUsd: 0, evidenceLabel: "derived" },
     },
@@ -115,8 +178,16 @@ export const definition: ModuleDefinition = {
       triggerKind: "manual",
       graph: {
         nodes: [
-          { key: "resolve", kind: "capability", ref: "ads.advertiser_resolution" },
-          { key: "creatives", kind: "capability", ref: "ads.creative_intelligence" },
+          {
+            key: "resolve",
+            kind: "capability",
+            ref: "ads.advertiser_resolution",
+          },
+          {
+            key: "creatives",
+            kind: "capability",
+            ref: "ads.creative_intelligence",
+          },
         ],
         edges: [{ from: "resolve", to: "creatives" }],
       },
@@ -125,10 +196,16 @@ export const definition: ModuleDefinition = {
       key: "wf.vendor_ad_refresh",
       name: "Vendor ad refresh",
       description:
-        "Scheduled re-observation of confirmed advertisers. Cache friendly, detail fetched only for unseen creative IDs, absent creatives retired rather than deleted.",
+        "Registry-declared refresh for confirmed advertisers. Runtime scheduling is disabled until explicitly allowlisted. Cache friendly, detail fetched only for unseen creative IDs, absent creatives retired rather than deleted.",
       triggerKind: "schedule",
       graph: {
-        nodes: [{ key: "creatives", kind: "capability", ref: "ads.creative_intelligence" }],
+        nodes: [
+          {
+            key: "creatives",
+            kind: "capability",
+            ref: "ads.creative_intelligence",
+          },
+        ],
         edges: [],
       },
     },
@@ -139,7 +216,13 @@ export const definition: ModuleDefinition = {
         "Follows each unique ad destination once and records funnel observations. An unchanged page costs nothing and is a successful no-change pass.",
       triggerKind: "manual",
       graph: {
-        nodes: [{ key: "destinations", kind: "capability", ref: "ads.landing_page_intelligence" }],
+        nodes: [
+          {
+            key: "destinations",
+            kind: "capability",
+            ref: "ads.landing_page_intelligence",
+          },
+        ],
         edges: [],
       },
     },
@@ -150,7 +233,13 @@ export const definition: ModuleDefinition = {
         "Rebuilds creative families and recomputes the vendor network view from stored evidence. Costs nothing and produces observations, not recommendations.",
       triggerKind: "manual",
       graph: {
-        nodes: [{ key: "network", kind: "capability", ref: "ads.vendor_network_analysis" }],
+        nodes: [
+          {
+            key: "network",
+            kind: "capability",
+            ref: "ads.vendor_network_analysis",
+          },
+        ],
         edges: [],
       },
     },
@@ -158,10 +247,16 @@ export const definition: ModuleDefinition = {
       key: "wf.live_paid_serp_observe",
       name: "Live paid SERP observation",
       description:
-        "Observes the paid block for the approved keyword set. It stops cleanly when no keyword has been approved rather than inventing a query.",
+        "Observes the paid block for the approved keyword set. Runtime scheduling is disabled until explicitly allowlisted, and the pending capability blocks execution. It stops cleanly when no keyword has been approved rather than inventing a query.",
       triggerKind: "schedule",
       graph: {
-        nodes: [{ key: "observe", kind: "capability", ref: "ads.live_serp_observation" }],
+        nodes: [
+          {
+            key: "observe",
+            kind: "capability",
+            ref: "ads.live_serp_observation",
+          },
+        ],
         edges: [],
       },
     },

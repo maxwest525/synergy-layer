@@ -3,6 +3,7 @@ import { requireTenantId } from "./tenant.server";
 
 import type { Database } from "@/integrations/supabase/types";
 import { fileInboxItem, logActivity } from "./os.server";
+import { mayExecuteCapability } from "./serpapi/provider-gate";
 
 type Client = SupabaseClient<Database>;
 
@@ -24,10 +25,14 @@ export function parseGraph(graph: unknown): WorkflowGraph {
 
 export function assertRunnableGraph(graph: WorkflowGraph): void {
   if (graph.nodes.some((node) => node.kind === "agent")) {
-    throw new Error("This workflow cannot run because agent runtime is not implemented.");
+    throw new Error(
+      "This workflow cannot run because agent runtime is not implemented.",
+    );
   }
   if (graph.nodes.some((node) => node.kind === "approval")) {
-    throw new Error("This workflow cannot run because approval continuation is not implemented.");
+    throw new Error(
+      "This workflow cannot run because approval continuation is not implemented.",
+    );
   }
 }
 
@@ -35,9 +40,13 @@ export function assertRunnableGraph(graph: WorkflowGraph): void {
 export function orderNodes(graph: WorkflowGraph): WorkflowNode[] {
   const incoming = new Map<string, number>();
   graph.nodes.forEach((node) => incoming.set(node.key, 0));
-  graph.edges.forEach((edge) => incoming.set(edge.to, (incoming.get(edge.to) ?? 0) + 1));
+  graph.edges.forEach((edge) =>
+    incoming.set(edge.to, (incoming.get(edge.to) ?? 0) + 1),
+  );
 
-  const ready = graph.nodes.filter((node) => (incoming.get(node.key) ?? 0) === 0);
+  const ready = graph.nodes.filter(
+    (node) => (incoming.get(node.key) ?? 0) === 0,
+  );
   const ordered: WorkflowNode[] = [];
 
   while (ready.length > 0) {
@@ -49,7 +58,9 @@ export function orderNodes(graph: WorkflowGraph): WorkflowNode[] {
         const next = (incoming.get(edge.to) ?? 0) - 1;
         incoming.set(edge.to, next);
         if (next === 0) {
-          const target = graph.nodes.find((candidate) => candidate.key === edge.to);
+          const target = graph.nodes.find(
+            (candidate) => candidate.key === edge.to,
+          );
           if (target) ready.push(target);
         }
       });
@@ -61,7 +72,10 @@ export function orderNodes(graph: WorkflowGraph): WorkflowNode[] {
   return ordered;
 }
 
-type RunResult = { runId: string; state: Database["public"]["Enums"]["run_state"] };
+type RunResult = {
+  runId: string;
+  state: Database["public"]["Enums"]["run_state"];
+};
 
 /**
  * Executes a workflow graph node by node, recording one step row per node.
@@ -167,7 +181,8 @@ export async function runWorkflow(
     .update({
       state: finalState,
       error: failure,
-      finished_at: finalState === "awaiting_approval" ? null : finishedAt.toISOString(),
+      finished_at:
+        finalState === "awaiting_approval" ? null : finishedAt.toISOString(),
       duration_ms: finishedAt.getTime() - startedAt.getTime(),
     })
     .eq("id", run.id);
@@ -203,9 +218,17 @@ export async function runWorkflow(
   return { runId: run.id, state: finalState };
 }
 
-type NodeOutcome = { ok: boolean; output?: Record<string, unknown>; error?: string };
+type NodeOutcome = {
+  ok: boolean;
+  output?: Record<string, unknown>;
+  error?: string;
+};
 
-async function executeNode(client: Client, node: WorkflowNode, runId: string): Promise<NodeOutcome> {
+async function executeNode(
+  client: Client,
+  node: WorkflowNode,
+  runId: string,
+): Promise<NodeOutcome> {
   if (node.kind === "condition") {
     return { ok: true, output: { evaluated: true } };
   }
@@ -217,9 +240,13 @@ async function executeNode(client: Client, node: WorkflowNode, runId: string): P
       .eq("key", node.ref ?? "")
       .maybeSingle();
     if (error) return { ok: false, error: error.message };
-    if (!capability) return { ok: false, error: `Unknown capability "${node.ref}"` };
-    if (capability.integration_state !== "real") {
-      return { ok: false, error: `Capability "${capability.name}" is not authorised yet.` };
+    if (!capability)
+      return { ok: false, error: `Unknown capability "${node.ref}"` };
+    if (!mayExecuteCapability(node.ref ?? "", capability.integration_state)) {
+      return {
+        ok: false,
+        error: `Capability "${capability.name}" is not authorised yet.`,
+      };
     }
 
     const specialised =
@@ -231,12 +258,14 @@ async function executeNode(client: Client, node: WorkflowNode, runId: string): P
       (await runDataForSeoNode(client, node.ref ?? "", runId));
     if (specialised && !specialised.ok) return specialised;
 
-
     await client
       .from("capabilities")
       .update({ last_run_at: new Date().toISOString(), health: "healthy" })
       .eq("id", capability.id);
-    return { ok: true, output: { capability: capability.name, ...(specialised?.output ?? {}) } };
+    return {
+      ok: true,
+      output: { capability: capability.name, ...(specialised?.output ?? {}) },
+    };
   }
 
   const { data: agent, error } = await client
@@ -249,7 +278,10 @@ async function executeNode(client: Client, node: WorkflowNode, runId: string): P
 
   await client
     .from("agents")
-    .update({ current_task: `Executing node ${node.key}`, last_run_at: new Date().toISOString() })
+    .update({
+      current_task: `Executing node ${node.key}`,
+      last_run_at: new Date().toISOString(),
+    })
     .eq("id", agent.id);
 
   return { ok: true, output: { agent: agent.name, node: node.key } };
@@ -264,7 +296,8 @@ async function runSearchConsoleNode(
   ref: string,
 ): Promise<NodeOutcome | null> {
   if (ref === "search.console") {
-    const { collectDaily, getSelectedProperty } = await import("./search-console.server");
+    const { collectDaily, getSelectedProperty } =
+      await import("./search-console.server");
     const property = await getSelectedProperty(client);
     if (!property) {
       return { ok: false, error: "No Search Console property is selected." };
@@ -281,7 +314,10 @@ async function runSearchConsoleNode(
         },
       };
     } catch (error) {
-      return { ok: false, error: error instanceof Error ? error.message : String(error) };
+      return {
+        ok: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
     }
   }
 
@@ -304,12 +340,18 @@ async function runSearchConsoleNode(
       if (latestError) return { ok: false, error: latestError.message };
       const reportingDate = latest?.period_end_pt ?? null;
       if (!reportingDate) {
-        return { ok: true, output: { noChange: true, reason: "No stored snapshot to evaluate." } };
+        return {
+          ok: true,
+          output: { noChange: true, reason: "No stored snapshot to evaluate." },
+        };
       }
       const result = await evaluateSnapshots(client, property, reportingDate);
       return { ok: true, output: { ...result } };
     } catch (error) {
-      return { ok: false, error: error instanceof Error ? error.message : String(error) };
+      return {
+        ok: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
     }
   }
 
@@ -320,14 +362,20 @@ async function runSearchConsoleNode(
  * Research nodes run the real Perplexity + Firecrawl pass. A pass that files no
  * new entries is a successful step; only a genuine fault fails the node.
  */
-async function runResearchNode(client: Client, ref: string): Promise<NodeOutcome | null> {
+async function runResearchNode(
+  client: Client,
+  ref: string,
+): Promise<NodeOutcome | null> {
   if (ref !== "cap.web_research") return null;
   const { runWebResearch } = await import("./web-research.server");
   try {
     const result = await runWebResearch(client);
     return { ok: true, output: { ...result } };
   } catch (error) {
-    return { ok: false, error: error instanceof Error ? error.message : String(error) };
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : String(error),
+    };
   }
 }
 /**
@@ -345,7 +393,10 @@ async function runSeoValidationNode(
     const result = await runSeoValidation(client, runId);
     return { ok: true, output: { ...result } };
   } catch (error) {
-    return { ok: false, error: error instanceof Error ? error.message : String(error) };
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : String(error),
+    };
   }
 }
 
@@ -375,17 +426,25 @@ async function runDataForSeoNode(
   try {
     const tenantId = await requireTenantId(client);
     const property = await getSelectedProperty(client);
-    const target = (property ?? "").replace(/^sc-domain:/, "").replace(/^https?:\/\//, "").replace(/\/$/, "");
-    if (!target) return { ok: false, error: "No owned property is selected to observe." };
+    const target = (property ?? "")
+      .replace(/^sc-domain:/, "")
+      .replace(/^https?:\/\//, "")
+      .replace(/\/$/, "");
+    if (!target)
+      return { ok: false, error: "No owned property is selected to observe." };
 
     if (ref === "cap.dataforseo_labs") {
       const { suggestKeywords } = await import("./dataforseo/keywords.server");
-      const result = await suggestKeywords(client, tenantId, target, { runId, key: "dfs-keyword-discovery" });
+      const result = await suggestKeywords(client, tenantId, target, {
+        runId,
+        key: "dfs-keyword-discovery",
+      });
       return { ok: true, output: { target, ...result } };
     }
 
     if (ref === "cap.dataforseo_backlinks") {
-      const { collectBacklinkEvidence } = await import("./dataforseo/backlink-evidence.server");
+      const { collectBacklinkEvidence } =
+        await import("./dataforseo/backlink-evidence.server");
       const evidence = await collectBacklinkEvidence(client, tenantId, target, {
         runId,
         key: "dfs-backlink-baseline",
@@ -403,7 +462,8 @@ async function runDataForSeoNode(
     }
 
     if (ref === "cap.dataforseo_serp") {
-      const { getTrackedKeywords } = await import("./dataforseo/keywords.server");
+      const { getTrackedKeywords } =
+        await import("./dataforseo/keywords.server");
       const { queueSerpTasks } = await import("./dataforseo/serp.server");
       const keywords = await getTrackedKeywords(client, tenantId);
       if (keywords.length === 0) {
@@ -413,16 +473,28 @@ async function runDataForSeoNode(
             "No approved keywords to observe. Run keyword discovery and approve a set in the Action Center first: AOOS will not queue a keyword nobody chose.",
         };
       }
-      const result = await queueSerpTasks(client, tenantId, keywords, PUBLIC_ORIGIN, {
-        runId,
-        key: "dfs-serp-observe",
-      });
-      return { ok: true, output: { target, keywords: keywords.length, ...result } };
+      const result = await queueSerpTasks(
+        client,
+        tenantId,
+        keywords,
+        PUBLIC_ORIGIN,
+        {
+          runId,
+          key: "dfs-serp-observe",
+        },
+      );
+      return {
+        ok: true,
+        output: { target, keywords: keywords.length, ...result },
+      };
     }
 
     return { ok: true, output: { target } };
   } catch (error) {
-    return { ok: false, error: error instanceof Error ? error.message : String(error) };
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : String(error),
+    };
   }
 }
 
@@ -430,32 +502,52 @@ async function runDataForSeoNode(
  * Rebuilds the competitor set from observed SERP results. Costs nothing: it
  * re-reads stored evidence and never calls the provider.
  */
-async function runSerpCompetitorNode(client: Client, ref: string): Promise<NodeOutcome | null> {
-  if (ref !== "serp.competitors" && ref !== "serp.competitor_intelligence" && ref !== "competitor.page_observation") {
+async function runSerpCompetitorNode(
+  client: Client,
+  ref: string,
+): Promise<NodeOutcome | null> {
+  if (
+    ref !== "serp.competitors" &&
+    ref !== "serp.competitor_intelligence" &&
+    ref !== "competitor.page_observation"
+  ) {
     return null;
   }
   try {
     const { requireTenantId } = await import("./tenant.server");
     const { getSelectedProperty } = await import("./search-console.server");
-    const { deriveCompetitorsFromSerp } = await import("./dataforseo/competitors.server");
+    const { deriveCompetitorsFromSerp } =
+      await import("./dataforseo/competitors.server");
 
     const tenantId = await requireTenantId(client);
     const property = await getSelectedProperty(client);
-    const own = (property ?? "").replace(/^sc-domain:/, "").replace(/^https?:\/\//, "").replace(/\/$/, "");
+    const own = (property ?? "")
+      .replace(/^sc-domain:/, "")
+      .replace(/^https?:\/\//, "")
+      .replace(/\/$/, "");
     if (!own) return { ok: false, error: "No owned property is selected." };
 
     if (ref === "serp.competitor_intelligence") {
-      const { buildCompetitorProfiles } = await import("./dataforseo/competitor-intelligence.server");
+      const { buildCompetitorProfiles } =
+        await import("./dataforseo/competitor-intelligence.server");
       const { result } = await buildCompetitorProfiles(client, tenantId, own);
       return { ok: true, output: { ...result } };
     }
 
     if (ref === "competitor.page_observation") {
-      const { readShortlistedProfiles } = await import("./dataforseo/competitor-intelligence.server");
-      const { inspectShortlistPages } = await import("./dataforseo/competitor-pages.server");
+      const { readShortlistedProfiles } =
+        await import("./dataforseo/competitor-intelligence.server");
+      const { inspectShortlistPages } =
+        await import("./dataforseo/competitor-pages.server");
       const profiles = await readShortlistedProfiles(client, tenantId);
       if (profiles.length === 0) {
-        return { ok: true, output: { noChange: true, reason: "No shortlisted competitor to inspect." } };
+        return {
+          ok: true,
+          output: {
+            noChange: true,
+            reason: "No shortlisted competitor to inspect.",
+          },
+        };
       }
       const evidence = await inspectShortlistPages(client, tenantId, profiles);
       return { ok: true, output: { ...evidence } };
@@ -464,7 +556,10 @@ async function runSerpCompetitorNode(client: Client, ref: string): Promise<NodeO
     const result = await deriveCompetitorsFromSerp(client, tenantId, own);
     return { ok: true, output: { ...result } };
   } catch (error) {
-    return { ok: false, error: error instanceof Error ? error.message : String(error) };
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : String(error),
+    };
   }
 }
 
@@ -505,7 +600,10 @@ async function runAdsTransparencyNode(
         .eq("key", ref)
         .maybeSingle();
       if (capabilityError) {
-        return { ok: false, error: `Capability state read failed: ${capabilityError.message}` };
+        return {
+          ok: false,
+          error: `Capability state read failed: ${capabilityError.message}`,
+        };
       }
       if (!capability) {
         return { ok: false, error: `Capability ${ref} is not registered.` };
@@ -518,7 +616,6 @@ async function runAdsTransparencyNode(
       }
     }
 
-
     if (ref === "ads.vendor_network_analysis") {
       const { analyzeVendorNetwork } = await import("./serpapi/network.server");
       const result = await analyzeVendorNetwork(client, tenantId);
@@ -526,15 +623,23 @@ async function runAdsTransparencyNode(
     }
 
     if (ref === "ads.landing_page_intelligence") {
-      const { observeAdDestinations } = await import("./serpapi/landing-pages.server");
+      const { observeAdDestinations } =
+        await import("./serpapi/landing-pages.server");
       const result = await observeAdDestinations(client, tenantId);
       if (result.destinations === 0) {
-        return { ok: true, output: { noChange: true, reason: "No stored ad destination to observe yet." } };
+        return {
+          ok: true,
+          output: {
+            noChange: true,
+            reason: "No stored ad destination to observe yet.",
+          },
+        };
       }
       return { ok: true, output: { ...result } };
     }
 
-    const { serpApiCredentialsPresent } = await import("./serpapi/transport.server");
+    const { serpApiCredentialsPresent } =
+      await import("./serpapi/transport.server");
     if (!serpApiCredentialsPresent()) {
       return {
         ok: false,
@@ -544,36 +649,70 @@ async function runAdsTransparencyNode(
     }
 
     if (ref === "ads.advertiser_resolution") {
-      const { resolveVendorAdvertisers } = await import("./serpapi/advertisers.server");
-      const result = await resolveVendorAdvertisers(client, tenantId, { runId });
+      const { resolveVendorAdvertisers } =
+        await import("./serpapi/advertisers.server");
+      const result = await resolveVendorAdvertisers(client, tenantId, {
+        runId,
+      });
       return { ok: true, output: { ...result } as Record<string, unknown> };
     }
 
     if (ref === "ads.creative_intelligence") {
-      const { ingestAdvertiserCreatives } = await import("./serpapi/creatives.server");
-      const result = await ingestAdvertiserCreatives(client, tenantId, { runId });
+      const { ingestAdvertiserCreatives } =
+        await import("./serpapi/creatives.server");
+      const result = await ingestAdvertiserCreatives(client, tenantId, {
+        runId,
+      });
       if (result.advertisers === 0) {
         return {
           ok: true,
-          output: { noChange: true, reason: "No confirmed advertiser yet. Resolve and confirm a vendor advertiser first." },
+          output: {
+            noChange: true,
+            reason:
+              "No confirmed advertiser yet. Resolve and confirm a vendor advertiser first.",
+          },
         };
       }
       return { ok: true, output: { ...result } };
     }
 
     if (ref === "ads.live_serp_observation") {
-      const { observeLivePaidSerps } = await import("./serpapi/live-serp.server");
+      const { observeLivePaidSerps } =
+        await import("./serpapi/live-serp.server");
       const result = await observeLivePaidSerps(client, tenantId, { runId });
       if (result.keywords === 0) {
-        return { ok: false, error: "No approved keywords to observe on the paid SERP." };
+        return {
+          ok: false,
+          error: "No approved keywords to observe on the paid SERP.",
+        };
       }
       return { ok: true, output: { ...result } as Record<string, unknown> };
     }
 
-    const { probeSerpApiAccount } = await import("./serpapi/transport.server");
-    const account = await probeSerpApiAccount();
-    return { ok: true, output: { ...account } };
+    const { checkSerpApiAccount, recordSerpApiAccountStatus } =
+      await import("./serpapi/account.server");
+    const account = await checkSerpApiAccount();
+    await recordSerpApiAccountStatus(client, account);
+    if (!account.valid) {
+      return {
+        ok: false,
+        error: account.error ?? "The SerpApi account is not usable.",
+      };
+    }
+    return {
+      ok: true,
+      output: {
+        valid: true,
+        planName: account.planName,
+        searchesLeft: account.searchesLeft,
+        searchesPerMonth: account.searchesPerMonth,
+        checkedAt: account.checkedAt,
+      },
+    };
   } catch (error) {
-    return { ok: false, error: error instanceof Error ? error.message : String(error) };
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : String(error),
+    };
   }
 }

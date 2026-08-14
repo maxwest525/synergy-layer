@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Database } from "@/integrations/supabase/types";
 import { reconcileAppliedChangeEvidence } from "./change-requests.server";
+import { reconcileChangeMeasurements } from "./change-measurements.server";
 import { logActivity } from "./os.server";
 import { observeSearchConsole } from "./search-console-observe.server";
 import { collectDaily, getSelectedProperty } from "./search-console.server";
@@ -26,6 +27,10 @@ vi.mock("./search-console.server", () => ({
 
 vi.mock("./search-console-rules.server", () => ({
   evaluateSnapshots: vi.fn(async () => ({ evaluated: 10, observations: 0, recommendations: 0 })),
+}));
+
+vi.mock("./change-measurements.server", () => ({
+  reconcileChangeMeasurements: vi.fn(async () => ({ cycles: 0, windows: 0 })),
 }));
 
 vi.mock("./change-requests.server", () => ({
@@ -67,6 +72,7 @@ describe("Search Console observation tracking", () => {
     expect(getSelectedProperty).toHaveBeenCalledWith(client);
     expect(collectDaily).toHaveBeenCalledWith(client, "sc-domain:trumoveinc.com");
     expect(reconcileAppliedChangeEvidence).toHaveBeenCalledWith(client);
+    expect(reconcileChangeMeasurements).toHaveBeenCalledWith(client);
     expect(updates.some((entry) => entry.table === "search_console_properties" && "last_observed_at" in entry.values)).toBe(true);
     expect(logActivity).toHaveBeenCalledWith(
       client,

@@ -11,9 +11,9 @@ export const getChangeRequest = createServerFn({ method: "GET" })
     const { createRequestClient, resolveTenantId } = await import("./tenant.server");
     const { fetchChangeRequest } = await import("./change-requests.server");
     const { db, authenticated } = createRequestClient();
-    if (!authenticated) return { changeRequest: null, postChangeRows: [] };
+    if (!authenticated) return { changeRequest: null, postChangeRows: [], versions: [], measurement: { cycle: null, windows: [], observations: [], revisions: [] } };
     const tenantId = await resolveTenantId(db);
-    if (!tenantId) return { changeRequest: null, postChangeRows: [] };
+    if (!tenantId) return { changeRequest: null, postChangeRows: [], versions: [], measurement: { cycle: null, windows: [], observations: [], revisions: [] } };
     return fetchChangeRequest(db, tenantId, data.id);
   });
 

@@ -16,6 +16,7 @@ export type MeasurementRunView = {
   startedAt: string;
   finishedAt: string | null;
   durationMs: number | null;
+  authenticationSucceeded: boolean | null;
 };
 
 export type PageSpeedSnapshotView = {
@@ -41,7 +42,7 @@ export type Ga4SnapshotView = {
   property: string;
   startDate: string;
   endDate: string;
-  metrics: Record<string, number>;
+  metrics: Record<string, unknown>;
   collectedAt: string;
 };
 
@@ -52,7 +53,7 @@ export type MeasurementState = {
   runs: MeasurementRunView[];
   snapshots: PageSpeedSnapshotView[];
   ga4: {
-    property: string;
+    property: string | null;
     connection: Ga4ConnectionState;
     latest: Ga4SnapshotView | null;
     runs: MeasurementRunView[];
@@ -64,31 +65,51 @@ export const getMeasurementState = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<MeasurementState> => {
     const { requireTenantId } = await import("./tenant.server");
-    const { describeGa4Connection, readGa4EnvPresence, GA4_PROPERTY } = await import("./measurement/ga4");
+    const {
+      describeGa4Connection,
+      ga4PropertyForSearchConsoleProperty,
+      readGa4EnvPresence,
+    } = await import("./measurement/ga4");
     const tenantId = await requireTenantId(context.supabase);
 
-    const [roles, assets, runs, snapshots, ga4Rows] = await Promise.all([
-      context.supabase.from("user_roles").select("role").eq("user_id", context.userId),
-      context.supabase.from("assets").select("external_ref").eq("tenant_id", tenantId).eq("kind", "website"),
-      context.supabase
-        .from("measurement_runs")
-        .select("id, provider, target, strategy, status, error, http_status, started_at, finished_at, duration_ms")
-        .eq("tenant_id", tenantId)
-        .order("started_at", { ascending: false })
-        .limit(50),
-      context.supabase
-        .from("pagespeed_snapshots")
-        .select("*")
-        .eq("tenant_id", tenantId)
-        .order("collected_at", { ascending: false })
-        .limit(25),
-      context.supabase
-        .from("ga4_snapshots")
-        .select("id, property, start_date, end_date, metrics, collected_at")
-        .eq("tenant_id", tenantId)
-        .order("collected_at", { ascending: false })
-        .limit(1),
-    ]);
+    const [roles, assets, runs, snapshots, ga4Rows, selectedProperty] =
+      await Promise.all([
+        context.supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", context.userId),
+        context.supabase
+          .from("assets")
+          .select("external_ref")
+          .eq("tenant_id", tenantId)
+          .eq("kind", "website"),
+        context.supabase
+          .from("measurement_runs")
+          .select(
+            "id, provider, target, strategy, status, error, http_status, started_at, finished_at, duration_ms, quota",
+          )
+          .eq("tenant_id", tenantId)
+          .order("started_at", { ascending: false })
+          .limit(50),
+        context.supabase
+          .from("pagespeed_snapshots")
+          .select("*")
+          .eq("tenant_id", tenantId)
+          .order("collected_at", { ascending: false })
+          .limit(25),
+        context.supabase
+          .from("ga4_snapshots")
+          .select("id, property, start_date, end_date, metrics, collected_at")
+          .eq("tenant_id", tenantId)
+          .order("collected_at", { ascending: false })
+          .limit(25),
+        context.supabase
+          .from("search_console_properties")
+          .select("site_url")
+          .eq("tenant_id", tenantId)
+          .eq("selected", true)
+          .maybeSingle(),
+      ]);
 
     // A failed read must never read as "nothing measured yet".
     for (const [label, result] of [
@@ -97,8 +118,10 @@ export const getMeasurementState = createServerFn({ method: "POST" })
       ["measurement runs", runs],
       ["PageSpeed snapshots", snapshots],
       ["GA4 snapshots", ga4Rows],
+      ["selected Search Console property", selectedProperty],
     ] as const) {
-      if (result.error) throw new Error(`Could not read ${label}: ${result.error.message}`);
+      if (result.error)
+        throw new Error(`Could not read ${label}: ${result.error.message}`);
     }
 
     const ownedUrls = (assets.data ?? [])
@@ -116,24 +139,47 @@ export const getMeasurementState = createServerFn({ method: "POST" })
       started_at: string;
       finished_at: string | null;
       duration_ms: number | null;
-    }): MeasurementRunView => ({
-      id: row.id,
-      provider: row.provider,
-      target: row.target,
-      strategy: row.strategy,
-      status: row.status,
-      error: row.error,
-      httpStatus: row.http_status,
-      startedAt: row.started_at,
-      finishedAt: row.finished_at,
-      durationMs: row.duration_ms,
-    });
+      quota: unknown;
+    }): MeasurementRunView => {
+      const quota =
+        row.quota && typeof row.quota === "object" && !Array.isArray(row.quota)
+          ? (row.quota as Record<string, unknown>)
+          : {};
+      return {
+        id: row.id,
+        provider: row.provider,
+        target: row.target,
+        strategy: row.strategy,
+        status: row.status,
+        error: row.error,
+        httpStatus: row.http_status,
+        startedAt: row.started_at,
+        finishedAt: row.finished_at,
+        durationMs: row.duration_ms,
+        authenticationSucceeded:
+          typeof quota["authenticationSucceeded"] === "boolean"
+            ? (quota["authenticationSucceeded"] as boolean)
+            : null,
+      };
+    };
 
     const allRuns = (runs.data ?? []).map(mapRun);
-    const ga4Row = (ga4Rows.data ?? [])[0] ?? null;
+    const ga4Property = ga4PropertyForSearchConsoleProperty(
+      selectedProperty.data?.site_url ?? null,
+    );
+    const ga4Row =
+      (ga4Rows.data ?? []).find((row) => row.property === ga4Property) ?? null;
+    const ga4AuthenticationProven = allRuns.some(
+      (row) =>
+        row.provider === "ga4" &&
+        row.target === ga4Property &&
+        row.authenticationSucceeded === true,
+    );
 
     return {
-      isOperator: (roles.data ?? []).some((row) => row.role === "admin" || row.role === "operator"),
+      isOperator: (roles.data ?? []).some(
+        (row) => row.role === "admin" || row.role === "operator",
+      ),
       defaultUrl: ownedUrls[0] ?? "https://trumoveinc.com",
       ownedUrls,
       runs: allRuns.filter((row) => row.provider === "pagespeed"),
@@ -150,20 +196,27 @@ export const getMeasurementState = createServerFn({ method: "POST" })
         cls: row.cls === null ? null : Number(row.cls),
         tbtMs: row.tbt_ms === null ? null : Number(row.tbt_ms),
         fcpMs: row.fcp_ms === null ? null : Number(row.fcp_ms),
-        speedIndexMs: row.speed_index_ms === null ? null : Number(row.speed_index_ms),
-        opportunities: (row.opportunities ?? []) as unknown as PageSpeedOpportunity[],
+        speedIndexMs:
+          row.speed_index_ms === null ? null : Number(row.speed_index_ms),
+        opportunities: (row.opportunities ??
+          []) as unknown as PageSpeedOpportunity[],
         collectedAt: row.collected_at,
       })),
       ga4: {
-        property: GA4_PROPERTY,
-        connection: describeGa4Connection(readGa4EnvPresence(process.env)),
+        property: ga4Property,
+        connection: describeGa4Connection(
+          readGa4EnvPresence(process.env),
+          ga4Property,
+          Boolean(ga4Row),
+          ga4AuthenticationProven,
+        ),
         latest: ga4Row
           ? {
               id: ga4Row.id,
               property: ga4Row.property,
               startDate: ga4Row.start_date,
               endDate: ga4Row.end_date,
-              metrics: (ga4Row.metrics ?? {}) as Record<string, number>,
+              metrics: (ga4Row.metrics ?? {}) as Record<string, unknown>,
               collectedAt: ga4Row.collected_at,
             }
           : null,
@@ -177,7 +230,10 @@ export const runPageSpeedCheck = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) =>
     z
-      .object({ url: z.string().url().max(2000), strategy: z.enum(["mobile", "desktop"]) })
+      .object({
+        url: z.string().url().max(2000),
+        strategy: z.enum(["mobile", "desktop"]),
+      })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
@@ -186,7 +242,8 @@ export const runPageSpeedCheck = createServerFn({ method: "POST" })
     const { requireTenantId } = await import("./tenant.server");
     const tenantId = await requireTenantId(context.supabase);
 
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { supabaseAdmin } =
+      await import("@/integrations/supabase/client.server");
     const { runPageSpeed } = await import("./measurement/pagespeed.server");
 
     const result = await runPageSpeed(context.supabase, supabaseAdmin, {
@@ -214,17 +271,44 @@ export const refreshGa4 = createServerFn({ method: "POST" })
   .handler(async ({ context }) => {
     const { assertOperator } = await import("./os-admin.server");
     await assertOperator(context.supabase, context.userId);
-    const { describeGa4Connection, readGa4EnvPresence } = await import("./measurement/ga4");
-
-    const connection = describeGa4Connection(readGa4EnvPresence(process.env));
-    if (!connection.connected) {
+    const { requireTenantId } = await import("./tenant.server");
+    const tenantId = await requireTenantId(context.supabase);
+    const {
+      describeGa4Connection,
+      ga4PropertyForSearchConsoleProperty,
+      readGa4EnvPresence,
+    } = await import("./measurement/ga4");
+    const { data: selectedProperty, error: selectedPropertyError } =
+      await context.supabase
+        .from("search_console_properties")
+        .select("site_url")
+        .eq("tenant_id", tenantId)
+        .eq("selected", true)
+        .maybeSingle();
+    if (selectedPropertyError) {
       throw new Error(
-        `GA4 is not connected, so no request was made. ${connection.requirements.join(" ")}`.trim(),
+        `Could not read the tenant's selected Search Console property: ${selectedPropertyError.message}`,
       );
     }
-    // A credential exists but the reporting call is not built yet, so nothing is
-    // stored and nothing is claimed.
-    throw new Error(
-      "A GA4 credential is now present. The reporting call has not been enabled yet, so no data was fetched or stored.",
+    const property = ga4PropertyForSearchConsoleProperty(
+      selectedProperty?.site_url ?? null,
     );
+    const connection = describeGa4Connection(
+      readGa4EnvPresence(process.env),
+      property,
+    );
+    if (!connection.configured || !property) {
+      throw new Error(
+        `GA4 is not configured for this tenant, so no request was made. ${connection.requirements.join(" ")}`.trim(),
+      );
+    }
+
+    const { supabaseAdmin } =
+      await import("@/integrations/supabase/client.server");
+    const { runGa4Inventory } = await import("./measurement/ga4.server");
+    return runGa4Inventory(supabaseAdmin, {
+      tenantId,
+      actorId: context.userId,
+      property,
+    });
   });
