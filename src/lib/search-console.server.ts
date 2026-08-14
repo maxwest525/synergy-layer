@@ -4,6 +4,7 @@ import { requireTenantId } from "./tenant.server";
 
 import type { Database } from "@/integrations/supabase/types";
 import { logActivity } from "./os.server";
+import { readSearchConsoleCredentialPresence } from "./search-console-connection";
 import {
   materializeDailyTotals,
   normalizeInspection,
@@ -17,7 +18,11 @@ const REPORTING_TIMEZONE = "America/Los_Angeles";
 const API_QUERY_VERSION = "webmasters/v3";
 
 /** Permission levels the connected account can actually query with. */
-const QUERYABLE_PERMISSIONS = new Set(["siteOwner", "siteFullUser", "siteRestrictedUser"]);
+const QUERYABLE_PERMISSIONS = new Set([
+  "siteOwner",
+  "siteFullUser",
+  "siteRestrictedUser",
+]);
 
 export type PropertyEntry = {
   siteUrl: string;
@@ -38,7 +43,13 @@ export class SearchConsoleFailure extends Error {
 function credentials(): { lovableApiKey: string; connectionApiKey: string } {
   const lovableApiKey = process.env["LOVABLE_API_KEY"];
   const connectionApiKey = process.env["GOOGLE_SEARCH_CONSOLE_API_KEY"];
-  if (!lovableApiKey || !connectionApiKey) {
+  const presence = readSearchConsoleCredentialPresence(process.env);
+  if (
+    !presence.lovableApiKey ||
+    !presence.connectionApiKey ||
+    !lovableApiKey ||
+    !connectionApiKey
+  ) {
     throw new SearchConsoleFailure(
       "missing_credentials",
       "Search Console credentials are not available to the server.",
@@ -58,7 +69,10 @@ async function gateway<T>(path: string, init?: RequestInit): Promise<T> {
   try {
     response = await fetch(`${GATEWAY}${path}`, { ...init, headers });
   } catch (error) {
-    throw new SearchConsoleFailure("transport", `Search Console request failed: ${String(error)}`);
+    throw new SearchConsoleFailure(
+      "transport",
+      `Search Console request failed: ${String(error)}`,
+    );
   }
 
   if (response.status === 401 || response.status === 403) {
@@ -86,7 +100,10 @@ async function gateway<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export function checksum(value: unknown): string {
-  return createHash("sha256").update(JSON.stringify(value)).digest("hex").slice(0, 32);
+  return createHash("sha256")
+    .update(JSON.stringify(value))
+    .digest("hex")
+    .slice(0, 32);
 }
 
 /** Pacific-time calendar date for a given instant, the timezone Search Console reports in. */
@@ -108,9 +125,9 @@ export function shiftDate(isoDate: string, days: number): string {
 
 /** Accessible properties with the permission level Google reports. Never "verified by AOOS". */
 export async function listProperties(): Promise<PropertyEntry[]> {
-  const data = await gateway<{ siteEntry?: { siteUrl: string; permissionLevel?: string }[] }>(
-    "/webmasters/v3/sites",
-  );
+  const data = await gateway<{
+    siteEntry?: { siteUrl: string; permissionLevel?: string }[];
+  }>("/webmasters/v3/sites");
   return (data.siteEntry ?? []).map((entry) => ({
     siteUrl: entry.siteUrl,
     permissionLevel: entry.permissionLevel ?? "unknown",
@@ -122,18 +139,16 @@ export async function syncProperties(client: Client): Promise<PropertyEntry[]> {
   const entries = await listProperties();
   const tenantId = await requireTenantId(client);
   for (const entry of entries) {
-    const { error } = await client
-      .from("search_console_properties")
-      .upsert(
-        {
-          tenant_id: tenantId,
-          site_url: entry.siteUrl,
-          permission_level: entry.permissionLevel,
-          eligible: entry.eligible,
-          last_observed_at: new Date().toISOString(),
-        },
-        { onConflict: "tenant_id,site_url" },
-      );
+    const { error } = await client.from("search_console_properties").upsert(
+      {
+        tenant_id: tenantId,
+        site_url: entry.siteUrl,
+        permission_level: entry.permissionLevel,
+        eligible: entry.eligible,
+        last_observed_at: new Date().toISOString(),
+      },
+      { onConflict: "tenant_id,site_url" },
+    );
     if (error) throw new SearchConsoleFailure("persistence", error.message);
   }
 
@@ -157,7 +172,10 @@ export async function selectProperty(
   const entries = await syncProperties(client);
   const match = entries.find((entry) => entry.siteUrl === siteUrl);
   if (!match) {
-    throw new SearchConsoleFailure("validation", "That property is not accessible to the connected account.");
+    throw new SearchConsoleFailure(
+      "validation",
+      "That property is not accessible to the connected account.",
+    );
   }
   if (!match.eligible) {
     throw new SearchConsoleFailure(
@@ -166,11 +184,14 @@ export async function selectProperty(
     );
   }
 
-  const clearError = (await client
-    .from("search_console_properties")
-    .update({ selected: false })
-    .neq("site_url", siteUrl)).error;
-  if (clearError) throw new SearchConsoleFailure("persistence", clearError.message);
+  const clearError = (
+    await client
+      .from("search_console_properties")
+      .update({ selected: false })
+      .neq("site_url", siteUrl)
+  ).error;
+  if (clearError)
+    throw new SearchConsoleFailure("persistence", clearError.message);
 
   const { error } = await client
     .from("search_console_properties")
@@ -190,7 +211,9 @@ export async function selectProperty(
   return match;
 }
 
-export async function getSelectedProperty(client: Client): Promise<string | null> {
+export async function getSelectedProperty(
+  client: Client,
+): Promise<string | null> {
   const { data, error } = await client
     .from("search_console_properties")
     .select("site_url")
@@ -200,7 +223,8 @@ export async function getSelectedProperty(client: Client): Promise<string | null
   return data?.site_url ?? null;
 }
 
-type InspectionRow = Database["public"]["Tables"]["search_console_url_inspections"]["Row"];
+type InspectionRow =
+  Database["public"]["Tables"]["search_console_url_inspections"]["Row"];
 type SitemapSubmissionRow =
   Database["public"]["Tables"]["search_console_sitemap_submissions"]["Row"];
 
@@ -214,7 +238,11 @@ export async function inspectUrl(
   const inspectedUrl = normalizeOwnedUrl(property, candidateUrl);
   const payload = await gateway<unknown>("/v1/urlInspection/index:inspect", {
     method: "POST",
-    body: JSON.stringify({ inspectionUrl: inspectedUrl, siteUrl: property, languageCode: "en-US" }),
+    body: JSON.stringify({
+      inspectionUrl: inspectedUrl,
+      siteUrl: property,
+      languageCode: "en-US",
+    }),
   });
   const inspection = normalizeInspection(payload);
   const { data, error } = await client
@@ -300,7 +328,8 @@ export async function submitSitemap(
       { method: "PUT" },
     );
   } catch (error) {
-    const failureReason = error instanceof Error ? error.message : String(error);
+    const failureReason =
+      error instanceof Error ? error.message : String(error);
     await recordSitemapSubmission(client, {
       property,
       sitemapUrl,
@@ -335,7 +364,8 @@ export async function submitSitemap(
     payload: {
       property,
       sitemapUrl,
-      guarantee: "Submission asks Google to process the sitemap; it does not guarantee indexing.",
+      guarantee:
+        "Submission asks Google to process the sitemap; it does not guarantee indexing.",
     },
   });
   return submission;
@@ -352,13 +382,25 @@ type QueryBody = {
   aggregationType?: string;
 };
 
-export type QueryRow = { keys?: string[]; clicks: number; impressions: number; ctr: number; position: number };
+export type QueryRow = {
+  keys?: string[];
+  clicks: number;
+  impressions: number;
+  ctr: number;
+  position: number;
+};
 type QueryResponse = { rows?: QueryRow[]; responseAggregationType?: string };
 
-async function query(property: string, body: QueryBody): Promise<QueryResponse> {
+async function query(
+  property: string,
+  body: QueryBody,
+): Promise<QueryResponse> {
   return gateway<QueryResponse>(
     `/webmasters/v3/sites/${encodeURIComponent(property)}/searchAnalytics/query`,
-    { method: "POST", body: JSON.stringify({ dataState: "final", type: "web", ...body }) },
+    {
+      method: "POST",
+      body: JSON.stringify({ dataState: "final", type: "web", ...body }),
+    },
   );
 }
 
@@ -366,7 +408,9 @@ async function query(property: string, body: QueryBody): Promise<QueryResponse> 
  * Newest Pacific date with finalized data. No hardcoded lag: ask the API and
  * take the newest date it returns. Zero rows is a valid answer, not a failure.
  */
-export async function latestFinalDate(property: string): Promise<string | null> {
+export async function latestFinalDate(
+  property: string,
+): Promise<string | null> {
   const today = pacificDate(new Date());
   const response = await query(property, {
     startDate: shiftDate(today, -14),
@@ -374,7 +418,9 @@ export async function latestFinalDate(property: string): Promise<string | null> 
     dimensions: ["date"],
     rowLimit: 30,
   });
-  const dates = (response.rows ?? []).map((row) => row.keys?.[0]).filter(Boolean) as string[];
+  const dates = (response.rows ?? [])
+    .map((row) => row.keys?.[0])
+    .filter(Boolean) as string[];
   if (dates.length === 0) return null;
   return dates.sort().at(-1) ?? null;
 }
@@ -393,7 +439,10 @@ type SnapshotInput = {
   totals: Record<string, number | null>;
 };
 
-async function persistSnapshot(client: Client, input: SnapshotInput): Promise<string> {
+async function persistSnapshot(
+  client: Client,
+  input: SnapshotInput,
+): Promise<string> {
   const tenantId = await requireTenantId(client);
   const definition = {
     property: input.property,
@@ -421,7 +470,8 @@ async function persistSnapshot(client: Client, input: SnapshotInput): Promise<st
       paginated_request_count: input.paginatedRequestCount,
       returned_row_count: input.rows.length,
       // An ungrouped property-total query returns exactly one row by design.
-      possibly_truncated: input.kind !== "property_totals" && input.rows.length >= input.rowLimit,
+      possibly_truncated:
+        input.kind !== "property_totals" && input.rows.length >= input.rowLimit,
 
       reporting_timezone: REPORTING_TIMEZONE,
       period_start_pt: input.periodStart,
@@ -442,7 +492,8 @@ async function persistSnapshot(client: Client, input: SnapshotInput): Promise<st
       .eq("kind", "property_totals")
       .eq("period_start_pt", input.periodStart)
       .single();
-    if (existingError) throw new SearchConsoleFailure("persistence", existingError.message);
+    if (existingError)
+      throw new SearchConsoleFailure("persistence", existingError.message);
     return existing.id;
   }
   if (error) throw new SearchConsoleFailure("persistence", error.message);
@@ -453,7 +504,10 @@ async function persistSnapshot(client: Client, input: SnapshotInput): Promise<st
 export function weightedPosition(rows: QueryRow[]): number | null {
   const impressions = rows.reduce((total, row) => total + row.impressions, 0);
   if (impressions === 0) return null;
-  return rows.reduce((total, row) => total + row.position * row.impressions, 0) / impressions;
+  return (
+    rows.reduce((total, row) => total + row.position * row.impressions, 0) /
+    impressions
+  );
 }
 
 export type CollectionResult = {
@@ -486,10 +540,15 @@ export async function collectPageQuery(
     .eq("property", property)
     .eq("period_end_pt", reportingDate)
     .eq("kind", "page_query");
-  if (existingError) throw new SearchConsoleFailure("persistence", existingError.message);
+  if (existingError)
+    throw new SearchConsoleFailure("persistence", existingError.message);
   if ((existing ?? []).length > 0) {
     const first = existing![0]!;
-    return { snapshotId: first.id, rows: first.returned_row_count, created: false };
+    return {
+      snapshotId: first.id,
+      rows: first.returned_row_count,
+      created: false,
+    };
   }
 
   const rows: QueryRow[] = [];
@@ -504,7 +563,8 @@ export async function collectPageQuery(
       startRow: requests * PAGE_QUERY_ROW_LIMIT,
     });
     requests += 1;
-    responseAggregationType = response.responseAggregationType ?? responseAggregationType;
+    responseAggregationType =
+      response.responseAggregationType ?? responseAggregationType;
     const page = response.rows ?? [];
     rows.push(...page);
     if (page.length < PAGE_QUERY_ROW_LIMIT) break;
@@ -546,7 +606,11 @@ async function collectDailyTotalsHistory(
     dimensions: ["date"],
     rowLimit: 250,
   });
-  const days = materializeDailyTotals(response.rows ?? [], periodStart, reportingDate);
+  const days = materializeDailyTotals(
+    response.rows ?? [],
+    periodStart,
+    reportingDate,
+  );
   const { data: existing, error } = await client
     .from("search_console_snapshots")
     .select("period_start_pt")
@@ -555,7 +619,9 @@ async function collectDailyTotalsHistory(
     .gte("period_start_pt", periodStart)
     .lte("period_start_pt", reportingDate);
   if (error) throw new SearchConsoleFailure("persistence", error.message);
-  const existingDates = new Set((existing ?? []).map((row) => row.period_start_pt));
+  const existingDates = new Set(
+    (existing ?? []).map((row) => row.period_start_pt),
+  );
   const snapshotIds: string[] = [];
 
   for (const day of days) {
@@ -596,11 +662,19 @@ async function collectDailyTotalsHistory(
   return snapshotIds;
 }
 
-export async function collectDaily(client: Client, property: string): Promise<CollectionResult> {
+export async function collectDaily(
+  client: Client,
+  property: string,
+): Promise<CollectionResult> {
   const reportingDate = await latestFinalDate(property);
 
   if (!reportingDate) {
-    return { property, reportingDate: null, snapshotIds: [], emptyResult: true };
+    return {
+      property,
+      reportingDate: null,
+      snapshotIds: [],
+      emptyResult: true,
+    };
   }
 
   const { data: existing, error: existingError } = await client
@@ -609,9 +683,14 @@ export async function collectDaily(client: Client, property: string): Promise<Co
     .eq("property", property)
     .eq("period_end_pt", reportingDate)
     .eq("kind", "property_totals");
-  if (existingError) throw new SearchConsoleFailure("persistence", existingError.message);
+  if (existingError)
+    throw new SearchConsoleFailure("persistence", existingError.message);
   if ((existing ?? []).length > 0) {
-    const historyIds = await collectDailyTotalsHistory(client, property, reportingDate);
+    const historyIds = await collectDailyTotalsHistory(
+      client,
+      property,
+      reportingDate,
+    );
     // Still ensure the page+query snapshot exists for this finalized date.
     const backfilled = await collectPageQuery(client, property, reportingDate);
     return {
@@ -619,14 +698,15 @@ export async function collectDaily(client: Client, property: string): Promise<Co
       reportingDate,
       snapshotIds: [
         ...historyIds,
-        ...(backfilled.created && backfilled.snapshotId ? [backfilled.snapshotId] : []),
+        ...(backfilled.created && backfilled.snapshotId
+          ? [backfilled.snapshotId]
+          : []),
       ],
       emptyResult: false,
     };
   }
 
   const snapshotIds: string[] = [];
-
 
   const totalsResponse = await query(property, {
     startDate: reportingDate,
@@ -637,7 +717,10 @@ export async function collectDaily(client: Client, property: string): Promise<Co
   const totals = {
     clicks: totalsRow?.clicks ?? 0,
     impressions: totalsRow?.impressions ?? 0,
-    ctr: totalsRow && totalsRow.impressions > 0 ? totalsRow.clicks / totalsRow.impressions : null,
+    ctr:
+      totalsRow && totalsRow.impressions > 0
+        ? totalsRow.clicks / totalsRow.impressions
+        : null,
     position: totalsRow?.position ?? null,
   };
 
@@ -687,31 +770,35 @@ export async function collectDaily(client: Client, property: string): Promise<Co
   }
 
   const pageQuery = await collectPageQuery(client, property, reportingDate);
-  if (pageQuery.created && pageQuery.snapshotId) snapshotIds.push(pageQuery.snapshotId);
-
-
+  if (pageQuery.created && pageQuery.snapshotId)
+    snapshotIds.push(pageQuery.snapshotId);
 
   const sitemaps = await gateway<{ sitemap?: unknown[] }>(
     `/webmasters/v3/sites/${encodeURIComponent(property)}/sitemaps`,
   );
-  const { error: sitemapError } = await client.from("search_console_snapshots").insert({
-    tenant_id: await requireTenantId(client),
-    property,
-    kind: "dimensional_rows",
-    dimensions: ["sitemap"],
-    data_state: "final",
-    row_limit: 0,
-    returned_row_count: (sitemaps.sitemap ?? []).length,
-    period_start_pt: reportingDate,
-    period_end_pt: reportingDate,
-    reporting_timezone: REPORTING_TIMEZONE,
-    api_query_version: API_QUERY_VERSION,
-    checksum: checksum(sitemaps),
-    payload: sitemaps as never,
-  });
-  if (sitemapError) throw new SearchConsoleFailure("persistence", sitemapError.message);
+  const { error: sitemapError } = await client
+    .from("search_console_snapshots")
+    .insert({
+      tenant_id: await requireTenantId(client),
+      property,
+      kind: "dimensional_rows",
+      dimensions: ["sitemap"],
+      data_state: "final",
+      row_limit: 0,
+      returned_row_count: (sitemaps.sitemap ?? []).length,
+      period_start_pt: reportingDate,
+      period_end_pt: reportingDate,
+      reporting_timezone: REPORTING_TIMEZONE,
+      api_query_version: API_QUERY_VERSION,
+      checksum: checksum(sitemaps),
+      payload: sitemaps as never,
+    });
+  if (sitemapError)
+    throw new SearchConsoleFailure("persistence", sitemapError.message);
 
-  snapshotIds.push(...(await collectDailyTotalsHistory(client, property, reportingDate)));
+  snapshotIds.push(
+    ...(await collectDailyTotalsHistory(client, property, reportingDate)),
+  );
 
   const emptyResult = totals.impressions === 0;
 
@@ -721,9 +808,13 @@ export async function collectDaily(client: Client, property: string): Promise<Co
     summary: emptyResult
       ? `Search Console returned no rows for ${property} on ${reportingDate} (Pacific). Recorded as an empty snapshot.`
       : `Collected Search Console data for ${property} on ${reportingDate} (Pacific).`,
-    payload: { property, reportingDate, emptyResult, snapshots: snapshotIds.length },
+    payload: {
+      property,
+      reportingDate,
+      emptyResult,
+      snapshots: snapshotIds.length,
+    },
   });
 
   return { property, reportingDate, snapshotIds, emptyResult };
 }
-

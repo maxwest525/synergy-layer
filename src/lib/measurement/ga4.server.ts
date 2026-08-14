@@ -22,6 +22,7 @@ export type Ga4InventoryRow = {
   eventName: string;
   eventCount: number;
   activeUsers: number;
+  sessions: number;
 };
 
 export type Ga4Inventory = {
@@ -29,24 +30,41 @@ export type Ga4Inventory = {
   pageCount: number;
   eventNameCount: number;
   totalEventCount: number;
+  totalSessions: number;
+  truncated: boolean;
   rows: Ga4InventoryRow[];
   quota: Record<string, unknown>;
 };
 
 export class Ga4ProviderError extends Error {
   readonly httpStatus: number | null;
+  readonly authenticationSucceeded: boolean;
 
-  constructor(message: string, httpStatus: number | null = null) {
+  constructor(
+    message: string,
+    httpStatus: number | null = null,
+    authenticationSucceeded = false,
+  ) {
     super(message);
     this.name = "Ga4ProviderError";
     this.httpStatus = httpStatus;
+    this.authenticationSucceeded = authenticationSucceeded;
   }
 }
 
-export function buildGa4InventoryRequest(window: {
-  startDate: string;
-  endDate: string;
-}) {
+/** A 401 means the bearer credential itself was rejected. Other Data API
+ * responses prove Google accepted authentication, even when the property read
+ * is refused or malformed. */
+export function ga4ResponseProvesAuthentication(status: number): boolean {
+  return status >= 200 && status < 500 && status !== 401;
+}
+
+export function buildGa4InventoryRequest(
+  window: { startDate: string; endDate: string },
+  targetUrl?: string,
+) {
+  const target = targetUrl ? new URL(targetUrl) : null;
+  const pagePath = target ? `${target.pathname}${target.search}` : null;
   return {
     dateRanges: [window],
     dimensions: [
@@ -54,12 +72,46 @@ export function buildGa4InventoryRequest(window: {
       { name: "pagePathPlusQueryString" },
       { name: "eventName" },
     ],
-    metrics: [{ name: "eventCount" }, { name: "activeUsers" }],
+    metrics: [
+      { name: "eventCount" },
+      { name: "activeUsers" },
+      { name: "sessions" },
+    ],
     metricAggregations: ["TOTAL"],
     orderBys: [{ metric: { metricName: "eventCount" }, desc: true }],
     keepEmptyRows: false,
     returnPropertyQuota: true,
     limit: "10000",
+    ...(target && pagePath
+      ? {
+          dimensionFilter: {
+            andGroup: {
+              expressions: [
+                {
+                  filter: {
+                    fieldName: "hostName",
+                    stringFilter: {
+                      value: target.hostname,
+                      matchType: "EXACT",
+                      caseSensitive: false,
+                    },
+                  },
+                },
+                {
+                  filter: {
+                    fieldName: "pagePathPlusQueryString",
+                    stringFilter: {
+                      value: pagePath,
+                      matchType: "EXACT",
+                      caseSensitive: true,
+                    },
+                  },
+                },
+              ],
+            },
+          },
+        }
+      : {}),
   };
 }
 
@@ -95,6 +147,7 @@ export function normalizeGa4Inventory(payload: unknown): Ga4Inventory {
       eventName: dimensions[2]?.value ?? "",
       eventCount: numberAt(metrics, 0),
       activeUsers: numberAt(metrics, 1),
+      sessions: numberAt(metrics, 2),
     };
   });
 
@@ -113,6 +166,13 @@ export function normalizeGa4Inventory(payload: unknown): Ga4Inventory {
       totals.length > 0
         ? numberAt(totals[0]?.metricValues, 0)
         : normalized.reduce((sum, row) => sum + row.eventCount, 0),
+    totalSessions:
+      totals.length > 0
+        ? numberAt(totals[0]?.metricValues, 2)
+        : normalized.reduce((sum, row) => sum + row.sessions, 0),
+    truncated:
+      typeof report["rowCount"] === "number" &&
+      report["rowCount"] > normalized.length,
     rows: normalized,
     quota:
       report["propertyQuota"] && typeof report["propertyQuota"] === "object"
@@ -230,6 +290,7 @@ async function accessToken(env: Record<string, string | undefined>): Promise<{
 export async function fetchGa4Inventory(
   window: { startDate: string; endDate: string },
   env: Record<string, string | undefined> = process.env,
+  targetUrl?: string,
 ): Promise<{
   inventory: Ga4Inventory;
   credentialKind: Exclude<Ga4CredentialKind, null>;
@@ -242,7 +303,7 @@ export async function fetchGa4Inventory(
       authorization: `Bearer ${auth.token}`,
       "content-type": "application/json",
     },
-    body: JSON.stringify(buildGa4InventoryRequest(window)),
+    body: JSON.stringify(buildGa4InventoryRequest(window, targetUrl)),
   });
   let payload: unknown;
   try {
@@ -251,12 +312,14 @@ export async function fetchGa4Inventory(
     throw new Ga4ProviderError(
       `GA4 Data API returned unreadable JSON [${response.status}].`,
       response.status,
+      ga4ResponseProvesAuthentication(response.status),
     );
   }
   if (!response.ok) {
     throw new Ga4ProviderError(
       `GA4 Data API request failed [${response.status}].`,
       response.status,
+      ga4ResponseProvesAuthentication(response.status),
     );
   }
   return {
@@ -305,13 +368,17 @@ export async function runGa4Inventory(
       );
   };
 
+  let authenticationSucceeded = false;
   try {
     const result = await fetchGa4Inventory(window);
+    authenticationSucceeded = true;
     const metrics = {
       rowCount: result.inventory.rowCount,
       pageCount: result.inventory.pageCount,
       eventNameCount: result.inventory.eventNameCount,
       totalEventCount: result.inventory.totalEventCount,
+      totalSessions: result.inventory.totalSessions,
+      truncated: result.inventory.truncated,
       rows: result.inventory.rows,
     };
     const { error: snapshotError } = await admin.from("ga4_snapshots").insert({
@@ -326,14 +393,18 @@ export async function runGa4Inventory(
         endpoint: `${DATA_ENDPOINT}/${GA4_PROPERTY}:runReport`,
         credentialKind: result.credentialKind,
         dimensions: ["hostName", "pagePathPlusQueryString", "eventName"],
-        metrics: ["eventCount", "activeUsers"],
+        metrics: ["eventCount", "activeUsers", "sessions"],
       } as never,
     });
     if (snapshotError)
       throw new Error(
         `GA4 responded but the snapshot could not be stored: ${snapshotError.message}`,
       );
-    await finish({ status: "succeeded", http_status: result.httpStatus });
+    await finish({
+      status: "succeeded",
+      http_status: result.httpStatus,
+      quota: { authenticationSucceeded: true },
+    });
     return {
       runId: run.id,
       status: "succeeded" as const,
@@ -342,12 +413,105 @@ export async function runGa4Inventory(
       pageCount: result.inventory.pageCount,
       eventNameCount: result.inventory.eventNameCount,
       totalEventCount: result.inventory.totalEventCount,
+      totalSessions: result.inventory.totalSessions,
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     const httpStatus =
       error instanceof Ga4ProviderError ? error.httpStatus : null;
-    await finish({ status: "failed", error: message, http_status: httpStatus });
+    await finish({
+      status: "failed",
+      error: message,
+      http_status: httpStatus,
+      quota: {
+        authenticationSucceeded:
+          error instanceof Ga4ProviderError
+            ? error.authenticationSucceeded
+            : authenticationSucceeded,
+      },
+    });
     throw new Error(message);
+  }
+}
+
+/**
+ * One exact-target, exact-window read for immutable change measurement. This
+ * does not write a property-wide GA4 snapshot; the caller appends the result to
+ * the governed change-measurement history.
+ */
+export async function runGa4PageWindow(
+  admin: AdminClient,
+  input: {
+    tenantId: string;
+    targetUrl: string;
+    startDate: string;
+    endDate: string;
+    windowDays: 0 | 7 | 14 | 28;
+  },
+) {
+  const { data: run, error: runError } = await admin
+    .from("measurement_runs")
+    .insert({
+      tenant_id: input.tenantId,
+      provider: "ga4",
+      target: input.targetUrl,
+      strategy: `change_window_${input.windowDays}`,
+      status: "running",
+      cost_usd: 0,
+    })
+    .select("id")
+    .single();
+  if (runError || !run) {
+    throw new Error(
+      `Could not open a GA4 change-measurement run: ${runError?.message ?? "no row"}`,
+    );
+  }
+
+  const startedAt = Date.now();
+  const finish = async (patch: Record<string, unknown>) => {
+    const { error } = await admin
+      .from("measurement_runs")
+      .update({
+        finished_at: new Date().toISOString(),
+        duration_ms: Date.now() - startedAt,
+        ...patch,
+      })
+      .eq("id", run.id);
+    if (error)
+      throw new Error(
+        `Could not close the GA4 change-measurement run: ${error.message}`,
+      );
+  };
+
+  let authenticationSucceeded = false;
+  try {
+    const result = await fetchGa4Inventory(
+      { startDate: input.startDate, endDate: input.endDate },
+      process.env,
+      input.targetUrl,
+    );
+    authenticationSucceeded = true;
+    await finish({
+      status: "succeeded",
+      http_status: result.httpStatus,
+      quota: { authenticationSucceeded: true },
+    });
+    return { runId: run.id, ...result };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const httpStatus =
+      error instanceof Ga4ProviderError ? error.httpStatus : null;
+    await finish({
+      status: "failed",
+      error: message,
+      http_status: httpStatus,
+      quota: {
+        authenticationSucceeded:
+          error instanceof Ga4ProviderError
+            ? error.authenticationSucceeded
+            : authenticationSucceeded,
+      },
+    });
+    throw error;
   }
 }

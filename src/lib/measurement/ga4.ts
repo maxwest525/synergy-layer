@@ -9,6 +9,7 @@ export type Ga4CredentialKind =
 
 export type Ga4ConnectionState = {
   configured: boolean;
+  authenticated: boolean;
   connected: boolean;
   credentialKind: Ga4CredentialKind;
   statement: string;
@@ -27,6 +28,7 @@ export type Ga4EnvPresence = {
 export function describeGa4Connection(
   presence: Ga4EnvPresence,
   successfulSnapshot = false,
+  authenticationProven = false,
 ): Ga4ConnectionState {
   const serviceAccount = presence.serviceAccountJson;
   const oauth =
@@ -42,11 +44,14 @@ export function describeGa4Connection(
   if (credentialKind) {
     return {
       configured: true,
+      authenticated: authenticationProven || successfulSnapshot,
       connected: successfulSnapshot,
       credentialKind,
       statement: successfulSnapshot
         ? `AOOS has completed a GA4 Data API read for ${GA4_PROPERTY}.`
-        : "A complete server credential is configured, but connection remains unproven until the first successful refresh.",
+        : authenticationProven
+          ? "Google authentication succeeded, but a property report has not succeeded yet. Verify the property grant."
+          : "A complete server credential is configured, but authentication and property access remain unproven until Refresh GA4 succeeds.",
       requirements: [],
       measurementIdPresent: presence.measurementId,
     };
@@ -78,6 +83,7 @@ export function describeGa4Connection(
 
   return {
     configured: false,
+    authenticated: false,
     connected: false,
     credentialKind: null,
     statement: presence.measurementId

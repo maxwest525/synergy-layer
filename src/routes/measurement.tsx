@@ -84,6 +84,7 @@ type Ga4UiRow = {
   eventName: string;
   eventCount: number;
   activeUsers: number;
+  sessions: number;
 };
 
 function ga4Number(metrics: Record<string, unknown>, key: string): number {
@@ -101,7 +102,8 @@ function ga4Rows(metrics: Record<string, unknown>): Ga4UiRow[] {
       typeof (row as Ga4UiRow).pagePath === "string" &&
       typeof (row as Ga4UiRow).eventName === "string" &&
       typeof (row as Ga4UiRow).eventCount === "number" &&
-      typeof (row as Ga4UiRow).activeUsers === "number",
+      typeof (row as Ga4UiRow).activeUsers === "number" &&
+      typeof (row as Ga4UiRow).sessions === "number",
   );
 }
 
@@ -424,11 +426,21 @@ function MeasurementPage() {
           <span className="flex items-center gap-2">
             <StatePill
               label={
-                ga4.connection.connected
-                  ? "Connected"
-                  : ga4.connection.configured
-                    ? "Configured"
-                    : "Ready to connect"
+                ga4.connection.configured ? "Configured" : "Not configured"
+              }
+              tone={ga4.connection.configured ? "success" : "warning"}
+            />
+            <StatePill
+              label={
+                ga4.connection.authenticated
+                  ? "Authenticated"
+                  : "Auth not proven"
+              }
+              tone={ga4.connection.authenticated ? "success" : "warning"}
+            />
+            <StatePill
+              label={
+                ga4.connection.connected ? "Read succeeded" : "Read not proven"
               }
               tone={ga4.connection.connected ? "success" : "warning"}
             />
@@ -479,10 +491,21 @@ function MeasurementPage() {
             </ul>
             <p className="mt-2 text-xs text-muted-foreground">
               No local credential is copied in, and no historical figures are
-              shown. GA4 stays Ready to connect until a real request succeeds.
+              shown. Configuration, authentication, and a successful property
+              read are reported separately.
             </p>
           </div>
         )}
+
+        {ga4.connection.configured && !ga4.connection.authenticated ? (
+          <p className="mt-3 rounded-xl border border-primary/30 bg-primary/5 px-3 py-3 text-sm text-muted-foreground">
+            One-time Google step: enable the Google Analytics Data API and grant
+            the service account client_email from GA4_SERVICE_ACCOUNT_JSON
+            Viewer access to property 536830122. For OAuth mode, reconnect the
+            Google user and ensure that user has Viewer access to the same
+            property. Then select Refresh GA4.
+          </p>
+        ) : null}
 
         {ga4.latest ? (
           <div className="mt-5 space-y-4">
@@ -530,7 +553,7 @@ function MeasurementPage() {
                       </span>
                       <span className="text-xs text-muted-foreground">
                         {row.eventCount} event(s) · {row.activeUsers} active
-                        user(s)
+                        user(s) · {row.sessions} session(s)
                       </span>
                     </li>
                   ))}

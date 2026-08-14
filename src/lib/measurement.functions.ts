@@ -16,6 +16,7 @@ export type MeasurementRunView = {
   startedAt: string;
   finishedAt: string | null;
   durationMs: number | null;
+  authenticationSucceeded: boolean | null;
 };
 
 export type PageSpeedSnapshotView = {
@@ -81,7 +82,7 @@ export const getMeasurementState = createServerFn({ method: "POST" })
       context.supabase
         .from("measurement_runs")
         .select(
-          "id, provider, target, strategy, status, error, http_status, started_at, finished_at, duration_ms",
+          "id, provider, target, strategy, status, error, http_status, started_at, finished_at, duration_ms, quota",
         )
         .eq("tenant_id", tenantId)
         .order("started_at", { ascending: false })
@@ -127,21 +128,35 @@ export const getMeasurementState = createServerFn({ method: "POST" })
       started_at: string;
       finished_at: string | null;
       duration_ms: number | null;
-    }): MeasurementRunView => ({
-      id: row.id,
-      provider: row.provider,
-      target: row.target,
-      strategy: row.strategy,
-      status: row.status,
-      error: row.error,
-      httpStatus: row.http_status,
-      startedAt: row.started_at,
-      finishedAt: row.finished_at,
-      durationMs: row.duration_ms,
-    });
+      quota: unknown;
+    }): MeasurementRunView => {
+      const quota =
+        row.quota && typeof row.quota === "object" && !Array.isArray(row.quota)
+          ? (row.quota as Record<string, unknown>)
+          : {};
+      return {
+        id: row.id,
+        provider: row.provider,
+        target: row.target,
+        strategy: row.strategy,
+        status: row.status,
+        error: row.error,
+        httpStatus: row.http_status,
+        startedAt: row.started_at,
+        finishedAt: row.finished_at,
+        durationMs: row.duration_ms,
+        authenticationSucceeded:
+          typeof quota["authenticationSucceeded"] === "boolean"
+            ? (quota["authenticationSucceeded"] as boolean)
+            : null,
+      };
+    };
 
     const allRuns = (runs.data ?? []).map(mapRun);
     const ga4Row = (ga4Rows.data ?? [])[0] ?? null;
+    const ga4AuthenticationProven = allRuns.some(
+      (row) => row.provider === "ga4" && row.authenticationSucceeded === true,
+    );
 
     return {
       isOperator: (roles.data ?? []).some(
@@ -174,6 +189,7 @@ export const getMeasurementState = createServerFn({ method: "POST" })
         connection: describeGa4Connection(
           readGa4EnvPresence(process.env),
           Boolean(ga4Row),
+          ga4AuthenticationProven,
         ),
         latest: ga4Row
           ? {

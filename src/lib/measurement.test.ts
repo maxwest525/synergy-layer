@@ -14,6 +14,7 @@ import {
 } from "./measurement/ga4";
 import {
   buildGa4InventoryRequest,
+  ga4ResponseProvesAuthentication,
   normalizeGa4Inventory,
 } from "./measurement/ga4.server";
 
@@ -207,7 +208,13 @@ describe("GA4 connection gate", () => {
   it("separates configured credentials from a proven successful connection", () => {
     const presence = readGa4EnvPresence({ GA4_SERVICE_ACCOUNT_JSON: "{}" });
     expect(describeGa4Connection(presence).configured).toBe(true);
+    expect(describeGa4Connection(presence).authenticated).toBe(false);
     expect(describeGa4Connection(presence).connected).toBe(false);
+    expect(describeGa4Connection(presence, false, true)).toMatchObject({
+      configured: true,
+      authenticated: true,
+      connected: false,
+    });
     expect(describeGa4Connection(presence, true).connected).toBe(true);
   });
 });
@@ -222,6 +229,13 @@ describe("ga4Window", () => {
 });
 
 describe("GA4 exact-page event inventory", () => {
+  it("separates rejected credentials from authenticated property-read failures", () => {
+    expect(ga4ResponseProvesAuthentication(401)).toBe(false);
+    expect(ga4ResponseProvesAuthentication(403)).toBe(true);
+    expect(ga4ResponseProvesAuthentication(400)).toBe(true);
+    expect(ga4ResponseProvesAuthentication(503)).toBe(false);
+  });
+
   it("asks the official report for exact host, page, and event dimensions", () => {
     const body = buildGa4InventoryRequest({
       startDate: "2026-07-14",
@@ -235,8 +249,36 @@ describe("GA4 exact-page event inventory", () => {
     expect(body.metrics.map((metric) => metric.name)).toEqual([
       "eventCount",
       "activeUsers",
+      "sessions",
     ]);
     expect(body.returnPropertyQuota).toBe(true);
+  });
+
+  it("filters a change window to one exact hostname and page path", () => {
+    const body = buildGa4InventoryRequest(
+      { startDate: "2026-08-01", endDate: "2026-08-07" },
+      "https://trumoveinc.com/moving-services?zip=12345",
+    );
+    expect(body.dimensionFilter?.andGroup.expressions).toEqual([
+      expect.objectContaining({
+        filter: expect.objectContaining({
+          fieldName: "hostName",
+          stringFilter: expect.objectContaining({
+            value: "trumoveinc.com",
+            matchType: "EXACT",
+          }),
+        }),
+      }),
+      expect.objectContaining({
+        filter: expect.objectContaining({
+          fieldName: "pagePathPlusQueryString",
+          stringFilter: expect.objectContaining({
+            value: "/moving-services?zip=12345",
+            matchType: "EXACT",
+          }),
+        }),
+      }),
+    ]);
   });
 
   it("normalizes provider strings without inventing events or users", () => {
@@ -249,7 +291,7 @@ describe("GA4 exact-page event inventory", () => {
             { value: "/moving-services?zip=12345" },
             { value: "generate_lead" },
           ],
-          metricValues: [{ value: "4" }, { value: "3" }],
+          metricValues: [{ value: "4" }, { value: "3" }, { value: "2" }],
         },
         {
           dimensionValues: [
@@ -257,22 +299,26 @@ describe("GA4 exact-page event inventory", () => {
             { value: "/moving-services" },
             { value: "page_view" },
           ],
-          metricValues: [{ value: "11" }, { value: "8" }],
+          metricValues: [{ value: "11" }, { value: "8" }, { value: "7" }],
         },
       ],
-      totals: [{ metricValues: [{ value: "15" }, { value: "9" }] }],
+      totals: [
+        { metricValues: [{ value: "15" }, { value: "9" }, { value: "9" }] },
+      ],
       propertyQuota: { tokensPerDay: { consumed: 1, remaining: 999 } },
     });
     expect(report.rowCount).toBe(2);
     expect(report.pageCount).toBe(2);
     expect(report.eventNameCount).toBe(2);
     expect(report.totalEventCount).toBe(15);
+    expect(report.totalSessions).toBe(9);
     expect(report.rows[0]).toMatchObject({
       hostName: "trumoveinc.com",
       pagePath: "/moving-services?zip=12345",
       eventName: "generate_lead",
       eventCount: 4,
       activeUsers: 3,
+      sessions: 2,
     });
   });
 
@@ -282,6 +328,7 @@ describe("GA4 exact-page event inventory", () => {
       pageCount: 0,
       eventNameCount: 0,
       totalEventCount: 0,
+      totalSessions: 0,
       rows: [],
     });
   });
