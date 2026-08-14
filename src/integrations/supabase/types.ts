@@ -1030,15 +1030,15 @@ export type Database = {
           changes: Json
           created_at: string
           evidence: Json
-          generation_context: Json
           evidence_limitations: string
           evidence_summary: string
+          generation_context: Json
           id: string
           idempotency_key: string
           implementation_method: string
           inbox_item_id: string | null
-          proposed_at: string
           proposal_type: string
+          proposed_at: string
           published_proof_at: string | null
           published_proof_notes: string | null
           rationale: string
@@ -1082,15 +1082,15 @@ export type Database = {
           changes?: Json
           created_at?: string
           evidence?: Json
-          generation_context?: Json
           evidence_limitations?: string
           evidence_summary?: string
+          generation_context?: Json
           id?: string
           idempotency_key: string
           implementation_method?: string
           inbox_item_id?: string | null
-          proposed_at?: string
           proposal_type?: string
+          proposed_at?: string
           published_proof_at?: string | null
           published_proof_notes?: string | null
           rationale: string
@@ -1134,15 +1134,15 @@ export type Database = {
           changes?: Json
           created_at?: string
           evidence?: Json
-          generation_context?: Json
           evidence_limitations?: string
           evidence_summary?: string
+          generation_context?: Json
           id?: string
           idempotency_key?: string
           implementation_method?: string
           inbox_item_id?: string | null
-          proposed_at?: string
           proposal_type?: string
+          proposed_at?: string
           published_proof_at?: string | null
           published_proof_notes?: string | null
           rationale?: string
@@ -2449,6 +2449,47 @@ export type Database = {
           },
         ]
       }
+      search_console_sitemap_submissions: {
+        Row: {
+          failure_reason: string | null
+          id: string
+          property: string
+          requested_by: string | null
+          sitemap_url: string
+          status: string
+          submitted_at: string
+          tenant_id: string
+        }
+        Insert: {
+          failure_reason?: string | null
+          id?: string
+          property: string
+          requested_by?: string | null
+          sitemap_url: string
+          status: string
+          submitted_at?: string
+          tenant_id: string
+        }
+        Update: {
+          failure_reason?: string | null
+          id?: string
+          property?: string
+          requested_by?: string | null
+          sitemap_url?: string
+          status?: string
+          submitted_at?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "search_console_sitemap_submissions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       search_console_snapshots: {
         Row: {
           aggregation_type: string
@@ -2531,47 +2572,6 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "search_console_snapshots_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      search_console_sitemap_submissions: {
-        Row: {
-          failure_reason: string | null
-          id: string
-          property: string
-          requested_by: string | null
-          sitemap_url: string
-          status: string
-          submitted_at: string
-          tenant_id: string
-        }
-        Insert: {
-          failure_reason?: string | null
-          id?: string
-          property: string
-          requested_by?: string | null
-          sitemap_url: string
-          status: string
-          submitted_at?: string
-          tenant_id: string
-        }
-        Update: {
-          failure_reason?: string | null
-          id?: string
-          property?: string
-          requested_by?: string | null
-          sitemap_url?: string
-          status?: string
-          submitted_at?: string
-          tenant_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "search_console_sitemap_submissions_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -3418,17 +3418,6 @@ export type Database = {
         }
       }
       command_center_overview: { Args: { _tenant_id: string }; Returns: Json }
-      decide_ad_advertiser_candidate: {
-        Args: { _candidate_id: string; _decision: string }
-        Returns: Json
-      }
-      has_role: {
-        Args: {
-          _role: Database["public"]["Enums"]["app_role"]
-          _user_id: string
-        }
-        Returns: boolean
-      }
       create_title_h1_proposal: {
         Args: {
           _actor: string
@@ -3451,21 +3440,16 @@ export type Database = {
         }
         Returns: Json
       }
-      revise_title_h1_proposal: {
-        Args: {
-          _actor: string
-          _changes: Json
-          _evidence: Json
-          _evidence_limitations: string
-          _evidence_summary: string
-          _generation_context: Json
-          _id: string
-          _rationale: string
-          _revision_kind: string
-          _risk_note: string
-          _source_revision_before: string
-        }
+      decide_ad_advertiser_candidate: {
+        Args: { _candidate_id: string; _decision: string }
         Returns: Json
+      }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
       }
       is_operator: { Args: never; Returns: boolean }
       is_tenant_member: { Args: { _tenant_id: string }; Returns: boolean }
@@ -3502,6 +3486,22 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      revise_title_h1_proposal: {
+        Args: {
+          _actor: string
+          _changes: Json
+          _evidence: Json
+          _evidence_limitations: string
+          _evidence_summary: string
+          _generation_context: Json
+          _id: string
+          _rationale: string
+          _revision_kind: string
+          _risk_note: string
+          _source_revision_before: string
+        }
+        Returns: Json
       }
       revoke_operator: { Args: { _email: string }; Returns: string }
       seed_tool_estate_for_tenant: {
