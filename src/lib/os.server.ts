@@ -69,6 +69,7 @@ type InboxInput = {
   subjectKind?: string | null;
   subjectId?: string | null;
   actions?: unknown[];
+  metadata?: Record<string, unknown>;
   tenantId?: string | null;
 };
 
@@ -78,6 +79,12 @@ export async function fileInboxItem(
   item: InboxInput,
 ): Promise<void> {
   const { requireTenantId } = await import("./tenant.server");
+  const metadata = {
+    ...(item.metadata ?? {}),
+    ...(item.lane === "needs_attention" && item.metadata?.["category"] === undefined
+      ? { category: "failure" }
+      : {}),
+  };
   const { error } = await client.from("inbox_items").insert({
     tenant_id: await requireTenantId(client, item.tenantId),
     lane: item.lane,
@@ -88,6 +95,7 @@ export async function fileInboxItem(
     subject_kind: item.subjectKind ?? null,
     subject_id: item.subjectId ?? null,
     actions: (item.actions ?? []) as never,
+    metadata: metadata as never,
   });
   if (error) throw new Error(error.message);
 }

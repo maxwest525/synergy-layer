@@ -2,7 +2,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireTenantId } from "./tenant.server";
 
 import type { Database } from "@/integrations/supabase/types";
-import { fileInboxItem, logActivity } from "./os.server";
+import { logActivity } from "./os.server";
+import { observationRecommendationRecord } from "./observation-record";
 import { SearchConsoleFailure, checksum, type QueryRow } from "./search-console.server";
 
 type Client = SupabaseClient<Database>;
@@ -683,19 +684,19 @@ export async function runSeoValidation(
     if (recommendationId) {
       const { error: updateError } = await client
         .from("recommendations")
-        .update({
+        .update(observationRecommendationRecord({
           description: finding.description,
           confidence: finding.confidence,
           run_id: workflowRunId,
-          metadata: { ...evidence, observationOnly: true } as never,
-        })
+          metadata: evidence as never,
+        }))
         .eq("id", recommendationId);
       if (updateError) throw new SearchConsoleFailure("persistence", updateError.message);
       updated += 1;
     } else {
       const { data: inserted, error: insertError } = await client
         .from("recommendations")
-        .insert({
+        .insert(observationRecommendationRecord({
           tenant_id: await requireTenantId(client),
           title: finding.title,
           description: finding.description,
@@ -708,12 +709,10 @@ export async function runSeoValidation(
           confidence: finding.confidence,
           reasoning: `Rule ${finding.rule} over finalized Search Console snapshots for ${reportingDate} (Pacific), compared against ${comparisonDate ?? "no prior period"}.`,
           suggested_action: finding.suggestedAction as never,
-          requires_approval: true,
-          state: "proposed",
           issue_fingerprint: issueFingerprint,
           run_id: workflowRunId,
-          metadata: { ...evidence, observationOnly: true } as never,
-        })
+          metadata: evidence as never,
+        }))
         .select("id")
         .single();
       if (insertError) throw new SearchConsoleFailure("persistence", insertError.message);
@@ -729,16 +728,6 @@ export async function runSeoValidation(
         if (targetError) throw new SearchConsoleFailure("persistence", targetError.message);
       }
 
-      await fileInboxItem(client, {
-        lane: "pending_approval",
-        sourceModule: "seo-validation",
-        title: finding.title,
-        summary: finding.description,
-        priority: finding.businessImpact === "high" ? 2 : 3,
-        subjectKind: "recommendation",
-        subjectId: recommendationId,
-        actions: [{ kind: "approve" }, { kind: "open" }],
-      });
     }
 
     const { error: observationError } = await client.from("search_console_observations").upsert(

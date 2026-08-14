@@ -15,6 +15,7 @@ import {
 
 import { OperatorRouteError } from "@/components/os/route-error";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
   approveChangeRequest,
@@ -24,6 +25,10 @@ import {
   verifyChangeRequest,
 } from "@/lib/change-requests.functions";
 import { describeOutcome, humanState, isChangeState } from "@/lib/change-request-state";
+import {
+  editTitleH1Proposal,
+  regenerateTitleH1Proposal,
+} from "@/lib/title-h1-proposals.functions";
 import { getTenantContext } from "@/lib/tenant.functions";
 
 export const Route = createFileRoute("/changes/$id")({
@@ -51,14 +56,154 @@ export const Route = createFileRoute("/changes/$id")({
 
 type FieldChange = { field?: string; label?: string; before?: string; after?: string };
 type EvidenceRow = {
+  source?: string;
   query?: string;
   date?: string;
+  position?: number;
   average_position?: number;
   impressions?: number;
+  clicks?: number;
+  domain?: string;
+  url?: string;
+  title?: string;
+  h1?: string;
+  observedAt?: string;
+  rows?: unknown;
+};
+type ProposalVersion = {
+  id: string;
+  version_number: number;
+  revision_kind: string;
+  changes: unknown;
+  rationale: string;
+  created_at: string;
 };
 
 function asArray<T>(value: unknown): T[] {
   return Array.isArray(value) ? (value as T[]) : [];
+}
+
+function ProposalRevisionPanel({
+  id,
+  fields,
+  rationale,
+  versions,
+  editable,
+  onChanged,
+}: {
+  id: string;
+  fields: FieldChange[];
+  rationale: string;
+  versions: ProposalVersion[];
+  editable: boolean;
+  onChanged: () => void;
+}) {
+  const edit = useServerFn(editTitleH1Proposal);
+  const regenerate = useServerFn(regenerateTitleH1Proposal);
+  const [seoTitle, setSeoTitle] = useState(
+    fields.find((field) => field.field === "seo_title")?.after ?? "",
+  );
+  const [h1, setH1] = useState(
+    fields.find((field) => field.field === "page_heading")?.after ?? "",
+  );
+  const [reason, setReason] = useState(rationale);
+
+  const revision = useMutation({
+    mutationFn: (action: "edit" | "regenerate") =>
+      action === "regenerate"
+        ? regenerate({ data: { id } })
+        : edit({ data: { id, seoTitle, h1, rationale: reason } }),
+    onSuccess: (result) => {
+      toast.success(
+        result.versionNumber
+          ? `Saved immutable revision ${result.versionNumber}.`
+          : "Proposal updated.",
+      );
+      onChanged();
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+  return (
+    <GlassCard className="p-5">
+      <h2 className="text-sm font-semibold text-foreground">Draft wording and revisions</h2>
+      {editable ? (
+        <>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Editing saves a new immutable revision. Regenerate calls Gemini once using fresh required
+            evidence and optional knowledge writing guidance.
+          </p>
+          <div className="mt-4 grid gap-3">
+            <label className="grid gap-1 text-sm">
+              <span className="text-muted-foreground">SEO title</span>
+              <Input value={seoTitle} onChange={(event) => setSeoTitle(event.target.value)} />
+            </label>
+            <label className="grid gap-1 text-sm">
+              <span className="text-muted-foreground">H1</span>
+              <Input value={h1} onChange={(event) => setH1(event.target.value)} />
+            </label>
+            <label className="grid gap-1 text-sm">
+              <span className="text-muted-foreground">Rationale</span>
+              <Textarea value={reason} onChange={(event) => setReason(event.target.value)} />
+            </label>
+          </div>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Button
+              disabled={revision.isPending}
+              onClick={() => revision.mutate("edit")}
+            >
+              Save edit
+            </Button>
+            <Button
+              variant="outline"
+              disabled={revision.isPending}
+              onClick={() => revision.mutate("regenerate")}
+            >
+              Regenerate with fresh evidence
+            </Button>
+          </div>
+        </>
+      ) : (
+        <p className="mt-2 text-sm text-muted-foreground">
+          Approved wording and evidence are locked. This history cannot be changed.
+        </p>
+      )}
+
+      <h3 className="mt-6 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        Immutable revision history
+      </h3>
+      {versions.length === 0 ? (
+        <p className="mt-2 text-sm text-muted-foreground">
+          Initial generation creates no version record. The first edit or regeneration creates
+          revision 1.
+        </p>
+      ) : (
+        <ol className="mt-3 space-y-3">
+          {versions.map((version) => {
+            const versionFields = asArray<FieldChange>(version.changes);
+            return (
+              <li key={version.id} className="rounded-xl border border-border/60 p-3">
+                <p className="text-sm font-medium text-foreground">
+                  Revision {version.version_number} · {version.revision_kind}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {new Date(version.created_at).toLocaleString()}
+                </p>
+                <ul className="mt-2 space-y-1">
+                  {versionFields.map((field) => (
+                    <li key={field.field ?? field.label} className="text-sm text-muted-foreground">
+                      {field.label ?? field.field}: <span className="text-foreground">{field.after}</span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-2 text-sm text-muted-foreground">{version.rationale}</p>
+              </li>
+            );
+          })}
+        </ol>
+      )}
+    </GlassCard>
+  );
 }
 
 function ChangeRequestPage() {
@@ -133,6 +278,20 @@ function ChangeRequestPage() {
     postChangeRows: data.postChangeRows,
   });
   const busy = mutation.isPending;
+  const practicalState =
+    state === "rejected"
+      ? "Rejected"
+      : state === "rolled_back"
+        ? "Rolled back"
+        : change.proposal_type === "title_h1"
+          ? state === "proposed"
+            ? "Draft"
+            : change.published_proof_at || state === "applied" || state === "verified"
+              ? "Live"
+              : change.source_commit_sha
+                ? "Committed"
+                : "Approved"
+          : humanState(state);
 
   const brief = [
     `Change request: ${change.title}`,
@@ -157,7 +316,10 @@ function ChangeRequestPage() {
         title={change.title}
         description="One concrete change to one page. Approving authorizes the change. It does not approve the Search Console data, edit the public site, or publish anything."
         actions={
-          <StatePill label={humanState(state)} tone={state === "rejected" ? "danger" : "primary"} />
+          <StatePill
+            label={practicalState}
+            tone={state === "rejected" || state === "rolled_back" ? "danger" : "primary"}
+          />
         }
       />
 
@@ -194,6 +356,18 @@ function ChangeRequestPage() {
         ) : null}
       </GlassCard>
 
+      {change.proposal_type === "title_h1" ? (
+        <ProposalRevisionPanel
+          key={`${id}:${change.revision_count}`}
+          id={id}
+          fields={fields}
+          rationale={change.rationale}
+          versions={data.versions}
+          editable={state === "proposed"}
+          onChanged={invalidate}
+        />
+      ) : null}
+
       <div className="grid gap-4 lg:grid-cols-2">
         <GlassCard className="p-5">
           <h2 className="text-sm font-semibold text-foreground">Why this was proposed</h2>
@@ -212,18 +386,71 @@ function ChangeRequestPage() {
           {evidence.length === 0 ? (
             <p className="mt-2 text-sm text-muted-foreground">No evidence rows are attached.</p>
           ) : (
-            <ul className="mt-3 space-y-2">
-              {evidence.map((row, index) => (
-                <li
-                  key={`${row.query}-${row.date}-${index}`}
-                  className="text-sm text-muted-foreground"
-                >
-                  <span className="text-foreground">{row.query}</span> — average position{" "}
-                  {row.average_position} on {row.date}, {row.impressions} impression
-                  {row.impressions === 1 ? "" : "s"}
-                </li>
-              ))}
-            </ul>
+            <div className="mt-3 space-y-4">
+              {evidence.map((group, index) => {
+                if (group.source === "live_page") {
+                  return (
+                    <div key="live-page" className="rounded-xl border border-border/60 p-3">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        Live page
+                      </p>
+                      <p className="mt-2 text-sm text-foreground">{group.title}</p>
+                      <p className="mt-1 text-sm text-muted-foreground">H1: {group.h1}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {group.url} · observed {group.observedAt}
+                      </p>
+                    </div>
+                  );
+                }
+
+                if (group.source === "google_search_console") {
+                  const rows = asArray<EvidenceRow>(group.rows);
+                  return (
+                    <div key="gsc" className="rounded-xl border border-border/60 p-3">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        Google Search Console · exact page
+                      </p>
+                      <ul className="mt-2 space-y-2">
+                        {rows.map((row, rowIndex) => (
+                          <li key={`${row.query}-${row.date}-${rowIndex}`} className="text-sm text-muted-foreground">
+                            <span className="text-foreground">{row.query}</span> — position {row.position} on{" "}
+                            {row.date}, {row.impressions} impressions, {row.clicks} clicks
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  );
+                }
+
+                if (group.source === "dataforseo_competitors") {
+                  const rows = asArray<EvidenceRow>(group.rows);
+                  return (
+                    <div key="dataforseo" className="rounded-xl border border-border/60 p-3">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        DataForSEO · active tracked competitors
+                      </p>
+                      <ul className="mt-2 space-y-2">
+                        {rows.map((row, rowIndex) => (
+                          <li key={`${row.domain}-${row.url}-${rowIndex}`} className="text-sm text-muted-foreground">
+                            <span className="text-foreground">{row.title}</span> — {row.domain}, position{" "}
+                            {row.position} for {row.query}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  );
+                }
+
+                return (
+                  <p key={`${group.query}-${group.date}-${index}`} className="text-sm text-muted-foreground">
+                    <span className="text-foreground">{group.query ?? group.source ?? "Evidence"}</span>
+                    {group.date
+                      ? ` — average position ${group.average_position ?? group.position ?? "unknown"} on ${group.date}, ${group.impressions ?? 0} impressions`
+                      : null}
+                  </p>
+                );
+              })}
+            </div>
           )}
         </GlassCard>
       </div>

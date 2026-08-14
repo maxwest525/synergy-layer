@@ -79,3 +79,33 @@ function isActionCenterLane(value: string): value is ActionCenterLane {
     "fyi",
   ].includes(value);
 }
+
+
+export type ActionCenterScopedItem = {
+  resolved_at: string | null;
+  lane: string;
+  subject_kind: string | null;
+  metadata: unknown;
+  changeRequest: ActionCenterChange | null;
+};
+
+/**
+ * The Action Center is an action surface, not a feed. It contains only active
+ * executable change requests and failures explicitly classified by producers.
+ */
+export function isActionCenterItem(item: ActionCenterScopedItem): boolean {
+  if (item.resolved_at !== null) return false;
+
+  if (item.subject_kind === "change_request") {
+    return Boolean(
+      item.changeRequest &&
+        ["proposed", "approved", "applied"].includes(item.changeRequest.state),
+    );
+  }
+
+  if (item.lane !== "needs_attention") return false;
+  if (!item.metadata || typeof item.metadata !== "object" || Array.isArray(item.metadata)) {
+    return false;
+  }
+  return (item.metadata as Record<string, unknown>)["category"] === "failure";
+}

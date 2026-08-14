@@ -14,6 +14,7 @@ type Client = SupabaseClient<Database>;
 export type { PostChangeRow };
 
 type ChangeRow = Database["public"]["Tables"]["change_requests"]["Row"];
+type ChangeVersionRow = Database["public"]["Tables"]["change_request_versions"]["Row"];
 
 /** Post-application Search Console rows for the target page, if any exist yet. */
 async function fetchPostChangeRows(
@@ -54,14 +55,29 @@ export async function fetchChangeRequest(client: Client, tenantId: string, id: s
     .eq("tenant_id", tenantId)
     .maybeSingle();
   if (error) throw new Error(error.message);
-  if (!data) return { changeRequest: null, postChangeRows: [] as PostChangeRow[] };
-  const postChangeRows = await fetchPostChangeRows(
+  if (!data) {
+    return {
+      changeRequest: null,
+      postChangeRows: [] as PostChangeRow[],
+      versions: [] as ChangeVersionRow[],
+    };
+  }
+  const [{ data: versions, error: versionError }, postChangeRows] = await Promise.all([
+    client
+      .from("change_request_versions")
+      .select("*")
+      .eq("tenant_id", tenantId)
+      .eq("change_request_id", id)
+      .order("version_number", { ascending: false }),
+    fetchPostChangeRows(
     client,
     tenantId,
     data.target_url,
-    data.applied_at,
-  );
-  return { changeRequest: data, postChangeRows };
+      data.applied_at,
+    ),
+  ]);
+  if (versionError) throw new Error(versionError.message);
+  return { changeRequest: data, postChangeRows, versions: versions ?? [] };
 }
 
 /**

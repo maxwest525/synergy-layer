@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - codex/aoos-recovery-title-h1
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      # Lovable currently updates package.json without regenerating package-lock.json.
+      # Install from package.json during recovery without mutating the checkout.
+      - run: npm install --package-lock=false --no-audit --no-fund
+      - name: Lint changed JavaScript and TypeScript
+        shell: bash
+        run: |
+          git diff --name-only --diff-filter=ACMR -z origin/main...HEAD -- '*.js' '*.jsx' '*.ts' '*.tsx' |
+            xargs -0 -r npm exec eslint -- --rule 'prettier/prettier: off'
+      - name: Test
+        if: always()
+        run: npm test
+      - name: Build
+        if: always()
+        run: npm run build

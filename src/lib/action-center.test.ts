@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { actionCenterFieldChanges, actionCenterLane, actionCenterStage } from "./action-center";
+import {
+  actionCenterFieldChanges,
+  actionCenterLane,
+  actionCenterStage,
+  isActionCenterItem,
+} from "./action-center";
 
 const change = {
   state: "approved",
@@ -13,6 +18,18 @@ describe("Action Center change request lifecycle", () => {
   it("keeps a legacy completed approval visible until execution is finished", () => {
     expect(actionCenterLane("completed", change)).toBe("in_progress");
     expect(actionCenterStage(change)).toBe("Approved — ready to execute");
+  });
+
+  it("keeps an unresolved approved proposal visible as an executable action", () => {
+    expect(
+      isActionCenterItem({
+        resolved_at: null,
+        lane: "needs_attention",
+        subject_kind: "change_request",
+        metadata: {},
+        changeRequest: change,
+      }),
+    ).toBe(true);
   });
 
   it("keeps applied work visible for outcome tracking", () => {

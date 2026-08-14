@@ -950,6 +950,75 @@ export type Database = {
           },
         ]
       }
+      change_request_versions: {
+        Row: {
+          change_request_id: string
+          changes: Json
+          created_at: string
+          created_by: string
+          evidence: Json
+          evidence_limitations: string
+          evidence_summary: string
+          generation_context: Json
+          id: string
+          rationale: string
+          revision_kind: string
+          risk_note: string | null
+          source_revision_before: string
+          tenant_id: string
+          version_number: number
+        }
+        Insert: {
+          change_request_id: string
+          changes: Json
+          created_at?: string
+          created_by: string
+          evidence: Json
+          evidence_limitations: string
+          evidence_summary: string
+          generation_context?: Json
+          id?: string
+          rationale: string
+          revision_kind: string
+          risk_note?: string | null
+          source_revision_before: string
+          tenant_id: string
+          version_number: number
+        }
+        Update: {
+          change_request_id?: string
+          changes?: Json
+          created_at?: string
+          created_by?: string
+          evidence?: Json
+          evidence_limitations?: string
+          evidence_summary?: string
+          generation_context?: Json
+          id?: string
+          rationale?: string
+          revision_kind?: string
+          risk_note?: string | null
+          source_revision_before?: string
+          tenant_id?: string
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "change_request_versions_change_request_id_fkey"
+            columns: ["change_request_id"]
+            isOneToOne: false
+            referencedRelation: "change_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "change_request_versions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       change_requests: {
         Row: {
           applied_at: string | null
@@ -961,6 +1030,7 @@ export type Database = {
           changes: Json
           created_at: string
           evidence: Json
+          generation_context: Json
           evidence_limitations: string
           evidence_summary: string
           id: string
@@ -968,12 +1038,14 @@ export type Database = {
           implementation_method: string
           inbox_item_id: string | null
           proposed_at: string
+          proposal_type: string
           published_proof_at: string | null
           published_proof_notes: string | null
           rationale: string
           recommendation_id: string | null
           rejected_at: string | null
           rejected_by: string | null
+          revision_count: number
           risk_note: string | null
           rollback_notes: string | null
           rolled_back_at: string | null
@@ -1010,6 +1082,7 @@ export type Database = {
           changes?: Json
           created_at?: string
           evidence?: Json
+          generation_context?: Json
           evidence_limitations?: string
           evidence_summary?: string
           id?: string
@@ -1017,12 +1090,14 @@ export type Database = {
           implementation_method?: string
           inbox_item_id?: string | null
           proposed_at?: string
+          proposal_type?: string
           published_proof_at?: string | null
           published_proof_notes?: string | null
           rationale: string
           recommendation_id?: string | null
           rejected_at?: string | null
           rejected_by?: string | null
+          revision_count?: number
           risk_note?: string | null
           rollback_notes?: string | null
           rolled_back_at?: string | null
@@ -1059,6 +1134,7 @@ export type Database = {
           changes?: Json
           created_at?: string
           evidence?: Json
+          generation_context?: Json
           evidence_limitations?: string
           evidence_summary?: string
           id?: string
@@ -1066,12 +1142,14 @@ export type Database = {
           implementation_method?: string
           inbox_item_id?: string | null
           proposed_at?: string
+          proposal_type?: string
           published_proof_at?: string | null
           published_proof_notes?: string | null
           rationale?: string
           recommendation_id?: string | null
           rejected_at?: string | null
           rejected_by?: string | null
+          revision_count?: number
           risk_note?: string | null
           rollback_notes?: string | null
           rolled_back_at?: string | null
@@ -3350,6 +3428,44 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      create_title_h1_proposal: {
+        Args: {
+          _actor: string
+          _changes: Json
+          _evidence: Json
+          _evidence_limitations: string
+          _evidence_summary: string
+          _generation_context: Json
+          _idempotency_key: string
+          _rationale: string
+          _risk_note: string
+          _source_branch: string
+          _source_file: string
+          _source_project_id: string
+          _source_repo: string
+          _source_revision_before: string
+          _target_url: string
+          _tenant_id: string
+          _title: string
+        }
+        Returns: Json
+      }
+      revise_title_h1_proposal: {
+        Args: {
+          _actor: string
+          _changes: Json
+          _evidence: Json
+          _evidence_limitations: string
+          _evidence_summary: string
+          _generation_context: Json
+          _id: string
+          _rationale: string
+          _revision_kind: string
+          _risk_note: string
+          _source_revision_before: string
+        }
+        Returns: Json
       }
       is_operator: { Args: never; Returns: boolean }
       is_tenant_member: { Args: { _tenant_id: string }; Returns: boolean }

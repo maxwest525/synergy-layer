@@ -594,6 +594,11 @@ function InboxPage() {
         eyebrow="Operational center"
         title="Action Center"
         description={`${open} open actions across every workspace. Each card shows what is being requested and the decisions you can take now.`}
+        actions={
+          <Button asChild>
+            <Link to="/changes/new">New title/H1 proposal</Link>
+          </Button>
+        }
       />
 
       <div className="space-y-6">
@@ -658,9 +663,9 @@ function InboxPage() {
       </div>
 
       <p className="text-xs text-muted-foreground">
-        Inline editing and AI re-generation are backlogged until revisions can invalidate approval
-        and require a fresh decision. They are not shown as fake controls. Looking for system-wide
-        state? Open the{" "}
+        Draft title/H1 proposals can be edited or regenerated from their detail page. Every edit
+        or regeneration creates an immutable revision; approved wording stays locked. Looking for
+        system-wide state? Open the{" "}
         <Link to="/command-center" className="text-primary underline-offset-4 hover:underline">
           Command Center
         </Link>
