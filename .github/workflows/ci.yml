@@ -20,7 +20,9 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
+      # Lovable currently updates package.json without regenerating package-lock.json.
+      # Install from package.json during recovery without mutating the checkout.
+      - run: npm install --package-lock=false --no-audit --no-fund
       - run: npm run lint
       - run: npm test
       - run: npm run build
