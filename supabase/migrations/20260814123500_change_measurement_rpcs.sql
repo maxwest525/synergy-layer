@@ -10,10 +10,10 @@ BEGIN
   SELECT * INTO v_cycle FROM public.change_measurement_cycles WHERE id = _cycle_id;
   SELECT * INTO v_window FROM public.change_measurement_windows WHERE id = _window_id AND cycle_id = _cycle_id;
   IF v_cycle.id IS NULL OR v_window.id IS NULL THEN RAISE EXCEPTION 'Measurement cycle/window mismatch.'; END IF;
-  IF _source_role IS DISTINCT FROM CASE _provider
+  IF _source_role IS DISTINCT FROM (CASE _provider
     WHEN 'live_page' THEN 'source_of_truth' WHEN 'gsc' THEN 'source_of_truth' WHEN 'ga4' THEN 'source_of_truth'
     WHEN 'dataforseo_organic' THEN 'enrichment' WHEN 'serpapi_transparency' THEN 'corroboration'
-    WHEN 'serpapi_paid_serp' THEN 'corroboration' WHEN 'knowledge' THEN 'devils_advocate' ELSE NULL END THEN
+    WHEN 'serpapi_paid_serp' THEN 'corroboration' WHEN 'knowledge' THEN 'devils_advocate' ELSE NULL END) THEN
     RAISE EXCEPTION 'Provider role mismatch.';
   END IF;
   SELECT id, revision_number, status, payload, source_refs INTO v_prior, v_revision, v_prior_status, v_prior_payload, v_prior_refs FROM public.change_measurement_observations
