@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { generateTitleH1Proposal } from "@/lib/title-h1-proposals.functions";
 
+type ProposalMode = "gemini" | "deterministic_dev";
+
 export const Route = createFileRoute("/changes/new")({
   ssr: false,
   errorComponent: OperatorRouteError,
@@ -32,11 +34,12 @@ function NewTitleH1ProposalPage() {
   const [targetUrl, setTargetUrl] = useState("");
 
   const mutation = useMutation({
-    mutationFn: () =>
+    mutationFn: (mode: ProposalMode) =>
       generate({
         data: {
           targetUrl,
           idempotencyKey: crypto.randomUUID(),
+          mode,
         },
       }),
     onSuccess: (result) => {
@@ -61,7 +64,7 @@ function NewTitleH1ProposalPage() {
           className="grid gap-4"
           onSubmit={(event) => {
             event.preventDefault();
-            mutation.mutate();
+            mutation.mutate("gemini");
           }}
         >
           <label className="grid gap-1 text-sm">
@@ -78,11 +81,28 @@ function NewTitleH1ProposalPage() {
             Knowledge entries may guide the writing, but they are not evidence and an empty
             knowledge match does not block generation.
           </p>
-          <div>
+          <div className="flex flex-wrap gap-3">
             <Button type="submit" disabled={mutation.isPending}>
-              {mutation.isPending ? "Generating…" : "Generate proposal"}
+              {mutation.isPending && mutation.variables === "gemini"
+                ? "Generating…"
+                : "Generate proposal"}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={mutation.isPending}
+              onClick={() => mutation.mutate("deterministic_dev")}
+            >
+              {mutation.isPending && mutation.variables === "deterministic_dev"
+                ? "Generating dev draft…"
+                : "Generate dev draft"}
             </Button>
           </div>
+          <p className="text-xs text-muted-foreground">
+            Gemini remains the default. Dev mode bypasses only Gemini wording generation;
+            operator access, the live page, GSC, DataForSEO, source proof, review, and approval
+            are still required.
+          </p>
         </form>
       </GlassCard>
     </div>
