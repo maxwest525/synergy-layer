@@ -10,7 +10,7 @@ import {
 import { createGithubApi, createRenderedVerifier } from "./execution/execute.server";
 import { applyExactReplacements, countOccurrences } from "./execution/source-change";
 import { generateTitleH1Wording } from "./gemini.server";
-import { retrieveKnowledgeGuidance } from "./knowledge-guidance.server";
+import { retrieveKnowledgeGuidance } from "./knowledge-retrieval.server";
 import {
   assertCompleteEvidence,
   buildTitleH1Changes,
@@ -148,10 +148,14 @@ export async function prepareTitleH1Proposal(
     throw new Error("The rendered live H1 is not one unique literal in the allowlisted source file.");
   }
 
-  const guidance = await retrieveKnowledgeGuidance(client, tenantId, {
-    targetUrl,
-    queries,
-  });
+  const guidance = (
+    await retrieveKnowledgeGuidance(client, [targetUrl, ...queries].join(" "), { limit: 5 })
+  ).map((entry) => ({
+    id: entry.id,
+    title: entry.title,
+    excerpt: entry.excerpt.slice(0, 600),
+    sourceRef: entry.sourceRef,
+  }));
 
   const apiKey = process.env["GEMINI_API_KEY"] ?? "";
   const model = process.env["GEMINI_MODEL"] ?? "";

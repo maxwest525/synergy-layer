@@ -95,12 +95,31 @@ describe("title/H1 proposal evidence contract", () => {
     ]);
   });
 
+  it("accepts complete evidence when optional writing guidance is empty", () => {
+    expect(() => assertCompleteEvidence(complete)).not.toThrow();
+    expect(buildTitleH1Prompt(complete, [])).toContain(
+      "WRITING GUIDANCE (not evidence; may be empty):\\n[]",
+    );
+  });
+
   it("builds a wording-only prompt from exactly the three approved evidence classes", () => {
-    const prompt = buildTitleH1Prompt(complete);
+    const prompt = buildTitleH1Prompt(complete, [
+      {
+        id: "guide-1",
+        title: "SEO title guidance",
+        excerpt: "Lead with the page subject and write for people.",
+        sourceRef: "books/seo-playbook.md",
+      },
+    ]);
     expect(prompt).toContain("livePage");
     expect(prompt).toContain("gsc");
     expect(prompt).toContain("competitors");
     expect(prompt).not.toMatch(/GA4|Google Analytics|knowledge base|Lovable AI Gateway/i);
     expect(prompt).toMatch(/wording only/i);
+    expect(prompt.indexOf("WRITING GUIDANCE")).toBeGreaterThan(
+      prompt.indexOf("APPROVED PROPOSAL EVIDENCE"),
+    );
+    expect(prompt).toContain('"id": "guide-1"');
+    expect(prompt).toContain('"sourceRef": "books/seo-playbook.md"');
   });
 });

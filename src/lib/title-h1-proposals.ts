@@ -186,6 +186,20 @@ export function buildTitleH1Prompt(
       null,
       2,
     ),
+    "",
+    "WRITING GUIDANCE (not evidence; may be empty):",
+    guidance.length > 0
+      ? JSON.stringify(
+          guidance.map(({ id, title, excerpt, sourceRef }) => ({
+            id,
+            title,
+            excerpt: excerpt.slice(0, 600),
+            sourceRef,
+          })),
+          null,
+          2,
+        )
+      : "[]",
   ].join("\n");
 }
 
