@@ -279,17 +279,19 @@ function ChangeRequestPage() {
   });
   const busy = mutation.isPending;
   const practicalState =
-    change.proposal_type === "title_h1"
-      ? state === "rejected" || state === "rolled_back"
-        ? humanState(state)
-        : state === "proposed"
-        ? "Draft"
-        : change.published_proof_at || state === "applied" || state === "verified"
-          ? "Live"
-          : change.source_commit_sha
-            ? "Committed"
-            : "Approved"
-      : humanState(state);
+    state === "rejected"
+      ? "Rejected"
+      : state === "rolled_back"
+        ? "Rolled back"
+        : change.proposal_type === "title_h1"
+          ? state === "proposed"
+            ? "Draft"
+            : change.published_proof_at || state === "applied" || state === "verified"
+              ? "Live"
+              : change.source_commit_sha
+                ? "Committed"
+                : "Approved"
+          : humanState(state);
 
   const brief = [
     `Change request: ${change.title}`,
@@ -314,7 +316,10 @@ function ChangeRequestPage() {
         title={change.title}
         description="One concrete change to one page. Approving authorizes the change. It does not approve the Search Console data, edit the public site, or publish anything."
         actions={
-          <StatePill label={practicalState} tone={state === "rejected" ? "danger" : "primary"} />
+          <StatePill
+            label={practicalState}
+            tone={state === "rejected" || state === "rolled_back" ? "danger" : "primary"}
+          />
         }
       />
 
