@@ -38,6 +38,13 @@ export type ProposalEvidenceInput = {
   competitors: CompetitorProposalEvidence[];
 };
 
+export type KnowledgeWritingGuidance = {
+  id: string;
+  title: string;
+  excerpt: string;
+  sourceRef: string | null;
+};
+
 export type TitleH1Wording = {
   seoTitle: string;
   h1: string;
@@ -158,7 +165,10 @@ export function assertCompleteEvidence(input: ProposalEvidenceInput): asserts in
   }
 }
 
-export function buildTitleH1Prompt(evidence: ProposalEvidence): string {
+export function buildTitleH1Prompt(
+  evidence: ProposalEvidence,
+  guidance: KnowledgeWritingGuidance[] = [],
+): string {
   return [
     "You draft wording only for one paired SEO title and H1 proposal.",
     "Return only the requested structured JSON. Do not make execution decisions,",

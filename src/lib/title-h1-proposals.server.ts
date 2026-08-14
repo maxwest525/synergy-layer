@@ -10,6 +10,7 @@ import {
 import { createGithubApi, createRenderedVerifier } from "./execution/execute.server";
 import { applyExactReplacements, countOccurrences } from "./execution/source-change";
 import { generateTitleH1Wording } from "./gemini.server";
+import { retrieveKnowledgeGuidance } from "./knowledge-guidance.server";
 import {
   assertCompleteEvidence,
   buildTitleH1Changes,
@@ -147,12 +148,17 @@ export async function prepareTitleH1Proposal(
     throw new Error("The rendered live H1 is not one unique literal in the allowlisted source file.");
   }
 
+  const guidance = await retrieveKnowledgeGuidance(client, tenantId, {
+    targetUrl,
+    queries,
+  });
+
   const apiKey = process.env["GEMINI_API_KEY"] ?? "";
   const model = process.env["GEMINI_MODEL"] ?? "";
   const wording = await generateTitleH1Wording({
     apiKey,
     model,
-    prompt: buildTitleH1Prompt(evidence),
+    prompt: buildTitleH1Prompt(evidence, guidance),
   });
   const changes = buildTitleH1Changes(evidence.livePage, wording);
   const simulation = applyExactReplacements(source.content, changes);
@@ -183,7 +189,8 @@ export async function prepareTitleH1Proposal(
       model,
       generatedAt: new Date().toISOString(),
       evidenceClasses: ["live_page", "google_search_console", "dataforseo_competitors"],
-      guidanceEntryIds: [],
+      guidanceEntryIds: guidance.map((entry) => entry.id),
+      guidanceSourceRefs: guidance.map((entry) => entry.sourceRef).filter(Boolean),
     },
     sourceRepo: GOVERNED_REPO,
     sourceBranch: GOVERNED_BRANCH,
