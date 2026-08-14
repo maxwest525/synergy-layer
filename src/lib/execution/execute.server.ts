@@ -116,6 +116,10 @@ export function createExecutionStore(admin: Client, rls: Client, actorId: string
       if (!payload || typeof payload.changed !== "boolean") {
         throw new Error("The publish-proof routine returned an unreadable result. Nothing was assumed.");
       }
+      if (payload.changed) {
+        const { recordRenderedLiveAnchor } = await import("../change-measurements.server");
+        await recordRenderedLiveAnchor(admin, id, actorId, proof);
+      }
       return { changed: payload.changed };
     },
   };

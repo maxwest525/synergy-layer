@@ -8,6 +8,7 @@ import {
   type PostChangeRow,
 } from "./change-request-evidence";
 import { type ChangeAction } from "./change-request-state";
+import { fetchChangeMeasurementHistory } from "./change-measurements.server";
 
 type Client = SupabaseClient<Database>;
 
@@ -60,9 +61,10 @@ export async function fetchChangeRequest(client: Client, tenantId: string, id: s
       changeRequest: null,
       postChangeRows: [] as PostChangeRow[],
       versions: [] as ChangeVersionRow[],
+      measurement: { cycle: null, windows: [], observations: [], revisions: [] },
     };
   }
-  const [{ data: versions, error: versionError }, postChangeRows] = await Promise.all([
+  const [{ data: versions, error: versionError }, postChangeRows, measurement] = await Promise.all([
     client
       .from("change_request_versions")
       .select("*")
@@ -70,14 +72,15 @@ export async function fetchChangeRequest(client: Client, tenantId: string, id: s
       .eq("change_request_id", id)
       .order("version_number", { ascending: false }),
     fetchPostChangeRows(
-    client,
-    tenantId,
-    data.target_url,
+      client,
+      tenantId,
+      data.target_url,
       data.applied_at,
     ),
+    fetchChangeMeasurementHistory(client, tenantId, id),
   ]);
   if (versionError) throw new Error(versionError.message);
-  return { changeRequest: data, postChangeRows, versions: versions ?? [] };
+  return { changeRequest: data, postChangeRows, versions: versions ?? [], measurement };
 }
 
 /**

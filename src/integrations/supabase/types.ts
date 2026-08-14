@@ -1019,6 +1019,42 @@ export type Database = {
           },
         ]
       }
+      change_measurement_cycles: {
+        Row: { approval_snapshot: Json; approved_at: string; baseline_frozen_at: string; change_request_id: string; created_at: string; gsc_property: string | null; id: string; live_at: string | null; target_url: string; tenant_id: string }
+        Insert: { approval_snapshot: Json; approved_at: string; baseline_frozen_at?: string; change_request_id: string; created_at?: string; gsc_property?: string | null; id?: string; live_at?: string | null; target_url: string; tenant_id: string }
+        Update: { approval_snapshot?: Json; approved_at?: string; baseline_frozen_at?: string; change_request_id?: string; created_at?: string; gsc_property?: string | null; id?: string; live_at?: string | null; target_url?: string; tenant_id?: string }
+        Relationships: [
+          { foreignKeyName: "change_measurement_cycles_change_request_id_fkey"; columns: ["change_request_id"]; isOneToOne: true; referencedRelation: "change_requests"; referencedColumns: ["id"] },
+          { foreignKeyName: "change_measurement_cycles_tenant_id_fkey"; columns: ["tenant_id"]; isOneToOne: false; referencedRelation: "tenants"; referencedColumns: ["id"] },
+        ]
+      }
+      change_measurement_windows: {
+        Row: { anchor_kind: string; available_after_pt: string; created_at: string; cycle_id: string; id: string; period_end_pt: string; period_start_pt: string; tenant_id: string; window_days: number }
+        Insert: { anchor_kind: string; available_after_pt: string; created_at?: string; cycle_id: string; id?: string; period_end_pt: string; period_start_pt: string; tenant_id: string; window_days: number }
+        Update: { anchor_kind?: string; available_after_pt?: string; created_at?: string; cycle_id?: string; id?: string; period_end_pt?: string; period_start_pt?: string; tenant_id?: string; window_days?: number }
+        Relationships: [
+          { foreignKeyName: "change_measurement_windows_cycle_tenant_fkey"; columns: ["cycle_id", "tenant_id"]; isOneToOne: false; referencedRelation: "change_measurement_cycles"; referencedColumns: ["id", "tenant_id"] },
+          { foreignKeyName: "change_measurement_windows_tenant_id_fkey"; columns: ["tenant_id"]; isOneToOne: false; referencedRelation: "tenants"; referencedColumns: ["id"] },
+        ]
+      }
+      change_measurement_observations: {
+        Row: { captured_at: string; cycle_id: string; id: string; payload: Json; provenance: Json; provider: string; revision_number: number; source_refs: Json; source_role: string; status: string; supersedes_id: string | null; tenant_id: string; window_id: string }
+        Insert: { captured_at?: string; cycle_id: string; id?: string; payload?: Json; provenance?: Json; provider: string; revision_number: number; source_refs?: Json; source_role: string; status: string; supersedes_id?: string | null; tenant_id: string; window_id: string }
+        Update: { captured_at?: string; cycle_id?: string; id?: string; payload?: Json; provenance?: Json; provider?: string; revision_number?: number; source_refs?: Json; source_role?: string; status?: string; supersedes_id?: string | null; tenant_id?: string; window_id?: string }
+        Relationships: [
+          { foreignKeyName: "change_measurement_observations_cycle_tenant_fkey"; columns: ["cycle_id", "tenant_id"]; isOneToOne: false; referencedRelation: "change_measurement_cycles"; referencedColumns: ["id", "tenant_id"] },
+          { foreignKeyName: "change_measurement_observations_window_tenant_fkey"; columns: ["window_id", "tenant_id"]; isOneToOne: false; referencedRelation: "change_measurement_windows"; referencedColumns: ["id", "tenant_id"] },
+        ]
+      }
+      change_measurement_revisions: {
+        Row: { actor_id: string | null; created_at: string; cycle_id: string; detail: Json; id: string; kind: string; summary: string; tenant_id: string; window_id: string | null }
+        Insert: { actor_id?: string | null; created_at?: string; cycle_id: string; detail?: Json; id?: string; kind: string; summary: string; tenant_id: string; window_id?: string | null }
+        Update: { actor_id?: string | null; created_at?: string; cycle_id?: string; detail?: Json; id?: string; kind?: string; summary?: string; tenant_id?: string; window_id?: string | null }
+        Relationships: [
+          { foreignKeyName: "change_measurement_revisions_cycle_tenant_fkey"; columns: ["cycle_id", "tenant_id"]; isOneToOne: false; referencedRelation: "change_measurement_cycles"; referencedColumns: ["id", "tenant_id"] },
+          { foreignKeyName: "change_measurement_revisions_window_tenant_fkey"; columns: ["window_id", "tenant_id"]; isOneToOne: false; referencedRelation: "change_measurement_windows"; referencedColumns: ["id", "tenant_id"] },
+        ]
+      }
       change_requests: {
         Row: {
           applied_at: string | null
@@ -1035,6 +1071,7 @@ export type Database = {
           evidence_summary: string
           id: string
           idempotency_key: string
+          live_at: string | null
           implementation_method: string
           inbox_item_id: string | null
           proposed_at: string
@@ -1087,6 +1124,7 @@ export type Database = {
           evidence_summary?: string
           id?: string
           idempotency_key: string
+          live_at?: string | null
           implementation_method?: string
           inbox_item_id?: string | null
           proposed_at?: string
@@ -1139,6 +1177,7 @@ export type Database = {
           evidence_summary?: string
           id?: string
           idempotency_key?: string
+          live_at?: string | null
           implementation_method?: string
           inbox_item_id?: string | null
           proposed_at?: string
@@ -3374,6 +3413,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      append_change_measurement_observation: {
+        Args: { _cycle_id: string; _payload: Json; _provenance: Json; _provider: string; _source_refs: Json; _source_role: string; _status: string; _window_id: string }
+        Returns: string
+      }
+      append_change_measurement_revision: {
+        Args: { _actor_id: string; _cycle_id: string; _detail: Json; _kind: string; _summary: string; _window_id: string | null }
+        Returns: string
+      }
       apply_change_request_rendered_proof: {
         Args: {
           _actor: string

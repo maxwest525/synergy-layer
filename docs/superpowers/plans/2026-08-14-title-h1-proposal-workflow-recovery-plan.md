@@ -45,3 +45,15 @@ Test first: each evidence class missing, irrelevant competitor exclusion, prompt
 ## Refusal rules
 
 No fallback to Lovable AI Gateway, generic proposal generation, background Gemini, GA4 gating, observation approvals, auto-success, silent source drift handling, or unscoped knowledge retrieval.
+
+
+## 2026-08-14 source-role supersession
+
+The earlier exclusive-three-source language is superseded. The workflow uses every available trustworthy source without treating unlike sources as equivalent:
+
+- live page, exact-page GSC, and exact-page GA4 are source-of-truth observations for publication, organic search, and onsite behavior respectively;
+- DataForSEO organic results are enrichment;
+- SerpAPI Ads Transparency and live paid-SERP observations are corroboration for paid messaging and pressure;
+- approved tenant knowledge is devil's-advocate guidance, not empirical evidence.
+
+Live page, GSC, and relevant DataForSEO remain the required minimum inputs for wording generation. GA4 and SerpAPI are optional and their absence is displayed rather than blocking. Every prompt section carries its role and provenance. Cross-source conflicts are review flags only: there is no composite score, confidence score, causal verdict, automatic success judgment, or automatic verification. Gemini remains operator-triggered and drafts wording only.

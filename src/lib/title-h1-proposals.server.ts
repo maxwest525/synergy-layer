@@ -22,6 +22,7 @@ import {
   type CompetitorSnapshotInput,
   type GscSnapshotInput,
   type ProposalEvidence,
+  type ProposalOptionalContext,
 } from "./title-h1-proposals";
 
 type Client = SupabaseClient<Database>;
@@ -137,6 +138,26 @@ export async function prepareTitleH1Proposal(
   assertCompleteEvidence(evidenceInput);
   const evidence: ProposalEvidence = evidenceInput;
 
+  // Optional sources enrich/corroborate the wording brief but never gate proposal eligibility.
+  const [{ data: ga4Rows, error: ga4Error }, { data: transparencyRows, error: transparencyError }, { data: paidRows, error: paidError }] = await Promise.all([
+    client.from("ga4_snapshots").select("id,start_date,end_date,metrics,provenance,collected_at").eq("tenant_id", tenantId).order("collected_at", { ascending: false }).limit(20),
+    client.from("ad_creatives").select("id,headline,long_headline,snippet,call_to_action,target_domain,first_shown,last_shown,retrieved_at,source_url,content_checksum").eq("tenant_id", tenantId).order("retrieved_at", { ascending: false }).limit(30),
+    queries.length ? client.from("ad_live_serp_observations").select("id,keyword,reporting_date,ad_count,ads_payload,source_url,request_fingerprint,observed_at").eq("tenant_id", tenantId).in("keyword", queries).order("observed_at", { ascending: false }).limit(30) : Promise.resolve({ data: [], error: null }),
+  ]);
+  if (ga4Error) throw new Error(ga4Error.message);
+  if (transparencyError) throw new Error(transparencyError.message);
+  if (paidError) throw new Error(paidError.message);
+  const exactGa4 = (ga4Rows ?? []).filter((row) => {
+    const metrics = row.metrics && typeof row.metrics === "object" && !Array.isArray(row.metrics) ? row.metrics as Record<string, unknown> : {};
+    return metrics.targetUrl === targetUrl || metrics.pageLocation === targetUrl;
+  });
+  const optionalContext: ProposalOptionalContext = {
+    ga4: { status: exactGa4.length ? "available" : "missing", rows: exactGa4, provenance: { scope: "exact page behavioral baseline/event inventory", note: exactGa4.length ? "measurement only" : "No exact-page GA4 snapshot is available; generation continues." } },
+    serpapiTransparency: { status: transparencyRows?.length ? "available" : "missing", rows: transparencyRows ?? [], provenance: { scope: "paid creative history", note: "corroboration only" } },
+    serpapiPaidSerp: { status: paidRows?.length ? "available" : "missing", rows: paidRows ?? [], provenance: { scope: "live paid SERP for exact GSC queries", note: "corroboration only" } },
+    contradictionFlags: [],
+  };
+
   const github = createGithubApi();
   if (!github) {
     throw new Error("An executable source baseline cannot be proven: GITHUB_EXECUTOR_TOKEN is not configured.");
@@ -164,7 +185,7 @@ export async function prepareTitleH1Proposal(
   const wording = await generateTitleH1Wording({
     apiKey,
     model,
-    prompt: buildTitleH1Prompt(evidence, guidance),
+    prompt: buildTitleH1Prompt(evidence, guidance, optionalContext),
   });
   const changes = buildTitleH1Changes(evidence.livePage, wording);
   const simulation = applyExactReplacements(source.content, changes);
@@ -182,9 +203,13 @@ export async function prepareTitleH1Proposal(
     changes,
     rationale: wording.rationale,
     evidence: [
-      { source: "live_page", ...evidence.livePage },
-      { source: "google_search_console", rows: evidence.gsc },
-      { source: "dataforseo_competitors", rows: evidence.competitors },
+      { source: "live_page", role: "source_of_truth", ...evidence.livePage },
+      { source: "google_search_console", role: "source_of_truth", rows: evidence.gsc },
+      { source: "dataforseo_competitors", role: "enrichment", rows: evidence.competitors },
+      { source: "ga4", role: "source_of_truth", ...optionalContext.ga4 },
+      { source: "serpapi_transparency", role: "corroboration", ...optionalContext.serpapiTransparency },
+      { source: "serpapi_paid_serp", role: "corroboration", ...optionalContext.serpapiPaidSerp },
+      { source: "knowledge", role: "devils_advocate", rows: guidance },
     ],
     evidenceSummary: `The current rendered title and H1 were observed at ${observedAt}; ${evidence.gsc.length} exact-page GSC page/query rows and ${evidence.competitors.length} active-tracked-competitor DataForSEO organic rows informed the wording.`,
     evidenceLimitations:
@@ -194,7 +219,9 @@ export async function prepareTitleH1Proposal(
       provider: "google_gemini_direct",
       model,
       generatedAt: new Date().toISOString(),
-      evidenceClasses: ["live_page", "google_search_console", "dataforseo_competitors"],
+      sourceRoles: { live_page: "source_of_truth", google_search_console: "source_of_truth", ga4: "source_of_truth", dataforseo_competitors: "enrichment", serpapi_transparency: "corroboration", serpapi_paid_serp: "corroboration", knowledge: "devils_advocate" },
+      optionalSourceStatus: { ga4: optionalContext.ga4.status, serpapiTransparency: optionalContext.serpapiTransparency.status, serpapiPaidSerp: optionalContext.serpapiPaidSerp.status },
+      contradictionFlags: optionalContext.contradictionFlags,
       guidanceEntryIds: guidance.map((entry) => entry.id),
       guidanceSourceRefs: guidance.map((entry) => entry.sourceRef).filter(Boolean),
     },

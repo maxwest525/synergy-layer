@@ -206,6 +206,49 @@ function ProposalRevisionPanel({
   );
 }
 
+const providerLabels: Record<string, string> = {
+  live_page: "Live page", gsc: "Google Search Console", ga4: "Google Analytics 4",
+  dataforseo_organic: "DataForSEO organic", serpapi_transparency: "SerpAPI Ads Transparency",
+  serpapi_paid_serp: "SerpAPI live paid SERP", knowledge: "Knowledge review guidance",
+};
+
+type MeasurementView = { cycle: Record<string, unknown> | null; windows: Record<string, unknown>[]; observations: Record<string, unknown>[]; revisions: Record<string, unknown>[] };
+
+function MeasurementHistory({ measurement }: { measurement: MeasurementView }) {
+  if (!measurement.cycle) return null;
+  const latest = new Map<string, Record<string, unknown>>();
+  for (const observation of measurement.observations) {
+    const key = String(observation.window_id) + ":" + String(observation.provider);
+    const prior = latest.get(key);
+    if (!prior || Number(observation.revision_number) > Number(prior.revision_number)) latest.set(key, observation);
+  }
+  return (
+    <GlassCard className="p-5">
+      <h2 className="text-sm font-semibold text-foreground">Measurement history</h2>
+      <p className="mt-2 text-sm text-muted-foreground">The approval baseline is frozen separately from the rendered live anchor. Providers keep their own roles; this history does not calculate success or verify the change automatically.</p>
+      <div className="mt-4 grid gap-3 lg:grid-cols-2">
+        {measurement.windows.map((window) => {
+          const observations = [...latest.values()].filter((row) => row.window_id === window.id);
+          return (
+            <div key={String(window.id)} className="rounded-xl border border-border/60 p-3">
+              <p className="text-sm font-medium text-foreground">{Number(window.window_days) === 0 ? "Immutable approval baseline" : String(window.window_days) + "-day window"}</p>
+              <p className="mt-1 text-xs text-muted-foreground">{String(window.period_start_pt)} through {String(window.period_end_pt)} · available after {String(window.available_after_pt)}</p>
+              {observations.length ? (
+                <ul className="mt-3 space-y-2">{observations.map((row) => (
+                  <li key={String(row.id)} className="text-sm text-muted-foreground"><span className="text-foreground">{providerLabels[String(row.provider)] ?? String(row.provider)}</span>{" · " + String(row.source_role).replaceAll("_", " ") + " · " + String(row.status)}</li>
+                ))}</ul>
+              ) : <p className="mt-3 text-sm text-muted-foreground">No provider observations are available yet.</p>}
+            </div>
+          );
+        })}
+      </div>
+      {measurement.revisions.length ? <div className="mt-4 border-t border-border/60 pt-3">
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Append-only notes and anchors</p>
+        {measurement.revisions.map((revision) => <p key={String(revision.id)} className="mt-2 text-sm text-muted-foreground"><span className="text-foreground">{String(revision.kind).replaceAll("_", " ")}</span>{" · " + String(revision.summary)}</p>)}
+      </div> : null}
+    </GlassCard>
+  );
+}
 function ChangeRequestPage() {
   const { id } = Route.useParams();
   const loadTenantContext = useServerFn(getTenantContext);
@@ -454,6 +497,8 @@ function ChangeRequestPage() {
           )}
         </GlassCard>
       </div>
+
+      <MeasurementHistory measurement={data.measurement as MeasurementView} />
 
       {state === "rejected" || state === "rolled_back" ? null : (
         <ExecutionCard

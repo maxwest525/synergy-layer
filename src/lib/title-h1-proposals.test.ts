@@ -99,11 +99,11 @@ describe("title/H1 proposal evidence contract", () => {
   it("accepts complete evidence when optional writing guidance is empty", () => {
     expect(() => assertCompleteEvidence(complete)).not.toThrow();
     expect(buildTitleH1Prompt(complete, [])).toContain(
-      "WRITING GUIDANCE (not evidence; may be empty):\n[]",
+      "DEVIL'S ADVOCATE WRITING GUIDANCE (not empirical evidence; may be empty):\n[]",
     );
   });
 
-  it("builds a wording-only prompt from exactly the three approved evidence classes", () => {
+  it("builds a wording-only prompt with explicit roles and optional-source absence", () => {
     const prompt = buildTitleH1Prompt(complete, [
       {
         id: "guide-1",
@@ -115,14 +115,24 @@ describe("title/H1 proposal evidence contract", () => {
     expect(prompt).toContain("livePage");
     expect(prompt).toContain("gsc");
     expect(prompt).toContain("competitors");
-    expect(prompt).not.toMatch(/GA4|Google Analytics|knowledge base|Lovable AI Gateway/i);
+    expect(prompt).toMatch(/ga4[\\s\\S]*source_of_truth[\\s\\S]*missing/i);
+    expect(prompt).toMatch(/ENRICHMENT[\\s\\S]*organic market context/);
+    expect(prompt).toMatch(/CORROBORATION[\\s\\S]*paid messaging/);
+    expect(prompt).not.toMatch(/Lovable AI Gateway/i);
     expect(prompt).toMatch(/wording only/i);
-    expect(prompt.indexOf("WRITING GUIDANCE")).toBeGreaterThan(
-      prompt.indexOf("APPROVED PROPOSAL EVIDENCE"),
+    expect(prompt.indexOf("DEVIL'S ADVOCATE WRITING GUIDANCE")).toBeGreaterThan(
+      prompt.indexOf("SOURCE OF TRUTH"),
     );
     expect(prompt).toContain('"id": "guide-1"');
     expect(prompt).toContain('"sourceRef": "books/seo-playbook.md"');
   });
+  it("does not gate generation when GA4 and SerpAPI are missing", () => {
+    expect(() => assertCompleteEvidence(complete)).not.toThrow();
+    const prompt = buildTitleH1Prompt(complete, []);
+    expect(prompt.match(/"status": "missing"/g)?.length).toBe(3);
+    expect(prompt).toContain("CROSS-SOURCE REVIEW FLAGS (questions, never verdicts):\\n[]");
+  });
+
 });
 
 describe("rendered proposal redirect boundary", () => {

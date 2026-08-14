@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import { fileInboxItem, logActivity } from "./os.server";
 import { reconcileAppliedChangeEvidence } from "./change-requests.server";
+import { reconcileChangeMeasurements } from "./change-measurements.server";
 import { evaluateSnapshots, type RuleRunResult } from "./search-console-rules.server";
 import { SearchConsoleFailure, collectDaily, getSelectedProperty } from "./search-console.server";
 
@@ -83,6 +84,7 @@ export async function observeSearchConsole(client: Client): Promise<ObserveResul
 
     const rules = await evaluateSnapshots(client, property, collection.reportingDate);
     const outcomes = await reconcileAppliedChangeEvidence(client);
+    await reconcileChangeMeasurements(client);
     await logActivity(client, {
       verb: "capability.observation_completed",
       subjectKind: "capability",
