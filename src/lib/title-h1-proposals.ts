@@ -51,6 +51,37 @@ export type TitleH1Wording = {
   h1: string;
   rationale: string;
 };
+/**
+ * Temporary operator-only development fallback for environments where Gemini
+ * is not configured. Evidence and source-proof gates still run before this is
+ * used, and the resulting proposal remains a normal review-required draft.
+ */
+export function buildDeterministicDevWording(
+  evidence: ProposalEvidence,
+): TitleH1Wording {
+  const observedQuery = [...evidence.gsc]
+    .sort((a, b) => b.impressions - a.impressions || a.position - b.position)[0]
+    ?.query.trim();
+  const normalized = (observedQuery || "corporate relocation movers")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+  const lead = normalized
+    .split(" ")
+    .filter(Boolean)
+    .map((token) => token.charAt(0).toUpperCase() + token.slice(1))
+    .join(" ")
+    .slice(0, 80)
+    .trim();
+
+  return validateTitleH1Wording({
+    seoTitle: `${lead} | Corporate Relocation | TruMove`,
+    h1: `${lead} & Corporate Relocation Services`,
+    rationale: `Development-mode wording uses the highest-impression exact-page GSC query${
+      observedQuery ? `, “${observedQuery},”` : ""
+    } while preserving the page's observed corporate-relocation intent. It bypasses only Gemini generation; all evidence, source-proof, review, and approval gates remain active.`,
+  });
+}
 
 export type GscSnapshotInput = {
   periodStart: string;
