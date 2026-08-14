@@ -1,10 +1,12 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
-const sql = readFileSync(
-  new URL("../../supabase/migrations/20260814123000_change_measurement_engine.sql", import.meta.url),
-  "utf8",
-);
+const sql = [
+  "../../supabase/migrations/20260814123000_change_measurement_engine.sql",
+  "../../supabase/migrations/20260814123500_change_measurement_rpcs.sql",
+]
+  .map((path) => readFileSync(new URL(path, import.meta.url), "utf8"))
+  .join("\n");
 
 describe("change measurement database contract", () => {
   it("keeps all lifecycle tables tenant-consistent and read-only to authenticated users", () => {
