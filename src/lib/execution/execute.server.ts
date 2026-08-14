@@ -258,6 +258,17 @@ const FIRECRAWL_URL = "https://api.firecrawl.dev/v2/scrape";
  * HTML is only an application shell. Proof therefore needs a renderer.
  * Returns null when no Firecrawl credential is configured.
  */
+export function buildRenderedScrapeRequest(url: string) {
+  return {
+    url,
+    formats: ["rawHtml", "markdown"],
+    onlyMainContent: false,
+    waitFor: 3000,
+    // Publish proof must never use Firecrawl's two-day default cache.
+    maxAge: 0,
+  };
+}
+
 export function createRenderedVerifier(): RenderedVerifier | null {
   const key = process.env["FIRECRAWL_API_KEY"];
   if (!key) return null;
@@ -269,12 +280,7 @@ export function createRenderedVerifier(): RenderedVerifier | null {
         method: "POST",
         label: "Firecrawl",
         headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          url,
-          formats: ["rawHtml", "markdown"],
-          onlyMainContent: false,
-          waitFor: 3000,
-        }),
+        body: JSON.stringify(buildRenderedScrapeRequest(url)),
       });
       if (response.status < 200 || response.status >= 300) {
         throw new Error(`Firecrawl responded ${response.status}, so nothing was proven.`);
