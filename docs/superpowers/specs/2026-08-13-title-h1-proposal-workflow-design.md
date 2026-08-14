@@ -27,12 +27,10 @@ Existing internal execution states may remain where needed for safe transitions,
 - Repair observation-only approval leakage.
 - Clean up existing observation-only Action Center rows.
 - Select a page-level finding for title/H1 evaluation.
-- Collect evidence from only:
+- Collect proposal evidence from only:
   - the live webpage;
   - Google Search Console;
-  - DataForSEO;
-  - GA4;
-  - previous AOOS changes.
+  - relevant DataForSEO competitor evidence.
 - Apply deterministic evidence-sufficiency rules.
 - Draft one title/H1 candidate through a provider-neutral generator interface whose first adapter calls Gemini directly.
 - Deterministically validate the candidate.
@@ -106,16 +104,16 @@ The page must have enough finalized GSC evidence to support the originating rule
 - observed competitor titles and H1s when available;
 - collection dates and provider provenance.
 
-The generator must not trigger unapproved paid collection. Missing, stale, or irrelevant DataForSEO evidence blocks proposal generation and leaves `Needs investigation` with the exact reason.
+The generator must not trigger unapproved paid collection. If the relevant competitor evidence needed to support the finding is absent or irrelevant, the finding remains `Needs investigation` with the exact reason.
 
-### GA4
+### GA4 after publication
 
 - page-level sessions or views;
 - engagement measure;
 - configured lead-event counts;
 - comparison window and reporting dates.
 
-GA4 is a required source for this first workflow. If the Data API is not connected, the page is not present in GA4 results, or lead events are not configured, the finding remains `Needs investigation`. AOOS must show the missing credential, access, property, or event mapping instead of skipping GA4.
+GA4 does not decide whether a proposal may be generated. It is collected only for the pre-publication baseline and post-publication measured outcome. If the Data API is not connected, the page is absent from GA4 results, or lead events are not configured, AOOS records and displays that measurement gap instead of blocking the proposal or pretending GA4 was measured.
 
 ### Previous AOOS changes
 
@@ -123,7 +121,7 @@ GA4 is a required source for this first workflow. If the Data API is not connect
 - the approved values and publication times;
 - any rollback or unresolved measurement state.
 
-An active proposal or unmeasured recent change for the same page blocks generation unless the operator explicitly ignores or closes it. This prevents recommendation churn and overlapping experiments.
+These records are displayed as context and used to avoid silently proposing the exact same change again. They are not a separate evidence provider or a blanket eligibility gate.
 
 ## Sufficiency gate
 
@@ -135,9 +133,7 @@ The gate passes only when:
 - the live rendered page is valid and allowlisted;
 - title and H1 are unambiguous;
 - GSC evidence satisfies the originating typed threshold;
-- relevant stored DataForSEO competitor evidence exists and is fresh under a documented freshness window;
-- GA4 page and lead-event evidence is readable;
-- no conflicting AOOS change is active;
+- relevant stored DataForSEO competitor evidence supports the finding;
 - every source timestamp and checksum is stored.
 
 On failure, the finding gets `Needs investigation` plus machine-readable missing-evidence codes and operator-readable reasons. It does not enter Action Center.
@@ -197,9 +193,9 @@ Validation failure leaves the row as `Needs investigation` and stores the reject
 
 Reuse `change_requests` as the executable proposal record instead of adding another top-level lifecycle. Add an immutable version table for title/H1 payloads.
 
-Each proposal version stores:
+The base proposal stores:
 
-- proposal/change request ID and monotonically increasing version number;
+- proposal/change request ID;
 - page URL and canonical URL;
 - current and proposed title/H1;
 - evidence bundle reference and checksum;
@@ -210,12 +206,12 @@ Each proposal version stores:
 - deterministic confidence and its inputs;
 - verification and reversal instructions;
 - generator provider/model metadata;
-- creation reason: initial, regenerate, or operator edit;
+- creation reason: initial;
 - creator and timestamp.
 
-Initial generation creates version 1. Edit or Regenerate creates a new immutable version and makes it current. Old versions remain readable for audit. No version is created for merely opening or reviewing a proposal.
+Initial generation creates the base proposal and no separate version row. Edit or Regenerate first archives the prior payload and then creates a new immutable numbered version that becomes current. Old versions remain readable for audit. No version is created for initial generation, opening, reviewing, or approval.
 
-Approval writes `approved_version_id`, `approved_by`, and `approved_at` atomically. A database invariant prevents the approved version from changing. Editing or regenerating after approval requires rejecting/closing the approved change and creating a new proposal; it cannot mutate the authorization.
+Approval atomically stores the current proposal/version identifier, its exact payload, and its checksum with `approved_by` and `approved_at`. A database invariant prevents that approved snapshot from changing. Editing or regenerating after approval requires rejecting/closing the approved change and creating a new proposal; it cannot mutate the authorization.
 
 ## Action Center
 
@@ -231,7 +227,7 @@ The card and detail page display:
 - deterministic confidence;
 - verification plan;
 - reversal plan;
-- source freshness and any limitations.
+- source dates and any limitations.
 
 Available actions:
 
@@ -313,9 +309,9 @@ Implementation follows red-green TDD.
 
 ### Sufficiency
 
-- Each missing source independently produces `Needs investigation`.
+- Each missing proposal-evidence source independently produces `Needs investigation`.
 - Ineligible rule and ambiguous page structure never call Gemini.
-- Stale DataForSEO and conflicting AOOS changes block generation.
+- Missing relevant DataForSEO competitor evidence blocks generation.
 - Complete evidence calls the configured generator once.
 
 ### Generator and validation
@@ -328,7 +324,7 @@ Implementation follows red-green TDD.
 
 ### Versioning and approval
 
-- Initial generation creates version 1.
+- Initial generation creates only the base proposal.
 - Edit and regeneration create immutable subsequent versions.
 - Failed edit/regeneration does not replace the current version.
 - Approval locks the exact current version atomically.
@@ -356,7 +352,7 @@ This workflow is complete only when:
 
 - no observation-only finding appears in Action Center or requires approval;
 - legacy leaked items are repaired without deleting evidence;
-- one real page finding is enriched from all five required sources;
+- one real page finding is enriched from the live webpage, GSC, and relevant DataForSEO competitor evidence;
 - insufficient evidence visibly remains `Needs investigation`;
 - direct Gemini creates a structured draft through the replaceable interface;
 - deterministic validation creates one exact title/H1 proposal;
