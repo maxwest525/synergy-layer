@@ -571,7 +571,7 @@ function InboxPage() {
       <div className="space-y-6">
         {lanes.map((lane) => {
           const items = grouped.get(lane.key) ?? [];
-           return (
+          return (
             <section key={lane.key} className="space-y-3">
               <div className="flex items-baseline justify-between gap-4">
                 <h2 className="text-sm font-semibold tracking-tight text-foreground">
@@ -605,7 +605,6 @@ function InboxPage() {
                   ))}
                 </ul>
               )}
-
             </section>
           );
         })}
