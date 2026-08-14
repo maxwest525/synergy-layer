@@ -14,9 +14,11 @@ describe("signal integrity", () => {
       new URL("../../supabase/migrations/20260814070000_signal_integrity_recovery.sql", import.meta.url),
       "utf8",
     );
-    expect(migration.match(/\\$sync_action\\$/g)).toHaveLength(2);
-    expect(migration).toContain("AS $sync_action$\\nDECLARE");
-    expect(migration).toContain("END;\\n$sync_action$;");
+    expect(migration.split("$sync_action$")).toHaveLength(3);
+    expect(migration).toContain(`AS $sync_action$
+DECLARE`);
+    expect(migration).toContain(`END;
+$sync_action$;`);
   });
 
   it("stores observation-only findings as observed and never approval-gated", () => {
