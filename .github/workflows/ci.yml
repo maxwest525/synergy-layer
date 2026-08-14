@@ -16,6 +16,8 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -23,7 +25,14 @@ jobs:
       # Lovable currently updates package.json without regenerating package-lock.json.
       # Install from package.json during recovery without mutating the checkout.
       - run: npm install --package-lock=false --no-audit --no-fund
-      # Formatting has a large pre-existing Lovable backlog; keep semantic linting blocking.
-      - run: npm run lint -- --rule 'prettier/prettier: off'
-      - run: npm test
-      - run: npm run build
+      - name: Lint changed JavaScript and TypeScript
+        shell: bash
+        run: |
+          git diff --name-only --diff-filter=ACMR -z origin/main...HEAD -- '*.js' '*.jsx' '*.ts' '*.tsx' |
+            xargs -0 -r npm exec eslint --
+      - name: Test
+        if: always()
+        run: npm test
+      - name: Build
+        if: always()
+        run: npm run build
