@@ -26,6 +26,7 @@ export async function fetchInbox() {
       .from("inbox_items")
       .select("*")
       .eq("tenant_id", tenantId!)
+      .is("resolved_at", null)
       .order("priority", { ascending: true })
       .order("created_at", { ascending: false })
       .limit(200),
