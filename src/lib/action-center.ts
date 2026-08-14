@@ -1,6 +1,20 @@
 export type ActionCenterLane =
   "needs_attention" | "pending_approval" | "in_progress" | "scheduled" | "completed" | "fyi";
 
+export const ACTION_CENTER_PRESENTATION_LANES = [
+  { key: "needs_attention", label: "Needs attention", hint: "Broken, blocked, or drifting." },
+  { key: "pending_approval", label: "Pending approval", hint: "Waiting on a human decision." },
+  {
+    key: "in_progress",
+    label: "In progress",
+    hint: "Approved work that still needs execution or proof.",
+  },
+] as const satisfies ReadonlyArray<{
+  key: ActionCenterLane;
+  label: string;
+  hint: string;
+}>;
+
 export type ActionCenterFieldChange = {
   field: string;
   label: string;

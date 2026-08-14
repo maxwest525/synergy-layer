@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { memo, useCallback, useMemo, useState } from "react";
+import { memo, useCallback, useMemo } from "react";
 import { toast } from "sonner";
 
 import {
@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
+  ACTION_CENTER_PRESENTATION_LANES,
   actionCenterFieldChanges,
   actionCenterLane,
   actionCenterStage,
@@ -32,7 +33,7 @@ import {
 } from "@/lib/action-center";
 import { approveChangeRequest, rejectChangeRequest } from "@/lib/change-requests.functions";
 import { executeChangeRequest } from "@/lib/execution/execution.functions";
-import { reopenInboxItem, resolveInboxItem } from "@/lib/os-admin.functions";
+import { resolveInboxItem } from "@/lib/os-admin.functions";
 import { getInbox } from "@/lib/os.functions";
 
 const inboxQuery = {
@@ -40,21 +41,7 @@ const inboxQuery = {
   queryFn: () => getInbox(),
 };
 
-// How many completed items render before the operator asks for the rest.
-const COMPLETED_PREVIEW = 5;
-
-const lanes = [
-  { key: "needs_attention", label: "Needs attention", hint: "Broken, blocked, or drifting." },
-  { key: "pending_approval", label: "Pending approval", hint: "Waiting on a human decision." },
-  {
-    key: "in_progress",
-    label: "In progress",
-    hint: "Approved work that still needs execution or proof.",
-  },
-  { key: "scheduled", label: "Scheduled", hint: "Queued to run." },
-  { key: "completed", label: "Completed", hint: "Closed in the last cycle." },
-  { key: "fyi", label: "FYI", hint: "Context, no action needed." },
-] as const;
+const lanes = ACTION_CENTER_PRESENTATION_LANES;
 
 export const Route = createFileRoute("/")({
   // Operator-only workspace: nothing here is public, and rendering it on the
@@ -339,7 +326,6 @@ const InboxCard = memo(function InboxCard({
   lane,
   busy,
   onClear,
-  onReopen,
   onDecision,
   onExecute,
 }: {
@@ -348,7 +334,6 @@ const InboxCard = memo(function InboxCard({
   lane: ActionCenterLane;
   busy: boolean;
   onClear: (id: string) => void;
-  onReopen: (id: string) => void;
   onDecision: (id: string, decision: ChangeDecision) => void;
   onExecute: (id: string) => void;
 }) {
@@ -479,14 +464,9 @@ const InboxCard = memo(function InboxCard({
             {change ? changeActionLabel(change) : actionLabel(reviewRoute, item.lane)}
           </InboxActionLink>
         ) : null}
-        {!change && lane !== "completed" && lane !== "pending_approval" ? (
+        {!change && lane !== "pending_approval" ? (
           <Button variant="outline" size="sm" disabled={busy} onClick={() => onClear(item.id)}>
             Clear
-          </Button>
-        ) : null}
-        {lane === "completed" && item.cleared_from_lane !== null ? (
-          <Button variant="outline" size="sm" disabled={busy} onClick={() => onReopen(item.id)}>
-            Unclear
           </Button>
         ) : null}
       </div>
@@ -495,11 +475,9 @@ const InboxCard = memo(function InboxCard({
 });
 
 function InboxPage() {
-  const [showAllCompleted, setShowAllCompleted] = useState(false);
   const { data } = useSuspenseQuery(inboxQuery);
   const queryClient = useQueryClient();
   const resolve = useServerFn(resolveInboxItem);
-  const reopen = useServerFn(reopenInboxItem);
   const approve = useServerFn(approveChangeRequest);
   const reject = useServerFn(rejectChangeRequest);
   const execute = useServerFn(executeChangeRequest);
@@ -514,16 +492,7 @@ function InboxPage() {
   const mutation = useMutation({
     mutationFn: (id: string) => resolve({ data: { id } }),
     onSuccess: () => {
-      toast.success("Item cleared. You can undo this from Completed.");
-      refresh();
-    },
-    onError: (error: Error) => toast.error(error.message),
-  });
-
-  const reopenMutation = useMutation({
-    mutationFn: (id: string) => reopen({ data: { id } }),
-    onSuccess: () => {
-      toast.success("Item reopened into its previous lane.");
+      toast.success("Item cleared from Action Center.");
       refresh();
     },
     onError: (error: Error) => toast.error(error.message),
@@ -563,13 +532,9 @@ function InboxPage() {
   });
 
   const busy =
-    mutation.isPending ||
-    reopenMutation.isPending ||
-    decisionMutation.isPending ||
-    executeMutation.isPending;
+    mutation.isPending || decisionMutation.isPending || executeMutation.isPending;
 
   const clear = useCallback((id: string) => mutation.mutate(id), [mutation]);
-  const restore = useCallback((id: string) => reopenMutation.mutate(id), [reopenMutation]);
 
   // One pass over the rows instead of a full-array filter per lane plus a route
   // resolve per card on every render.
@@ -582,8 +547,10 @@ function InboxPage() {
     let openCount = 0;
     for (const item of data) {
       const lane = actionCenterLane(item.lane, item.changeRequest);
-      if (lane !== "completed") openCount += 1;
-      buckets.get(lane)?.push({ item, reviewRoute: reviewRouteFor(item), lane });
+      const bucket = buckets.get(lane);
+      if (!bucket) continue;
+      openCount += 1;
+      bucket.push({ item, reviewRoute: reviewRouteFor(item), lane });
     }
     return { open: openCount, grouped: buckets };
   }, [data]);
@@ -604,12 +571,6 @@ function InboxPage() {
       <div className="space-y-6">
         {lanes.map((lane) => {
           const items = grouped.get(lane.key) ?? [];
-          // Completed only grows. Rendering every closed item forever made the
-          // Inbox slower every day for rows nobody is acting on. The newest are
-          // shown by default and the rest stay one click away.
-          const collapsed =
-            lane.key === "completed" && !showAllCompleted && items.length > COMPLETED_PREVIEW;
-          const visible = collapsed ? items.slice(0, COMPLETED_PREVIEW) : items;
           return (
             <section key={lane.key} className="space-y-3">
               <div className="flex items-baseline justify-between gap-4">
@@ -629,7 +590,7 @@ function InboxPage() {
                 />
               ) : (
                 <ul className="space-y-2">
-                  {visible.map(({ item, reviewRoute, lane: itemLane }) => (
+                  {items.map(({ item, reviewRoute, lane: itemLane }) => (
                     <li key={item.id}>
                       <InboxCard
                         item={item}
@@ -637,7 +598,6 @@ function InboxPage() {
                         lane={itemLane}
                         busy={busy}
                         onClear={clear}
-                        onReopen={restore}
                         onDecision={(id, decision) => decisionMutation.mutate({ id, decision })}
                         onExecute={(id) => executeMutation.mutate(id)}
                       />
@@ -645,18 +605,6 @@ function InboxPage() {
                   ))}
                 </ul>
               )}
-
-              {lane.key === "completed" && items.length > COMPLETED_PREVIEW ? (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowAllCompleted((shown) => !shown)}
-                >
-                  {collapsed
-                    ? `Show all ${items.length} completed items`
-                    : "Show only the most recent"}
-                </Button>
-              ) : null}
             </section>
           );
         })}
