@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  ACTION_CENTER_PRESENTATION_LANES,
   actionCenterFieldChanges,
   actionCenterLane,
   actionCenterStage,
@@ -15,6 +16,14 @@ const change = {
 };
 
 describe("Action Center change request lifecycle", () => {
+  it("renders only the three truthful action lanes", () => {
+    expect(ACTION_CENTER_PRESENTATION_LANES.map((lane) => lane.key)).toEqual([
+      "needs_attention",
+      "pending_approval",
+      "in_progress",
+    ]);
+  });
+
   it("keeps a legacy completed approval visible until execution is finished", () => {
     expect(actionCenterLane("completed", change)).toBe("in_progress");
     expect(actionCenterStage(change)).toBe("Approved — ready to execute");
