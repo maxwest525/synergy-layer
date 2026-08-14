@@ -1,0 +1,106 @@
+import { describe, expect, it } from "vitest";
+
+import {
+  assertCompleteEvidence,
+  buildTitleH1Prompt,
+  selectRelevantCompetitorEvidence,
+  type ProposalEvidence,
+} from "./title-h1-proposals";
+
+const complete: ProposalEvidence = {
+  livePage: {
+    url: "https://trumoveinc.com/services/corporate-relocation",
+    title: "Corporate Relocation | TruMove",
+    h1: "Corporate Relocation",
+    observedAt: "2026-08-14T12:00:00.000Z",
+    renderedBy: "Firecrawl",
+  },
+  gsc: [
+    {
+      query: "employee relocation movers",
+      date: "2026-08-12",
+      position: 18,
+      impressions: 14,
+      clicks: 1,
+    },
+  ],
+  competitors: [
+    {
+      query: "employee relocation movers",
+      domain: "examplemover.com",
+      url: "https://examplemover.com/employee-relocation",
+      title: "Employee Relocation Movers",
+      position: 3,
+      observedAt: "2026-08-13T00:00:00.000Z",
+    },
+  ],
+};
+
+describe("title/H1 proposal evidence contract", () => {
+  it.each(["livePage", "gsc", "competitors"] as const)(
+    "refuses when required %s evidence is absent",
+    (source) => {
+      const evidence = { ...complete, [source]: source === "livePage" ? null : [] };
+      expect(() => assertCompleteEvidence(evidence)).toThrow(/required/i);
+    },
+  );
+
+  it("keeps only active tracked competitors from exact GSC queries", () => {
+    const rows = selectRelevantCompetitorEvidence({
+      gscQueries: ["employee relocation movers"],
+      trackedDomains: ["approved.example"],
+      snapshots: [
+        {
+          target: "employee relocation movers",
+          collectedAt: "2026-08-13T00:00:00.000Z",
+          rows: [
+            {
+              type: "organic",
+              domain: "approved.example",
+              url: "https://approved.example/relocation",
+              title: "Employee Relocation Services",
+              rank_group: 2,
+            },
+            {
+              type: "organic",
+              domain: "unapproved.example",
+              url: "https://unapproved.example/relocation",
+              title: "Should not be used",
+              rank_group: 1,
+            },
+          ],
+        },
+        {
+          target: "unrelated query",
+          collectedAt: "2026-08-13T00:00:00.000Z",
+          rows: [
+            {
+              type: "organic",
+              domain: "approved.example",
+              url: "https://approved.example/unrelated",
+              title: "Wrong query",
+              rank_group: 1,
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(rows).toEqual([
+      expect.objectContaining({
+        query: "employee relocation movers",
+        domain: "approved.example",
+        position: 2,
+      }),
+    ]);
+  });
+
+  it("builds a wording-only prompt from exactly the three approved evidence classes", () => {
+    const prompt = buildTitleH1Prompt(complete);
+    expect(prompt).toContain("livePage");
+    expect(prompt).toContain("gsc");
+    expect(prompt).toContain("competitors");
+    expect(prompt).not.toMatch(/GA4|Google Analytics|knowledge base|Lovable AI Gateway/i);
+    expect(prompt).toMatch(/wording only/i);
+  });
+});
