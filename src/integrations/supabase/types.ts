@@ -1024,7 +1024,7 @@ export type Database = {
         Insert: { approval_snapshot: Json; approved_at: string; baseline_frozen_at?: string; change_request_id: string; created_at?: string; gsc_property?: string | null; id?: string; live_at?: string | null; target_url: string; tenant_id: string }
         Update: { approval_snapshot?: Json; approved_at?: string; baseline_frozen_at?: string; change_request_id?: string; created_at?: string; gsc_property?: string | null; id?: string; live_at?: string | null; target_url?: string; tenant_id?: string }
         Relationships: [
-          { foreignKeyName: "change_measurement_cycles_change_request_id_fkey"; columns: ["change_request_id"]; isOneToOne: true; referencedRelation: "change_requests"; referencedColumns: ["id"] },
+          { foreignKeyName: "change_measurement_cycles_change_tenant_fkey"; columns: ["change_request_id", "tenant_id"]; isOneToOne: true; referencedRelation: "change_requests"; referencedColumns: ["id", "tenant_id"] },
           { foreignKeyName: "change_measurement_cycles_tenant_id_fkey"; columns: ["tenant_id"]; isOneToOne: false; referencedRelation: "tenants"; referencedColumns: ["id"] },
         ]
       }

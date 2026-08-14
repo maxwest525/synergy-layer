@@ -2,11 +2,12 @@
 -- Sources stay separate: no blended score and no automatic success judgment.
 
 ALTER TABLE public.change_requests ADD COLUMN IF NOT EXISTS live_at timestamptz;
+CREATE UNIQUE INDEX IF NOT EXISTS change_requests_id_tenant_unique ON public.change_requests(id, tenant_id);
 
 CREATE TABLE public.change_measurement_cycles (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id uuid NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
-  change_request_id uuid NOT NULL REFERENCES public.change_requests(id) ON DELETE CASCADE,
+  change_request_id uuid NOT NULL,
   target_url text NOT NULL,
   gsc_property text,
   approved_at timestamptz NOT NULL,
@@ -15,7 +16,9 @@ CREATE TABLE public.change_measurement_cycles (
   approval_snapshot jsonb NOT NULL,
   created_at timestamptz NOT NULL DEFAULT now(),
   UNIQUE (change_request_id),
-  UNIQUE (id, tenant_id)
+  UNIQUE (id, tenant_id),
+  CONSTRAINT change_measurement_cycles_change_tenant_fkey
+    FOREIGN KEY (change_request_id, tenant_id) REFERENCES public.change_requests(id, tenant_id) ON DELETE CASCADE
 );
 
 CREATE TABLE public.change_measurement_windows (
@@ -105,14 +108,17 @@ CREATE OR REPLACE FUNCTION public.guard_change_measurement_anchor() RETURNS trig
 LANGUAGE plpgsql SET search_path = public AS $$
 BEGIN
   IF OLD.tenant_id IS DISTINCT FROM NEW.tenant_id OR OLD.change_request_id IS DISTINCT FROM NEW.change_request_id
-     OR OLD.target_url IS DISTINCT FROM NEW.target_url OR OLD.approved_at IS DISTINCT FROM NEW.approved_at
+     OR OLD.target_url IS DISTINCT FROM NEW.target_url OR OLD.gsc_property IS DISTINCT FROM NEW.gsc_property OR OLD.approved_at IS DISTINCT FROM NEW.approved_at
      OR OLD.baseline_frozen_at IS DISTINCT FROM NEW.baseline_frozen_at OR OLD.approval_snapshot IS DISTINCT FROM NEW.approval_snapshot
      OR (OLD.live_at IS NOT NULL AND OLD.live_at IS DISTINCT FROM NEW.live_at) THEN
     RAISE EXCEPTION 'Measurement approval and live anchors are immutable.';
   END IF;
+  IF OLD.live_at IS NULL AND NEW.live_at IS NOT NULL AND NOT EXISTS (
+    SELECT 1 FROM public.change_requests WHERE id = NEW.change_request_id AND tenant_id = NEW.tenant_id AND published_proof_at = NEW.live_at
+  ) THEN RAISE EXCEPTION 'The live anchor must equal the rendered published-proof timestamp.'; END IF;
   RETURN NEW;
 END;
-$$;
+$;
 CREATE TRIGGER guard_change_measurement_anchor BEFORE UPDATE ON public.change_measurement_cycles FOR EACH ROW EXECUTE FUNCTION public.guard_change_measurement_anchor();
 
 CREATE OR REPLACE FUNCTION public.capture_change_measurement_lifecycle() RETURNS trigger
