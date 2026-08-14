@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+
 import { describe, expect, it, vi } from "vitest";
 
 import { isActionCenterItem } from "./action-center";
@@ -7,6 +9,16 @@ import { requireScheduleAllowlist } from "./scheduler.server";
 import { assertRunnableGraph } from "./workflow-runner.server";
 
 describe("signal integrity", () => {
+  it("keeps the recovery trigger function validly dollar-quoted", () => {
+    const migration = readFileSync(
+      new URL("../../supabase/migrations/20260814070000_signal_integrity_recovery.sql", import.meta.url),
+      "utf8",
+    );
+    expect(migration.match(/\\$sync_action\\$/g)).toHaveLength(2);
+    expect(migration).toContain("AS $sync_action$\\nDECLARE");
+    expect(migration).toContain("END;\\n$sync_action$;");
+  });
+
   it("stores observation-only findings as observed and never approval-gated", () => {
     expect(
       observationRecommendationRecord({
