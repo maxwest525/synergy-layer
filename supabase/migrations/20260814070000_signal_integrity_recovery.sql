@@ -62,7 +62,7 @@ RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
-AS $
+AS $sync_action$
 DECLARE
   v_now timestamptz := now();
   v_href text := '/changes/' || NEW.id::text;
@@ -127,7 +127,7 @@ BEGIN
 
   RETURN NEW;
 END;
-$;
+$sync_action$;
 
 DROP TRIGGER IF EXISTS sync_change_request_action_item ON public.change_requests;
 CREATE TRIGGER sync_change_request_action_item
