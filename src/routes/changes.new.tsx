@@ -29,7 +29,7 @@ export const Route = createFileRoute("/changes/new")({
 function NewTitleH1ProposalPage() {
   const navigate = Route.useNavigate();
   const generate = useServerFn(generateTitleH1Proposal);
-  const [targetUrl, setTargetUrl] = useState("https://trumoveinc.com/");
+  const [targetUrl, setTargetUrl] = useState("");
 
   const mutation = useMutation({
     mutationFn: () =>

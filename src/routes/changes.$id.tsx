@@ -59,8 +59,16 @@ type EvidenceRow = {
   source?: string;
   query?: string;
   date?: string;
+  position?: number;
   average_position?: number;
   impressions?: number;
+  clicks?: number;
+  domain?: string;
+  url?: string;
+  title?: string;
+  h1?: string;
+  observedAt?: string;
+  rows?: unknown;
 };
 type ProposalVersion = {
   id: string;
@@ -272,7 +280,9 @@ function ChangeRequestPage() {
   const busy = mutation.isPending;
   const practicalState =
     change.proposal_type === "title_h1"
-      ? state === "proposed"
+      ? state === "rejected" || state === "rolled_back"
+        ? humanState(state)
+        : state === "proposed"
         ? "Draft"
         : change.published_proof_at || state === "applied" || state === "verified"
           ? "Live"
@@ -343,6 +353,7 @@ function ChangeRequestPage() {
 
       {change.proposal_type === "title_h1" ? (
         <ProposalRevisionPanel
+          key={`${id}:${change.revision_count}`}
           id={id}
           fields={fields}
           rationale={change.rationale}
@@ -370,18 +381,71 @@ function ChangeRequestPage() {
           {evidence.length === 0 ? (
             <p className="mt-2 text-sm text-muted-foreground">No evidence rows are attached.</p>
           ) : (
-            <ul className="mt-3 space-y-2">
-              {evidence.map((row, index) => (
-                <li
-                  key={`${row.query}-${row.date}-${index}`}
-                  className="text-sm text-muted-foreground"
-                >
-                  <span className="text-foreground">{row.query}</span> — average position{" "}
-                  {row.average_position} on {row.date}, {row.impressions} impression
-                  {row.impressions === 1 ? "" : "s"}
-                </li>
-              ))}
-            </ul>
+            <div className="mt-3 space-y-4">
+              {evidence.map((group, index) => {
+                if (group.source === "live_page") {
+                  return (
+                    <div key="live-page" className="rounded-xl border border-border/60 p-3">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        Live page
+                      </p>
+                      <p className="mt-2 text-sm text-foreground">{group.title}</p>
+                      <p className="mt-1 text-sm text-muted-foreground">H1: {group.h1}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {group.url} · observed {group.observedAt}
+                      </p>
+                    </div>
+                  );
+                }
+
+                if (group.source === "google_search_console") {
+                  const rows = asArray<EvidenceRow>(group.rows);
+                  return (
+                    <div key="gsc" className="rounded-xl border border-border/60 p-3">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        Google Search Console · exact page
+                      </p>
+                      <ul className="mt-2 space-y-2">
+                        {rows.map((row, rowIndex) => (
+                          <li key={`${row.query}-${row.date}-${rowIndex}`} className="text-sm text-muted-foreground">
+                            <span className="text-foreground">{row.query}</span> — position {row.position} on{" "}
+                            {row.date}, {row.impressions} impressions, {row.clicks} clicks
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  );
+                }
+
+                if (group.source === "dataforseo_competitors") {
+                  const rows = asArray<EvidenceRow>(group.rows);
+                  return (
+                    <div key="dataforseo" className="rounded-xl border border-border/60 p-3">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        DataForSEO · active tracked competitors
+                      </p>
+                      <ul className="mt-2 space-y-2">
+                        {rows.map((row, rowIndex) => (
+                          <li key={`${row.domain}-${row.url}-${rowIndex}`} className="text-sm text-muted-foreground">
+                            <span className="text-foreground">{row.title}</span> — {row.domain}, position{" "}
+                            {row.position} for {row.query}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  );
+                }
+
+                return (
+                  <p key={`${group.query}-${group.date}-${index}`} className="text-sm text-muted-foreground">
+                    <span className="text-foreground">{group.query ?? group.source ?? "Evidence"}</span>
+                    {group.date
+                      ? ` — average position ${group.average_position ?? group.position ?? "unknown"} on ${group.date}, ${group.impressions ?? 0} impressions`
+                      : null}
+                  </p>
+                );
+              })}
+            </div>
           )}
         </GlassCard>
       </div>
