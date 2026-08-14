@@ -98,7 +98,7 @@ describe("title/H1 proposal evidence contract", () => {
   it("accepts complete evidence when optional writing guidance is empty", () => {
     expect(() => assertCompleteEvidence(complete)).not.toThrow();
     expect(buildTitleH1Prompt(complete, [])).toContain(
-      "WRITING GUIDANCE (not evidence; may be empty):\\n[]",
+      "WRITING GUIDANCE (not evidence; may be empty):\n[]",
     );
   });
 
