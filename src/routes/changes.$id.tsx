@@ -216,26 +216,26 @@ type MeasurementView = { cycle: Record<string, unknown> | null; windows: Record<
 
 function MeasurementHistory({ measurement }: { measurement: MeasurementView }) {
   if (!measurement.cycle) return null;
-  const latest = new Map<string, Record<string, unknown>>();
-  for (const observation of measurement.observations) {
-    const key = String(observation.window_id) + ":" + String(observation.provider);
-    const prior = latest.get(key);
-    if (!prior || Number(observation.revision_number) > Number(prior.revision_number)) latest.set(key, observation);
-  }
   return (
     <GlassCard className="p-5">
       <h2 className="text-sm font-semibold text-foreground">Measurement history</h2>
       <p className="mt-2 text-sm text-muted-foreground">The approval baseline is frozen separately from the rendered live anchor. Providers keep their own roles; this history does not calculate success or verify the change automatically.</p>
       <div className="mt-4 grid gap-3 lg:grid-cols-2">
         {measurement.windows.map((window) => {
-          const observations = [...latest.values()].filter((row) => row.window_id === window.id);
+          const observations = measurement.observations.filter((row) => row.window_id === window.id);
           return (
             <div key={String(window.id)} className="rounded-xl border border-border/60 p-3">
               <p className="text-sm font-medium text-foreground">{Number(window.window_days) === 0 ? "Immutable approval baseline" : String(window.window_days) + "-day window"}</p>
               <p className="mt-1 text-xs text-muted-foreground">{String(window.period_start_pt)} through {String(window.period_end_pt)} · available after {String(window.available_after_pt)}</p>
               {observations.length ? (
                 <ul className="mt-3 space-y-2">{observations.map((row) => (
-                  <li key={String(row.id)} className="text-sm text-muted-foreground"><span className="text-foreground">{providerLabels[String(row.provider)] ?? String(row.provider)}</span>{" · " + String(row.source_role).replaceAll("_", " ") + " · " + String(row.status)}</li>
+                  <li key={String(row.id)} className="text-sm text-muted-foreground">
+                    <span className="text-foreground">{providerLabels[String(row.provider)] ?? String(row.provider)}</span>
+                    {" · revision " + String(row.revision_number) + " · " + String(row.source_role).replaceAll("_", " ") + " · " + String(row.status)}
+                    <span className="mt-0.5 block text-xs">
+                      Captured {new Date(String(row.captured_at)).toLocaleString()}
+                    </span>
+                  </li>
                 ))}</ul>
               ) : <p className="mt-3 text-sm text-muted-foreground">No provider observations are available yet.</p>}
             </div>

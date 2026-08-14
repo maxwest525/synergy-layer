@@ -7,7 +7,10 @@ import {
   type GscSnapshot,
   type MeasurementProvider,
 } from "./change-measurement";
-import { readGa4EnvPresence } from "./measurement/ga4";
+import {
+  ga4PropertyForSearchConsoleProperty,
+  readGa4EnvPresence,
+} from "./measurement/ga4";
 
 type Client = SupabaseClient<Database>;
 type Cycle = Database["public"]["Tables"]["change_measurement_cycles"]["Row"];
@@ -223,6 +226,29 @@ async function captureGa4(admin: Client, cycle: Cycle, window: Window) {
   if (priorError) throw new Error(priorError.message);
   if (prior?.status === "complete" || prior?.status === "empty") return;
 
+  const property = ga4PropertyForSearchConsoleProperty(cycle.gsc_property);
+  if (!property) {
+    await append(admin, {
+      cycleId: cycle.id,
+      windowId: window.id,
+      provider: "ga4",
+      status: "partial",
+      payload: {
+        configured: false,
+        readSucceeded: false,
+        reason: "ga4_property_not_bound_to_gsc_property",
+      },
+      provenance: {
+        searchConsoleProperty: cycle.gsc_property,
+        property: null,
+        targetUrl: cycle.target_url,
+        exactPageMatch: true,
+        providerCallMade: false,
+      },
+    });
+    return;
+  }
+
   const presence = readGa4EnvPresence(process.env);
   const configured =
     presence.serviceAccountJson ||
@@ -241,7 +267,8 @@ async function captureGa4(admin: Client, cycle: Cycle, window: Window) {
         reason: "server_credentials_not_configured",
       },
       provenance: {
-        property: "properties/536830122",
+        searchConsoleProperty: cycle.gsc_property,
+        property,
         targetUrl: cycle.target_url,
         exactPageMatch: true,
         providerCallMade: false,
@@ -254,6 +281,7 @@ async function captureGa4(admin: Client, cycle: Cycle, window: Window) {
     const { runGa4PageWindow } = await import("./measurement/ga4.server");
     const result = await runGa4PageWindow(admin, {
       tenantId: cycle.tenant_id,
+      property,
       targetUrl: cycle.target_url,
       startDate: window.period_start_pt,
       endDate: window.period_end_pt,
@@ -282,7 +310,8 @@ async function captureGa4(admin: Client, cycle: Cycle, window: Window) {
       },
       refs: [result.runId],
       provenance: {
-        property: "properties/536830122",
+        searchConsoleProperty: cycle.gsc_property,
+        property,
         targetUrl: cycle.target_url,
         periodStart: window.period_start_pt,
         periodEnd: window.period_end_pt,
@@ -304,7 +333,8 @@ async function captureGa4(admin: Client, cycle: Cycle, window: Window) {
         reason: error instanceof Error ? error.message : String(error),
       },
       provenance: {
-        property: "properties/536830122",
+        searchConsoleProperty: cycle.gsc_property,
+        property,
         targetUrl: cycle.target_url,
         exactPageMatch: true,
         providerCallMade: true,
@@ -314,7 +344,7 @@ async function captureGa4(admin: Client, cycle: Cycle, window: Window) {
   }
 }
 
-/** Materializes stored evidence only. It makes no provider calls and never changes workflow state. */
+/** Reconciles every due evidence window without changing workflow state. */
 export async function reconcileChangeMeasurements(
   admin: Client,
   tenantId?: string,

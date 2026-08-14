@@ -4,7 +4,6 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database } from "@/integrations/supabase/types";
 import {
-  GA4_PROPERTY,
   ga4Window,
   readGa4EnvPresence,
   type Ga4CredentialKind,
@@ -288,6 +287,7 @@ async function accessToken(env: Record<string, string | undefined>): Promise<{
 }
 
 export async function fetchGa4Inventory(
+  property: string,
   window: { startDate: string; endDate: string },
   env: Record<string, string | undefined> = process.env,
   targetUrl?: string,
@@ -297,7 +297,7 @@ export async function fetchGa4Inventory(
   httpStatus: number;
 }> {
   const auth = await accessToken(env);
-  const response = await fetch(`${DATA_ENDPOINT}/${GA4_PROPERTY}:runReport`, {
+  const response = await fetch(`${DATA_ENDPOINT}/${property}:runReport`, {
     method: "POST",
     headers: {
       authorization: `Bearer ${auth.token}`,
@@ -331,7 +331,12 @@ export async function fetchGa4Inventory(
 
 export async function runGa4Inventory(
   admin: AdminClient,
-  input: { tenantId: string; actorId: string; now?: Date },
+  input: {
+    tenantId: string;
+    actorId: string;
+    property: string;
+    now?: Date;
+  },
 ) {
   const window = ga4Window(input.now ?? new Date());
   const { data: run, error: runError } = await admin
@@ -339,7 +344,7 @@ export async function runGa4Inventory(
     .insert({
       tenant_id: input.tenantId,
       provider: "ga4",
-      target: GA4_PROPERTY,
+      target: input.property,
       strategy: "page_event_inventory",
       actor_id: input.actorId,
       status: "running",
@@ -370,7 +375,7 @@ export async function runGa4Inventory(
 
   let authenticationSucceeded = false;
   try {
-    const result = await fetchGa4Inventory(window);
+    const result = await fetchGa4Inventory(input.property, window);
     authenticationSucceeded = true;
     const metrics = {
       rowCount: result.inventory.rowCount,
@@ -384,13 +389,13 @@ export async function runGa4Inventory(
     const { error: snapshotError } = await admin.from("ga4_snapshots").insert({
       tenant_id: input.tenantId,
       run_id: run.id,
-      property: GA4_PROPERTY,
+      property: input.property,
       start_date: window.startDate,
       end_date: window.endDate,
       metrics: metrics as never,
       quota: result.inventory.quota as never,
       provenance: {
-        endpoint: `${DATA_ENDPOINT}/${GA4_PROPERTY}:runReport`,
+        endpoint: `${DATA_ENDPOINT}/${input.property}:runReport`,
         credentialKind: result.credentialKind,
         dimensions: ["hostName", "pagePathPlusQueryString", "eventName"],
         metrics: ["eventCount", "activeUsers", "sessions"],
@@ -443,6 +448,7 @@ export async function runGa4PageWindow(
   admin: AdminClient,
   input: {
     tenantId: string;
+    property: string;
     targetUrl: string;
     startDate: string;
     endDate: string;
@@ -486,6 +492,7 @@ export async function runGa4PageWindow(
   let authenticationSucceeded = false;
   try {
     const result = await fetchGa4Inventory(
+      input.property,
       { startDate: input.startDate, endDate: input.endDate },
       process.env,
       input.targetUrl,

@@ -9,6 +9,7 @@ import {
 } from "./measurement/pagespeed";
 import {
   describeGa4Connection,
+  ga4PropertyForSearchConsoleProperty,
   ga4Window,
   readGa4EnvPresence,
 } from "./measurement/ga4";
@@ -17,6 +18,8 @@ import {
   ga4ResponseProvesAuthentication,
   normalizeGa4Inventory,
 } from "./measurement/ga4.server";
+
+const TRUMOVE_GA4_PROPERTY = "properties/536830122";
 
 function lighthousePayload(overrides: Record<string, unknown> = {}) {
   return {
@@ -169,11 +172,35 @@ describe("assertOwnedTarget", () => {
 });
 
 describe("GA4 connection gate", () => {
+  it("binds GA4 only from a supported tenant Search Console property", () => {
+    expect(
+      ga4PropertyForSearchConsoleProperty("sc-domain:trumoveinc.com"),
+    ).toBe(TRUMOVE_GA4_PROPERTY);
+    expect(
+      ga4PropertyForSearchConsoleProperty("https://trumoveinc.com/"),
+    ).toBe(TRUMOVE_GA4_PROPERTY);
+    expect(
+      ga4PropertyForSearchConsoleProperty("sc-domain:competitor.com"),
+    ).toBeNull();
+    expect(ga4PropertyForSearchConsoleProperty(null)).toBeNull();
+  });
+
+  it("fails closed when the tenant has no supported GA4 binding", () => {
+    const state = describeGa4Connection(
+      readGa4EnvPresence({ GA4_SERVICE_ACCOUNT_JSON: "{}" }),
+      null,
+    );
+    expect(state.configured).toBe(false);
+    expect(state.connected).toBe(false);
+    expect(state.statement).toMatch(/No GA4 property is bound/);
+  });
+
   it("stays unconnected when only a browser measurement id exists", () => {
     const state = describeGa4Connection(
       readGa4EnvPresence({
         VITE_LOVABLE_CONNECTOR_GOOGLE_ANALYTICS_API_KEY: "G-ABC123",
       }),
+      TRUMOVE_GA4_PROPERTY,
     );
     expect(state.connected).toBe(false);
     expect(state.credentialKind).toBeNull();
@@ -183,7 +210,10 @@ describe("GA4 connection gate", () => {
   });
 
   it("stays unconnected with no credential at all", () => {
-    const state = describeGa4Connection(readGa4EnvPresence({}));
+    const state = describeGa4Connection(
+      readGa4EnvPresence({}),
+      TRUMOVE_GA4_PROPERTY,
+    );
     expect(state.connected).toBe(false);
     expect(
       state.requirements.some((line) =>
@@ -198,6 +228,7 @@ describe("GA4 connection gate", () => {
         GA4_OAUTH_CLIENT_ID: "id",
         GA4_OAUTH_REFRESH_TOKEN: "token",
       }),
+      TRUMOVE_GA4_PROPERTY,
     );
     expect(state.connected).toBe(false);
     expect(state.requirements).toEqual([
@@ -207,15 +238,25 @@ describe("GA4 connection gate", () => {
 
   it("separates configured credentials from a proven successful connection", () => {
     const presence = readGa4EnvPresence({ GA4_SERVICE_ACCOUNT_JSON: "{}" });
-    expect(describeGa4Connection(presence).configured).toBe(true);
-    expect(describeGa4Connection(presence).authenticated).toBe(false);
-    expect(describeGa4Connection(presence).connected).toBe(false);
-    expect(describeGa4Connection(presence, false, true)).toMatchObject({
+    expect(
+      describeGa4Connection(presence, TRUMOVE_GA4_PROPERTY).configured,
+    ).toBe(true);
+    expect(
+      describeGa4Connection(presence, TRUMOVE_GA4_PROPERTY).authenticated,
+    ).toBe(false);
+    expect(
+      describeGa4Connection(presence, TRUMOVE_GA4_PROPERTY).connected,
+    ).toBe(false);
+    expect(
+      describeGa4Connection(presence, TRUMOVE_GA4_PROPERTY, false, true),
+    ).toMatchObject({
       configured: true,
       authenticated: true,
       connected: false,
     });
-    expect(describeGa4Connection(presence, true).connected).toBe(true);
+    expect(
+      describeGa4Connection(presence, TRUMOVE_GA4_PROPERTY, true).connected,
+    ).toBe(true);
   });
 });
 

@@ -19,6 +19,7 @@ export type GscProposalEvidence = {
 
 export type CompetitorProposalEvidence = {
   query: string;
+  matchedGscQuery: string;
   domain: string;
   url: string;
   title: string;
@@ -73,6 +74,70 @@ function normalizeDomain(value: string): string {
 
 function normalizeQuery(value: string): string {
   return value.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+const QUERY_MODIFIERS = new Set([
+  "a",
+  "an",
+  "and",
+  "best",
+  "for",
+  "me",
+  "near",
+  "of",
+  "or",
+  "rated",
+  "recommended",
+  "the",
+  "to",
+  "top",
+]);
+
+function queryTokens(value: string): Set<string> {
+  return new Set(
+    normalizeQuery(value)
+      .replace(/[^a-z0-9]+/g, " ")
+      .split(" ")
+      .filter((token) => token.length > 2 && !QUERY_MODIFIERS.has(token)),
+  );
+}
+
+/**
+ * Stored SERP evidence is reusable when its target expresses substantially the
+ * same intent as an exact-page GSC query. Exact matches always win. A related
+ * target needs at least two shared meaningful terms and two-thirds coverage of
+ * the shorter query, which admits "employee moving company" / "long distance
+ * moving company" without admitting a generic one-word overlap such as
+ * "movers".
+ */
+export function matchRelevantGscQuery(
+  gscQueries: string[],
+  snapshotTarget: string,
+): string | null {
+  const normalizedTarget = normalizeQuery(snapshotTarget);
+  const exact = gscQueries.find(
+    (query) => normalizeQuery(query) === normalizedTarget,
+  );
+  if (exact) return exact;
+
+  const targetTokens = queryTokens(snapshotTarget);
+  if (targetTokens.size < 2) return null;
+  let best: { query: string; coverage: number; overlap: number } | null = null;
+  for (const query of gscQueries) {
+    const tokens = queryTokens(query);
+    if (tokens.size < 2) continue;
+    const overlap = [...tokens].filter((token) => targetTokens.has(token)).length;
+    const coverage = overlap / Math.min(tokens.size, targetTokens.size);
+    if (overlap < 2 || coverage < 2 / 3) continue;
+    if (
+      !best ||
+      coverage > best.coverage ||
+      (coverage === best.coverage && overlap > best.overlap)
+    ) {
+      best = { query, coverage, overlap };
+    }
+  }
+  return best?.query ?? null;
 }
 
 export function requireProposalTarget(value: string): string {
@@ -152,14 +217,16 @@ export function selectRelevantCompetitorEvidence(input: {
   snapshots: CompetitorSnapshotInput[];
   limit?: number;
 }): CompetitorProposalEvidence[] {
-  const queries = new Set(input.gscQueries.map(normalizeQuery));
   const tracked = new Set(input.trackedDomains.map(normalizeDomain));
   const seen = new Set<string>();
   const evidence: CompetitorProposalEvidence[] = [];
 
   for (const snapshot of input.snapshots) {
-    const query = normalizeQuery(snapshot.target);
-    if (!queries.has(query)) continue;
+    const matchedGscQuery = matchRelevantGscQuery(
+      input.gscQueries,
+      snapshot.target,
+    );
+    if (!matchedGscQuery) continue;
     for (const row of snapshot.rows) {
       if (row["type"] !== "organic") continue;
       const domain = normalizeDomain(String(row["domain"] ?? ""));
@@ -167,11 +234,12 @@ export function selectRelevantCompetitorEvidence(input: {
       const title = typeof row["title"] === "string" ? row["title"].trim() : "";
       const position = finiteNumber(row["rank_group"] ?? row["rank_absolute"]);
       if (!tracked.has(domain) || !url || !title || position <= 0) continue;
-      const key = `${query}|${domain}|${url}`;
+      const key = `${normalizeQuery(snapshot.target)}|${domain}|${url}`;
       if (seen.has(key)) continue;
       seen.add(key);
       evidence.push({
         query: snapshot.target,
+        matchedGscQuery,
         domain,
         url,
         title,
@@ -211,6 +279,48 @@ const emptyOptionalContext: ProposalOptionalContext = {
   serpapiPaidSerp: { status: "missing", rows: [], provenance: {} },
   contradictionFlags: [],
 };
+
+export type CompetitorEvidenceMode = "exact_query" | "related_query_fallback";
+
+/**
+ * The database proposal RPC accepts exactly three required evidence groups.
+ * Optional sources remain auditable beneath the competitor context group, but
+ * cannot change proposal eligibility or the persisted top-level contract.
+ */
+export function buildProposalEvidenceGroups(
+  evidence: ProposalEvidence,
+  optional: ProposalOptionalContext = emptyOptionalContext,
+  guidance: KnowledgeWritingGuidance[] = [],
+  competitorEvidenceMode: CompetitorEvidenceMode = "exact_query",
+): Record<string, unknown>[] {
+  return [
+    { source: "live_page", role: "source_of_truth", ...evidence.livePage },
+    { source: "google_search_console", role: "source_of_truth", rows: evidence.gsc },
+    {
+      source: "dataforseo_competitors",
+      role: "enrichment",
+      queryMatchMode: competitorEvidenceMode,
+      rows: evidence.competitors,
+      supportingContext: {
+        ga4: { role: "source_of_truth", ...optional.ga4 },
+        serpapiTransparency: {
+          role: "corroboration",
+          ...optional.serpapiTransparency,
+        },
+        serpapiPaidSerp: {
+          role: "corroboration",
+          ...optional.serpapiPaidSerp,
+        },
+        knowledge: {
+          role: "devils_advocate",
+          status: guidance.length > 0 ? "available" : "missing",
+          rows: guidance,
+        },
+        contradictionFlags: optional.contradictionFlags,
+      },
+    },
+  ];
+}
 
 export function buildTitleH1Prompt(
   evidence: ProposalEvidence,

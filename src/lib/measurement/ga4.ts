@@ -1,6 +1,26 @@
 /** GA4 connection truth. Credential presence is not connection proof. */
 
-export const GA4_PROPERTY = "properties/536830122";
+/**
+ * A GA4 property is selected only through a tenant's selected Search Console
+ * property. Keeping the registry here makes an unsupported tenant fail closed
+ * instead of silently reading the original TruMove property.
+ */
+const GA4_PROPERTY_BY_GSC_PROPERTY: Readonly<Record<string, string>> = {
+  "sc-domain:trumoveinc.com": "properties/536830122",
+  "https://trumoveinc.com/": "properties/536830122",
+  "https://www.trumoveinc.com/": "properties/536830122",
+};
+
+export function ga4PropertyForSearchConsoleProperty(
+  searchConsoleProperty: string | null | undefined,
+): string | null {
+  if (!searchConsoleProperty) return null;
+  return (
+    GA4_PROPERTY_BY_GSC_PROPERTY[
+      searchConsoleProperty.trim().toLowerCase()
+    ] ?? null
+  );
+}
 
 export type Ga4CredentialKind =
   | "service_account"
@@ -27,6 +47,7 @@ export type Ga4EnvPresence = {
 
 export function describeGa4Connection(
   presence: Ga4EnvPresence,
+  property: string | null,
   successfulSnapshot = false,
   authenticationProven = false,
 ): Ga4ConnectionState {
@@ -41,6 +62,21 @@ export function describeGa4Connection(
       ? "oauth_refresh_token"
       : null;
 
+  if (!property) {
+    return {
+      configured: false,
+      authenticated: false,
+      connected: false,
+      credentialKind,
+      statement:
+        "No GA4 property is bound to this tenant's selected Search Console property.",
+      requirements: [
+        "Select a supported Search Console property for this tenant before refreshing GA4.",
+      ],
+      measurementIdPresent: presence.measurementId,
+    };
+  }
+
   if (credentialKind) {
     return {
       configured: true,
@@ -48,7 +84,7 @@ export function describeGa4Connection(
       connected: successfulSnapshot,
       credentialKind,
       statement: successfulSnapshot
-        ? `AOOS has completed a GA4 Data API read for ${GA4_PROPERTY}.`
+        ? `AOOS has completed a GA4 Data API read for ${property}.`
         : authenticationProven
           ? "Google authentication succeeded, but a property report has not succeeded yet. Verify the property grant."
           : "A complete server credential is configured, but authentication and property access remain unproven until Refresh GA4 succeeds.",
@@ -74,7 +110,7 @@ export function describeGa4Connection(
       "A Google service account JSON with Analytics read access, stored as the server secret GA4_SERVICE_ACCOUNT_JSON.",
     );
     requirements.push(
-      `That service account must have Viewer access on ${GA4_PROPERTY}.`,
+      `That service account must have Viewer access on ${property}.`,
     );
     requirements.push(
       "The Google Analytics Data API must be enabled on the same Google Cloud project.",

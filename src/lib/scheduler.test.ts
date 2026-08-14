@@ -2,11 +2,16 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Database } from "@/integrations/supabase/types";
+import { reconcileChangeMeasurements } from "./change-measurements.server";
 import { tickScheduler } from "./scheduler.server";
 import { runWorkflow } from "./workflow-runner.server";
 
 vi.mock("./workflow-runner.server", () => ({
   runWorkflow: vi.fn(async () => ({ runId: "run-id", state: "succeeded" })),
+}));
+
+vi.mock("./change-measurements.server", () => ({
+  reconcileChangeMeasurements: vi.fn(async () => ({ cycles: 1, windows: 4 })),
 }));
 
 vi.mock("./os.server", () => ({
@@ -70,14 +75,16 @@ function schedulerClient() {
 describe("tickScheduler automation scope", () => {
   beforeEach(() => {
     vi.mocked(runWorkflow).mockClear();
+    vi.mocked(reconcileChangeMeasurements).mockClear();
   });
 
-  it("runs only the explicitly allowed GSC schedule and does not collect the paid SERP backlog", async () => {
+  it("runs the allowed GSC schedule and reconciles due change windows without collecting the paid SERP backlog", async () => {
     const { client, touchedTables } = schedulerClient();
 
     const result = await tickScheduler(client, new Date("2026-08-11T23:00:00.000Z"), {
       onlyKeys: ["gsc-daily-observe"],
       collectSerpBacklog: false,
+      reconcileChangeMeasurements: true,
     });
 
     expect(result.ran).toEqual([{ schedule: "gsc-daily-observe", state: "succeeded" }]);
@@ -89,5 +96,7 @@ describe("tickScheduler automation scope", () => {
       null,
     );
     expect(touchedTables).not.toContain("dataforseo_requests");
+    expect(reconcileChangeMeasurements).toHaveBeenCalledTimes(1);
+    expect(reconcileChangeMeasurements).toHaveBeenCalledWith(client);
   });
 });

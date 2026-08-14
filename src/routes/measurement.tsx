@@ -450,7 +450,13 @@ function MeasurementPage() {
         </div>
 
         <div className="mt-4 space-y-1">
-          <DetailRow label="Owned property" value={ga4.property} />
+          <DetailRow
+            label="Tenant GA4 property"
+            value={
+              ga4.property ??
+              "not bound to the selected Search Console property"
+            }
+          />
           <DetailRow
             label="Reporting window"
             value="28 days through yesterday, once connected"
@@ -501,9 +507,9 @@ function MeasurementPage() {
           <p className="mt-3 rounded-xl border border-primary/30 bg-primary/5 px-3 py-3 text-sm text-muted-foreground">
             One-time Google step: enable the Google Analytics Data API and grant
             the service account client_email from GA4_SERVICE_ACCOUNT_JSON
-            Viewer access to property 536830122. For OAuth mode, reconnect the
-            Google user and ensure that user has Viewer access to the same
-            property. Then select Refresh GA4.
+            Viewer access to {ga4.property ?? "the tenant-bound GA4 property"}.
+            For OAuth mode, reconnect the Google user and ensure that user has
+            Viewer access to the same property. Then select Refresh GA4.
           </p>
         ) : null}
 

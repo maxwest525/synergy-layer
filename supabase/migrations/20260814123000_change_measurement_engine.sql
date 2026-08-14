@@ -118,7 +118,7 @@ BEGIN
   ) THEN RAISE EXCEPTION 'The live anchor must equal the rendered published-proof timestamp.'; END IF;
   RETURN NEW;
 END;
-$;
+$$;
 CREATE TRIGGER guard_change_measurement_anchor BEFORE UPDATE ON public.change_measurement_cycles FOR EACH ROW EXECUTE FUNCTION public.guard_change_measurement_anchor();
 
 CREATE OR REPLACE FUNCTION public.capture_change_measurement_lifecycle() RETURNS trigger

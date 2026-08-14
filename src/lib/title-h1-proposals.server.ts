@@ -14,6 +14,7 @@ import { retrieveKnowledgeGuidance } from "./knowledge-retrieval.server";
 import {
   assertCompleteEvidence,
   assertSameCanonicalProposalPage,
+  buildProposalEvidenceGroups,
   buildTitleH1Changes,
   buildTitleH1Prompt,
   requireProposalTarget,
@@ -129,14 +130,44 @@ export async function prepareTitleH1Proposal(
     }));
   }
 
-  const competitors = selectRelevantCompetitorEvidence({
+  let competitors = selectRelevantCompetitorEvidence({
     gscQueries: queries,
     trackedDomains: (trackedRows ?? []).map((row) => row.domain),
     snapshots: competitorSnapshots,
   });
+
+  // Exact query snapshots are preferred. If none contains usable evidence,
+  // inspect recent organic snapshots and let the strict related-query matcher
+  // admit only substantially overlapping search intent.
+  if (queries.length > 0 && competitors.length === 0) {
+    const { data, error } = await client
+      .from("dataforseo_snapshots")
+      .select("target, payload, collected_at")
+      .eq("tenant_id", tenantId)
+      .eq("kind", "serp_organic")
+      .order("collected_at", { ascending: false })
+      .limit(200);
+    if (error) throw new Error(error.message);
+    competitorSnapshots = (data ?? []).map((snapshot) => ({
+      target: snapshot.target,
+      collectedAt: snapshot.collected_at,
+      rows: payloadRows(snapshot.payload),
+    }));
+    competitors = selectRelevantCompetitorEvidence({
+      gscQueries: queries,
+      trackedDomains: (trackedRows ?? []).map((row) => row.domain),
+      snapshots: competitorSnapshots,
+    });
+  }
+
   const evidenceInput = { livePage, gsc, competitors };
   assertCompleteEvidence(evidenceInput);
   const evidence: ProposalEvidence = evidenceInput;
+  const competitorEvidenceMode = evidence.competitors.some(
+    (row) => row.query.trim().toLowerCase() !== row.matchedGscQuery.trim().toLowerCase(),
+  )
+    ? "related_query_fallback"
+    : "exact_query";
 
   // Optional sources enrich/corroborate the wording brief but never gate proposal eligibility.
   const [{ data: ga4Rows, error: ga4Error }, { data: transparencyRows, error: transparencyError }, { data: paidRows, error: paidError }] = await Promise.all([
@@ -202,16 +233,13 @@ export async function prepareTitleH1Proposal(
     title: `Improve title and H1 for ${pageLabel(targetUrl)}`,
     changes,
     rationale: wording.rationale,
-    evidence: [
-      { source: "live_page", role: "source_of_truth", ...evidence.livePage },
-      { source: "google_search_console", role: "source_of_truth", rows: evidence.gsc },
-      { source: "dataforseo_competitors", role: "enrichment", rows: evidence.competitors },
-      { source: "ga4", role: "source_of_truth", ...optionalContext.ga4 },
-      { source: "serpapi_transparency", role: "corroboration", ...optionalContext.serpapiTransparency },
-      { source: "serpapi_paid_serp", role: "corroboration", ...optionalContext.serpapiPaidSerp },
-      { source: "knowledge", role: "devils_advocate", rows: guidance },
-    ],
-    evidenceSummary: `The current rendered title and H1 were observed at ${observedAt}; ${evidence.gsc.length} exact-page GSC page/query rows and ${evidence.competitors.length} active-tracked-competitor DataForSEO organic rows informed the wording.`,
+    evidence: buildProposalEvidenceGroups(
+      evidence,
+      optionalContext,
+      guidance,
+      competitorEvidenceMode,
+    ),
+    evidenceSummary: `The current rendered title and H1 were observed at ${observedAt}; ${evidence.gsc.length} exact-page GSC page/query rows and ${evidence.competitors.length} active-tracked-competitor DataForSEO organic rows (${competitorEvidenceMode === "exact_query" ? "exact query" : "strict related-query fallback"}) informed the wording.`,
     evidenceLimitations:
       "Search Console rows are finalized historical observations, competitor rankings do not prove causation, and publication or performance improvement is not guaranteed.",
     riskNote: "Operator review is required. Approval locks the exact wording and source revision.",
@@ -219,6 +247,7 @@ export async function prepareTitleH1Proposal(
       provider: "google_gemini_direct",
       model,
       generatedAt: new Date().toISOString(),
+      competitorEvidenceMode,
       sourceRoles: { live_page: "source_of_truth", google_search_console: "source_of_truth", ga4: "source_of_truth", dataforseo_competitors: "enrichment", serpapi_transparency: "corroboration", serpapi_paid_serp: "corroboration", knowledge: "devils_advocate" },
       optionalSourceStatus: { ga4: optionalContext.ga4.status, serpapiTransparency: optionalContext.serpapiTransparency.status, serpapiPaidSerp: optionalContext.serpapiPaidSerp.status },
       contradictionFlags: optionalContext.contradictionFlags,

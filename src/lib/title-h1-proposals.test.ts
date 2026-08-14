@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   assertCompleteEvidence,
   assertSameCanonicalProposalPage,
+  buildProposalEvidenceGroups,
   buildTitleH1Prompt,
   selectRelevantCompetitorEvidence,
   type ProposalEvidence,
@@ -28,6 +29,7 @@ const complete: ProposalEvidence = {
   competitors: [
     {
       query: "employee relocation movers",
+      matchedGscQuery: "employee relocation movers",
       domain: "examplemover.com",
       url: "https://examplemover.com/employee-relocation",
       title: "Employee Relocation Movers",
@@ -90,10 +92,65 @@ describe("title/H1 proposal evidence contract", () => {
     expect(rows).toEqual([
       expect.objectContaining({
         query: "employee relocation movers",
+        matchedGscQuery: "employee relocation movers",
         domain: "approved.example",
         position: 2,
       }),
     ]);
+  });
+
+  it("uses a substantially related SERP query when no exact snapshot exists", () => {
+    const rows = selectRelevantCompetitorEvidence({
+      gscQueries: ["employee moving company"],
+      trackedDomains: ["approved.example"],
+      snapshots: [
+        {
+          target: "long distance moving company",
+          collectedAt: "2026-08-13T00:00:00.000Z",
+          rows: [
+            {
+              type: "organic",
+              domain: "approved.example",
+              url: "https://approved.example/long-distance-moving",
+              title: "Long Distance Moving Company",
+              rank_group: 3,
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(rows).toEqual([
+      expect.objectContaining({
+        query: "long distance moving company",
+        matchedGscQuery: "employee moving company",
+        domain: "approved.example",
+      }),
+    ]);
+  });
+
+  it("rejects a generic one-word query overlap", () => {
+    const rows = selectRelevantCompetitorEvidence({
+      gscQueries: ["employee relocation movers"],
+      trackedDomains: ["approved.example"],
+      snapshots: [
+        {
+          target: "long distance movers",
+          collectedAt: "2026-08-13T00:00:00.000Z",
+          rows: [
+            {
+              type: "organic",
+              domain: "approved.example",
+              url: "https://approved.example/long-distance-moving",
+              title: "Long Distance Movers",
+              rank_group: 3,
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(rows).toEqual([]);
   });
 
   it("accepts complete evidence when optional writing guidance is empty", () => {
@@ -131,6 +188,27 @@ describe("title/H1 proposal evidence contract", () => {
     const prompt = buildTitleH1Prompt(complete, []);
     expect(prompt.match(/"status": "missing"/g)?.length).toBe(3);
     expect(prompt).toContain("CROSS-SOURCE REVIEW FLAGS (questions, never verdicts):\n[]");
+  });
+
+  it("persists exactly three required evidence groups with optional context nested", () => {
+    const groups = buildProposalEvidenceGroups(complete);
+
+    expect(groups).toHaveLength(3);
+    expect(groups.map((group) => group.source)).toEqual([
+      "live_page",
+      "google_search_console",
+      "dataforseo_competitors",
+    ]);
+    expect(groups[2]).toMatchObject({
+      queryMatchMode: "exact_query",
+      supportingContext: {
+        ga4: { role: "source_of_truth", status: "missing" },
+        serpapiTransparency: { role: "corroboration", status: "missing" },
+        serpapiPaidSerp: { role: "corroboration", status: "missing" },
+        knowledge: { role: "devils_advocate", status: "missing", rows: [] },
+        contradictionFlags: [],
+      },
+    });
   });
 
 });
