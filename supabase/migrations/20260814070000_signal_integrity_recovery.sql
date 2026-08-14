@@ -49,7 +49,11 @@ SET lane = 'completed'::public.inbox_lane,
       'archived_from_lane', lane::text
     )
 WHERE resolved_at IS NULL
-  AND subject_kind IS DISTINCT FROM 'change_request';
+  AND subject_kind IS DISTINCT FROM 'change_request'
+  AND (
+    lane IS DISTINCT FROM 'needs_attention'::public.inbox_lane
+    OR metadata ->> 'category' IS DISTINCT FROM 'failure'
+  );
 
 CREATE OR REPLACE FUNCTION public.command_center_overview(_tenant_id uuid)
 RETURNS jsonb
