@@ -3617,6 +3617,30 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      append_change_measurement_observation: {
+        Args: {
+          _cycle_id: string
+          _payload: Json
+          _provenance: Json
+          _provider: string
+          _source_refs: Json
+          _source_role: string
+          _status: string
+          _window_id: string
+        }
+        Returns: string
+      }
+      append_change_measurement_revision: {
+        Args: {
+          _actor_id: string
+          _cycle_id: string
+          _detail: Json
+          _kind: string
+          _summary: string
+          _window_id: string
+        }
+        Returns: string
+      }
       apply_change_request_rendered_proof: {
         Args: {
           _actor: string
