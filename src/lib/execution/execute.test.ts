@@ -11,7 +11,10 @@ import {
   type GithubApi,
   type RenderedVerifier,
 } from "./execute";
-import { captureMeasurementFollowupWarning } from "./execute.server";
+import {
+  buildRenderedScrapeRequest,
+  captureMeasurementFollowupWarning,
+} from "./execute.server";
 
 const changes = parseFieldChanges([
   {
@@ -234,6 +237,22 @@ describe("executeSourceChange", () => {
     expect(outcome.status).toBe("replayed");
     expect(writes).toHaveLength(0);
     expect(saved).toHaveLength(0);
+  });
+});
+
+describe("buildRenderedScrapeRequest", () => {
+  it("forces a fresh Firecrawl render for publish proof", () => {
+    expect(
+      buildRenderedScrapeRequest(
+        "https://trumoveinc.com/services/corporate-relocation",
+      ),
+    ).toEqual({
+      url: "https://trumoveinc.com/services/corporate-relocation",
+      formats: ["rawHtml", "markdown"],
+      onlyMainContent: false,
+      waitFor: 3000,
+      maxAge: 0,
+    });
   });
 });
 
