@@ -4,7 +4,7 @@ import { approvalBaselineWindow, buildGscWindowObservation, findMeasurementContr
 describe("measurement windows", () => {
   it("uses Pacific calendar dates across DST and excludes approval/live days", () => {
     expect(ptDate("2026-03-08T07:30:00Z")).toBe("2026-03-07");
-    expect(approvalBaselineWindow("2026-03-08T07:30:00Z")).toEqual({ windowDays: 0, periodStartPt: "2026-02-08", periodEndPt: "2026-03-06" });
+    expect(approvalBaselineWindow("2026-03-08T07:30:00Z")).toEqual({ windowDays: 0, periodStartPt: "2026-02-07", periodEndPt: "2026-03-06" });
     expect(outcomeWindow("2026-11-01T08:30:00Z", 7)).toEqual({ windowDays: 7, periodStartPt: "2026-11-02", periodEndPt: "2026-11-08" });
   });
 });

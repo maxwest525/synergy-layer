@@ -115,9 +115,9 @@ describe("title/H1 proposal evidence contract", () => {
     expect(prompt).toContain("livePage");
     expect(prompt).toContain("gsc");
     expect(prompt).toContain("competitors");
-    expect(prompt).toMatch(/ga4[\\s\\S]*source_of_truth[\\s\\S]*missing/i);
-    expect(prompt).toMatch(/ENRICHMENT[\\s\\S]*organic market context/);
-    expect(prompt).toMatch(/CORROBORATION[\\s\\S]*paid messaging/);
+    expect(prompt).toMatch(/ga4[\s\S]*source_of_truth[\s\S]*missing/i);
+    expect(prompt).toMatch(/ENRICHMENT[\s\S]*organic market context/);
+    expect(prompt).toMatch(/CORROBORATION[\s\S]*paid messaging/);
     expect(prompt).not.toMatch(/Lovable AI Gateway/i);
     expect(prompt).toMatch(/wording only/i);
     expect(prompt.indexOf("DEVIL'S ADVOCATE WRITING GUIDANCE")).toBeGreaterThan(
@@ -130,7 +130,7 @@ describe("title/H1 proposal evidence contract", () => {
     expect(() => assertCompleteEvidence(complete)).not.toThrow();
     const prompt = buildTitleH1Prompt(complete, []);
     expect(prompt.match(/"status": "missing"/g)?.length).toBe(3);
-    expect(prompt).toContain("CROSS-SOURCE REVIEW FLAGS (questions, never verdicts):\\n[]");
+    expect(prompt).toContain("CROSS-SOURCE REVIEW FLAGS (questions, never verdicts):\n[]");
   });
 
 });
