@@ -709,8 +709,6 @@ export async function runSeoValidation(
           confidence: finding.confidence,
           reasoning: `Rule ${finding.rule} over finalized Search Console snapshots for ${reportingDate} (Pacific), compared against ${comparisonDate ?? "no prior period"}.`,
           suggested_action: finding.suggestedAction as never,
-          requires_approval: true,
-          state: "proposed",
           issue_fingerprint: issueFingerprint,
           run_id: workflowRunId,
           metadata: evidence as never,

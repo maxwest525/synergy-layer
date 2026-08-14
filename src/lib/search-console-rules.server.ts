@@ -216,8 +216,6 @@ export async function evaluateSnapshots(
           confidence: observation.confidence,
           reasoning: `Rule ${observation.rule} over finalized Search Console data for ${reportingDate} (Pacific).`,
           suggested_action: { kind: "review", rule: observation.rule, target: observation.target } as never,
-          requires_approval: true,
-          state: "proposed",
           issue_fingerprint: issueFingerprint,
           metadata: { property, rule: observation.rule } as never,
         }))
