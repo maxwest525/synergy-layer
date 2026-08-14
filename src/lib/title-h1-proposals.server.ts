@@ -13,6 +13,7 @@ import { generateTitleH1Wording } from "./gemini.server";
 import { retrieveKnowledgeGuidance } from "./knowledge-retrieval.server";
 import {
   assertCompleteEvidence,
+  assertSameCanonicalProposalPage,
   buildTitleH1Changes,
   buildTitleH1Prompt,
   requireProposalTarget,
@@ -70,6 +71,7 @@ export async function prepareTitleH1Proposal(
     throw new Error("Required live-page evidence is unavailable: FIRECRAWL_API_KEY is not configured.");
   }
   const rendered = await renderer.render(targetUrl);
+  assertSameCanonicalProposalPage(targetUrl, rendered.finalUrl);
   const livePage =
     rendered.title && rendered.heading
       ? {

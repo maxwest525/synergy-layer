@@ -89,6 +89,39 @@ export function requireProposalTarget(value: string): string {
   return url.toString();
 }
 
+function canonicalProposalPageIdentity(value: string): string {
+  const url = new URL(value);
+  const pathname = url.pathname.replace(/\/+$/, "") || "/";
+  return `${url.origin}${pathname}${url.search}`;
+}
+
+/**
+ * Firecrawl may follow redirects. Revalidate the resolved destination before
+ * any model call so evidence and persistence cannot silently switch pages.
+ * Only an otherwise identical URL with a different trailing slash is treated
+ * as the same canonical page.
+ */
+export function assertSameCanonicalProposalPage(
+  requestedUrl: string,
+  renderedFinalUrl: string,
+): void {
+  const requested = requireProposalTarget(requestedUrl);
+  let rendered: string;
+  try {
+    rendered = requireProposalTarget(renderedFinalUrl);
+  } catch {
+    throw new Error("The rendered redirect left the governed origin; proposal generation refused.");
+  }
+  if (
+    canonicalProposalPageIdentity(requested) !==
+    canonicalProposalPageIdentity(rendered)
+  ) {
+    throw new Error(
+      "The rendered redirect did not resolve to the same canonical page; proposal generation refused.",
+    );
+  }
+}
+
 export function selectGscProposalEvidence(input: {
   targetUrl: string;
   snapshots: GscSnapshotInput[];
