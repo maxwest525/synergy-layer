@@ -182,7 +182,7 @@ export async function prepareTitleH1Proposal(
   if (paidError) throw new Error(paidError.message);
   const exactGa4 = (ga4Rows ?? []).filter((row) => {
     const metrics = row.metrics && typeof row.metrics === "object" && !Array.isArray(row.metrics) ? row.metrics as Record<string, unknown> : {};
-    return metrics.targetUrl === targetUrl || metrics.pageLocation === targetUrl;
+    return metrics['targetUrl'] === targetUrl || metrics['pageLocation'] === targetUrl;
   });
   const optionalContext: ProposalOptionalContext = {
     ga4: { status: exactGa4.length ? "available" : "missing", rows: exactGa4, provenance: { scope: "exact page behavioral baseline/event inventory", note: exactGa4.length ? "measurement only" : "No exact-page GA4 snapshot is available; generation continues." } },

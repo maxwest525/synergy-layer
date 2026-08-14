@@ -207,7 +207,7 @@ describe("title/H1 proposal evidence contract", () => {
     const groups = buildProposalEvidenceGroups(complete);
 
     expect(groups).toHaveLength(3);
-    expect(groups.map((group) => group.source)).toEqual([
+    expect(groups.map((group) => group['source'])).toEqual([
       "live_page",
       "google_search_console",
       "dataforseo_competitors",

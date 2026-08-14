@@ -4,7 +4,7 @@ import { GEMINI_API_ORIGIN, generateTitleH1Wording } from "./gemini.server";
 
 describe("direct Gemini structured output", () => {
   it("calls Google directly with a strict wording-only JSON schema", async () => {
-    const fetcher = vi.fn(async () =>
+    const fetcher = vi.fn(async (_url: string | URL | Request, _init?: RequestInit) =>
       new Response(
         JSON.stringify({
           candidates: [
@@ -52,7 +52,7 @@ describe("direct Gemini structured output", () => {
   });
 
   it("writes nothing by returning an error when Gemini output is malformed", async () => {
-    const fetcher = vi.fn(async () =>
+    const fetcher = vi.fn(async (_url: string | URL | Request, _init?: RequestInit) =>
       new Response(
         JSON.stringify({
           candidates: [{ content: { parts: [{ text: "{not-json" }] } }],

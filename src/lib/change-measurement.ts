@@ -32,7 +32,7 @@ export function ptDate(instant: string | Date): string {
   const date = instant instanceof Date ? instant : new Date(instant);
   if (!Number.isFinite(date.valueOf())) throw new Error("A valid instant is required.");
   const parts = Object.fromEntries(ptFormatter.formatToParts(date).map((p) => [p.type, p.value]));
-  return `${parts.year}-${parts.month}-${parts.day}`;
+  return `${parts['year']}-${parts['month']}-${parts['day']}`;
 }
 
 export function addCalendarDays(date: string, amount: number): string {
@@ -110,9 +110,9 @@ export function buildGscWindowObservation(input: {
     if (!Array.isArray(payload?.rows)) continue;
     for (const item of payload.rows) {
       const row = (item ?? {}) as Record<string, unknown>;
-      const keys = Array.isArray(row.keys) ? row.keys : [];
+      const keys = Array.isArray(row['keys']) ? row['keys'] : [];
       if (keys[0] !== input.targetUrl) continue;
-      rows.push({ date: snapshot.period_start_pt, query: typeof keys[1] === "string" ? keys[1] : "(unknown query)", clicks: numberOrZero(row.clicks), impressions: numberOrZero(row.impressions), position: numberOrZero(row.position) });
+      rows.push({ date: snapshot.period_start_pt, query: typeof keys[1] === "string" ? keys[1] : "(unknown query)", clicks: numberOrZero(row['clicks']), impressions: numberOrZero(row['impressions']), position: numberOrZero(row['position']) });
     }
   }
   rows.sort((a, b) => a.date.localeCompare(b.date) || a.query.localeCompare(b.query));

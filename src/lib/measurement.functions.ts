@@ -37,12 +37,21 @@ export type PageSpeedSnapshotView = {
   collectedAt: string;
 };
 
+/** Mirrors the stored JSON column, but stays serializable across the RPC boundary. */
+export type Ga4MetricValue =
+  | string
+  | number
+  | boolean
+  | null
+  | Ga4MetricValue[]
+  | { [key: string]: Ga4MetricValue };
+
 export type Ga4SnapshotView = {
   id: string;
   property: string;
   startDate: string;
   endDate: string;
-  metrics: Record<string, unknown>;
+  metrics: Record<string, Ga4MetricValue>;
   collectedAt: string;
 };
 
@@ -216,7 +225,7 @@ export const getMeasurementState = createServerFn({ method: "POST" })
               property: ga4Row.property,
               startDate: ga4Row.start_date,
               endDate: ga4Row.end_date,
-              metrics: (ga4Row.metrics ?? {}) as Record<string, unknown>,
+              metrics: (ga4Row.metrics ?? {}) as Record<string, Ga4MetricValue>,
               collectedAt: ga4Row.collected_at,
             }
           : null,

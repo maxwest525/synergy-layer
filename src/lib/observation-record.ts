@@ -1,9 +1,12 @@
 type ObservationInput = {
   metadata?: unknown;
-  [key: string]: unknown;
 };
 
-export function observationRecommendationRecord<T extends ObservationInput>(
+/**
+ * `const` type parameter keeps literal unions (risk, impact levels) narrow so
+ * the database column types still accept the record.
+ */
+export function observationRecommendationRecord<const T extends ObservationInput>(
   record: T,
 ): T & {
   state: "observed";
