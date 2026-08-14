@@ -14,6 +14,7 @@ import { retrieveKnowledgeGuidance } from "./knowledge-retrieval.server";
 import {
   assertCompleteEvidence,
   assertSameCanonicalProposalPage,
+  buildDeterministicDevWording,
   buildProposalEvidenceGroups,
   buildTitleH1Changes,
   buildTitleH1Prompt,
@@ -64,6 +65,7 @@ export async function prepareTitleH1Proposal(
   client: Client,
   tenantId: string,
   rawTargetUrl: string,
+  options: { wordingMode?: "gemini" | "deterministic_dev" } = {},
 ): Promise<PreparedTitleH1Proposal> {
   const targetUrl = requireProposalTarget(rawTargetUrl);
   const observedAt = new Date().toISOString();
@@ -211,13 +213,17 @@ export async function prepareTitleH1Proposal(
     sourceRef: entry.sourceRef,
   }));
 
+  const wordingMode = options.wordingMode ?? "gemini";
   const apiKey = process.env["GEMINI_API_KEY"] ?? "";
   const model = process.env["GEMINI_MODEL"] ?? "";
-  const wording = await generateTitleH1Wording({
-    apiKey,
-    model,
-    prompt: buildTitleH1Prompt(evidence, guidance, optionalContext),
-  });
+  const wording =
+    wordingMode === "deterministic_dev"
+      ? buildDeterministicDevWording(evidence)
+      : await generateTitleH1Wording({
+          apiKey,
+          model,
+          prompt: buildTitleH1Prompt(evidence, guidance, optionalContext),
+        });
   const changes = buildTitleH1Changes(evidence.livePage, wording);
   const simulation = applyExactReplacements(source.content, changes);
   if (!simulation.ok || simulation.value.alreadyApplied) {
@@ -242,10 +248,17 @@ export async function prepareTitleH1Proposal(
     evidenceSummary: `The current rendered title and H1 were observed at ${observedAt}; ${evidence.gsc.length} exact-page GSC page/query rows and ${evidence.competitors.length} active-tracked-competitor DataForSEO organic rows (${competitorEvidenceMode === "exact_query" ? "exact query" : "strict related-query fallback"}) informed the wording.`,
     evidenceLimitations:
       "Search Console rows are finalized historical observations, competitor rankings do not prove causation, and publication or performance improvement is not guaranteed.",
-    riskNote: "Operator review is required. Approval locks the exact wording and source revision.",
+    riskNote:
+      wordingMode === "deterministic_dev"
+        ? "Development-mode wording bypassed Gemini only. Operator review is required, and approval locks the exact wording and source revision."
+        : "Operator review is required. Approval locks the exact wording and source revision.",
     generationContext: {
-      provider: "google_gemini_direct",
-      model,
+      provider:
+        wordingMode === "deterministic_dev"
+          ? "deterministic_dev"
+          : "google_gemini_direct",
+      model: wordingMode === "deterministic_dev" ? null : model,
+      wordingMode,
       generatedAt: new Date().toISOString(),
       competitorEvidenceMode,
       sourceRoles: { live_page: "source_of_truth", google_search_console: "source_of_truth", ga4: "source_of_truth", dataforseo_competitors: "enrichment", serpapi_transparency: "corroboration", serpapi_paid_serp: "corroboration", knowledge: "devils_advocate" },
