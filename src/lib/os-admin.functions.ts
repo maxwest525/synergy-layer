@@ -60,7 +60,10 @@ export const runSchedulerTick = createServerFn({ method: "POST" })
     const { assertOperator } = await import("./os-admin.server");
     await assertOperator(context.supabase, context.userId);
     const { tickScheduler } = await import("./scheduler.server");
-    return tickScheduler(context.supabase);
+    return tickScheduler(context.supabase, new Date(), {
+      onlyKeys: ["gsc-daily-observe"],
+      collectSerpBacklog: false,
+    });
   });
 
 export const runReferenceAgent = createServerFn({ method: "POST" })

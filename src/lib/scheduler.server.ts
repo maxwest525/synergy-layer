@@ -18,6 +18,13 @@ export type SchedulerTickOptions = {
   collectSerpBacklog?: boolean;
 };
 
+export function requireScheduleAllowlist(options: SchedulerTickOptions): Set<string> {
+  if (!options.onlyKeys || options.onlyKeys.length === 0) {
+    throw new Error("Scheduler ticks require an explicit schedule allowlist.");
+  }
+  return new Set(options.onlyKeys);
+}
+
 /**
  * Claims every due schedule, respecting dependency edges so chains run in
  * order instead of as isolated jobs.
@@ -27,6 +34,7 @@ export async function tickScheduler(
   now = new Date(),
   options: SchedulerTickOptions = {},
 ): Promise<TickResult> {
+  const allowedKeys = requireScheduleAllowlist(options);
   const { data: schedules, error } = await client.from("schedules").select("*").eq("enabled", true);
   if (error) throw new Error(error.message);
 
@@ -36,10 +44,7 @@ export async function tickScheduler(
   if (dependencyError) throw new Error(dependencyError.message);
 
   const allSchedules = schedules ?? [];
-  const allowedKeys = options.onlyKeys ? new Set(options.onlyKeys) : null;
-  const selectedSchedules = allowedKeys
-    ? allSchedules.filter((schedule) => allowedKeys.has(schedule.key))
-    : allSchedules;
+  const selectedSchedules = allSchedules.filter((schedule) => allowedKeys.has(schedule.key));
   const byId = new Map(allSchedules.map((schedule) => [schedule.id, schedule]));
   const result: TickResult = { claimed: 0, blocked: 0, ran: [] };
 

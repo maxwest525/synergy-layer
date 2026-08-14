@@ -2,7 +2,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireTenantId } from "./tenant.server";
 
 import type { Database } from "@/integrations/supabase/types";
-import { fileInboxItem, logActivity } from "./os.server";
+import { logActivity } from "./os.server";
+import { observationRecommendationRecord } from "./observation-record";
 import { SearchConsoleFailure, checksum, shiftDate, type QueryRow } from "./search-console.server";
 
 type Client = SupabaseClient<Database>;
@@ -202,7 +203,7 @@ export async function evaluateSnapshots(
     if (!recommendationId) {
       const { data: inserted, error: insertError } = await client
         .from("recommendations")
-        .insert({
+        .insert(observationRecommendationRecord({
           tenant_id: await requireTenantId(client),
           title: observation.title,
           description: observation.description,
@@ -218,24 +219,14 @@ export async function evaluateSnapshots(
           requires_approval: true,
           state: "proposed",
           issue_fingerprint: issueFingerprint,
-          metadata: { property, rule: observation.rule, observationOnly: true } as never,
-        })
+          metadata: { property, rule: observation.rule } as never,
+        }))
         .select("id")
         .single();
       if (insertError) throw new SearchConsoleFailure("persistence", insertError.message);
       recommendationId = inserted.id;
       created += 1;
 
-      await fileInboxItem(client, {
-        lane: "pending_approval",
-        sourceModule: "search-console",
-        title: observation.title,
-        summary: observation.description,
-        priority: observation.businessImpact === "high" ? 2 : 3,
-        subjectKind: "recommendation",
-        subjectId: recommendationId,
-        actions: [{ kind: "approve" }, { kind: "open" }],
-      });
     }
 
     const { error: observationError } = await client.from("search_console_observations").upsert(

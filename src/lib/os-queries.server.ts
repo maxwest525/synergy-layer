@@ -1,3 +1,4 @@
+import { isActionCenterItem } from "./action-center";
 import { rows, unwrap } from "./os.server";
 import { createRequestClient, resolveTenantId } from "./tenant.server";
 
@@ -52,13 +53,15 @@ export async function fetchInbox() {
         );
   const changeRequestsById = new Map(changeRequests.map((change) => [change.id, change]));
 
-  return inbox.map((item) => ({
-    ...item,
-    changeRequest:
-      item.subject_kind === "change_request" && item.subject_id
-        ? (changeRequestsById.get(item.subject_id) ?? null)
-        : null,
-  }));
+  return inbox
+    .map((item) => ({
+      ...item,
+      changeRequest:
+        item.subject_kind === "change_request" && item.subject_id
+          ? (changeRequestsById.get(item.subject_id) ?? null)
+          : null,
+    }))
+    .filter(isActionCenterItem);
 }
 
 export async function fetchActivity(limit = 40) {
