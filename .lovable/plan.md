@@ -1,47 +1,60 @@
-# Make navigation between workspaces fast
+# Post-migration cleanup and verification pass
 
-## What I measured
+The two migrations landed cleanly, but the repo is not back to green and several
+capabilities are still unproven. Here is what I would check next, in priority order.
 
-Every workspace page currently costs a full server round trip before anything renders. Timing the running app:
+## 1. Type errors are still open (59 of them)
 
-```text
-/                1899 ms
-/command-center  1657 ms
-/assets          1450 ms
-/agents          1479 ms
-/workflows       1544 ms
-```
+Confirmed by a typecheck just now. They are concentrated in the files that touch
+the new change-measurement engine and the measurement views:
 
-Confirmed causes, from reading the code and the live network traffic:
+- 36 `TS4111` index-signature access errors (`src/routes/changes.$id.tsx`,
+  `src/lib/title-h1-proposals.server.ts`, tests)
+- 12 `TS18046` "data is of type unknown" in `src/routes/measurement.tsx`
+- 3 implicit `any` parameters, plus a handful of assignment/narrowing errors
+  including a `risk` field typed as `string` where the database expects the
+  enum values `none | low | medium | high | critical`
 
-1. **Every route blocks on its loader.** Each route does `ensureQueryData(...)` in the loader, so clicking a nav link shows the old page frozen until the server answers. Nothing renders early, and there is no pending UI.
-2. **No preloading.** `src/router.tsx` sets `defaultPreloadStaleTime: 0` but never sets `defaultPreload`, so hovering a link fetches nothing ahead of time.
-3. **Nothing is cached between visits.** No `staleTime` anywhere, so going Inbox to Assets and back re-runs the identical server call every time.
-4. **Each server call pays a tenant tax before it queries anything.** Every read builds a fresh backend client, then runs up to three extra sequential lookups (`profiles`, `tenant_members`, `tenants`) just to work out which client workspace applies. That is 1 to 3 extra round trips in front of the real query, on every single request. The existing cache is keyed to the throwaway client, so it never survives a request.
-5. **The Command Center fires 20+ separate count queries** in `fetchOverview`, which is why it is the heaviest page.
-6. **A hydration mismatch on the Agents route** forces React to throw away the server-rendered tree and re-render the whole page on the client, which reads as a visible stall.
+These are real: the generated database types were never regenerated after the
+new RPCs and tables landed, so the client-side calls fall back to `unknown`.
 
-## What I will change
+Fix: regenerate the database types first, then work through the remaining
+errors file by file. Nothing here changes behavior, only typing and property
+access syntax.
 
-**Routing and caching (biggest win, no backend changes)**
-- Set `defaultPreload: "intent"` with a short delay in `src/router.tsx`, and give queries a sane `staleTime` (about 30 seconds) plus a longer `gcTime` so revisits are instant and refresh in the background.
-- Stop loaders from blocking: kick off the fetch in the loader without awaiting it, and let each page's suspense query render with a lightweight skeleton. Pages become interactive immediately instead of freezing on the old screen.
-- Add a small pending component so a slow page shows structure rather than nothing.
+## 2. The change-measurement engine has never actually run
 
-**Cut the per-request tenant tax**
-- Cache the resolved tenant per request (and briefly per operator token) instead of per throwaway client, so the `profiles` / `tenant_members` / `tenants` lookups run once rather than in front of every read.
-- Reuse a single backend client per request instead of constructing a new one for each call.
+The tables, triggers, and the two service-role RPCs now exist, but no cycle,
+window, observation, or revision row has ever been written. Existing means
+working only after a real cycle is opened from a real approved change and a
+Search Console observation is appended through the RPC.
 
-**Command Center**
-- Collapse the 20+ sequential count queries into a single grouped read so the heaviest page stops being a fan-out of round trips.
+Fix: open one measurement cycle against an existing approved change request,
+append one genuine Search Console observation, and confirm the immutability
+triggers reject a second write to the same window.
 
-**Correctness fix that shows up as slowness**
-- Fix the Agents route hydration mismatch so the page is not re-rendered from scratch after load.
+## 3. Capabilities still blocked, unchanged
 
-## Out of scope
+Worth restating so none of these is mistaken for working:
 
-No schema changes, no new tables, no visual redesign, no change to what any page shows. Purely load behavior.
+- GA4: registry now describes the tenant binding correctly, but there is still
+  no server credential, so zero snapshots. Configured, not connected.
+- PageSpeed: still zero successful snapshots, three real quota failures.
+- GitHub executor: `GITHUB_EXECUTOR_TOKEN` still absent, so the execution loop
+  cannot leave preflight.
 
-## Verification
+## 4. Smaller items
 
-Re-run the same page timings after the change and report before/after numbers, and confirm in the browser that a second visit to a workspace renders instantly from cache and that the Agents hydration error is gone.
+- Every `createServerFn().inputValidator()` call logs a deprecation warning on
+  each SSR pass. Renaming to `.validator()` is mechanical and quiets the log.
+- Nine pre-existing SECURITY DEFINER linter warnings on older functions should
+  be reviewed once, then either fixed or explicitly recorded as accepted.
+
+## Suggested order
+
+1. Regenerate types, clear the 59 type errors, confirm lint, tests, and build pass.
+2. Prove the change-measurement engine with one real cycle.
+3. Decide which blocked capability to unblock next (GA4 credential, PageSpeed
+   quota, or GitHub token) and do only that one.
+
+Tell me which of these to start with, or approve the order above.
