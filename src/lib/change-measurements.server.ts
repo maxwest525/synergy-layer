@@ -54,7 +54,7 @@ function evidenceGroup(
   evidence: unknown,
   source: string,
 ): Record<string, unknown> | null {
-  return asRecords(evidence).find((row) => row.source === source) ?? null;
+  return asRecords(evidence).find((row) => row['source'] === source) ?? null;
 }
 
 async function captureApprovalContext(
@@ -76,14 +76,14 @@ async function captureApprovalContext(
     },
   });
   const organic = evidenceGroup(change.evidence, "dataforseo_competitors");
-  const organicRows = asRecords(organic?.rows);
+  const organicRows = asRecords(organic?.['rows']);
   await append(admin, {
     cycleId: cycle.id,
     windowId: window.id,
     provider: "dataforseo_organic",
     status: organicRows.length ? "complete" : "empty",
     payload: { rows: organicRows },
-    refs: organicRows.map((row) => row.snapshotId).filter(Boolean),
+    refs: organicRows.map((row) => row['snapshotId']).filter(Boolean),
     provenance: {
       capturedFrom: "approved_proposal_evidence",
       role: "enrichment",
@@ -96,11 +96,11 @@ async function captureApprovalContext(
     !Array.isArray(change.generation_context)
       ? (change.generation_context as Record<string, unknown>)
       : {};
-  const knowledgeIds = Array.isArray(context.guidanceEntryIds)
-    ? context.guidanceEntryIds
+  const knowledgeIds = Array.isArray(context['guidanceEntryIds'])
+    ? context['guidanceEntryIds']
     : [];
-  const knowledgeRefs = Array.isArray(context.guidanceSourceRefs)
-    ? context.guidanceSourceRefs
+  const knowledgeRefs = Array.isArray(context['guidanceSourceRefs'])
+    ? context['guidanceSourceRefs']
     : [];
   await append(admin, {
     cycleId: cycle.id,
@@ -403,7 +403,8 @@ export async function recordRenderedLiveAnchor(
     "append_change_measurement_revision",
     {
       _cycle_id: cycle.id,
-      _window_id: null,
+      // The SQL parameter is nullable; the generated Args type is not.
+      _window_id: null as unknown as string,
       _actor_id: actorId,
       _kind: "live_anchor",
       _summary:
