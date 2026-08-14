@@ -594,6 +594,11 @@ function InboxPage() {
         eyebrow="Operational center"
         title="Action Center"
         description={`${open} open actions across every workspace. Each card shows what is being requested and the decisions you can take now.`}
+        actions={
+          <Button asChild>
+            <Link to="/changes/new">New title/H1 proposal</Link>
+          </Button>
+        }
       />
 
       <div className="space-y-6">

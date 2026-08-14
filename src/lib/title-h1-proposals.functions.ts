@@ -19,11 +19,38 @@ const editInput = z.object({
 type RpcResult = { data: unknown; error: { message: string } | null };
 type ServiceRpc = { rpc(name: string, args: Record<string, unknown>): Promise<RpcResult> };
 
-async function serviceRpc(name: string, args: Record<string, unknown>) {
+export type TitleH1ProposalMutationResult = {
+  changeRequest: { id: string };
+  changed: boolean;
+  versionNumber: number | null;
+};
+
+async function serviceRpc(
+  name: string,
+  args: Record<string, unknown>,
+): Promise<TitleH1ProposalMutationResult> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const result = await (supabaseAdmin as unknown as ServiceRpc).rpc(name, args);
   if (result.error) throw new Error(result.error.message);
-  return result.data;
+  const payload =
+    result.data && typeof result.data === "object" && !Array.isArray(result.data)
+      ? (result.data as Record<string, unknown>)
+      : {};
+  const change =
+    payload["change_request"] &&
+    typeof payload["change_request"] === "object" &&
+    !Array.isArray(payload["change_request"])
+      ? (payload["change_request"] as Record<string, unknown>)
+      : {};
+  if (typeof change["id"] !== "string") {
+    throw new Error("The proposal mutation completed without a readable proposal id.");
+  }
+  return {
+    changeRequest: { id: change["id"] },
+    changed: payload["changed"] === true,
+    versionNumber:
+      typeof payload["version_number"] === "number" ? payload["version_number"] : null,
+  };
 }
 
 function liveEvidence(evidence: unknown): { title: string; h1: string } {
