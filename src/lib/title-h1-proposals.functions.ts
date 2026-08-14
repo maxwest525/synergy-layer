@@ -8,6 +8,7 @@ const id = z.string().uuid();
 const createInput = z.object({
   targetUrl: z.string().url().max(500),
   idempotencyKey: z.string().uuid(),
+  mode: z.enum(["gemini", "deterministic_dev"]).default("gemini"),
 });
 const editInput = z.object({
   id,
@@ -76,7 +77,9 @@ export const generateTitleH1Proposal = createServerFn({ method: "POST" })
     const { prepareTitleH1Proposal } = await import("./title-h1-proposals.server");
     await assertOperator(context.supabase, context.userId);
     const tenantId = await requireTenantId(context.supabase);
-    const proposal = await prepareTitleH1Proposal(context.supabase, tenantId, data.targetUrl);
+    const proposal = await prepareTitleH1Proposal(context.supabase, tenantId, data.targetUrl, {
+      wordingMode: data.mode,
+    });
     return serviceRpc("create_title_h1_proposal", {
       _tenant_id: tenantId,
       _actor: context.userId,

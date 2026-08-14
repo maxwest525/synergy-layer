@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   assertCompleteEvidence,
   assertSameCanonicalProposalPage,
+  buildDeterministicDevWording,
   buildProposalEvidenceGroups,
   buildTitleH1Prompt,
   selectRelevantCompetitorEvidence,
@@ -158,6 +159,18 @@ describe("title/H1 proposal evidence contract", () => {
     expect(buildTitleH1Prompt(complete, [])).toContain(
       "DEVIL'S ADVOCATE WRITING GUIDANCE (not empirical evidence; may be empty):\n[]",
     );
+  });
+
+  it("builds an evidence-backed deterministic dev draft without weakening gates", () => {
+    const wording = buildDeterministicDevWording(complete);
+
+    expect(wording).toEqual({
+      seoTitle: "Employee Relocation Movers | Corporate Relocation | TruMove",
+      h1: "Employee Relocation Movers & Corporate Relocation Services",
+      rationale: expect.stringMatching(/development-mode[\s\S]*evidence[\s\S]*approval/i),
+    });
+    expect(wording.seoTitle).not.toBe(complete.livePage.title);
+    expect(wording.h1).not.toBe(complete.livePage.h1);
   });
 
   it("builds a wording-only prompt with explicit roles and optional-source absence", () => {
