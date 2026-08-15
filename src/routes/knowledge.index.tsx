@@ -1,6 +1,7 @@
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
+import { toast } from "sonner";
 
 import {
   EmptyState,
@@ -11,7 +12,10 @@ import {
 } from "@/components/os/primitives";
 import { getKnowledge } from "@/lib/os.functions";
 import { Button } from "@/components/ui/button";
-import { getGovernedKnowledge } from "@/lib/knowledge/functions";
+import {
+  getGovernedKnowledge,
+  ingestAndActivateGovernedKnowledge,
+} from "@/lib/knowledge/functions";
 
 const knowledgeQuery = { queryKey: ["knowledge"], queryFn: () => getKnowledge() };
 
@@ -46,6 +50,8 @@ export const Route = createFileRoute("/knowledge/")({
 function KnowledgePage() {
   const { data } = useSuspenseQuery(knowledgeQuery);
   const loadGoverned = useServerFn(getGovernedKnowledge);
+  const ingestGoverned = useServerFn(ingestAndActivateGovernedKnowledge);
+  const queryClient = useQueryClient();
   const governed = useSuspenseQuery({
     queryKey: ["governed-knowledge"],
     queryFn: () => loadGoverned(),
@@ -56,6 +62,16 @@ function KnowledgePage() {
   const activeChunks = governed.data.chunks.filter((chunk) =>
     activeVersionIds.has(chunk.source_version_id),
   );
+  const ingestion = useMutation({
+    mutationFn: () => ingestGoverned({ data: { approvedModelRequests: 18 } }),
+    onSuccess: async (result) => {
+      await queryClient.invalidateQueries({ queryKey: ["governed-knowledge"] });
+      toast.success(
+        `Activated ${result.sourceCount} sources and ${result.embeddedChunkCount} embedded chunks.`,
+      );
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
 
   return (
     <div className="space-y-8">
@@ -84,6 +100,24 @@ function KnowledgePage() {
             tone={activeChunks.length ? "success" : "warning"}
           />
         </div>
+        {!activeChunks.length ? (
+          <div className="mt-4 rounded-xl border border-border/60 p-3">
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              This operator action makes at most 18 Gemini embedding requests, then stores and
+              activates the immutable source versions. It does not run automatically or in the
+              background.
+            </p>
+            <Button
+              className="mt-3"
+              disabled={ingestion.isPending}
+              onClick={() => ingestion.mutate()}
+            >
+              {ingestion.isPending
+                ? "Embedding and activating…"
+                : "Ingest and activate · maximum 18 requests"}
+            </Button>
+          </div>
+        ) : null}
         <div className="mt-4 grid gap-3 sm:grid-cols-3">
           <div className="rounded-xl border border-border/60 p-3">
             <p className="text-xs text-muted-foreground">Governed sources</p>
