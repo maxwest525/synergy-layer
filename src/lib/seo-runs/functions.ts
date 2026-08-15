@@ -44,7 +44,7 @@ export const getSeoRuns = createServerFn({ method: "GET" })
     const tenantId = await requireTenantId(context.supabase);
     const { data, error } = await context.supabase
       .from("seo_runs")
-      .select("*")
+      .select("id,target_url,query_class,created_at,state,change_request_id")
       .eq("tenant_id", tenantId)
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
