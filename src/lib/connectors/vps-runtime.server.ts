@@ -16,7 +16,8 @@ function publicUrl(raw: string): string {
   if (
     /^(localhost|127\.|0\.|10\.|192\.168\.|169\.254\.|172\.(1[6-9]|2\d|3[01])\.|::1$)/i.test(
       url.hostname,
-    ) || url.hostname.toLowerCase().endsWith(".local")
+    ) ||
+    url.hostname.toLowerCase().endsWith(".local")
   ) {
     throw new Error("Private or loopback crawl targets are not allowed.");
   }
