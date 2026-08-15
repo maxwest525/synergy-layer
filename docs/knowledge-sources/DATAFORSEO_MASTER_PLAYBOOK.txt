@@ -195,4 +195,3 @@ Snapshot generated: 2026-08-13T20:42:50.379Z.
 Every production decision receipt must store: DataForSEO endpoint and API version; sanitized request body; response/task ID or immutable response snapshot; collection timestamp; market/language/device/engine/surface; page and query cohort; candidate set; scoring weights and thresholds; model/code version; selected Y; local Z and MDE; implementation re-crawl; first-party outcome window; control/comparison method; confidence interval or posterior; guardrail result; reviewer; and next review trigger.
 
 This playbook is a hosted snapshot, not a live DataForSEO connection.
-

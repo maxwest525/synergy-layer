@@ -3326,5 +3326,3 @@ SERPs vary by place, device, language, personalization and time.
 Controlled SEO tests require sufficient comparable pages and stable pre-trends; otherwise conclusions remain probabilistic.
 Strong psychology cannot rescue a false promise, irrelevant page or broken product.
 No compliant method guarantees crawling, indexing, ranking, rich results, AI citation or traffic.
-
-
