@@ -141,12 +141,18 @@ function redactedEndpoint(rawUrl: string): string {
 }
 
 async function readBoundedResponseBody(response: Response): Promise<string | null> {
+  const body = response.body;
   const declaredLength = response.headers.get("content-length");
   if (declaredLength && Number(declaredLength) > DATAFORSEO_MAX_PROBE_BODY_BYTES) {
+    try {
+      await body?.cancel();
+    } catch {
+      // Cancellation is best-effort and must not change the probe result.
+    }
     return null;
   }
 
-  const reader = response.body?.getReader();
+  const reader = body?.getReader();
   if (!reader) return null;
 
   const chunks: Uint8Array[] = [];
@@ -156,7 +162,14 @@ async function readBoundedResponseBody(response: Response): Promise<string | nul
       const { done, value } = await reader.read();
       if (done) break;
       totalBytes += value.byteLength;
-      if (totalBytes > DATAFORSEO_MAX_PROBE_BODY_BYTES) return null;
+      if (totalBytes > DATAFORSEO_MAX_PROBE_BODY_BYTES) {
+        try {
+          await reader.cancel();
+        } catch {
+          // Cancellation is best-effort and must not change the probe result.
+        }
+        return null;
+      }
       chunks.push(value);
     }
   } finally {
@@ -264,7 +277,7 @@ export async function probeConnector(
       signal: controller.signal,
     });
     const schemaValid =
-      key !== "dataforseo" || !response.ok || (await hasDataForSeoSuccessEnvelope(response));
+      key !== "dataforseo" || response.status !== 200 || (await hasDataForSeoSuccessEnvelope(response));
     return {
       key,
       health: response.ok ? (schemaValid ? "healthy" : "degraded") : "failing",

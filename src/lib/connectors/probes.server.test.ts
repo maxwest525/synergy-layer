@@ -45,6 +45,56 @@ describe("connector probes", () => {
     expect(result).toMatchObject({ health: "degraded", outcome: "schema_error" });
   });
 
+  it("keeps a DataForSEO HTTP 201 status-only", async () => {
+    const result = await probeConnector("dataforseo", {
+      env: dataForSeoEnv,
+      fetcher: async () => new Response("not-json", { status: 201 }),
+    });
+
+    expect(result).toMatchObject({
+      health: "healthy",
+      outcome: "success",
+      proof: { statusCode: 201 },
+    });
+  });
+
+  it("cancels an oversized streamed DataForSEO body without exposing it", async () => {
+    const cancel = vi.fn();
+    const oversizedBody = `provider-body-${"x".repeat(32 * 1024)}`;
+    const response = new Response(
+      new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(new TextEncoder().encode(oversizedBody));
+        },
+        cancel,
+      }),
+      { status: 200 },
+    );
+    const result = await probeConnector("dataforseo", {
+      env: dataForSeoEnv,
+      fetcher: async () => response,
+    });
+
+    expect(result).toMatchObject({ health: "degraded", outcome: "schema_error" });
+    expect(JSON.stringify(result)).not.toContain("provider-body-");
+    expect(cancel).toHaveBeenCalledTimes(1);
+  });
+
+  it("cancels a DataForSEO body whose declared length exceeds the cap", async () => {
+    const cancel = vi.fn();
+    const response = new Response(new ReadableStream<Uint8Array>({ cancel }), {
+      status: 200,
+      headers: { "content-length": "32769" },
+    });
+    const result = await probeConnector("dataforseo", {
+      env: dataForSeoEnv,
+      fetcher: async () => response,
+    });
+
+    expect(result).toMatchObject({ health: "degraded", outcome: "schema_error" });
+    expect(cancel).toHaveBeenCalledTimes(1);
+  });
+
   it.each([
     [{ status_code: 40000, status_message: "Error", tasks: [] }],
     [{ status_code: 20000, status_message: "Ok.", tasks: [{ status_code: 40000 }] }],
