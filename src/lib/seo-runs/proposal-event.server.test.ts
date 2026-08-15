@@ -2,7 +2,9 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   reconcileSeoRunProposalEvent,
+  repairFailedSeoRunProposalEvent,
   type ProposalEventAdminClient,
+  type ProposalRepairAdminClient,
   type LinkedSeoRun,
 } from "./proposal-event.server";
 
@@ -86,5 +88,51 @@ describe("SEO proposal event recovery", () => {
     ).rejects.toThrow("timeline unavailable");
 
     expect(upsert).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("failed SEO proposal timeline repair", () => {
+  function createRepairAdmin() {
+    const upsert = vi.fn().mockResolvedValue({ error: null });
+    const eqId = vi.fn().mockResolvedValue({ error: null });
+    const eqTenant = vi.fn().mockReturnValue({ eq: eqId });
+    const update = vi.fn().mockReturnValue({ eq: eqTenant });
+    const admin: ProposalRepairAdminClient = {
+      from(table) {
+        return table === "seo_run_events" ? { upsert } : { update };
+      },
+    };
+    return { admin, upsert, update, eqTenant, eqId };
+  }
+
+  it("repairs the durable failed-and-linked run after reload without provider dependencies", async () => {
+    const { admin, upsert, update, eqTenant, eqId } = createRepairAdmin();
+
+    await repairFailedSeoRunProposalEvent({
+      run: { ...linkedRun, state: "failed" },
+      tenantId: "tenant-789",
+      actorId: "actor-012",
+      admin,
+    });
+
+    expect(upsert).toHaveBeenCalledTimes(1);
+    expect(update).toHaveBeenCalledWith({ state: "awaiting_approval", failure_reason: null });
+    expect(eqTenant).toHaveBeenCalledWith("tenant_id", "tenant-789");
+    expect(eqId).toHaveBeenCalledWith("id", "run-123");
+  });
+
+  it("refuses repair unless the reloaded run is failed and linked", async () => {
+    const { admin, upsert } = createRepairAdmin();
+
+    await expect(
+      repairFailedSeoRunProposalEvent({
+        run: { ...linkedRun, state: "awaiting_approval" },
+        tenantId: "tenant-789",
+        actorId: "actor-012",
+        admin,
+      }),
+    ).rejects.toThrow("Only a failed SEO run with a linked proposal can repair its timeline.");
+
+    expect(upsert).not.toHaveBeenCalled();
   });
 });

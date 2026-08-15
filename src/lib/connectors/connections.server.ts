@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import { createRequestClient, resolveTenantId } from "../tenant.server";
 import { CONNECTOR_CATALOG, describeConnectorReadiness, type ConnectorReadiness } from "./catalog";
+import { projectCurrentConnectorReadiness } from "./current-readiness";
 import { probeConnector, type ConnectorProbeResult } from "./probes.server";
 
 type Client = SupabaseClient<Database>;
@@ -53,23 +54,13 @@ export async function fetchConnectorReadiness() {
   const tenantId = authenticated ? await resolveTenantId(db) : null;
   if (!tenantId) return { connections: [], configuredCount: 0, healthyCount: 0 };
 
-  const readiness = describeConnectorReadiness(process.env);
   const { data, error } = await db
     .from("tenant_connections")
     .select("*")
     .eq("tenant_id", tenantId)
     .order("capability_key");
   if (error) throw new Error(error.message);
-  const persisted = new Map((data ?? []).map((row) => [row.capability_key, row]));
-  const connections = readiness.map((item) => {
-    const persistedConnection = persisted.get(item.key) ?? null;
-    const configured = item.state === "configured";
-    return {
-      ...item,
-      health: configured ? (persistedConnection?.health ?? "unknown") : "unknown",
-      persisted: configured ? persistedConnection : null,
-    };
-  });
+  const connections = projectCurrentConnectorReadiness(data ?? [], process.env);
   return {
     connections,
     configuredCount: connections.filter((item) => item.state === "configured").length,

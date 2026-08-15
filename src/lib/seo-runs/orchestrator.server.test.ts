@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { assessSeoPreflight } from "./orchestrator.server";
+import { assessSeoPreflight, buildCurrentSeoConnectorSnapshot } from "./orchestrator.server";
 import {
   deriveSeoRunSourceExecutionState,
   deriveSeoRunState,
@@ -30,6 +30,39 @@ describe("SEO run preflight", () => {
       unhealthyConnectors: [],
       missingEvidence: [],
     });
+  });
+
+  it("blocks stale healthy proof when required current configuration was removed", () => {
+    const persisted = SEO_REQUIRED_CONNECTORS.map((capabilityKey) => ({
+      capability_key: capabilityKey,
+      config: { probe_outcome: "success" },
+      health: "healthy",
+      integration_state: "real",
+    }));
+    const currentEnv = {
+      SUPABASE_URL: "https://project.supabase.co",
+      SUPABASE_SERVICE_ROLE_KEY: "service-role",
+      LOVABLE_API_KEY: "gsc-key",
+      DATAFORSEO_BASIC_TOKEN: "",
+      FIRECRAWL_API_KEY: "firecrawl-key",
+      GEMINI_API_KEY: "gemini-key",
+      GITHUB_EXECUTOR_TOKEN: "github-key",
+    };
+
+    const snapshot = buildCurrentSeoConnectorSnapshot(persisted, currentEnv);
+    const result = assessSeoPreflight(snapshot, {
+      searchConsoleRows: 7,
+      dataForSeoSnapshots: 56,
+    });
+
+    expect(snapshot.find((row) => row.capabilityKey === "dataforseo")).toEqual({
+      capabilityKey: "dataforseo",
+      integrationState: "pending",
+      health: "unknown",
+      probeOutcome: null,
+    });
+    expect(result.missingConnectors).toContain("dataforseo");
+    expect(result.ready).toBe(false);
   });
 });
 

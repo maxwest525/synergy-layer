@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { isSeoRunEligibleForPreparation } from "./eligibility";
+import {
+  isSeoRunEligibleForPreparation,
+  isSeoRunEligibleForProposalEventRepair,
+} from "./eligibility";
 
 describe("SEO run preparation eligibility", () => {
   it("accepts the server row shape while keeping unknown states ineligible", () => {
@@ -33,5 +36,16 @@ describe("SEO run preparation eligibility", () => {
     ["rolled-back run", "rolled_back", null, false],
   ] as const)("marks %s as preparable: %s", (_name, state, change_request_id, expected) => {
     expect(isSeoRunEligibleForPreparation({ state, change_request_id })).toBe(expected);
+  });
+});
+
+describe("SEO run proposal-event repair eligibility", () => {
+  it.each([
+    ["failed linked run", "failed", "change-1", true],
+    ["failed unlinked run", "failed", null, false],
+    ["awaiting approval linked run", "awaiting_approval", "change-1", false],
+    ["unknown linked run", "unexpected_state", "change-1", false],
+  ] as const)("marks %s as repairable: %s", (_name, state, change_request_id, expected) => {
+    expect(isSeoRunEligibleForProposalEventRepair({ state, change_request_id })).toBe(expected);
   });
 });

@@ -43,6 +43,25 @@ export type LinkedSeoRun = {
   updated_at: string;
 };
 
+type FailedLinkedSeoRun = LinkedSeoRun & { state: string };
+
+export type ProposalRepairAdminClient = {
+  from(table: "seo_run_events" | "seo_runs"): {
+    upsert?: (
+      event: ProposalEventInsert,
+      options: ProposalEventUpsertOptions,
+    ) => PromiseLike<ProposalEventWriteResult>;
+    update?: (values: { state: "awaiting_approval"; failure_reason: null }) => {
+      eq(
+        column: "tenant_id",
+        value: string,
+      ): {
+        eq(column: "id", value: string): PromiseLike<ProposalEventWriteResult>;
+      };
+    };
+  };
+};
+
 type ReconcileSeoRunProposalEventInput = {
   run: LinkedSeoRun;
   tenantId: string;
@@ -73,5 +92,34 @@ export async function reconcileSeoRunProposalEvent({
     },
     { onConflict: "tenant_id,run_id,event_key", ignoreDuplicates: true },
   );
+  if (error) throw new Error(error.message);
+}
+
+export async function repairFailedSeoRunProposalEvent({
+  run,
+  tenantId,
+  actorId,
+  admin,
+}: {
+  run: FailedLinkedSeoRun;
+  tenantId: string;
+  actorId: string;
+  admin: ProposalRepairAdminClient;
+}): Promise<void> {
+  if (run.state !== "failed" || !run.change_request_id) {
+    throw new Error("Only a failed SEO run with a linked proposal can repair its timeline.");
+  }
+  await reconcileSeoRunProposalEvent({
+    run,
+    tenantId,
+    actorId,
+    admin: admin as ProposalEventAdminClient,
+  });
+  const { error } = await admin.from("seo_runs").update!({
+    state: "awaiting_approval",
+    failure_reason: null,
+  })
+    .eq("tenant_id", tenantId)
+    .eq("id", run.id);
   if (error) throw new Error(error.message);
 }

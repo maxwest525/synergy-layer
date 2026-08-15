@@ -7,6 +7,10 @@ import { requireProposalTarget } from "../title-h1-proposals";
 import { canonicalSeoRunTarget, maxSeoRunBatchSize } from "./batch";
 import { describeSeoRunFailure } from "./failure";
 import { reconcileSeoRunProposalEvent, SEO_PROPOSAL_EVENT_SUMMARY } from "./proposal-event.server";
+import {
+  repairFailedSeoRunProposalEvent,
+  type ProposalRepairAdminClient,
+} from "./proposal-event.server";
 
 const createInput = z.object({
   targetUrl: z.string().url().max(500),
@@ -205,7 +209,8 @@ export const evaluateSeoRun = createServerFn({ method: "POST" })
       return run;
     }
 
-    const { assessSeoPreflight } = await import("./orchestrator.server");
+    const { assessSeoPreflight, buildCurrentSeoConnectorSnapshot } =
+      await import("./orchestrator.server");
     const { evaluateAuthorityForTarget } = await import("../authority/evaluate.server");
     const { prepareTitleH1Proposal } = await import("../title-h1-proposals.server");
     const { serviceRpc } = await import("../title-h1-proposals.functions");
@@ -224,18 +229,10 @@ export const evaluateSeoRun = createServerFn({ method: "POST" })
     if (connectionsResult.error) throw new Error(connectionsResult.error.message);
     if (gscResult.error) throw new Error(gscResult.error.message);
     if (dfsResult.error) throw new Error(dfsResult.error.message);
-    const connectorSnapshot = (connectionsResult.data ?? []).map((row) => {
-      const config =
-        row.config && typeof row.config === "object" && !Array.isArray(row.config)
-          ? (row.config as Record<string, unknown>)
-          : {};
-      return {
-        capabilityKey: row.capability_key,
-        integrationState: row.integration_state,
-        health: row.health,
-        probeOutcome: typeof config["probe_outcome"] === "string" ? config["probe_outcome"] : null,
-      };
-    });
+    const connectorSnapshot = buildCurrentSeoConnectorSnapshot(
+      connectionsResult.data ?? [],
+      process.env,
+    );
     const evidenceSnapshot = {
       searchConsoleRows: gscResult.count ?? 0,
       dataForSeoSnapshots: dfsResult.count ?? 0,
@@ -361,4 +358,32 @@ export const evaluateSeoRun = createServerFn({ method: "POST" })
       if (eventError) throw new Error(eventError.message);
       throw new Error(failureReason);
     }
+  });
+
+export const repairSeoRunProposalEvent = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((value: unknown) => runInput.parse(value))
+  .handler(async ({ data, context }) => {
+    const { assertOperator } = await import("../os-admin.server");
+    const { requireTenantId } = await import("../tenant.server");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await assertOperator(context.supabase, context.userId);
+    const tenantId = await requireTenantId(context.supabase);
+    const { data: run, error } = await supabaseAdmin
+      .from("seo_runs")
+      .select("*")
+      .eq("tenant_id", tenantId)
+      .eq("id", data.id)
+      .single();
+    if (error) throw new Error(error.message);
+    if (!run.change_request_id) {
+      throw new Error("Only a failed SEO run with a linked proposal can repair its timeline.");
+    }
+    await repairFailedSeoRunProposalEvent({
+      run: { ...run, change_request_id: run.change_request_id },
+      tenantId,
+      actorId: context.userId,
+      admin: supabaseAdmin as unknown as ProposalRepairAdminClient,
+    });
+    return { ...run, state: "awaiting_approval" as const, failure_reason: null };
   });
