@@ -1,6 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import type { Database } from "@/integrations/supabase/types";
+import { assertRead, summarizeSitemaps } from "./essentials";
 import type { PageSpeedFacts, SitemapSummary, SystemFacts } from "./essentials";
 
 export type EssentialsFacts = {
@@ -63,6 +66,54 @@ function num(value: unknown): number {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }
 
+type SearchConsoleSnapshot = Pick<
+  Database["public"]["Tables"]["search_console_snapshots"]["Row"],
+  "id" | "kind" | "dimensions" | "period_end_pt" | "returned_row_count" | "totals" | "collected_at"
+>;
+
+/** Reads snapshot metadata first; the potentially large sitemap payload is read only on demand. */
+export async function readSelectedPropertySnapshots(
+  db: Pick<SupabaseClient<Database>, "from">,
+  tenantId: string,
+  siteUrl: string,
+): Promise<{ snapshots: SearchConsoleSnapshot[]; sitemapPayload: unknown | null }> {
+  const gscSnapshots = assertRead(
+    "Search Console snapshots",
+    await db
+      .from("search_console_snapshots")
+      .select("id, kind, dimensions, period_end_pt, returned_row_count, totals, collected_at")
+      .eq("tenant_id", tenantId)
+      .eq("property", siteUrl)
+      .order("period_end_pt", { ascending: false })
+      .limit(500),
+  );
+  const snapshots = gscSnapshots.data ?? [];
+  const totals = snapshots.filter((row) => row.kind === "property_totals");
+  const latestDate = totals[0]?.period_end_pt ?? snapshots[0]?.period_end_pt ?? null;
+  const latest = snapshots.filter((row) => row.period_end_pt === latestDate);
+  const sitemapRow =
+    latest.find(
+      (row) =>
+        row.kind === "dimensional_rows" &&
+        (row.dimensions ?? []).length === 1 &&
+        (row.dimensions ?? [])[0] === "sitemap",
+    ) ?? null;
+
+  if (!sitemapRow) return { snapshots, sitemapPayload: null };
+
+  const sitemapPayload = assertRead(
+    "Search Console sitemap snapshot",
+    await db
+      .from("search_console_snapshots")
+      .select("payload")
+      .eq("tenant_id", tenantId)
+      .eq("id", sitemapRow.id)
+      .single(),
+  ).data?.payload;
+
+  return { snapshots, sitemapPayload: sitemapPayload ?? null };
+}
+
 /**
  * One tenant-scoped read for the Marketing Essentials screen. Everything is a
  * stored row: no provider is called, nothing is written, and no count is
@@ -72,7 +123,6 @@ export const getEssentials = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<EssentialsFacts> => {
     const { requireTenantId } = await import("./tenant.server");
-    const { assertRead, summarizeSitemaps } = await import("./essentials");
     const tenantId = await requireTenantId(context.supabase);
     const db = context.supabase;
 
@@ -99,16 +149,8 @@ export const getEssentials = createServerFn({ method: "GET" })
       psSnapshots,
     ] = await Promise.all([
       selected
-        ? db
-            .from("search_console_snapshots")
-            .select(
-              "kind, dimensions, period_end_pt, returned_row_count, totals, collected_at, payload",
-            )
-            .eq("tenant_id", tenantId)
-            .eq("property", selected.site_url)
-            .order("period_end_pt", { ascending: false })
-            .limit(500)
-        : Promise.resolve({ data: [], error: null } as const),
+        ? readSelectedPropertySnapshots(db, tenantId, selected.site_url)
+        : Promise.resolve({ snapshots: [], sitemapPayload: null } as const),
       db
         .from("change_requests")
         .select("id, title, target_url, state, proposed_at")
@@ -154,7 +196,6 @@ export const getEssentials = createServerFn({ method: "GET" })
         .eq("tenant_id", tenantId),
     ]);
 
-    assertRead("Search Console snapshots", gscSnapshots);
     assertRead("Change requests", changeRows);
     assertRead("Tracked keywords", trackedKeywords);
     assertRead("Keyword candidates", keywordCandidates);
@@ -163,7 +204,7 @@ export const getEssentials = createServerFn({ method: "GET" })
     assertRead("PageSpeed runs", psRuns);
     assertRead("PageSpeed snapshots", psSnapshots);
 
-    const snapshots = gscSnapshots.data ?? [];
+    const snapshots = gscSnapshots.snapshots;
     const totals = snapshots.filter((row) => row.kind === "property_totals");
     const latestDate = totals[0]?.period_end_pt ?? snapshots[0]?.period_end_pt ?? null;
     const latestTotals = (totals[0]?.totals ?? {}) as Record<string, unknown>;
@@ -173,7 +214,7 @@ export const getEssentials = createServerFn({ method: "GET" })
       (row.dimensions ?? []).length === 1 &&
       (row.dimensions ?? [])[0] === dimension;
     const sitemapRow = latest.find((row) => dimensionMatch(row, "sitemap")) ?? null;
-    const sitemaps = summarizeSitemaps(sitemapRow?.payload ?? null);
+    const sitemaps = summarizeSitemaps(gscSnapshots.sitemapPayload);
 
     const changes = changeRows.data ?? [];
     const proposed = changes.filter((row) => row.state === "proposed");
