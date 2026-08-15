@@ -46,8 +46,20 @@ async function postJson(
       body: JSON.stringify(body),
       signal: controller.signal,
     });
-    if (!response.ok)
-      throw new Error(`Gemini embedding request failed with HTTP ${response.status}.`);
+    if (!response.ok) {
+      let detail = "";
+      try {
+        const payload = (await response.json()) as { error?: { message?: unknown } };
+        if (typeof payload.error?.message === "string") {
+          detail = payload.error.message.replace(/\s+/g, " ").trim().slice(0, 500);
+        }
+      } catch {
+        // Preserve the HTTP status when Google returns a non-JSON error body.
+      }
+      throw new Error(
+        `Gemini embedding request failed with HTTP ${response.status}${detail ? `: ${detail}` : "."}`,
+      );
+    }
     return response.json();
   } finally {
     clearTimeout(timeout);

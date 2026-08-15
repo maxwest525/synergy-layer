@@ -62,4 +62,24 @@ describe("Gemini knowledge embeddings", () => {
       "768",
     );
   });
+
+  it("preserves Google's safe quota detail when an embedding request fails", async () => {
+    const fetcher = vi.fn(
+      async (_url: string | URL | Request, _init?: RequestInit) =>
+        new Response(
+          JSON.stringify({
+            error: {
+              code: 429,
+              message: "Quota exceeded for embed_content_paid_tier_requests, limit: 0",
+              status: "RESOURCE_EXHAUSTED",
+            },
+          }),
+          { status: 429 },
+        ),
+    );
+
+    await expect(embedQuery({ apiKey: "secret", query: "authority", fetcher })).rejects.toThrow(
+      "Gemini embedding request failed with HTTP 429: Quota exceeded for embed_content_paid_tier_requests, limit: 0",
+    );
+  });
 });
