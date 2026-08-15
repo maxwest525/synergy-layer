@@ -13,3 +13,21 @@ export function getWorkspaceAccessState({
   if (!ready) return "loading";
   return signedIn ? "ready" : "signed-out";
 }
+
+export function resolveOperatorEmail(
+  loadEmail: () => Promise<string | null>,
+  timeoutMs = 3_000,
+): Promise<string | null> {
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = (email: string | null) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      resolve(email);
+    };
+    const timeout = setTimeout(() => finish(null), timeoutMs);
+
+    void loadEmail().then(finish, () => finish(null));
+  });
+}
