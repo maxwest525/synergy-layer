@@ -2,12 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 
-import {
-  GlassCard,
-  StatePill,
-  formatWhen,
-  toneForState,
-} from "@/components/os/primitives";
+import { GlassCard, StatePill, formatWhen, toneForState } from "@/components/os/primitives";
 import { Button } from "@/components/ui/button";
 import {
   getSearchConsoleState,
@@ -41,9 +36,7 @@ export function SearchConsolePanel() {
   const refresh = useMutation({
     mutationFn: () => listProperties({ data: undefined }),
     onSuccess: (result) => {
-      toast.success(
-        `Google reports ${result.properties.length} accessible properties.`,
-      );
+      toast.success(`Google reports ${result.properties.length} accessible properties.`);
       invalidate();
     },
     onError: (error: Error) => toast.error(error.message),
@@ -85,13 +78,10 @@ export function SearchConsolePanel() {
       <GlassCard className="p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h2 className="text-sm font-semibold text-foreground">
-              Connection
-            </h2>
+            <h2 className="text-sm font-semibold text-foreground">Connection</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Read only. AOOS can list properties, read finalized performance,
-              and read sitemap status. It cannot change anything in Search
-              Console.
+              Read only. AOOS can list properties, read finalized performance, and read sitemap
+              status. It cannot change anything in Search Console.
             </p>
           </div>
           <div className="flex gap-2">
@@ -128,36 +118,22 @@ export function SearchConsolePanel() {
           </div>
           <div className="rounded-xl border border-border/60 p-3">
             <StatePill
-              label={
-                connection?.authenticated
-                  ? "Google access proven"
-                  : "Access not proven"
-              }
+              label={connection?.authenticated ? "Google access proven" : "Access not proven"}
               tone={connection?.authenticated ? "success" : "warning"}
             />
             <p className="mt-2 text-xs text-muted-foreground">
               Last property check:{" "}
-              {connection?.authenticatedAt
-                ? formatWhen(connection.authenticatedAt)
-                : "never"}
-              .
+              {connection?.authenticatedAt ? formatWhen(connection.authenticatedAt) : "never"}.
             </p>
           </div>
           <div className="rounded-xl border border-border/60 p-3">
             <StatePill
-              label={
-                connection?.readSucceeded
-                  ? "Read succeeded"
-                  : "No successful read"
-              }
+              label={connection?.readSucceeded ? "Read succeeded" : "No successful read"}
               tone={connection?.readSucceeded ? "success" : "warning"}
             />
             <p className="mt-2 text-xs text-muted-foreground">
               Last stored Search Analytics read:{" "}
-              {connection?.readSucceededAt
-                ? formatWhen(connection.readSucceededAt)
-                : "never"}
-              .
+              {connection?.readSucceededAt ? formatWhen(connection.readSucceededAt) : "never"}.
             </p>
           </div>
         </div>
@@ -166,21 +142,17 @@ export function SearchConsolePanel() {
           <div className="mt-3 rounded-xl border border-border/60 px-3 py-2 text-sm">
             <p className="text-foreground">
               Latest attempt: {connection.lastAttemptState}
-              {connection.lastAttemptAt
-                ? ` · ${formatWhen(connection.lastAttemptAt)}`
-                : ""}
+              {connection.lastAttemptAt ? ` · ${formatWhen(connection.lastAttemptAt)}` : ""}
             </p>
             {connection.lastAttemptError ? (
-              <p className="mt-1 text-xs text-destructive">
-                {connection.lastAttemptError}
-              </p>
+              <p className="mt-1 text-xs text-destructive">{connection.lastAttemptError}</p>
             ) : null}
             {connection.lastAttemptState === "failed" &&
             connection.authenticated &&
             connection.readSucceeded ? (
               <p className="mt-1 text-xs text-muted-foreground">
-                A failed transport attempt does not erase the separately proven
-                Google access and successful-read history.
+                A failed transport attempt does not erase the separately proven Google access and
+                successful-read history.
               </p>
             ) : null}
           </div>
@@ -188,10 +160,9 @@ export function SearchConsolePanel() {
 
         {!connection?.configured ? (
           <p className="mt-3 text-xs text-muted-foreground">
-            One-time setup: connect Google Search Console in Lovable so the
-            server receives LOVABLE_API_KEY and GOOGLE_SEARCH_CONSOLE_API_KEY,
-            then use Check access. The Google account must be a user of the
-            selected property.
+            One-time setup: connect Google Search Console in Lovable so the server receives
+            LOVABLE_API_KEY and GOOGLE_SEARCH_CONSOLE_API_KEY, then use Check access. The Google
+            account must be a user of the selected property.
           </p>
         ) : null}
 
@@ -199,24 +170,20 @@ export function SearchConsolePanel() {
           <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
             Selected property
           </p>
-          <p className="text-sm text-foreground">
-            {selected?.site_url ?? "None selected yet."}
-          </p>
+          <p className="text-sm text-foreground">{selected?.site_url ?? "None selected yet."}</p>
         </div>
       </GlassCard>
 
       <GlassCard className="p-5">
-        <h2 className="text-sm font-semibold text-foreground">
-          Accessible properties
-        </h2>
+        <h2 className="text-sm font-semibold text-foreground">Accessible properties</h2>
         {state.isError ? (
           <p className="mt-2 text-sm text-destructive">
             Search Console state could not be loaded. {state.error.message}
           </p>
         ) : properties.length === 0 ? (
           <p className="mt-2 text-sm text-muted-foreground">
-            No properties recorded yet. Run a check to list what the connected
-            Google account can reach.
+            No properties recorded yet. Run a check to list what the connected Google account can
+            reach.
           </p>
         ) : (
           <ul className="mt-3 space-y-3">
@@ -226,14 +193,10 @@ export function SearchConsolePanel() {
                 className="flex flex-wrap items-center justify-between gap-3 border-b border-border/50 pb-3 last:border-b-0 last:pb-0"
               >
                 <div>
-                  <p className="text-sm font-medium text-foreground">
-                    {property.site_url}
-                  </p>
+                  <p className="text-sm font-medium text-foreground">{property.site_url}</p>
                   <p className="text-xs text-muted-foreground">
                     Google reports {property.permission_level}
-                    {property.eligible
-                      ? ""
-                      : " which cannot query performance data"}
+                    {property.eligible ? "" : " which cannot query performance data"}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -243,11 +206,7 @@ export function SearchConsolePanel() {
                   <Button
                     variant="outline"
                     size="sm"
-                    disabled={
-                      !property.eligible ||
-                      property.selected ||
-                      choose.isPending
-                    }
+                    disabled={!property.eligible || property.selected || choose.isPending}
                     onClick={() => choose.mutate(property.site_url)}
                   >
                     Select
@@ -260,28 +219,20 @@ export function SearchConsolePanel() {
       </GlassCard>
 
       <GlassCard className="p-5">
-        <h2 className="text-sm font-semibold text-foreground">
-          Recent snapshots
-        </h2>
+        <h2 className="text-sm font-semibold text-foreground">Recent snapshots</h2>
         {snapshots.length === 0 ? (
-          <p className="mt-2 text-sm text-muted-foreground">
-            No snapshots stored yet.
-          </p>
+          <p className="mt-2 text-sm text-muted-foreground">No snapshots stored yet.</p>
         ) : (
           <ul className="mt-3 space-y-2">
             {snapshots.map((snapshot) => (
-              <li
-                key={snapshot.id}
-                className="flex flex-wrap justify-between gap-2 text-sm"
-              >
+              <li key={snapshot.id} className="flex flex-wrap justify-between gap-2 text-sm">
                 <span className="text-foreground">
                   {snapshot.dimensions.length > 0
                     ? snapshot.dimensions.join(" + ")
                     : "property totals"}
                 </span>
                 <span className="text-muted-foreground">
-                  {snapshot.period_end_pt} Pacific ·{" "}
-                  {snapshot.returned_row_count} rows ·{" "}
+                  {snapshot.period_end_pt} Pacific · {snapshot.returned_row_count} rows ·{" "}
                   {formatWhen(snapshot.collected_at)}
                 </span>
               </li>

@@ -18,8 +18,7 @@ export type SearchConsoleConnectionFacts = {
 export function readSearchConsoleCredentialPresence(
   env: Record<string, string | undefined>,
 ): SearchConsoleCredentialPresence {
-  const has = (key: string) =>
-    typeof env[key] === "string" && env[key]!.trim().length > 0;
+  const has = (key: string) => typeof env[key] === "string" && env[key]!.trim().length > 0;
   return {
     lovableApiKey: has("LOVABLE_API_KEY"),
     connectionApiKey: has("GOOGLE_SEARCH_CONSOLE_API_KEY"),

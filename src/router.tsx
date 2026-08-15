@@ -3,7 +3,6 @@ import { createRouter } from "@tanstack/react-router";
 import { RoutePending } from "./components/os/route-pending";
 import { routeTree } from "./routeTree.gen";
 
-
 export const getRouter = () => {
   // Workspace reads are operator scoped and change slowly. A short stale window
   // makes a second visit to a workspace render straight from cache instead of
@@ -29,9 +28,7 @@ export const getRouter = () => {
     defaultPendingMs: 150,
     defaultPendingMinMs: 200,
     defaultPendingComponent: RoutePending,
-
   });
 
   return router;
 };
-

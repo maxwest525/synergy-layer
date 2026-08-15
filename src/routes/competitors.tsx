@@ -4,10 +4,22 @@ import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast } from "sonner";
 
-import { EmptyState, GlassCard, MetricTile, PageHeader, StatePill } from "@/components/os/primitives";
+import {
+  EmptyState,
+  GlassCard,
+  MetricTile,
+  PageHeader,
+  StatePill,
+} from "@/components/os/primitives";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   COMPANY_CLASSIFICATIONS,
   COMPANY_CLASSIFICATION_LABELS,
@@ -67,7 +79,8 @@ function CompetitorReviewPage() {
   const allSelected = pending.length > 0 && selected.length === pending.length;
 
   const mutation = useMutation({
-    mutationFn: (input: { domains: string[]; decision: "approve" | "reject" }) => decide({ data: input }),
+    mutationFn: (input: { domains: string[]; decision: "approve" | "reject" }) =>
+      decide({ data: input }),
     onSuccess: (result, variables) => {
       toast.success(
         `${result.count} competitor${result.count === 1 ? "" : "s"} ${
@@ -83,7 +96,8 @@ function CompetitorReviewPage() {
   });
 
   const classificationMutation = useMutation({
-    mutationFn: (input: { candidateId: string; classification: CompanyClassification }) => classify({ data: input }),
+    mutationFn: (input: { candidateId: string; classification: CompanyClassification }) =>
+      classify({ data: input }),
     onSuccess: (result) => {
       toast.success(
         result.changed
@@ -106,7 +120,9 @@ function CompetitorReviewPage() {
   };
 
   const toggle = (domain: string) =>
-    setSelected((prev) => (prev.includes(domain) ? prev.filter((d) => d !== domain) : [...prev, domain]));
+    setSelected((prev) =>
+      prev.includes(domain) ? prev.filter((d) => d !== domain) : [...prev, domain],
+    );
 
   return (
     <div className="space-y-8">
@@ -139,10 +155,20 @@ function CompetitorReviewPage() {
             >
               {allSelected ? "Clear selection" : "Select all pending"}
             </Button>
-            <Button variant="outline" size="sm" disabled={busy} onClick={() => act(selected, "approve")}>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={busy}
+              onClick={() => act(selected, "approve")}
+            >
               Approve selected
             </Button>
-            <Button variant="outline" size="sm" disabled={busy} onClick={() => act(selected, "reject")}>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={busy}
+              onClick={() => act(selected, "reject")}
+            >
               Reject selected
             </Button>
           </GlassCard>
@@ -158,7 +184,9 @@ function CompetitorReviewPage() {
                 onToggleSelect={() => toggle(row.domain)}
                 onToggleExpand={() => setExpanded(expanded === row.id ? null : row.id)}
                 onDecide={(decision) => act([row.domain], decision)}
-                onClassify={(classification) => classificationMutation.mutate({ candidateId: row.id, classification })}
+                onClassify={(classification) =>
+                  classificationMutation.mutate({ candidateId: row.id, classification })
+                }
               />
             ))}
           </ul>
@@ -169,13 +197,14 @@ function CompetitorReviewPage() {
         <GlassCard className="space-y-3 p-5">
           <h2 className="text-sm font-medium text-foreground">Observed but not shortlisted</h2>
           <p className="text-xs text-muted-foreground">
-            These domains appear in the evidence but did not clear the significance threshold. They stay reviewable and are
-            never tracked automatically.
+            These domains appear in the evidence but did not clear the significance threshold. They
+            stay reviewable and are never tracked automatically.
           </p>
           <div className="flex flex-wrap gap-x-4 gap-y-1">
             {data.observed.slice(0, 60).map((row) => (
               <span key={row.id} className="text-xs text-muted-foreground">
-                <span className="text-foreground">{row.domain}</span> · {row.domainClass} · {row.serpsPresent} SERPs
+                <span className="text-foreground">{row.domain}</span> · {row.domainClass} ·{" "}
+                {row.serpsPresent} SERPs
               </span>
             ))}
           </div>
@@ -203,7 +232,16 @@ type RowProps = {
   onClassify: (classification: CompanyClassification) => void;
 };
 
-function CompetitorRow({ row, busy, checked, expanded, onToggleSelect, onToggleExpand, onDecide, onClassify }: RowProps) {
+function CompetitorRow({
+  row,
+  busy,
+  checked,
+  expanded,
+  onToggleSelect,
+  onToggleExpand,
+  onDecide,
+  onClassify,
+}: RowProps) {
   const page = row.pageEvidence;
   const classification = (row.companyClassification ?? "unclassified") as CompanyClassification;
   return (
@@ -216,12 +254,15 @@ function CompetitorRow({ row, busy, checked, expanded, onToggleSelect, onToggleE
               onCheckedChange={onToggleSelect}
               aria-label={`Select ${row.domain}`}
               className="mt-1"
-               disabled={row.reviewState !== "pending"}
+              disabled={row.reviewState !== "pending"}
             />
             <div className="min-w-0 space-y-1">
               <p className="text-sm font-medium text-foreground">{row.domain}</p>
               <div className="flex flex-wrap items-center gap-2">
-                <StatePill label={row.domainClass === "competitor" ? "Business competitor" : "Surface"} tone="primary" />
+                <StatePill
+                  label={row.domainClass === "competitor" ? "Business competitor" : "Surface"}
+                  tone="primary"
+                />
                 <StatePill label={`Company: ${COMPANY_CLASSIFICATION_LABELS[classification]}`} />
                 <StatePill label={`SERP share ${pct(row.serpShare)}`} />
                 <StatePill label={`Median position ${row.medianPosition || "—"}`} />
@@ -238,7 +279,11 @@ function CompetitorRow({ row, busy, checked, expanded, onToggleSelect, onToggleE
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-2">
-            <Select value={classification} disabled={busy} onValueChange={(value) => onClassify(value as CompanyClassification)}>
+            <Select
+              value={classification}
+              disabled={busy}
+              onValueChange={(value) => onClassify(value as CompanyClassification)}
+            >
               <SelectTrigger aria-label={`Classify ${row.domain}`} className="w-48">
                 <SelectValue />
               </SelectTrigger>
@@ -253,10 +298,20 @@ function CompetitorRow({ row, busy, checked, expanded, onToggleSelect, onToggleE
             <Button variant="outline" size="sm" onClick={onToggleExpand}>
               {expanded ? "Hide evidence" : "Evidence"}
             </Button>
-             <Button variant="outline" size="sm" disabled={busy || row.reviewState !== "pending"} onClick={() => onDecide("approve")}>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={busy || row.reviewState !== "pending"}
+              onClick={() => onDecide("approve")}
+            >
               Approve
             </Button>
-             <Button variant="outline" size="sm" disabled={busy || row.reviewState !== "pending"} onClick={() => onDecide("reject")}>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={busy || row.reviewState !== "pending"}
+              onClick={() => onDecide("reject")}
+            >
               Reject
             </Button>
           </div>
@@ -267,13 +322,20 @@ function CompetitorRow({ row, busy, checked, expanded, onToggleSelect, onToggleE
             <div className="space-y-1 text-xs text-muted-foreground">
               <p className="text-foreground">Ranking evidence</p>
               <p>
-                Present in {row.serpsPresent} of {row.serpsAnalysed} observed SERPs. Best position {row.bestPosition || "—"},
-                average {row.averagePosition || "—"}.
+                Present in {row.serpsPresent} of {row.serpsAnalysed} observed SERPs. Best position{" "}
+                {row.bestPosition || "—"}, average {row.averagePosition || "—"}.
               </p>
-              {row.serpFeatures.length > 0 ? <p>Surfaces involved: {row.serpFeatures.join(", ")}</p> : null}
-              {row.confidenceBasis.length > 0 ? <p>Confidence basis: {row.confidenceBasis.join("; ")}</p> : null}
+              {row.serpFeatures.length > 0 ? (
+                <p>Surfaces involved: {row.serpFeatures.join(", ")}</p>
+              ) : null}
+              {row.confidenceBasis.length > 0 ? (
+                <p>Confidence basis: {row.confidenceBasis.join("; ")}</p>
+              ) : null}
               {row.keywords.length > 0 ? (
-                <p>Overlapping queries: {row.keywords.slice(0, 12).join(", ")}{row.keywords.length > 12 ? "…" : ""}</p>
+                <p>
+                  Overlapping queries: {row.keywords.slice(0, 12).join(", ")}
+                  {row.keywords.length > 12 ? "…" : ""}
+                </p>
               ) : null}
             </div>
             <div className="space-y-1 text-xs text-muted-foreground">
@@ -281,30 +343,45 @@ function CompetitorRow({ row, busy, checked, expanded, onToggleSelect, onToggleE
               {page && page.fetched ? (
                 <>
                   <p>
-                    {page.pageType} · intent {page.intentMatch.replace(/_/g, " ")} · {page.wordCount.toLocaleString()} words
+                    {page.pageType} · intent {page.intentMatch.replace(/_/g, " ")} ·{" "}
+                    {page.wordCount.toLocaleString()} words
                   </p>
                   <p>
-                    H1 {page.headingCounts.h1} · H2 {page.headingCounts.h2} · H3 {page.headingCounts.h3} · internal links{" "}
-                    {page.internalLinks} · external {page.externalLinks}
+                    H1 {page.headingCounts.h1} · H2 {page.headingCounts.h2} · H3{" "}
+                    {page.headingCounts.h3} · internal links {page.internalLinks} · external{" "}
+                    {page.externalLinks}
                   </p>
-                  {page.schemaTypes.length > 0 ? <p>Schema: {page.schemaTypes.join(", ")}</p> : null}
-                  {page.topicalCoverage.length > 0 ? <p>Topics covered: {page.topicalCoverage.join(", ")}</p> : null}
+                  {page.schemaTypes.length > 0 ? (
+                    <p>Schema: {page.schemaTypes.join(", ")}</p>
+                  ) : null}
+                  {page.topicalCoverage.length > 0 ? (
+                    <p>Topics covered: {page.topicalCoverage.join(", ")}</p>
+                  ) : null}
                   <p>
-                    Phone CTA {page.hasPhoneCta ? "yes" : "no"} · quote form {page.hasQuoteForm ? "yes" : "no"} · review
-                    signals {page.hasReviewSignals ? "yes" : "no"} · FAQ block {page.hasFaqBlock ? "yes" : "no"}
+                    Phone CTA {page.hasPhoneCta ? "yes" : "no"} · quote form{" "}
+                    {page.hasQuoteForm ? "yes" : "no"} · review signals{" "}
+                    {page.hasReviewSignals ? "yes" : "no"} · FAQ block{" "}
+                    {page.hasFaqBlock ? "yes" : "no"}
                   </p>
                   <p className="break-all">Observed page: {page.url}</p>
                 </>
               ) : (
-                <p>No page observation recorded yet. Run the competitor intelligence workflow to inspect this winner.</p>
+                <p>
+                  No page observation recorded yet. Run the competitor intelligence workflow to
+                  inspect this winner.
+                </p>
               )}
             </div>
           </div>
         ) : null}
         {row.classificationUpdatedAt ? (
-          <p className="text-xs text-muted-foreground">Classification last changed {new Date(row.classificationUpdatedAt).toLocaleString()}.</p>
+          <p className="text-xs text-muted-foreground">
+            Classification last changed {new Date(row.classificationUpdatedAt).toLocaleString()}.
+          </p>
         ) : (
-          <p className="text-xs text-muted-foreground">No business classification has been assigned by an operator.</p>
+          <p className="text-xs text-muted-foreground">
+            No business classification has been assigned by an operator.
+          </p>
         )}
       </GlassCard>
     </li>

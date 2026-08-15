@@ -67,13 +67,18 @@ export async function runPageSpeed(
     })
     .select("id, started_at")
     .single();
-  if (runError || !run) throw new Error(`Could not open a measurement run: ${runError?.message ?? "no row"}`);
+  if (runError || !run)
+    throw new Error(`Could not open a measurement run: ${runError?.message ?? "no row"}`);
 
   const startedAt = Date.now();
   const finish = async (patch: Record<string, unknown>) => {
     const { error } = await admin
       .from("measurement_runs")
-      .update({ finished_at: new Date().toISOString(), duration_ms: Date.now() - startedAt, ...patch })
+      .update({
+        finished_at: new Date().toISOString(),
+        duration_ms: Date.now() - startedAt,
+        ...patch,
+      })
       .eq("id", run.id);
     if (error) throw new Error(`Could not close the measurement run: ${error.message}`);
   };
@@ -150,7 +155,9 @@ export async function runPageSpeed(
   });
   if (insertError) {
     await finish({ status: "failed", error: insertError.message, http_status: httpStatus });
-    throw new Error(`PageSpeed responded but the snapshot could not be stored: ${insertError.message}`);
+    throw new Error(
+      `PageSpeed responded but the snapshot could not be stored: ${insertError.message}`,
+    );
   }
 
   await finish({

@@ -5,9 +5,6 @@ export const SERPAPI_PROVIDER_GATE = "cap.serpapi_ads_transparency";
  * generic workflow guard. Every metered or downstream stage must separately
  * earn a real registry state before the runner can reach it.
  */
-export function mayExecuteCapability(
-  ref: string,
-  integrationState: string,
-): boolean {
+export function mayExecuteCapability(ref: string, integrationState: string): boolean {
   return integrationState === "real" || ref === SERPAPI_PROVIDER_GATE;
 }

@@ -50,7 +50,9 @@ function rowsOf(snapshot: SnapshotRow | undefined): QueryRow[] {
 }
 
 function pick(snapshots: SnapshotRow[], dimension: string): SnapshotRow | undefined {
-  return snapshots.find((snapshot) => snapshot.dimensions.length === 1 && snapshot.dimensions[0] === dimension);
+  return snapshots.find(
+    (snapshot) => snapshot.dimensions.length === 1 && snapshot.dimensions[0] === dimension,
+  );
 }
 
 function evaluate(current: SnapshotRow[], prior: SnapshotRow[]): Observation[] {
@@ -117,7 +119,8 @@ function evaluate(current: SnapshotRow[], prior: SnapshotRow[]): Observation[] {
     if (
       before &&
       before.impressions >= t.visibilityGain.minImpressions &&
-      (row.impressions - before.impressions) / before.impressions >= t.visibilityGain.minImpressionGrowth
+      (row.impressions - before.impressions) / before.impressions >=
+        t.visibilityGain.minImpressionGrowth
     ) {
       observations.push({
         rule: "visibility_gain",
@@ -203,28 +206,33 @@ export async function evaluateSnapshots(
     if (!recommendationId) {
       const { data: inserted, error: insertError } = await client
         .from("recommendations")
-        .insert(observationRecommendationRecord({
-          tenant_id: await requireTenantId(client),
-          title: observation.title,
-          description: observation.description,
-          source_module: "search-console",
-          business_impact: observation.businessImpact,
-          revenue_impact: observation.businessImpact,
-          traffic_impact: observation.businessImpact,
-          time_saved_minutes: 0,
-          risk: "none",
-          confidence: observation.confidence,
-          reasoning: `Rule ${observation.rule} over finalized Search Console data for ${reportingDate} (Pacific).`,
-          suggested_action: { kind: "review", rule: observation.rule, target: observation.target } as never,
-          issue_fingerprint: issueFingerprint,
-          metadata: { property, rule: observation.rule } as never,
-        }))
+        .insert(
+          observationRecommendationRecord({
+            tenant_id: await requireTenantId(client),
+            title: observation.title,
+            description: observation.description,
+            source_module: "search-console",
+            business_impact: observation.businessImpact,
+            revenue_impact: observation.businessImpact,
+            traffic_impact: observation.businessImpact,
+            time_saved_minutes: 0,
+            risk: "none",
+            confidence: observation.confidence,
+            reasoning: `Rule ${observation.rule} over finalized Search Console data for ${reportingDate} (Pacific).`,
+            suggested_action: {
+              kind: "review",
+              rule: observation.rule,
+              target: observation.target,
+            } as never,
+            issue_fingerprint: issueFingerprint,
+            metadata: { property, rule: observation.rule } as never,
+          }),
+        )
         .select("id")
         .single();
       if (insertError) throw new SearchConsoleFailure("persistence", insertError.message);
       recommendationId = inserted.id;
       created += 1;
-
     }
 
     const { error: observationError } = await client.from("search_console_observations").upsert(
@@ -246,5 +254,10 @@ export async function evaluateSnapshots(
     if (observationError) throw new SearchConsoleFailure("persistence", observationError.message);
   }
 
-  return { reportingDate, observations: observations.length, recommendations: created, noChange: false };
+  return {
+    reportingDate,
+    observations: observations.length,
+    recommendations: created,
+    noChange: false,
+  };
 }

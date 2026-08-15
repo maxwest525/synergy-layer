@@ -149,4 +149,3 @@ export const AVAILABILITY_TONE_CLASS: Record<Tone, string> = {
   danger: "text-destructive",
   primary: "text-primary",
 };
-

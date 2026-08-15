@@ -3,7 +3,14 @@ import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 
-import { DetailRow, GlassCard, PageHeader, StatePill, formatWhen, toneForState } from "@/components/os/primitives";
+import {
+  DetailRow,
+  GlassCard,
+  PageHeader,
+  StatePill,
+  formatWhen,
+  toneForState,
+} from "@/components/os/primitives";
 import { Button } from "@/components/ui/button";
 import { runWorkflowNow } from "@/lib/os-admin.functions";
 import { getWorkflow } from "@/lib/os.functions";
@@ -29,7 +36,9 @@ export const Route = createFileRoute("/workflows/$id")({
     return data;
   },
   head: ({ loaderData }) => {
-    const title = loaderData?.workflow ? `${loaderData.workflow.name} — Workflows — AOOS` : "Workflow — AOOS";
+    const title = loaderData?.workflow
+      ? `${loaderData.workflow.name} — Workflows — AOOS`
+      : "Workflow — AOOS";
     const description = loaderData?.workflow?.description ?? "Workflow definition and run history.";
     return {
       meta: [
@@ -70,7 +79,11 @@ function WorkflowDetailPage() {
         actions={
           <>
             <StatePill label={workflow.health} tone={toneForState(workflow.health)} />
-            <Button variant="outline" onClick={() => mutation.mutate()} disabled={mutation.isPending}>
+            <Button
+              variant="outline"
+              onClick={() => mutation.mutate()}
+              disabled={mutation.isPending}
+            >
               {mutation.isPending ? "Running" : "Run now"}
             </Button>
           </>
@@ -84,17 +97,28 @@ function WorkflowDetailPage() {
             <DetailRow label="Key" value={workflow.key} />
             <DetailRow label="Trigger" value={workflow.trigger_kind} />
             <DetailRow label="Version" value={workflow.version} />
-            <DetailRow label="Status" value={<StatePill label={workflow.status} tone={toneForState(workflow.status)} />} />
+            <DetailRow
+              label="Status"
+              value={<StatePill label={workflow.status} tone={toneForState(workflow.status)} />}
+            />
           </dl>
 
           <h3 className="mt-5 text-xs uppercase tracking-[0.14em] text-muted-foreground">Steps</h3>
           <ol className="mt-2 space-y-2">
             {(graph.nodes ?? []).map((node, index) => (
-              <li key={node.key} className="flex items-center gap-3 rounded-xl border border-border/60 px-3 py-2">
+              <li
+                key={node.key}
+                className="flex items-center gap-3 rounded-xl border border-border/60 px-3 py-2"
+              >
                 <span className="text-xs text-muted-foreground">{index + 1}</span>
                 <span className="flex-1 text-sm text-foreground">{node.key}</span>
-                <StatePill label={node.kind} tone={node.kind === "approval" ? "warning" : "primary"} />
-                {node.ref ? <span className="text-xs text-muted-foreground">{node.ref}</span> : null}
+                <StatePill
+                  label={node.kind}
+                  tone={node.kind === "approval" ? "warning" : "primary"}
+                />
+                {node.ref ? (
+                  <span className="text-xs text-muted-foreground">{node.ref}</span>
+                ) : null}
               </li>
             ))}
           </ol>
@@ -107,12 +131,18 @@ function WorkflowDetailPage() {
           ) : (
             <ul className="mt-3 space-y-4">
               {data.runs.map((run) => (
-                <li key={run.id} className="border-b border-border/50 pb-4 last:border-b-0 last:pb-0">
+                <li
+                  key={run.id}
+                  className="border-b border-border/50 pb-4 last:border-b-0 last:pb-0"
+                >
                   <div className="flex flex-wrap items-center gap-2">
                     <StatePill label={run.state} tone={toneForState(run.state)} />
-                    <span className="text-xs text-muted-foreground">{formatWhen(run.created_at)}</span>
                     <span className="text-xs text-muted-foreground">
-                      {run.duration_ms ? `${run.duration_ms} ms` : "in progress"} · {run.trigger_source}
+                      {formatWhen(run.created_at)}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {run.duration_ms ? `${run.duration_ms} ms` : "in progress"} ·{" "}
+                      {run.trigger_source}
                     </span>
                   </div>
                   {run.error ? <p className="mt-1 text-sm text-destructive">{run.error}</p> : null}
@@ -120,7 +150,10 @@ function WorkflowDetailPage() {
                     {[...run.workflow_steps]
                       .sort((a, b) => a.sequence - b.sequence)
                       .map((step) => (
-                        <li key={step.id} className="flex items-center justify-between gap-3 text-sm">
+                        <li
+                          key={step.id}
+                          className="flex items-center justify-between gap-3 text-sm"
+                        >
                           <span className="truncate text-muted-foreground">
                             {step.sequence + 1}. {step.node_key}
                           </span>

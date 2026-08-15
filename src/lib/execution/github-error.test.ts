@@ -1,7 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createGithubApi, GITHUB_USER_AGENT } from "./execute.server";
-import { describeGithubFailure, GithubStatusError, readGithubResponseSignals } from "./github-error";
+import {
+  describeGithubFailure,
+  GithubStatusError,
+  readGithubResponseSignals,
+} from "./github-error";
 
 function headers(init: Record<string, string>): Headers {
   return new Headers(init);
@@ -36,11 +40,12 @@ describe("GitHub request headers", () => {
 
   it("carries only safe headers into the thrown failure, never the body", async () => {
     process.env["GITHUB_EXECUTOR_TOKEN"] = "test-token";
-    globalThis.fetch = vi.fn(async () =>
-      new Response("secret repository contents", {
-        status: 403,
-        headers: { "x-ratelimit-remaining": "0", "x-ratelimit-reset": "1786483200" },
-      }),
+    globalThis.fetch = vi.fn(
+      async () =>
+        new Response("secret repository contents", {
+          status: 403,
+          headers: { "x-ratelimit-remaining": "0", "x-ratelimit-reset": "1786483200" },
+        }),
     ) as unknown as typeof fetch;
 
     const api = createGithubApi();
@@ -81,7 +86,10 @@ describe("readGithubResponseSignals", () => {
 describe("safe 403 classification", () => {
   const what = "branch main of owner/repo";
   const describe403 = (signals: ConstructorParameters<typeof GithubStatusError>[2]) =>
-    describeGithubFailure(new GithubStatusError(403, "/repos/owner/repo/branches/main", signals), what);
+    describeGithubFailure(
+      new GithubStatusError(403, "/repos/owner/repo/branches/main", signals),
+      what,
+    );
 
   it("names the primary rate limit with a human UTC reset time", () => {
     const message = describe403({ rateLimitRemaining: 0, rateLimitReset: 1786483200 });
@@ -114,7 +122,11 @@ describe("safe 403 classification", () => {
   });
 
   it("leaves 401 and 404 wording unchanged", () => {
-    expect(describeGithubFailure(new GithubStatusError(401, "/x"), what)).toContain("401 Unauthorized");
-    expect(describeGithubFailure(new GithubStatusError(404, "/x"), what)).toContain("404 Not Found");
+    expect(describeGithubFailure(new GithubStatusError(401, "/x"), what)).toContain(
+      "401 Unauthorized",
+    );
+    expect(describeGithubFailure(new GithubStatusError(404, "/x"), what)).toContain(
+      "404 Not Found",
+    );
   });
 });

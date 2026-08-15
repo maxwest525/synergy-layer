@@ -36,7 +36,9 @@ function text(value: unknown): string | null {
 }
 
 function textList(value: unknown): string[] {
-  return Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === "string") : [];
+  return Array.isArray(value)
+    ? value.filter((entry): entry is string => typeof entry === "string")
+    : [];
 }
 
 /**
@@ -50,7 +52,7 @@ export function normalizeOwnedUrl(property: string, candidate: string): string {
   } catch {
     throw new Error("Enter a valid absolute page or sitemap URL.");
   }
-  if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password) {
+  if (!["http:", "https:"].includes(url.protocol) || url.username || url.password) {
     throw new Error("Enter a valid HTTP or HTTPS URL without embedded credentials.");
   }
 

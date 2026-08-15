@@ -33,7 +33,6 @@ import {
   getAdsOverview,
   runAdsCanary,
   runAdvertiserSweep,
-
   type AdsCandidateView,
 } from "@/lib/ads.functions";
 
@@ -50,10 +49,14 @@ export const Route = createFileRoute("/ads/advertisers")({
         content:
           "Confirm or reject the Google advertiser accounts observed running ads for watched vendor domains, with provider quota, spend ledger, and stored evidence in view.",
       },
-      { property: "og:title", content: "Google advertiser review — AOOS Marketing Operating System" },
+      {
+        property: "og:title",
+        content: "Google advertiser review — AOOS Marketing Operating System",
+      },
       {
         property: "og:description",
-        content: "The human gate between observed Google Ads Transparency evidence and a confirmed advertiser.",
+        content:
+          "The human gate between observed Google Ads Transparency evidence and a confirmed advertiser.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -122,7 +125,11 @@ function CandidateCard({
         <DetailRow label="Observed" value={formatWhen(candidate.createdAt)} />
         <DetailRow
           label="Target domains"
-          value={candidate.targetDomains.length > 0 ? candidate.targetDomains.join(", ") : "none recorded"}
+          value={
+            candidate.targetDomains.length > 0
+              ? candidate.targetDomains.join(", ")
+              : "none recorded"
+          }
         />
         <DetailRow label="Funded by" value={candidate.adFundedBy ?? "not reported"} />
       </div>
@@ -177,7 +184,8 @@ function AdvertiserReviewPage() {
   });
 
   const decideMutation = useMutation({
-    mutationFn: (input: { candidateId: string; decision: "confirm" | "reject" }) => decide({ data: input }),
+    mutationFn: (input: { candidateId: string; decision: "confirm" | "reject" }) =>
+      decide({ data: input }),
     onSuccess: (result) => {
       toast.success(
         result.pending === 0
@@ -252,22 +260,39 @@ function AdvertiserReviewPage() {
         />
       </div>
 
-      <Section title="Provider account" description="Quota facts only. The API key is never read, returned, or stored.">
+      <Section
+        title="Provider account"
+        description="Quota facts only. The API key is never read, returned, or stored."
+      >
         <div className="grid gap-1 text-sm sm:grid-cols-2">
           <DetailRow
             label="Status"
             value={
               <StatePill
-                label={account.configured ? (account.valid ? "reachable" : "unusable") : "unchecked"}
+                label={
+                  account.configured ? (account.valid ? "reachable" : "unusable") : "unchecked"
+                }
                 tone={account.configured ? (account.valid ? "positive" : "danger") : "neutral"}
               />
             }
           />
           <DetailRow label="Plan" value={account.planName ?? "unknown"} />
-          <DetailRow label="Searches left" value={account.searchesLeft === null ? "unknown" : String(account.searchesLeft)} />
-          <DetailRow label="Hourly limit" value={account.hourlyLimit === null ? "unknown" : String(account.hourlyLimit)} />
-          <DetailRow label="Used this hour" value={account.thisHourSearches === null ? "unknown" : String(account.thisHourSearches)} />
-          <DetailRow label="Last checked" value={account.checkedAt ? formatWhen(account.checkedAt) : "never"} />
+          <DetailRow
+            label="Searches left"
+            value={account.searchesLeft === null ? "unknown" : String(account.searchesLeft)}
+          />
+          <DetailRow
+            label="Hourly limit"
+            value={account.hourlyLimit === null ? "unknown" : String(account.hourlyLimit)}
+          />
+          <DetailRow
+            label="Used this hour"
+            value={account.thisHourSearches === null ? "unknown" : String(account.thisHourSearches)}
+          />
+          <DetailRow
+            label="Last checked"
+            value={account.checkedAt ? formatWhen(account.checkedAt) : "never"}
+          />
         </div>
         {account.error ? <p className="mt-3 text-sm text-destructive">{account.error}</p> : null}
         <div className="mt-4 flex flex-wrap gap-2">
@@ -284,10 +309,11 @@ function AdvertiserReviewPage() {
               <AlertDialogHeader>
                 <AlertDialogTitle>This may charge one SerpApi search credit</AlertDialogTitle>
                 <AlertDialogDescription>
-                  Running the canary makes at most one Ads Transparency search for {canaryDomain}. It may
-                  charge one SerpApi search credit against this account, and it only runs when the account
-                  is valid and reports at least ten searches remaining. Any advertiser it finds is filed as
-                  a pending candidate; nothing is confirmed automatically.
+                  Running the canary makes at most one Ads Transparency search for {canaryDomain}.
+                  It may charge one SerpApi search credit against this account, and it only runs
+                  when the account is valid and reports at least ten searches remaining. Any
+                  advertiser it finds is filed as a pending candidate; nothing is confirmed
+                  automatically.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -301,7 +327,8 @@ function AdvertiserReviewPage() {
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button variant="outline" size="sm" disabled={busy || unresolvedDomains === 0}>
-                Sweep {unresolvedDomains} unresolved vendor domain{unresolvedDomains === 1 ? "" : "s"}
+                Sweep {unresolvedDomains} unresolved vendor domain
+                {unresolvedDomains === 1 ? "" : "s"}
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
@@ -310,11 +337,11 @@ function AdvertiserReviewPage() {
                   This may charge up to {unresolvedDomains} SerpApi search credits
                 </AlertDialogTitle>
                 <AlertDialogDescription>
-                  The sweep runs one Ads Transparency search per unresolved vendor domain, one at a time,
-                  through the same metered path as the canary. It refuses to start a search when the
-                  account is invalid or below the ten search floor, and it stops at the first refusal.
-                  Every advertiser it finds is filed as a pending candidate; nothing is confirmed
-                  automatically.
+                  The sweep runs one Ads Transparency search per unresolved vendor domain, one at a
+                  time, through the same metered path as the canary. It refuses to start a search
+                  when the account is invalid or below the ten search floor, and it stops at the
+                  first refusal. Every advertiser it finds is filed as a pending candidate; nothing
+                  is confirmed automatically.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -328,8 +355,8 @@ function AdvertiserReviewPage() {
         </div>
 
         <p className="mt-2 text-xs text-muted-foreground">
-          The account check costs nothing. The canary buys at most one search, and only when the account is valid
-          and reports at least ten searches remaining.
+          The account check costs nothing. The canary buys at most one search, and only when the
+          account is valid and reports at least ten searches remaining.
         </p>
       </Section>
 
@@ -349,16 +376,24 @@ function AdvertiserReviewPage() {
                 key={candidate.id}
                 candidate={candidate}
                 busy={busy}
-                onDecide={(decision) => decideMutation.mutate({ candidateId: candidate.id, decision })}
+                onDecide={(decision) =>
+                  decideMutation.mutate({ candidateId: candidate.id, decision })
+                }
               />
             ))}
           </div>
         )}
       </Section>
 
-      <Section title="Vendor watchlist" description="Watched domains and how far advertiser resolution has progressed.">
+      <Section
+        title="Vendor watchlist"
+        description="Watched domains and how far advertiser resolution has progressed."
+      >
         {data.watchlist.length === 0 ? (
-          <EmptyState title="No watched vendor domains" description="Add vendor domains to begin advertiser resolution." />
+          <EmptyState
+            title="No watched vendor domains"
+            description="Add vendor domains to begin advertiser resolution."
+          />
         ) : (
           <div className="divide-y divide-border/50">
             {data.watchlist.map((row) => (
@@ -371,14 +406,20 @@ function AdvertiserReviewPage() {
                     {row.active ? "" : " · inactive"}
                   </p>
                 </div>
-                <StatePill label={row.resolutionState.replace(/_/g, " ")} tone={toneForState(row.resolutionState)} />
+                <StatePill
+                  label={row.resolutionState.replace(/_/g, " ")}
+                  tone={toneForState(row.resolutionState)}
+                />
               </div>
             ))}
           </div>
         )}
       </Section>
 
-      <Section title="Confirmed advertisers" description="Operator-confirmed advertiser accounts and the vendor domains they are linked to.">
+      <Section
+        title="Confirmed advertisers"
+        description="Operator-confirmed advertiser accounts and the vendor domains they are linked to."
+      >
         {data.advertisers.length === 0 ? (
           <EmptyState
             title="No confirmed advertiser yet"
@@ -391,7 +432,9 @@ function AdvertiserReviewPage() {
                 <p className="text-sm text-foreground">{row.advertiserName ?? row.advertiserId}</p>
                 <p className="text-xs text-muted-foreground">
                   ID {row.advertiserId} · confirmed {formatWhen(row.confirmedAt)} ·{" "}
-                  {row.linkedDomains.length > 0 ? row.linkedDomains.join(", ") : row.vendorDomain ?? "unlinked"}
+                  {row.linkedDomains.length > 0
+                    ? row.linkedDomains.join(", ")
+                    : (row.vendorDomain ?? "unlinked")}
                 </p>
               </div>
             ))}
@@ -404,7 +447,10 @@ function AdvertiserReviewPage() {
         description="Append-only record of every SerpApi call: what was reserved, what was actually charged, and what the provider returned."
       >
         {data.ledger.length === 0 ? (
-          <EmptyState title="No provider calls recorded" description="No SerpApi search has been made for this workspace." />
+          <EmptyState
+            title="No provider calls recorded"
+            description="No SerpApi search has been made for this workspace."
+          />
         ) : (
           <div className="divide-y divide-border/50">
             {data.ledger.map((row) => (
@@ -414,7 +460,8 @@ function AdvertiserReviewPage() {
                     {row.module} · {row.queryText ?? row.engine}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {formatWhen(row.startedAt)} · reserved {row.reservedCredits} · charged {row.chargedCredits}
+                    {formatWhen(row.startedAt)} · reserved {row.reservedCredits} · charged{" "}
+                    {row.chargedCredits}
                     {row.providerSearchId ? ` · provider ${row.providerSearchId}` : ""}
                     {row.durationMs === null ? "" : ` · ${row.durationMs} ms`}
                   </p>
@@ -430,10 +477,18 @@ function AdvertiserReviewPage() {
       </Section>
 
       {decidedCandidates.length > 0 ? (
-        <Section title="Decided candidates" description="The audit trail of past advertiser attribution decisions.">
+        <Section
+          title="Decided candidates"
+          description="The audit trail of past advertiser attribution decisions."
+        >
           <div className="space-y-3">
             {decidedCandidates.map((candidate) => (
-              <CandidateCard key={candidate.id} candidate={candidate} busy={busy} onDecide={() => undefined} />
+              <CandidateCard
+                key={candidate.id}
+                candidate={candidate}
+                busy={busy}
+                onDecide={() => undefined}
+              />
             ))}
           </div>
         </Section>

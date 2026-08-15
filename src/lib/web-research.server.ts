@@ -69,7 +69,9 @@ async function searchPerplexity(objective: string): Promise<PerplexityAnswer> {
 }
 
 /** Firecrawl scrape of one source. Returns markdown, or null when the page cannot be read. */
-export async function scrapeFirecrawl(url: string): Promise<{ title: string; markdown: string } | null> {
+export async function scrapeFirecrawl(
+  url: string,
+): Promise<{ title: string; markdown: string } | null> {
   const response = await fetch(FIRECRAWL_URL, {
     method: "POST",
     headers: {

@@ -25,7 +25,12 @@ const workspaces = [
   { to: "/assets", label: "Assets", icon: Boxes, hint: "Everything we own" },
   { to: "/search", label: "Search", icon: Search, hint: "What Google observed" },
   { to: "/measurement", label: "Measurement", icon: Gauge, hint: "Page speed and analytics" },
-  { to: "/essentials", label: "Essentials", icon: ListChecks, hint: "What is covered and what is missing" },
+  {
+    to: "/essentials",
+    label: "Essentials",
+    icon: ListChecks,
+    hint: "What is covered and what is missing",
+  },
   { to: "/capabilities", label: "Capabilities", icon: Plug, hint: "What the OS can do" },
   { to: "/knowledge", label: "Knowledge", icon: BrainCircuit, hint: "What the OS knows" },
   { to: "/agents", label: "Agents", icon: Activity, hint: "Who does the work" },
@@ -51,7 +56,10 @@ export function Shell({ children }: { children: ReactNode }) {
           className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-border/60 bg-sidebar/70 px-3 py-5 backdrop-blur-xl lg:flex"
         >
           <Link to="/" className="mb-6 flex items-center gap-2 px-3">
-            <span aria-hidden className="size-2 rounded-full bg-primary shadow-[0_0_12px_var(--color-primary)]" />
+            <span
+              aria-hidden
+              className="size-2 rounded-full bg-primary shadow-[0_0_12px_var(--color-primary)]"
+            />
             <span className="text-sm font-semibold tracking-tight text-foreground">AOOS</span>
             <span className="text-xs text-muted-foreground">Marketing OS</span>
           </Link>
@@ -78,7 +86,9 @@ export function Shell({ children }: { children: ReactNode }) {
                       className={cn("size-4", active ? "text-primary" : "text-muted-foreground")}
                     />
                     <span className="flex-1 font-medium">{workspace.label}</span>
-                    {active ? <span aria-hidden className="size-1.5 rounded-full bg-primary" /> : null}
+                    {active ? (
+                      <span aria-hidden className="size-1.5 rounded-full bg-primary" />
+                    ) : null}
                   </Link>
                 </li>
               );
@@ -117,8 +127,8 @@ export function Shell({ children }: { children: ReactNode }) {
                   You are signed out, so every workspace reads as empty.
                 </p>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Operational state, evidence, and spend are hidden until an operator signs in. These
-                  zeros are an access state, not the state of the system.
+                  Operational state, evidence, and spend are hidden until an operator signs in.
+                  These zeros are an access state, not the state of the system.
                 </p>
                 <Link
                   to="/auth"

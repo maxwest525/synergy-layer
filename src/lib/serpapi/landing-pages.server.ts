@@ -31,10 +31,12 @@ function observe(markdown: string, title: string): Record<string, unknown> {
     hasForm: /\b(get (a )?quote|submit|continue|next step|zip code)\b/.test(text),
     quoteWizard: /\b(step \d|of \d steps|progress)\b/.test(text),
     observableFormFields: formFields,
-    trustSignals: ["bbb", "licensed", "insured", "usdot", "reviews", "rated", "guarantee"].filter((signal) =>
-      text.includes(signal),
+    trustSignals: ["bbb", "licensed", "insured", "usdot", "reviews", "rated", "guarantee"].filter(
+      (signal) => text.includes(signal),
     ),
-    brokerDisclosure: /\b(broker|not a (moving )?carrier|third[- ]party|partner network)\b/.test(text),
+    brokerDisclosure: /\b(broker|not a (moving )?carrier|third[- ]party|partner network)\b/.test(
+      text,
+    ),
     urgency: /\b(today|limited|book now|act now|last minute)\b/.test(text),
     offerLanguage: /\b(free|no obligation|save up to|% off)\b/.test(text),
     intent: /\b(long distance|interstate|cross country)\b/.test(text) ? "long_distance" : "general",
@@ -65,7 +67,12 @@ export async function observeAdDestinations(
   }
 
   const targets = [...unique.entries()].slice(0, options.limit ?? 15);
-  const result: LandingPageResult = { destinations: targets.length, observed: 0, unchanged: 0, failed: 0 };
+  const result: LandingPageResult = {
+    destinations: targets.length,
+    observed: 0,
+    unchanged: 0,
+    failed: 0,
+  };
 
   for (const [url, creativeId] of targets) {
     let page: { title: string; markdown: string } | null = null;

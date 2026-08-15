@@ -3,12 +3,22 @@ import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 
-import { DetailRow, GlassCard, PageHeader, StatePill, formatWhen, toneForState } from "@/components/os/primitives";
+import {
+  DetailRow,
+  GlassCard,
+  PageHeader,
+  StatePill,
+  formatWhen,
+  toneForState,
+} from "@/components/os/primitives";
 import { Button } from "@/components/ui/button";
 import { runReferenceAgent } from "@/lib/os-admin.functions";
 import { getAgent } from "@/lib/os.functions";
 
-const agentQuery = (id: string) => ({ queryKey: ["agent", id], queryFn: () => getAgent({ data: { id } }) });
+const agentQuery = (id: string) => ({
+  queryKey: ["agent", id],
+  queryFn: () => getAgent({ data: { id } }),
+});
 
 export const Route = createFileRoute("/agents/$id")({
   // Operator-only workspace: nothing here is public, and rendering it on the
@@ -42,7 +52,10 @@ function AgentDetailPage() {
   const queryClient = useQueryClient();
   const run = useServerFn(runReferenceAgent);
   const agent = data.agent!;
-  const permissions = (agent.permissions ?? {}) as { mutating?: boolean; requiresApproval?: boolean };
+  const permissions = (agent.permissions ?? {}) as {
+    mutating?: boolean;
+    requiresApproval?: boolean;
+  };
 
   const mutation = useMutation({
     mutationFn: () => run({ data: { agentId: id } }),
@@ -62,7 +75,11 @@ function AgentDetailPage() {
         actions={
           <>
             <StatePill label={agent.health} tone={toneForState(agent.health)} />
-            <Button variant="outline" onClick={() => mutation.mutate()} disabled={mutation.isPending}>
+            <Button
+              variant="outline"
+              onClick={() => mutation.mutate()}
+              disabled={mutation.isPending}
+            >
               {mutation.isPending ? "Running" : "Run agent"}
             </Button>
           </>
@@ -76,7 +93,10 @@ function AgentDetailPage() {
             <DetailRow label="Key" value={agent.key} />
             <DetailRow label="Model" value={agent.model ?? "Not set"} />
             <DetailRow label="Memory scope" value={agent.memory_scope} />
-            <DetailRow label="Status" value={<StatePill label={agent.status} tone={toneForState(agent.status)} />} />
+            <DetailRow
+              label="Status"
+              value={<StatePill label={agent.status} tone={toneForState(agent.status)} />}
+            />
             <DetailRow
               label="Approval"
               value={permissions.requiresApproval ? "Required before acting" : "Not required"}
@@ -119,7 +139,10 @@ function AgentDetailPage() {
               <ul className="mt-3 space-y-2">
                 {data.capabilities.map((grant) =>
                   grant.capabilities ? (
-                    <li key={grant.capabilities.id} className="flex items-center justify-between gap-3">
+                    <li
+                      key={grant.capabilities.id}
+                      className="flex items-center justify-between gap-3"
+                    >
                       <Link
                         to="/capabilities/$id"
                         params={{ id: grant.capabilities.id }}
@@ -141,7 +164,9 @@ function AgentDetailPage() {
           <GlassCard className="p-5">
             <h2 className="text-sm font-semibold text-foreground">Knowledge access</h2>
             {data.knowledge.length === 0 ? (
-              <p className="mt-2 text-sm text-muted-foreground">No knowledge collections attached.</p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                No knowledge collections attached.
+              </p>
             ) : (
               <ul className="mt-3 flex flex-wrap gap-2">
                 {data.knowledge.map((grant) =>
@@ -170,10 +195,15 @@ function AgentDetailPage() {
         ) : (
           <ul className="mt-3 space-y-3">
             {data.activity.map((event) => (
-              <li key={event.id} className="border-b border-border/50 pb-3 last:border-b-0 last:pb-0">
+              <li
+                key={event.id}
+                className="border-b border-border/50 pb-3 last:border-b-0 last:pb-0"
+              >
                 <div className="flex items-center gap-2">
                   <StatePill label={event.verb} tone="primary" />
-                  <span className="text-xs text-muted-foreground">{formatWhen(event.occurred_at)}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {formatWhen(event.occurred_at)}
+                  </span>
                 </div>
                 <p className="mt-1 text-sm text-foreground">{event.summary}</p>
               </li>

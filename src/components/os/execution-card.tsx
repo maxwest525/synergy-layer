@@ -11,11 +11,7 @@ import {
   getExecutionState,
   testGithubConnection,
 } from "@/lib/execution/execution.functions";
-import {
-  reconcileExecutionFacts,
-  reconcileReadinessFacts,
-} from "@/lib/execution/timeline";
-
+import { reconcileExecutionFacts, reconcileReadinessFacts } from "@/lib/execution/timeline";
 
 type Stage = { label: string; detail: string; done: boolean };
 
@@ -56,11 +52,9 @@ function CostNote() {
         corrective adapter pass 10.7, preflight and security pass 11.2, and runtime verification
         pass 2.6. The current pass is not included in that 51.7 subtotal and is billed the same way.
       </p>
-
     </div>
   );
 }
-
 
 /**
  * The execution surface. It separates facts that are easy to confuse: readiness
@@ -73,7 +67,6 @@ export function ExecutionCard(props: Props) {
   const runExecute = useServerFn(executeChangeRequest);
   const runPublishCheck = useServerFn(checkChangeRequestPublished);
   const runPreflight = useServerFn(testGithubConnection);
-
 
   const execution = useQuery({
     queryKey: ["change-request-execution", props.id],
@@ -89,7 +82,11 @@ export function ExecutionCard(props: Props) {
   const execute = useMutation({
     mutationFn: () => runExecute({ data: { id: props.id } }),
     onSuccess: (result) => {
-      if (result.status === "committed" || result.status === "replayed" || result.status === "reconciled")
+      if (
+        result.status === "committed" ||
+        result.status === "replayed" ||
+        result.status === "reconciled"
+      )
         toast.success(result.message);
       else toast.error(result.message);
       refresh();
@@ -134,20 +131,18 @@ export function ExecutionCard(props: Props) {
   const readiness = reconcileReadinessFacts(data?.readiness ?? [], facts);
   const decided = props.state !== "proposed";
 
-  const preflightButton =
-    data?.isOperator ? (
-      <Button
-        variant="outline"
-        size="sm"
-        disabled={running || !data.executorCredentialPresent}
-        onClick={() => preflight.mutate()}
-      >
-        {data.executorCredentialPresent
-          ? "Test GitHub connection (read only)"
-          : "GitHub connection test unavailable"}
-      </Button>
-    ) : null;
-
+  const preflightButton = data?.isOperator ? (
+    <Button
+      variant="outline"
+      size="sm"
+      disabled={running || !data.executorCredentialPresent}
+      onClick={() => preflight.mutate()}
+    >
+      {data.executorCredentialPresent
+        ? "Test GitHub connection (read only)"
+        : "GitHub connection test unavailable"}
+    </Button>
+  ) : null;
 
   const readinessLabel: Record<string, string> = {
     proven: "Proven",
@@ -195,13 +190,12 @@ export function ExecutionCard(props: Props) {
     </div>
   ) : execution.isError ? (
     <p className="mt-4 rounded-lg border border-border/60 p-3 text-sm text-muted-foreground">
-      Readiness and attempt details could not be refreshed. The lifecycle stages above still use
-      the commit and publication proof stored on this change request.
+      Readiness and attempt details could not be refreshed. The lifecycle stages above still use the
+      commit and publication proof stored on this change request.
     </p>
   ) : (
     <p className="mt-4 text-sm text-muted-foreground">Reading execution readiness…</p>
   );
-
 
   if (!decided) {
     return (
@@ -234,7 +228,6 @@ export function ExecutionCard(props: Props) {
           before approval.
         </p>
         <CostNote />
-
       </GlassCard>
     );
   }
@@ -313,7 +306,6 @@ export function ExecutionCard(props: Props) {
       <div className="mt-4 flex flex-wrap gap-2">
         {preflightButton}
         {data?.isOperator && !committed ? (
-
           <Button
             variant="outline"
             size="sm"

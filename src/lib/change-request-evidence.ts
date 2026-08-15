@@ -69,9 +69,7 @@ export type OutcomeEvidenceSummary =
     };
 
 /** Availability is actionable, but it is deliberately not a success verdict. */
-export function summarizeOutcomeEvidence(
-  rows: readonly PostChangeRow[],
-): OutcomeEvidenceSummary {
+export function summarizeOutcomeEvidence(rows: readonly PostChangeRow[]): OutcomeEvidenceSummary {
   if (rows.length === 0) return { ready: false, rowCount: 0 };
   const dates = rows.map((row) => row.date).sort();
   const firstDate = dates[0]!;

@@ -16,7 +16,10 @@ export const definition: ModuleDefinition = {
       operations: [
         { name: "list_inbox", description: "Read inbox items by lane." },
         { name: "list_recommendations", description: "Read recommendations by state or module." },
-        { name: "get_recommendation", description: "Read one recommendation with sanitised detail." },
+        {
+          name: "get_recommendation",
+          description: "Read one recommendation with sanitised detail.",
+        },
         { name: "list_workflow_runs", description: "Read recent workflow run history." },
         { name: "list_capabilities", description: "Read capability integration state and health." },
         { name: "list_assets", description: "Read the marketing asset registry." },

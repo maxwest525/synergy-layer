@@ -3,7 +3,14 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 
-import { EmptyState, GlassCard, PageHeader, StatePill, formatWhen, toneForState } from "@/components/os/primitives";
+import {
+  EmptyState,
+  GlassCard,
+  PageHeader,
+  StatePill,
+  formatWhen,
+  toneForState,
+} from "@/components/os/primitives";
 import { Button } from "@/components/ui/button";
 import { runSchedulerTick } from "@/lib/os-admin.functions";
 import { getSchedules } from "@/lib/os.functions";
@@ -63,7 +70,10 @@ function SchedulerPage() {
       />
 
       {data.schedules.length === 0 ? (
-        <EmptyState title="No schedules" description="Create a schedule to run a workflow on a cadence." />
+        <EmptyState
+          title="No schedules"
+          description="Create a schedule to run a workflow on a cadence."
+        />
       ) : (
         <ul className="space-y-3">
           {data.schedules.map((schedule) => {
@@ -80,9 +90,15 @@ function SchedulerPage() {
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
-                        <StatePill label={schedule.enabled ? "enabled" : "paused"} tone={schedule.enabled ? "positive" : "warning"} />
+                        <StatePill
+                          label={schedule.enabled ? "enabled" : "paused"}
+                          tone={schedule.enabled ? "positive" : "warning"}
+                        />
                         {schedule.last_state ? (
-                          <StatePill label={schedule.last_state} tone={toneForState(schedule.last_state)} />
+                          <StatePill
+                            label={schedule.last_state}
+                            tone={toneForState(schedule.last_state)}
+                          />
                         ) : null}
                       </div>
                     </div>

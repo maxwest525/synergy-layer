@@ -138,50 +138,41 @@ describe("normalizePageSpeed", () => {
 
   it("throws when there is no Lighthouse result at all", () => {
     expect(() =>
-      normalizePageSpeed(
-        {},
-        { url: "https://trumoveinc.com", strategy: "mobile" },
-      ),
+      normalizePageSpeed({}, { url: "https://trumoveinc.com", strategy: "mobile" }),
     ).toThrow(PageSpeedError);
   });
 });
 
 describe("assertOwnedTarget", () => {
   it("accepts an owned host regardless of www", () => {
-    expect(
-      assertOwnedTarget("https://www.trumoveinc.com/services", [
-        "trumoveinc.com",
-      ]),
-    ).toContain("trumoveinc.com/services");
+    expect(assertOwnedTarget("https://www.trumoveinc.com/services", ["trumoveinc.com"])).toContain(
+      "trumoveinc.com/services",
+    );
   });
 
   it("refuses a host that is not an owned asset", () => {
-    expect(() =>
-      assertOwnedTarget("https://competitor.com", ["trumoveinc.com"]),
-    ).toThrow(/not an owned site/);
+    expect(() => assertOwnedTarget("https://competitor.com", ["trumoveinc.com"])).toThrow(
+      /not an owned site/,
+    );
   });
 
   it("refuses non http protocols and malformed URLs", () => {
-    expect(() =>
-      assertOwnedTarget("ftp://trumoveinc.com", ["trumoveinc.com"]),
-    ).toThrow(/http and https/);
-    expect(() => assertOwnedTarget("not a url", ["trumoveinc.com"])).toThrow(
-      /not a valid URL/,
+    expect(() => assertOwnedTarget("ftp://trumoveinc.com", ["trumoveinc.com"])).toThrow(
+      /http and https/,
     );
+    expect(() => assertOwnedTarget("not a url", ["trumoveinc.com"])).toThrow(/not a valid URL/);
   });
 });
 
 describe("GA4 connection gate", () => {
   it("binds GA4 only from a supported tenant Search Console property", () => {
-    expect(
-      ga4PropertyForSearchConsoleProperty("sc-domain:trumoveinc.com"),
-    ).toBe(TRUMOVE_GA4_PROPERTY);
-    expect(
-      ga4PropertyForSearchConsoleProperty("https://trumoveinc.com/"),
-    ).toBe(TRUMOVE_GA4_PROPERTY);
-    expect(
-      ga4PropertyForSearchConsoleProperty("sc-domain:competitor.com"),
-    ).toBeNull();
+    expect(ga4PropertyForSearchConsoleProperty("sc-domain:trumoveinc.com")).toBe(
+      TRUMOVE_GA4_PROPERTY,
+    );
+    expect(ga4PropertyForSearchConsoleProperty("https://trumoveinc.com/")).toBe(
+      TRUMOVE_GA4_PROPERTY,
+    );
+    expect(ga4PropertyForSearchConsoleProperty("sc-domain:competitor.com")).toBeNull();
     expect(ga4PropertyForSearchConsoleProperty(null)).toBeNull();
   });
 
@@ -210,16 +201,9 @@ describe("GA4 connection gate", () => {
   });
 
   it("stays unconnected with no credential at all", () => {
-    const state = describeGa4Connection(
-      readGa4EnvPresence({}),
-      TRUMOVE_GA4_PROPERTY,
-    );
+    const state = describeGa4Connection(readGa4EnvPresence({}), TRUMOVE_GA4_PROPERTY);
     expect(state.connected).toBe(false);
-    expect(
-      state.requirements.some((line) =>
-        line.includes("GA4_SERVICE_ACCOUNT_JSON"),
-      ),
-    ).toBe(true);
+    expect(state.requirements.some((line) => line.includes("GA4_SERVICE_ACCOUNT_JSON"))).toBe(true);
   });
 
   it("names the exact missing half of a partial OAuth credential", () => {
@@ -231,32 +215,20 @@ describe("GA4 connection gate", () => {
       TRUMOVE_GA4_PROPERTY,
     );
     expect(state.connected).toBe(false);
-    expect(state.requirements).toEqual([
-      "GA4_OAUTH_CLIENT_SECRET is not set on the server.",
-    ]);
+    expect(state.requirements).toEqual(["GA4_OAUTH_CLIENT_SECRET is not set on the server."]);
   });
 
   it("separates configured credentials from a proven successful connection", () => {
     const presence = readGa4EnvPresence({ GA4_SERVICE_ACCOUNT_JSON: "{}" });
-    expect(
-      describeGa4Connection(presence, TRUMOVE_GA4_PROPERTY).configured,
-    ).toBe(true);
-    expect(
-      describeGa4Connection(presence, TRUMOVE_GA4_PROPERTY).authenticated,
-    ).toBe(false);
-    expect(
-      describeGa4Connection(presence, TRUMOVE_GA4_PROPERTY).connected,
-    ).toBe(false);
-    expect(
-      describeGa4Connection(presence, TRUMOVE_GA4_PROPERTY, false, true),
-    ).toMatchObject({
+    expect(describeGa4Connection(presence, TRUMOVE_GA4_PROPERTY).configured).toBe(true);
+    expect(describeGa4Connection(presence, TRUMOVE_GA4_PROPERTY).authenticated).toBe(false);
+    expect(describeGa4Connection(presence, TRUMOVE_GA4_PROPERTY).connected).toBe(false);
+    expect(describeGa4Connection(presence, TRUMOVE_GA4_PROPERTY, false, true)).toMatchObject({
       configured: true,
       authenticated: true,
       connected: false,
     });
-    expect(
-      describeGa4Connection(presence, TRUMOVE_GA4_PROPERTY, true).connected,
-    ).toBe(true);
+    expect(describeGa4Connection(presence, TRUMOVE_GA4_PROPERTY, true).connected).toBe(true);
   });
 });
 
@@ -343,9 +315,7 @@ describe("GA4 exact-page event inventory", () => {
           metricValues: [{ value: "11" }, { value: "8" }, { value: "7" }],
         },
       ],
-      totals: [
-        { metricValues: [{ value: "15" }, { value: "9" }, { value: "9" }] },
-      ],
+      totals: [{ metricValues: [{ value: "15" }, { value: "9" }, { value: "9" }] }],
       propertyQuota: { tokensPerDay: { consumed: 1, remaining: 999 } },
     });
     expect(report.rowCount).toBe(2);
@@ -395,8 +365,6 @@ describe("missing snapshot copy", () => {
   });
 
   it("says nothing was attempted only when there are no stored runs", () => {
-    expect(describeMissingSnapshot([]).title).toBe(
-      "No PageSpeed run attempted yet",
-    );
+    expect(describeMissingSnapshot([]).title).toBe("No PageSpeed run attempted yet");
   });
 });

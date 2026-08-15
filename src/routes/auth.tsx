@@ -19,7 +19,7 @@ function safeNext(value: unknown): string | undefined {
 
 export const Route = createFileRoute("/auth")({
   validateSearch: (search: Record<string, unknown>) => {
-    const next = safeNext(search['next']);
+    const next = safeNext(search["next"]);
     return next ? { next } : {};
   },
   head: () => ({
@@ -27,7 +27,8 @@ export const Route = createFileRoute("/auth")({
       { title: "Sign in — AOOS" },
       {
         name: "description",
-        content: "Operator sign-in for the AOOS marketing operating system. Read access is open; actions require a role.",
+        content:
+          "Operator sign-in for the AOOS marketing operating system. Read access is open; actions require a role.",
       },
       { property: "og:title", content: "Sign in — AOOS" },
       { property: "og:description", content: "Operator sign-in for AOOS." },
@@ -40,7 +41,7 @@ export const Route = createFileRoute("/auth")({
 function AuthPage() {
   const navigate = useNavigate();
   const search = Route.useSearch();
-  const next = safeNext(search['next' as keyof typeof search]);
+  const next = safeNext(search["next" as keyof typeof search]);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [mode, setMode] = useState<"sign_in" | "sign_up">("sign_in");
@@ -53,7 +54,9 @@ function AuthPage() {
           : supabase.auth.signUp({
               email,
               password,
-              options: { emailRedirectTo: next ? `${window.location.origin}${next}` : window.location.origin },
+              options: {
+                emailRedirectTo: next ? `${window.location.origin}${next}` : window.location.origin,
+              },
             });
       const { error } = await action;
       if (error) throw new Error(error.message);
@@ -73,7 +76,8 @@ function AuthPage() {
     mutationFn: async () => {
       const callback = `${window.location.origin}/auth/callback${next ? `?next=${encodeURIComponent(next)}` : ""}`;
       const result = await lovable.auth.signInWithOAuth("google", { redirect_uri: callback });
-      if (result.error) throw result.error instanceof Error ? result.error : new Error(String(result.error));
+      if (result.error)
+        throw result.error instanceof Error ? result.error : new Error(String(result.error));
       return result;
     },
     onSuccess: (result) => {
@@ -82,7 +86,6 @@ function AuthPage() {
     },
     onError: (error: Error) => toast.error(error.message),
   });
-
 
   return (
     <div className="mx-auto max-w-md space-y-8">
@@ -145,10 +148,9 @@ function AuthPage() {
         </Button>
 
         <p className="mt-4 text-xs leading-relaxed text-muted-foreground">
-          Signing in proves identity only. AOOS access is granted by the server side operator allowlist.
+          Signing in proves identity only. AOOS access is granted by the server side operator
+          allowlist.
         </p>
-
-
 
         <button
           type="button"

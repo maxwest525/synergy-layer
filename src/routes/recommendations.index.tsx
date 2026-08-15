@@ -1,7 +1,14 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 
-import { EmptyState, GlassCard, PageHeader, StatePill, formatWhen, toneForState } from "@/components/os/primitives";
+import {
+  EmptyState,
+  GlassCard,
+  PageHeader,
+  StatePill,
+  formatWhen,
+  toneForState,
+} from "@/components/os/primitives";
 import { getRecommendations } from "@/lib/os.functions";
 
 const recommendationsQuery = { queryKey: ["recommendations"], queryFn: () => getRecommendations() };
@@ -25,7 +32,10 @@ export const Route = createFileRoute("/recommendations/")({
           "Scored recommendations with traffic, revenue, and business impact, confidence, risk, and time saved before approval.",
       },
       { property: "og:title", content: "Recommendation Queue — AOOS" },
-      { property: "og:description", content: "What the system thinks should happen next, and why." },
+      {
+        property: "og:description",
+        content: "What the system thinks should happen next, and why.",
+      },
     ],
   }),
   component: RecommendationsPage,
@@ -59,7 +69,10 @@ function RecommendationsPage() {
                         </p>
                       ) : null}
                     </div>
-                    <StatePill label={recommendation.state} tone={toneForState(recommendation.state)} />
+                    <StatePill
+                      label={recommendation.state}
+                      tone={toneForState(recommendation.state)}
+                    />
                   </div>
                   <div className="mt-3 flex flex-wrap items-center gap-2">
                     <StatePill label={`traffic: ${recommendation.traffic_impact}`} />
@@ -67,11 +80,19 @@ function RecommendationsPage() {
                     <StatePill label={`business: ${recommendation.business_impact}`} />
                     <StatePill
                       label={`risk: ${recommendation.risk}`}
-                      tone={recommendation.risk === "high" || recommendation.risk === "critical" ? "danger" : "neutral"}
+                      tone={
+                        recommendation.risk === "high" || recommendation.risk === "critical"
+                          ? "danger"
+                          : "neutral"
+                      }
                     />
-                    <StatePill label={`confidence: ${Math.round(recommendation.confidence * 100)}%`} tone="primary" />
+                    <StatePill
+                      label={`confidence: ${Math.round(recommendation.confidence * 100)}%`}
+                      tone="primary"
+                    />
                     <span className="text-xs text-muted-foreground">
-                      {recommendation.time_saved_minutes} min saved · filed {formatWhen(recommendation.created_at)}
+                      {recommendation.time_saved_minutes} min saved · filed{" "}
+                      {formatWhen(recommendation.created_at)}
                     </span>
                   </div>
                 </GlassCard>

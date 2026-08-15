@@ -25,10 +25,7 @@ import {
   verifyChangeRequest,
 } from "@/lib/change-requests.functions";
 import { describeOutcome, humanState, isChangeState } from "@/lib/change-request-state";
-import {
-  editTitleH1Proposal,
-  regenerateTitleH1Proposal,
-} from "@/lib/title-h1-proposals.functions";
+import { editTitleH1Proposal, regenerateTitleH1Proposal } from "@/lib/title-h1-proposals.functions";
 import { getTenantContext } from "@/lib/tenant.functions";
 
 export const Route = createFileRoute("/changes/$id")({
@@ -103,9 +100,7 @@ function ProposalRevisionPanel({
   const [seoTitle, setSeoTitle] = useState(
     fields.find((field) => field.field === "seo_title")?.after ?? "",
   );
-  const [h1, setH1] = useState(
-    fields.find((field) => field.field === "page_heading")?.after ?? "",
-  );
+  const [h1, setH1] = useState(fields.find((field) => field.field === "page_heading")?.after ?? "");
   const [reason, setReason] = useState(rationale);
 
   const revision = useMutation({
@@ -130,8 +125,8 @@ function ProposalRevisionPanel({
       {editable ? (
         <>
           <p className="mt-2 text-sm text-muted-foreground">
-            Editing saves a new immutable revision. Regenerate calls Gemini once using fresh required
-            evidence and optional knowledge writing guidance.
+            Editing saves a new immutable revision. Regenerate calls Gemini once using fresh
+            required evidence and optional knowledge writing guidance.
           </p>
           <div className="mt-4 grid gap-3">
             <label className="grid gap-1 text-sm">
@@ -148,10 +143,7 @@ function ProposalRevisionPanel({
             </label>
           </div>
           <div className="mt-4 flex flex-wrap gap-2">
-            <Button
-              disabled={revision.isPending}
-              onClick={() => revision.mutate("edit")}
-            >
+            <Button disabled={revision.isPending} onClick={() => revision.mutate("edit")}>
               Save edit
             </Button>
             <Button
@@ -192,7 +184,8 @@ function ProposalRevisionPanel({
                 <ul className="mt-2 space-y-1">
                   {versionFields.map((field) => (
                     <li key={field.field ?? field.label} className="text-sm text-muted-foreground">
-                      {field.label ?? field.field}: <span className="text-foreground">{field.after}</span>
+                      {field.label ?? field.field}:{" "}
+                      <span className="text-foreground">{field.after}</span>
                     </li>
                   ))}
                 </ul>
@@ -207,45 +200,90 @@ function ProposalRevisionPanel({
 }
 
 const providerLabels: Record<string, string> = {
-  live_page: "Live page", gsc: "Google Search Console", ga4: "Google Analytics 4",
-  dataforseo_organic: "DataForSEO organic", serpapi_transparency: "SerpAPI Ads Transparency",
-  serpapi_paid_serp: "SerpAPI live paid SERP", knowledge: "Knowledge review guidance",
+  live_page: "Live page",
+  gsc: "Google Search Console",
+  ga4: "Google Analytics 4",
+  dataforseo_organic: "DataForSEO organic",
+  serpapi_transparency: "SerpAPI Ads Transparency",
+  serpapi_paid_serp: "SerpAPI live paid SERP",
+  knowledge: "Knowledge review guidance",
 };
 
-type MeasurementView = { cycle: Record<string, unknown> | null; windows: Record<string, unknown>[]; observations: Record<string, unknown>[]; revisions: Record<string, unknown>[] };
+type MeasurementView = {
+  cycle: Record<string, unknown> | null;
+  windows: Record<string, unknown>[];
+  observations: Record<string, unknown>[];
+  revisions: Record<string, unknown>[];
+};
 
 function MeasurementHistory({ measurement }: { measurement: MeasurementView }) {
   if (!measurement.cycle) return null;
   return (
     <GlassCard className="p-5">
       <h2 className="text-sm font-semibold text-foreground">Measurement history</h2>
-      <p className="mt-2 text-sm text-muted-foreground">The approval baseline is frozen separately from the rendered live anchor. Providers keep their own roles; this history does not calculate success or verify the change automatically.</p>
+      <p className="mt-2 text-sm text-muted-foreground">
+        The approval baseline is frozen separately from the rendered live anchor. Providers keep
+        their own roles; this history does not calculate success or verify the change automatically.
+      </p>
       <div className="mt-4 grid gap-3 lg:grid-cols-2">
         {measurement.windows.map((window) => {
-          const observations = measurement.observations.filter((row) => row['window_id'] === window['id']);
+          const observations = measurement.observations.filter(
+            (row) => row["window_id"] === window["id"],
+          );
           return (
-            <div key={String(window['id'])} className="rounded-xl border border-border/60 p-3">
-              <p className="text-sm font-medium text-foreground">{Number(window['window_days']) === 0 ? "Immutable approval baseline" : String(window['window_days']) + "-day window"}</p>
-              <p className="mt-1 text-xs text-muted-foreground">{String(window['period_start_pt'])} through {String(window['period_end_pt'])} · available after {String(window['available_after_pt'])}</p>
+            <div key={String(window["id"])} className="rounded-xl border border-border/60 p-3">
+              <p className="text-sm font-medium text-foreground">
+                {Number(window["window_days"]) === 0
+                  ? "Immutable approval baseline"
+                  : String(window["window_days"]) + "-day window"}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {String(window["period_start_pt"])} through {String(window["period_end_pt"])} ·
+                available after {String(window["available_after_pt"])}
+              </p>
               {observations.length ? (
-                <ul className="mt-3 space-y-2">{observations.map((row) => (
-                  <li key={String(row['id'])} className="text-sm text-muted-foreground">
-                    <span className="text-foreground">{providerLabels[String(row['provider'])] ?? String(row['provider'])}</span>
-                    {" · revision " + String(row['revision_number']) + " · " + String(row['source_role']).replaceAll("_", " ") + " · " + String(row['status'])}
-                    <span className="mt-0.5 block text-xs">
-                      Captured {new Date(String(row['captured_at'])).toLocaleString()}
-                    </span>
-                  </li>
-                ))}</ul>
-              ) : <p className="mt-3 text-sm text-muted-foreground">No provider observations are available yet.</p>}
+                <ul className="mt-3 space-y-2">
+                  {observations.map((row) => (
+                    <li key={String(row["id"])} className="text-sm text-muted-foreground">
+                      <span className="text-foreground">
+                        {providerLabels[String(row["provider"])] ?? String(row["provider"])}
+                      </span>
+                      {" · revision " +
+                        String(row["revision_number"]) +
+                        " · " +
+                        String(row["source_role"]).replaceAll("_", " ") +
+                        " · " +
+                        String(row["status"])}
+                      <span className="mt-0.5 block text-xs">
+                        Captured {new Date(String(row["captured_at"])).toLocaleString()}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="mt-3 text-sm text-muted-foreground">
+                  No provider observations are available yet.
+                </p>
+              )}
             </div>
           );
         })}
       </div>
-      {measurement.revisions.length ? <div className="mt-4 border-t border-border/60 pt-3">
-        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Append-only notes and anchors</p>
-        {measurement.revisions.map((revision) => <p key={String(revision['id'])} className="mt-2 text-sm text-muted-foreground"><span className="text-foreground">{String(revision['kind']).replaceAll("_", " ")}</span>{" · " + String(revision['summary'])}</p>)}
-      </div> : null}
+      {measurement.revisions.length ? (
+        <div className="mt-4 border-t border-border/60 pt-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Append-only notes and anchors
+          </p>
+          {measurement.revisions.map((revision) => (
+            <p key={String(revision["id"])} className="mt-2 text-sm text-muted-foreground">
+              <span className="text-foreground">
+                {String(revision["kind"]).replaceAll("_", " ")}
+              </span>
+              {" · " + String(revision["summary"])}
+            </p>
+          ))}
+        </div>
+      ) : null}
     </GlassCard>
   );
 }
@@ -455,9 +493,13 @@ function ChangeRequestPage() {
                       </p>
                       <ul className="mt-2 space-y-2">
                         {rows.map((row, rowIndex) => (
-                          <li key={`${row.query}-${row.date}-${rowIndex}`} className="text-sm text-muted-foreground">
-                            <span className="text-foreground">{row.query}</span> — position {row.position} on{" "}
-                            {row.date}, {row.impressions} impressions, {row.clicks} clicks
+                          <li
+                            key={`${row.query}-${row.date}-${rowIndex}`}
+                            className="text-sm text-muted-foreground"
+                          >
+                            <span className="text-foreground">{row.query}</span> — position{" "}
+                            {row.position} on {row.date}, {row.impressions} impressions,{" "}
+                            {row.clicks} clicks
                           </li>
                         ))}
                       </ul>
@@ -474,9 +516,12 @@ function ChangeRequestPage() {
                       </p>
                       <ul className="mt-2 space-y-2">
                         {rows.map((row, rowIndex) => (
-                          <li key={`${row.domain}-${row.url}-${rowIndex}`} className="text-sm text-muted-foreground">
-                            <span className="text-foreground">{row.title}</span> — {row.domain}, position{" "}
-                            {row.position} for {row.query}
+                          <li
+                            key={`${row.domain}-${row.url}-${rowIndex}`}
+                            className="text-sm text-muted-foreground"
+                          >
+                            <span className="text-foreground">{row.title}</span> — {row.domain},
+                            position {row.position} for {row.query}
                           </li>
                         ))}
                       </ul>
@@ -485,8 +530,13 @@ function ChangeRequestPage() {
                 }
 
                 return (
-                  <p key={`${group.query}-${group.date}-${index}`} className="text-sm text-muted-foreground">
-                    <span className="text-foreground">{group.query ?? group.source ?? "Evidence"}</span>
+                  <p
+                    key={`${group.query}-${group.date}-${index}`}
+                    className="text-sm text-muted-foreground"
+                  >
+                    <span className="text-foreground">
+                      {group.query ?? group.source ?? "Evidence"}
+                    </span>
                     {group.date
                       ? ` — average position ${group.average_position ?? group.position ?? "unknown"} on ${group.date}, ${group.impressions ?? 0} impressions`
                       : null}
@@ -520,7 +570,6 @@ function ChangeRequestPage() {
           onInvalidate={invalidate}
         />
       )}
-
 
       <GlassCard className="p-5">
         <h2 className="text-sm font-semibold text-foreground">Outcome</h2>

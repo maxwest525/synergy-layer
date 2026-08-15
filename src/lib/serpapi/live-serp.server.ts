@@ -2,7 +2,12 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database } from "@/integrations/supabase/types";
 import { logActivity } from "../os.server";
-import { MAX_SEARCHES_PER_RUN, fingerprint, recordSerpApiSpend, serpApiSearch } from "./transport.server";
+import {
+  MAX_SEARCHES_PER_RUN,
+  fingerprint,
+  recordSerpApiSpend,
+  serpApiSearch,
+} from "./transport.server";
 
 type Client = SupabaseClient<Database>;
 
@@ -83,7 +88,8 @@ export async function observeLivePaidSerps(
 
     const ads = (data["ads"] as AdRow[] | undefined) ?? [];
     for (const ad of ads) {
-      if (ad.displayed_link) advertisers.add(ad.displayed_link.replace(/^https?:\/\//, "").split("/")[0] ?? "");
+      if (ad.displayed_link)
+        advertisers.add(ad.displayed_link.replace(/^https?:\/\//, "").split("/")[0] ?? "");
       else if (ad.source) advertisers.add(ad.source);
     }
     result.adsSeen += ads.length;

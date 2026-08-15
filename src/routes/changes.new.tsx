@@ -99,9 +99,9 @@ function NewTitleH1ProposalPage() {
             </Button>
           </div>
           <p className="text-xs text-muted-foreground">
-            Gemini remains the default. Dev mode bypasses only Gemini wording generation;
-            operator access, the live page, GSC, DataForSEO, source proof, review, and approval
-            are still required.
+            Gemini remains the default. Dev mode bypasses only Gemini wording generation; operator
+            access, the live page, GSC, DataForSEO, source proof, review, and approval are still
+            required.
           </p>
         </form>
       </GlassCard>

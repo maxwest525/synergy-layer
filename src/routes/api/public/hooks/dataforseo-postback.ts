@@ -18,7 +18,6 @@ export const Route = createFileRoute("/api/public/hooks/dataforseo-postback")({
           });
         }
 
-
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const { ingestSerpPostback } = await import("@/lib/dataforseo/serp.server");
 

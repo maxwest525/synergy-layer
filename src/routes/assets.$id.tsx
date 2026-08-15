@@ -2,11 +2,21 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 
 import { DataForSeoPanel } from "@/components/os/dataforseo-panel";
-import { DetailRow, GlassCard, PageHeader, StatePill, formatWhen, toneForState } from "@/components/os/primitives";
+import {
+  DetailRow,
+  GlassCard,
+  PageHeader,
+  StatePill,
+  formatWhen,
+  toneForState,
+} from "@/components/os/primitives";
 import { SearchConsolePanel } from "@/components/os/search-console-panel";
 import { getAsset } from "@/lib/os.functions";
 
-const assetQuery = (id: string) => ({ queryKey: ["asset", id], queryFn: () => getAsset({ data: { id } }) });
+const assetQuery = (id: string) => ({
+  queryKey: ["asset", id],
+  queryFn: () => getAsset({ data: { id } }),
+});
 
 export const Route = createFileRoute("/assets/$id")({
   // Operator-only workspace: nothing here is public, and rendering it on the
@@ -20,7 +30,8 @@ export const Route = createFileRoute("/assets/$id")({
   },
   head: ({ loaderData }) => {
     const title = loaderData?.asset ? `${loaderData.asset.name} — Assets — AOOS` : "Asset — AOOS";
-    const description = loaderData?.asset?.description ?? "Asset detail, health, and history in AOOS.";
+    const description =
+      loaderData?.asset?.description ?? "Asset detail, health, and history in AOOS.";
     return {
       meta: [
         { title },
@@ -52,7 +63,10 @@ function AssetDetailPage() {
         <GlassCard className="p-5">
           <h2 className="text-sm font-semibold text-foreground">Record</h2>
           <dl className="mt-3">
-            <DetailRow label="Status" value={<StatePill label={asset.status} tone={toneForState(asset.status)} />} />
+            <DetailRow
+              label="Status"
+              value={<StatePill label={asset.status} tone={toneForState(asset.status)} />}
+            />
             <DetailRow label="Owner" value={asset.owner_label ?? "Unassigned"} />
             <DetailRow label="External reference" value={asset.external_ref ?? "None"} />
             <DetailRow label="Last updated" value={formatWhen(asset.updated_at)} />
@@ -62,14 +76,21 @@ function AssetDetailPage() {
         <GlassCard className="p-5">
           <h2 className="text-sm font-semibold text-foreground">History</h2>
           {data.activity.length === 0 ? (
-            <p className="mt-3 text-sm text-muted-foreground">No recorded activity for this asset yet.</p>
+            <p className="mt-3 text-sm text-muted-foreground">
+              No recorded activity for this asset yet.
+            </p>
           ) : (
             <ul className="mt-3 space-y-3">
               {data.activity.map((event) => (
-                <li key={event.id} className="border-b border-border/50 pb-3 last:border-b-0 last:pb-0">
+                <li
+                  key={event.id}
+                  className="border-b border-border/50 pb-3 last:border-b-0 last:pb-0"
+                >
                   <div className="flex items-center gap-2">
                     <StatePill label={event.verb} tone="primary" />
-                    <span className="text-xs text-muted-foreground">{formatWhen(event.occurred_at)}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {formatWhen(event.occurred_at)}
+                    </span>
                   </div>
                   <p className="mt-1 text-sm text-foreground">{event.summary}</p>
                 </li>
@@ -87,8 +108,8 @@ function AssetDetailPage() {
           <p className="text-sm text-muted-foreground">
             Search Console and DataForSEO collect against this property. Search Console observations
             carry no provider cost. DataForSEO calls can be metered, and that spend is ledgered
-            separately. Every snapshot is stored immutably. To read the actual observed metrics, open
-            the{" "}
+            separately. Every snapshot is stored immutably. To read the actual observed metrics,
+            open the{" "}
             <Link to="/search" className="text-primary underline-offset-4 hover:underline">
               Search workspace
             </Link>

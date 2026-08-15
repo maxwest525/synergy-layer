@@ -96,12 +96,38 @@ export const getAdsOverview = createServerFn({ method: "POST" })
     const db = context.supabase;
 
     const [capability, watchlist, ledger, candidates, advertisers, links] = await Promise.all([
-      db.from("capabilities").select("config, integration_state, health").eq("key", "cap.serpapi_ads_transparency").maybeSingle(),
-      db.from("ad_vendor_watchlist").select("id, domain, label, active, resolution_state").eq("tenant_id", tenantId).order("domain"),
-      db.from("serpapi_requests").select("*").eq("tenant_id", tenantId).order("started_at", { ascending: false }).limit(50),
-      db.from("ad_advertiser_candidates").select("*").eq("tenant_id", tenantId).order("created_at", { ascending: false }).limit(200),
-      db.from("ad_advertisers").select("*").eq("tenant_id", tenantId).order("confirmed_at", { ascending: false }).limit(200),
-      db.from("ad_vendor_advertisers").select("watchlist_id, advertiser_fk").eq("tenant_id", tenantId),
+      db
+        .from("capabilities")
+        .select("config, integration_state, health")
+        .eq("key", "cap.serpapi_ads_transparency")
+        .maybeSingle(),
+      db
+        .from("ad_vendor_watchlist")
+        .select("id, domain, label, active, resolution_state")
+        .eq("tenant_id", tenantId)
+        .order("domain"),
+      db
+        .from("serpapi_requests")
+        .select("*")
+        .eq("tenant_id", tenantId)
+        .order("started_at", { ascending: false })
+        .limit(50),
+      db
+        .from("ad_advertiser_candidates")
+        .select("*")
+        .eq("tenant_id", tenantId)
+        .order("created_at", { ascending: false })
+        .limit(200),
+      db
+        .from("ad_advertisers")
+        .select("*")
+        .eq("tenant_id", tenantId)
+        .order("confirmed_at", { ascending: false })
+        .limit(200),
+      db
+        .from("ad_vendor_advertisers")
+        .select("watchlist_id, advertiser_fk")
+        .eq("tenant_id", tenantId),
     ]);
 
     for (const result of [capability, watchlist, ledger, candidates, advertisers, links]) {
@@ -133,7 +159,9 @@ export const getAdsOverview = createServerFn({ method: "POST" })
         confidence: row.match_confidence === null ? null : Number(row.match_confidence),
         reviewState: row.review_state,
         creativesObserved: Number(evidence["creativesObserved"] ?? 0),
-        targetDomains: Array.isArray(evidence["targetDomains"]) ? (evidence["targetDomains"] as string[]) : [],
+        targetDomains: Array.isArray(evidence["targetDomains"])
+          ? (evidence["targetDomains"] as string[])
+          : [],
         servesQueriedDomain: evidence["servesQueriedDomain"] === true,
         sourceUrl: row.source_url,
         createdAt: row.created_at,
@@ -202,7 +230,8 @@ export const checkAdsProviderGate = createServerFn({ method: "POST" })
     const { assertOperator } = await import("./os-admin.server");
     await assertOperator(context.supabase, context.userId);
 
-    const { checkSerpApiAccount, recordSerpApiAccountStatus } = await import("./serpapi/account.server");
+    const { checkSerpApiAccount, recordSerpApiAccountStatus } =
+      await import("./serpapi/account.server");
     const status = await checkSerpApiAccount();
     await recordSerpApiAccountStatus(context.supabase, status);
     return status;
@@ -215,7 +244,9 @@ export const checkAdsProviderGate = createServerFn({ method: "POST" })
  */
 export const decideAdvertiserCandidate = createServerFn({ method: "POST" })
   .inputValidator((data) =>
-    z.object({ candidateId: z.string().uuid(), decision: z.enum(["confirm", "reject"]) }).parse(data),
+    z
+      .object({ candidateId: z.string().uuid(), decision: z.enum(["confirm", "reject"]) })
+      .parse(data),
   )
   .middleware([requireSupabaseAuth])
   .handler(async ({ context, data }) => {
@@ -257,7 +288,11 @@ export const runAdsCanary = createServerFn({ method: "POST" })
   .inputValidator((data) =>
     z
       .object({
-        domain: z.string().min(3).max(253).regex(/^[a-z0-9.-]+$/i, "Enter a bare domain."),
+        domain: z
+          .string()
+          .min(3)
+          .max(253)
+          .regex(/^[a-z0-9.-]+$/i, "Enter a bare domain."),
         runKey: z.string().min(3).max(200).optional(),
       })
       .parse(data),
@@ -280,7 +315,9 @@ export const runAdsCanary = createServerFn({ method: "POST" })
  * confirmed: every advertiser lands pending for operator review.
  */
 export const runAdvertiserSweep = createServerFn({ method: "POST" })
-  .inputValidator((data) => z.object({ limit: z.number().int().min(1).max(12).optional() }).parse(data ?? {}))
+  .inputValidator((data) =>
+    z.object({ limit: z.number().int().min(1).max(12).optional() }).parse(data ?? {}),
+  )
   .middleware([requireSupabaseAuth])
   .handler(async ({ context, data }) => {
     const { assertOperator } = await import("./os-admin.server");

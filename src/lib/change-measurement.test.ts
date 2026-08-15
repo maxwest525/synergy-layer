@@ -112,16 +112,11 @@ it("keeps source roles distinct and returns questions without a verdict", () => 
     "search_behavior_disagree",
     "paid_pressure_changed",
   ]);
-  expect(flags.some((flag) => "success" in flag || "verdict" in flag)).toBe(
-    false,
-  );
+  expect(flags.some((flag) => "success" in flag || "verdict" in flag)).toBe(false);
 });
 
 it("reconciles each due window with an exact-page GA4 read that cannot block GSC", () => {
-  const source = readFileSync(
-    new URL("./change-measurements.server.ts", import.meta.url),
-    "utf8",
-  );
+  const source = readFileSync(new URL("./change-measurements.server.ts", import.meta.url), "utf8");
   expect(source).toContain("runGa4PageWindow");
   expect(source).toContain("exactHostAndPagePathMatch: true");
   expect(source).toContain("totalSessions: observation.totalSessions");

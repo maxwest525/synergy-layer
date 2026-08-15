@@ -11,7 +11,9 @@ export const listKeywordCandidates = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) =>
     z
-      .object({ reviewState: z.enum(["pending", "approved", "rejected", "all"]).default("pending") })
+      .object({
+        reviewState: z.enum(["pending", "approved", "rejected", "all"]).default("pending"),
+      })
       .parse(data ?? {}),
   )
   .handler(async ({ data, context }) => {
@@ -67,16 +69,17 @@ export const decideKeywordCandidates = createServerFn({ method: "POST" })
     const { requireTenantId } = await import("./tenant.server");
     const tenantId = await requireTenantId(context.supabase);
 
-    const { approveKeywords, rejectKeywords, reconcileKeywordInbox } = await import(
-      "./dataforseo/keywords.server"
-    );
+    const { approveKeywords, rejectKeywords, reconcileKeywordInbox } =
+      await import("./dataforseo/keywords.server");
     const { logActivity } = await import("./os.server");
 
     let count = 0;
     if (data.decision === "approve") {
-      count = (await approveKeywords(context.supabase, tenantId, data.keywords, context.userId)).approved;
+      count = (await approveKeywords(context.supabase, tenantId, data.keywords, context.userId))
+        .approved;
     } else {
-      count = (await rejectKeywords(context.supabase, tenantId, data.keywords, context.userId)).rejected;
+      count = (await rejectKeywords(context.supabase, tenantId, data.keywords, context.userId))
+        .rejected;
     }
 
     await logActivity(context.supabase, {

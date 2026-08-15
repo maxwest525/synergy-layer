@@ -110,7 +110,8 @@ export function normalizePageSpeed(
 
   const providerError = record(root["error"]);
   if (providerError) {
-    const message = text(providerError["message"]) ?? "PageSpeed reported an error without a message.";
+    const message =
+      text(providerError["message"]) ?? "PageSpeed reported an error without a message.";
     throw new PageSpeedError(message, finiteNumber(providerError["code"]));
   }
 

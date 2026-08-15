@@ -61,7 +61,10 @@ export type CompetitorIntelligenceResult = {
 };
 
 function normaliseDomain(value: string): string {
-  return value.trim().toLowerCase().replace(/^www\./, "");
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/^www\./, "");
 }
 
 function median(values: number[]): number {
@@ -87,10 +90,7 @@ type ParsedSerp = {
 };
 
 /** Re-reads stored SERP snapshots into a per-keyword structure. Costs nothing. */
-async function readSerpEvidence(
-  client: Client,
-  tenantId: string,
-): Promise<ParsedSerp[]> {
+async function readSerpEvidence(client: Client, tenantId: string): Promise<ParsedSerp[]> {
   const cutoff = new Date(Date.now() - COMPETITOR_INTELLIGENCE_CONFIG.lookbackDays * 86_400_000)
     .toISOString()
     .slice(0, 10);
@@ -111,7 +111,7 @@ async function readSerpEvidence(
     // keyword is history, not a second competitive signal.
     if (byKeyword.has(snapshot.target)) continue;
 
-    const rows = ((snapshot.payload as { rows?: SerpRow[] } | null)?.rows ?? []);
+    const rows = (snapshot.payload as { rows?: SerpRow[] } | null)?.rows ?? [];
     const organic = new Map<string, { position: number; url: string; title: string }>();
     const features = new Set<string>();
 
@@ -196,9 +196,12 @@ export async function buildCompetitorProfiles(
   }
 
   const domains = new Set<string>();
-  for (const serp of serps) for (const domain of serp.organic.keys()) if (domain !== own) domains.add(domain);
+  for (const serp of serps)
+    for (const domain of serp.organic.keys()) if (domain !== own) domains.add(domain);
 
-  const ownedAbsentSerps = serps.filter((serp) => !serp.organic.has(own)).map((serp) => serp.keyword);
+  const ownedAbsentSerps = serps
+    .filter((serp) => !serp.organic.has(own))
+    .map((serp) => serp.keyword);
   const ownedPresentInSerps = serps.length - ownedAbsentSerps.length;
 
   const profiles: CompetitorProfile[] = [];
@@ -218,12 +221,21 @@ export async function buildCompetitorProfiles(
       keywords.push(serp.keyword);
       positions.push(hit.position);
       for (const feature of serp.features) features.add(feature);
-      topUrls.push({ keyword: serp.keyword, url: hit.url, position: hit.position, title: hit.title });
+      topUrls.push({
+        keyword: serp.keyword,
+        url: hit.url,
+        position: hit.position,
+        title: hit.title,
+      });
 
       const ownHit = serp.organic.get(own);
       if (!ownHit) {
         ownedAbsentWhilePresent.push(serp.keyword);
-        outranksOwned.push({ keyword: serp.keyword, competitorPosition: hit.position, ownedPosition: null });
+        outranksOwned.push({
+          keyword: serp.keyword,
+          competitorPosition: hit.position,
+          ownedPosition: null,
+        });
       } else if (hit.position < ownHit.position) {
         outranksOwned.push({
           keyword: serp.keyword,
@@ -249,16 +261,14 @@ export async function buildCompetitorProfiles(
     // Top-10 presence is worth more than deep-page presence.
     const positionStrength = Math.max(0, (11 - Math.min(medianPosition, 11)) / 10);
 
-    const significanceScore = round(
-      55 * serpShare + 25 * outrankShare + 20 * positionStrength,
-      1,
-    );
+    const significanceScore = round(55 * serpShare + 25 * outrankShare + 20 * positionStrength, 1);
 
     const confidenceBasis: string[] = [
       `Observed in ${keywords.length} of ${serps.length} approved-keyword SERPs.`,
       `Median organic position ${round(medianPosition, 1)} across ${positions.length} observations.`,
     ];
-    let confidence = 0.35 + 0.35 * Math.min(serpShare * 2, 1) + 0.15 * Math.min(keywords.length / 10, 1);
+    let confidence =
+      0.35 + 0.35 * Math.min(serpShare * 2, 1) + 0.15 * Math.min(keywords.length / 10, 1);
     if (classByDomain.get(domain) === "surface") {
       confidence = Math.min(confidence, 0.4);
       confidenceBasis.push(
@@ -348,10 +358,7 @@ export async function buildCompetitorProfiles(
       if (profile.shortlisted && reviewStateByDomain.get(profile.domain) === "discovered") {
         update.review_state = "pending";
       }
-      const { error } = await client
-        .from("competitor_candidates")
-        .update(update)
-        .eq("id", id);
+      const { error } = await client.from("competitor_candidates").update(update).eq("id", id);
       if (error) throw new Error(error.message);
     } else {
       const { error } = await client.from("competitor_candidates").upsert(
@@ -361,7 +368,7 @@ export async function buildCompetitorProfiles(
           domain: profile.domain,
           source: "serp.derived",
           domain_class: profile.domainClass,
-           review_state: profile.shortlisted ? "pending" : "discovered",
+          review_state: profile.shortlisted ? "pending" : "discovered",
           metrics: payload as never,
         },
         { onConflict: "tenant_id,seed_domain,domain,source", ignoreDuplicates: false },
@@ -424,7 +431,6 @@ export async function buildCompetitorProfiles(
       },
     });
   }
-
 
   return {
     result: {

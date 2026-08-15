@@ -110,15 +110,29 @@ export type HealthFactorScore = {
 };
 
 export type HealthScore =
-  | { sufficient: true; score: number; scoredFactors: number; totalFactors: number; factors: HealthFactorScore[] }
-  | { sufficient: false; reason: string; scoredFactors: number; totalFactors: number; factors: HealthFactorScore[] };
+  | {
+      sufficient: true;
+      score: number;
+      scoredFactors: number;
+      totalFactors: number;
+      factors: HealthFactorScore[];
+    }
+  | {
+      sufficient: false;
+      reason: string;
+      scoredFactors: number;
+      totalFactors: number;
+      factors: HealthFactorScore[];
+    };
 
 /**
  * Weighted health score with the sufficiency gate applied. Missing factors have
  * their weight redistributed across the scored ones rather than counting as zero.
  */
 export function scoreBacklinkHealth(factors: HealthFactorScore[]): HealthScore {
-  const weights = new Map<string, number>(HEALTH_FACTORS.map((factor) => [factor.key, factor.weight]));
+  const weights = new Map<string, number>(
+    HEALTH_FACTORS.map((factor) => [factor.key, factor.weight]),
+  );
   const scored = factors.filter((factor) => factor.score !== null && weights.has(factor.key));
   const totalFactors = SUFFICIENCY.totalFactors;
 

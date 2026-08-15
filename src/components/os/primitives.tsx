@@ -52,7 +52,9 @@ export function PageHeader({
           <span aria-hidden className="size-1.5 rounded-full bg-primary" />
           {eyebrow}
         </p>
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">{title}</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
+          {title}
+        </h1>
         <p className="text-sm leading-relaxed text-muted-foreground">{description}</p>
       </div>
       {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
@@ -83,7 +85,6 @@ export function StatePill({ label, tone = "neutral" }: { label: string; tone?: T
     </span>
   );
 }
-
 
 export function toneForState(state: string | null | undefined): Tone {
   switch (state) {
@@ -119,7 +120,10 @@ export function toneForState(state: string | null | undefined): Tone {
 
 export function EmptyState({ title, description }: { title: string; description: string }) {
   return (
-    <div role="status" className="rounded-2xl border border-dashed border-border/70 px-6 py-12 text-center">
+    <div
+      role="status"
+      className="rounded-2xl border border-dashed border-border/70 px-6 py-12 text-center"
+    >
       <h3 className="text-sm font-medium text-foreground">{title}</h3>
       <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">{description}</p>
     </div>
@@ -166,4 +170,3 @@ export function formatWhen(value: string | null | undefined): string {
   const minutes = String(date.getUTCMinutes()).padStart(2, "0");
   return `${MONTHS[date.getUTCMonth()]} ${date.getUTCDate()}, ${String(hours).padStart(2, "0")}:${minutes} ${suffix}`;
 }
-

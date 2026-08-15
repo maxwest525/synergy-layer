@@ -1,7 +1,14 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 
-import { EmptyState, GlassCard, PageHeader, StatePill, formatWhen, toneForState } from "@/components/os/primitives";
+import {
+  EmptyState,
+  GlassCard,
+  PageHeader,
+  StatePill,
+  formatWhen,
+  toneForState,
+} from "@/components/os/primitives";
 import { getAgents } from "@/lib/os.functions";
 
 const agentsQuery = { queryKey: ["agents"], queryFn: () => getAgents() };
@@ -25,7 +32,10 @@ export const Route = createFileRoute("/agents/")({
           "Every agent with its purpose, model, memory scope, granted capabilities, current objective, and last result.",
       },
       { property: "og:title", content: "Agent Registry — AOOS" },
-      { property: "og:description", content: "Who does the work inside the marketing operating system." },
+      {
+        property: "og:description",
+        content: "Who does the work inside the marketing operating system.",
+      },
     ],
   }),
   component: AgentsPage,
@@ -43,7 +53,10 @@ function AgentsPage() {
       />
 
       {data.length === 0 ? (
-        <EmptyState title="No agents registered" description="Declare an agent in a module, then sync the registry." />
+        <EmptyState
+          title="No agents registered"
+          description="Declare an agent in a module, then sync the registry."
+        />
       ) : (
         <div className="grid gap-3 md:grid-cols-2">
           {data.map((agent) => (
@@ -65,7 +78,8 @@ function AgentsPage() {
                   <StatePill label={`memory: ${agent.memory_scope}`} />
                 </div>
                 <p className="mt-3 text-xs text-muted-foreground">
-                  {agent.current_task ? `Now: ${agent.current_task}` : "Idle"} · last run {formatWhen(agent.last_run_at)}
+                  {agent.current_task ? `Now: ${agent.current_task}` : "Idle"} · last run{" "}
+                  {formatWhen(agent.last_run_at)}
                 </p>
               </GlassCard>
             </Link>

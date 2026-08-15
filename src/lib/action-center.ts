@@ -94,7 +94,6 @@ function isActionCenterLane(value: string): value is ActionCenterLane {
   ].includes(value);
 }
 
-
 export type ActionCenterScopedItem = {
   resolved_at: string | null;
   lane: string;
@@ -112,8 +111,7 @@ export function isActionCenterItem(item: ActionCenterScopedItem): boolean {
 
   if (item.subject_kind === "change_request") {
     return Boolean(
-      item.changeRequest &&
-        ["proposed", "approved", "applied"].includes(item.changeRequest.state),
+      item.changeRequest && ["proposed", "approved", "applied"].includes(item.changeRequest.state),
     );
   }
 

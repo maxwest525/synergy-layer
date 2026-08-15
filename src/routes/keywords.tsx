@@ -4,7 +4,14 @@ import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
-import { EmptyState, GlassCard, MetricTile, PageHeader, StatePill, formatWhen } from "@/components/os/primitives";
+import {
+  EmptyState,
+  GlassCard,
+  MetricTile,
+  PageHeader,
+  StatePill,
+  formatWhen,
+} from "@/components/os/primitives";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { decideKeywordCandidates, listKeywordCandidates } from "@/lib/keywords.functions";
@@ -66,7 +73,8 @@ function KeywordReviewPage() {
   );
 
   const mutation = useMutation({
-    mutationFn: (input: { keywords: string[]; decision: "approve" | "reject" }) => decide({ data: input }),
+    mutationFn: (input: { keywords: string[]; decision: "approve" | "reject" }) =>
+      decide({ data: input }),
     onSuccess: (result, variables) => {
       toast.success(
         `${result.count} keyword${result.count === 1 ? "" : "s"} ${variables.decision === "approve" ? "approved" : "rejected"}${
@@ -92,7 +100,9 @@ function KeywordReviewPage() {
   };
 
   const toggle = (keyword: string) =>
-    setSelected((prev) => (prev.includes(keyword) ? prev.filter((k) => k !== keyword) : [...prev, keyword]));
+    setSelected((prev) =>
+      prev.includes(keyword) ? prev.filter((k) => k !== keyword) : [...prev, keyword],
+    );
 
   return (
     <div className="space-y-8">
@@ -124,10 +134,20 @@ function KeywordReviewPage() {
             >
               {allSelected ? "Clear selection" : "Select all"}
             </Button>
-            <Button variant="outline" size="sm" disabled={busy} onClick={() => act(selected, "approve")}>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={busy}
+              onClick={() => act(selected, "approve")}
+            >
               Approve selected
             </Button>
-            <Button variant="outline" size="sm" disabled={busy} onClick={() => act(selected, "reject")}>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={busy}
+              onClick={() => act(selected, "reject")}
+            >
               Reject selected
             </Button>
             <span aria-hidden className="mx-1 h-5 w-px bg-border/70" />
@@ -135,7 +155,12 @@ function KeywordReviewPage() {
               variant="outline"
               size="sm"
               disabled={busy}
-              onClick={() => act(candidates.map((row) => row.keyword), "approve")}
+              onClick={() =>
+                act(
+                  candidates.map((row) => row.keyword),
+                  "approve",
+                )
+              }
             >
               Approve all
             </Button>
@@ -143,7 +168,12 @@ function KeywordReviewPage() {
               variant="outline"
               size="sm"
               disabled={busy}
-              onClick={() => act(candidates.map((row) => row.keyword), "reject")}
+              onClick={() =>
+                act(
+                  candidates.map((row) => row.keyword),
+                  "reject",
+                )
+              }
             >
               Reject all
             </Button>
@@ -166,27 +196,43 @@ function KeywordReviewPage() {
                       <div className="min-w-0 space-y-1">
                         <p className="text-sm font-medium text-foreground">{row.keyword}</p>
                         <div className="flex flex-wrap items-center gap-2">
-                          <StatePill label={`Volume ${fmtNumber(metrics.search_volume)}`} tone="primary" />
+                          <StatePill
+                            label={`Volume ${fmtNumber(metrics.search_volume)}`}
+                            tone="primary"
+                          />
                           <StatePill label={`CPC ${fmtMoney(metrics.cpc)}`} />
                           <StatePill
                             label={`Competition ${
-                              typeof metrics.competition === "number" ? metrics.competition.toFixed(2) : "—"
+                              typeof metrics.competition === "number"
+                                ? metrics.competition.toFixed(2)
+                                : "—"
                             }`}
                           />
                           <StatePill label={row.source} />
                           {row.seed ? <StatePill label={`Seed: ${row.seed}`} /> : null}
                         </div>
                         <p className="text-xs text-muted-foreground">
-                          {row.language_code}-{row.location_code} · snapshot {row.snapshot_id ? row.snapshot_id.slice(0, 8) : "none"} ·
-                          proposed {formatWhen(row.created_at)}
+                          {row.language_code}-{row.location_code} · snapshot{" "}
+                          {row.snapshot_id ? row.snapshot_id.slice(0, 8) : "none"} · proposed{" "}
+                          {formatWhen(row.created_at)}
                         </p>
                       </div>
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
-                      <Button variant="outline" size="sm" disabled={busy} onClick={() => act([row.keyword], "approve")}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={busy}
+                        onClick={() => act([row.keyword], "approve")}
+                      >
                         Approve
                       </Button>
-                      <Button variant="outline" size="sm" disabled={busy} onClick={() => act([row.keyword], "reject")}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={busy}
+                        onClick={() => act([row.keyword], "reject")}
+                      >
                         Reject
                       </Button>
                     </div>

@@ -19,9 +19,7 @@ export type SchedulerTickOptions = {
   reconcileChangeMeasurements?: boolean;
 };
 
-export function requireScheduleAllowlist(
-  options: SchedulerTickOptions,
-): Set<string> {
+export function requireScheduleAllowlist(options: SchedulerTickOptions): Set<string> {
   if (!options.onlyKeys || options.onlyKeys.length === 0) {
     throw new Error("Scheduler ticks require an explicit schedule allowlist.");
   }
@@ -38,10 +36,7 @@ export async function tickScheduler(
   options: SchedulerTickOptions = {},
 ): Promise<TickResult> {
   const allowedKeys = requireScheduleAllowlist(options);
-  const { data: schedules, error } = await client
-    .from("schedules")
-    .select("*")
-    .eq("enabled", true);
+  const { data: schedules, error } = await client.from("schedules").select("*").eq("enabled", true);
   if (error) throw new Error(error.message);
 
   const { data: dependencies, error: dependencyError } = await client
@@ -50,26 +45,20 @@ export async function tickScheduler(
   if (dependencyError) throw new Error(dependencyError.message);
 
   const allSchedules = schedules ?? [];
-  const selectedSchedules = allSchedules.filter((schedule) =>
-    allowedKeys.has(schedule.key),
-  );
+  const selectedSchedules = allSchedules.filter((schedule) => allowedKeys.has(schedule.key));
   const byId = new Map(allSchedules.map((schedule) => [schedule.id, schedule]));
   const result: TickResult = { claimed: 0, blocked: 0, ran: [] };
 
   for (const schedule of selectedSchedules) {
-    const due =
-      schedule.next_run_at === null || new Date(schedule.next_run_at) <= now;
+    const due = schedule.next_run_at === null || new Date(schedule.next_run_at) <= now;
     if (!due) continue;
 
-    const edges = (dependencies ?? []).filter(
-      (edge) => edge.schedule_id === schedule.id,
-    );
+    const edges = (dependencies ?? []).filter((edge) => edge.schedule_id === schedule.id);
     const blockedBy = edges.find((edge) => {
       const upstream = byId.get(edge.depends_on_schedule_id);
       if (!upstream) return false;
       if (!upstream.last_run_at) return true;
-      if (edge.condition === "on_success")
-        return upstream.last_state !== "succeeded";
+      if (edge.condition === "on_success") return upstream.last_state !== "succeeded";
       return upstream.last_state === null;
     });
 
@@ -96,12 +85,7 @@ export async function tickScheduler(
     let state: Database["public"]["Enums"]["run_state"] = "failed";
     try {
       if (schedule.target_kind === "workflow" && schedule.target_id) {
-        const run = await runWorkflow(
-          client,
-          schedule.target_id,
-          `schedule:${schedule.key}`,
-          null,
-        );
+        const run = await runWorkflow(client, schedule.target_id, `schedule:${schedule.key}`, null);
         state = run.state;
       } else {
         state = "succeeded";
@@ -137,8 +121,7 @@ export async function tickScheduler(
 
   if (options.collectSerpBacklog !== false) await collectSerpBacklog(client);
   if (options.reconcileChangeMeasurements === true) {
-    const { reconcileChangeMeasurements } =
-      await import("./change-measurements.server");
+    const { reconcileChangeMeasurements } = await import("./change-measurements.server");
     await reconcileChangeMeasurements(client);
   }
 

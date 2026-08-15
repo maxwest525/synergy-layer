@@ -18,15 +18,21 @@ function safeNext(value: unknown): string | undefined {
 export const Route = createFileRoute("/auth/callback")({
   ssr: false,
   validateSearch: (search: Record<string, unknown>) => {
-    const next = safeNext(search['next']);
+    const next = safeNext(search["next"]);
     return next ? { next } : {};
   },
   head: () => ({
     meta: [
       { title: "Completing sign-in — AOOS" },
-      { name: "description", content: "AOOS is validating your session and checking operator access." },
+      {
+        name: "description",
+        content: "AOOS is validating your session and checking operator access.",
+      },
       { property: "og:title", content: "Completing sign-in — AOOS" },
-      { property: "og:description", content: "AOOS is validating your session and checking operator access." },
+      {
+        property: "og:description",
+        content: "AOOS is validating your session and checking operator access.",
+      },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -36,7 +42,7 @@ export const Route = createFileRoute("/auth/callback")({
 function CallbackPage() {
   const navigate = useNavigate();
   const search = Route.useSearch();
-  const next = safeNext(search['next' as keyof typeof search]);
+  const next = safeNext(search["next" as keyof typeof search]);
   const provision = useServerFn(provisionSession);
   const [hasSession, setHasSession] = useState<boolean | null>(null);
 
@@ -112,8 +118,8 @@ function CallbackPage() {
         {denied ? (
           <>
             <p className="text-sm text-muted-foreground">
-              An administrator has to add your address to the operator allowlist before AOOS actions unlock.
-              Read-only workspaces stay available in the meantime.
+              An administrator has to add your address to the operator allowlist before AOOS actions
+              unlock. Read-only workspaces stay available in the meantime.
             </p>
             <div className="flex gap-3">
               <Button variant="outline" asChild>
@@ -132,7 +138,9 @@ function CallbackPage() {
         ) : null}
 
         {result.data?.canOperate ? (
-          <p className="text-sm text-primary">Operator access confirmed. Taking you to the Action Center.</p>
+          <p className="text-sm text-primary">
+            Operator access confirmed. Taking you to the Action Center.
+          </p>
         ) : null}
       </GlassCard>
     </div>

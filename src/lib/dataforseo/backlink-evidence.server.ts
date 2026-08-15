@@ -41,7 +41,7 @@ async function rowsOf(client: Client, snapshotId: string): Promise<Row[]> {
     .select("payload")
     .eq("id", snapshotId)
     .single();
-  return ((data?.payload as { rows?: Row[] } | null)?.rows ?? []);
+  return (data?.payload as { rows?: Row[] } | null)?.rows ?? [];
 }
 
 function num(value: unknown): number | null {
@@ -51,9 +51,12 @@ function num(value: unknown): number | null {
 function classifyAnchor(anchor: string, brandTokens: string[]): string {
   const value = anchor.trim().toLowerCase();
   if (!value) return "empty";
-  if (/^https?:\/\//.test(value) || /^www\./.test(value) || /\.[a-z]{2,}\/?$/.test(value)) return "naked";
+  if (/^https?:\/\//.test(value) || /^www\./.test(value) || /\.[a-z]{2,}\/?$/.test(value))
+    return "naked";
   if (brandTokens.some((token) => value.includes(token))) return "branded";
-  if (["click here", "here", "read more", "website", "link", "visit", "this site"].includes(value)) {
+  if (
+    ["click here", "here", "read more", "website", "link", "visit", "this site"].includes(value)
+  ) {
     return "generic";
   }
   return "topical";
@@ -88,7 +91,12 @@ export async function collectBacklinkEvidence(
   const pages = await collectTopLinkedPages(client, tenantId, target, workflow);
   const history = await collectBacklinkHistory(client, tenantId, target, workflow);
   costUsd =
-    summary.costUsd + domains.costUsd + links.costUsd + anchors.costUsd + pages.costUsd + history.costUsd;
+    summary.costUsd +
+    domains.costUsd +
+    links.costUsd +
+    anchors.costUsd +
+    pages.costUsd +
+    history.costUsd;
 
   const summaryRow = (await rowsOf(client, summary.snapshotId))[0] ?? {};
   const domainRows = await rowsOf(client, domains.snapshotId);
@@ -116,19 +124,24 @@ export async function collectBacklinkEvidence(
   const anchorDistribution = Object.fromEntries(
     [...anchorTotals.entries()].map(([bucket, count]) => [
       bucket,
-      { backlinks: count, share: anchorBacklinks > 0 ? Number((count / anchorBacklinks).toFixed(4)) : null },
+      {
+        backlinks: count,
+        share: anchorBacklinks > 0 ? Number((count / anchorBacklinks).toFixed(4)) : null,
+      },
     ]),
   );
 
   // Referring-domain quality and toxicity
-  const spamScores = domainRows.map((row) => num(row["backlinks_spam_score"]) ?? num(row["spam_score"])).filter(
-    (value): value is number => value !== null,
-  );
+  const spamScores = domainRows
+    .map((row) => num(row["backlinks_spam_score"]) ?? num(row["spam_score"]))
+    .filter((value): value is number => value !== null);
   const flagged = domainRows.filter((row) => {
     const spam = num(row["backlinks_spam_score"]) ?? num(row["spam_score"]) ?? 0;
     return spam >= TOXIC_DEFAULTS.spamScoreFlag;
   });
-  const ranks = domainRows.map((row) => num(row["rank"])).filter((value): value is number => value !== null);
+  const ranks = domainRows
+    .map((row) => num(row["rank"]))
+    .filter((value): value is number => value !== null);
 
   const followCounts = linkRows.reduce<{ dofollow: number; nofollow: number }>(
     (acc, row) => {
@@ -177,7 +190,8 @@ export async function collectBacklinkEvidence(
     },
     referringDomainQuality: {
       observed: domainRows.length,
-      medianRank: ranks.length > 0 ? ranks.sort((a, b) => a - b)[Math.floor(ranks.length / 2)] : null,
+      medianRank:
+        ranks.length > 0 ? ranks.sort((a, b) => a - b)[Math.floor(ranks.length / 2)] : null,
       maxSpamScore: spamScores.length > 0 ? Math.max(...spamScores) : null,
       flaggedForReview: flagged.map((row) => ({
         domain: row["domain"] ?? null,
@@ -215,7 +229,11 @@ export async function collectBacklinkEvidence(
     };
     switch (key) {
       case "referring_domain_count":
-        return { key, score: null, provenance: summaryRow["referring_domains"] === undefined ? null : provenance };
+        return {
+          key,
+          score: null,
+          provenance: summaryRow["referring_domains"] === undefined ? null : provenance,
+        };
       case "anchor_naturalness":
         return { key, score: null, provenance: anchorRows.length > 0 ? provenance : null };
       case "toxic_link_ratio":
@@ -231,7 +249,9 @@ export async function collectBacklinkEvidence(
     }
   });
 
-  const missingFactors = factors.filter((factor) => factor.provenance === null).map((factor) => factor.key);
+  const missingFactors = factors
+    .filter((factor) => factor.provenance === null)
+    .map((factor) => factor.key);
   const health = scoreBacklinkHealth(factors);
 
   const collectedAt = new Date().toISOString();

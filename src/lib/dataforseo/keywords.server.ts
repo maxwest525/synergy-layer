@@ -75,7 +75,7 @@ async function readSeedQueries(client: Client, tenantId: string): Promise<string
 
   const seen = new Set<string>();
   for (const snapshot of data ?? []) {
-    const rows = ((snapshot.payload as { rows?: Record<string, unknown>[] } | null)?.rows ?? []);
+    const rows = (snapshot.payload as { rows?: Record<string, unknown>[] } | null)?.rows ?? [];
     for (const row of rows) {
       const keys = row["keys"] as string[] | undefined;
       const keyword = String(keys?.[0] ?? row["query"] ?? "").trim();
@@ -87,19 +87,53 @@ async function readSeedQueries(client: Client, tenantId: string): Promise<string
   return [...seen];
 }
 
-async function snapshotRows(client: Client, snapshotId: string): Promise<Record<string, unknown>[]> {
+async function snapshotRows(
+  client: Client,
+  snapshotId: string,
+): Promise<Record<string, unknown>[]> {
   const { data } = await client
     .from("dataforseo_snapshots")
     .select("payload")
     .eq("id", snapshotId)
     .single();
-  return ((data?.payload as { rows?: Record<string, unknown>[] } | null)?.rows ?? []);
+  return (data?.payload as { rows?: Record<string, unknown>[] } | null)?.rows ?? [];
 }
 
 const STOPWORDS = new Set([
-  "the", "and", "for", "with", "your", "you", "our", "from", "that", "this", "are", "was",
-  "will", "can", "get", "all", "any", "how", "why", "who", "what", "when", "into", "more",
-  "best", "top", "near", "com", "www", "home", "page", "site", "welcome", "official",
+  "the",
+  "and",
+  "for",
+  "with",
+  "your",
+  "you",
+  "our",
+  "from",
+  "that",
+  "this",
+  "are",
+  "was",
+  "will",
+  "can",
+  "get",
+  "all",
+  "any",
+  "how",
+  "why",
+  "who",
+  "what",
+  "when",
+  "into",
+  "more",
+  "best",
+  "top",
+  "near",
+  "com",
+  "www",
+  "home",
+  "page",
+  "site",
+  "welcome",
+  "official",
 ]);
 
 function phraseTokens(phrase: string): string[] {
@@ -128,7 +162,11 @@ async function readSeedsFromSite(domain: string): Promise<string[]> {
   const phrases = new Set<string>();
   for (const source of [page.title, ...headings]) {
     for (const segment of source.split(/[|\u2013\u2014\-:•,.!?]/)) {
-      const cleaned = segment.replace(/[^A-Za-z0-9 ]/g, " ").replace(/\s+/g, " ").trim().toLowerCase();
+      const cleaned = segment
+        .replace(/[^A-Za-z0-9 ]/g, " ")
+        .replace(/\s+/g, " ")
+        .trim()
+        .toLowerCase();
       const words = cleaned.split(" ").filter(Boolean);
       if (words.length < 2 || words.length > 5) continue;
       if (phraseTokens(cleaned).length === 0) continue;
@@ -165,7 +203,9 @@ export async function suggestKeywords(
   // associations cannot be judged and must not be filed. Operator-supplied
   // seeds outrank everything else, because a human naming the service and the
   // market is better evidence than headline copy.
-  const explicitSeeds = (manualSeeds ?? []).map((seed) => seed.trim().toLowerCase()).filter(Boolean);
+  const explicitSeeds = (manualSeeds ?? [])
+    .map((seed) => seed.trim().toLowerCase())
+    .filter(Boolean);
   const operatorSeeds =
     explicitSeeds.length > 0 ? explicitSeeds : await readTenantSeeds(client, tenantId);
   const querySeeds = operatorSeeds.length > 0 ? [] : await readSeedQueries(client, tenantId);
@@ -202,7 +242,9 @@ export async function suggestKeywords(
 
   let discardedIrrelevant = 0;
   for (const item of await snapshotRows(client, forSite.snapshotId)) {
-    const keyword = String(item["keyword"] ?? "").trim().toLowerCase();
+    const keyword = String(item["keyword"] ?? "")
+      .trim()
+      .toLowerCase();
     if (!keyword) continue;
     if (!isRelevant(keyword)) {
       discardedIrrelevant += 1;
@@ -239,7 +281,9 @@ export async function suggestKeywords(
     costUsd += suggestion.costUsd;
 
     for (const item of await snapshotRows(client, suggestion.snapshotId)) {
-      const keyword = String(item["keyword"] ?? "").trim().toLowerCase();
+      const keyword = String(item["keyword"] ?? "")
+        .trim()
+        .toLowerCase();
       if (!keyword || candidates.has(keyword)) continue;
       if (!isRelevant(keyword)) {
         discardedIrrelevant += 1;

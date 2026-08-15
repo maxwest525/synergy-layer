@@ -9,7 +9,7 @@ import listWorkflowRuns from "./tools/list-workflow-runs";
 
 // The OAuth issuer must be the direct Supabase host; the project ref is the only
 // value that survives publish unchanged.
-const projectRef = import.meta.env['VITE_SUPABASE_PROJECT_ID'] ?? "project-ref-unset";
+const projectRef = import.meta.env["VITE_SUPABASE_PROJECT_ID"] ?? "project-ref-unset";
 
 export default defineMcp({
   name: "aoos-marketing-os",
@@ -22,5 +22,12 @@ export default defineMcp({
     acceptedAudiences: "authenticated",
   }),
   // Cast: the SDK's tool type requires outputSchema under exactOptionalPropertyTypes.
-  tools: [listInbox, listRecommendations, getRecommendation, listWorkflowRuns, listCapabilities, listAssets] as never,
+  tools: [
+    listInbox,
+    listRecommendations,
+    getRecommendation,
+    listWorkflowRuns,
+    listCapabilities,
+    listAssets,
+  ] as never,
 });

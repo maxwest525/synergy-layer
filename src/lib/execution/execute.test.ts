@@ -11,10 +11,7 @@ import {
   type GithubApi,
   type RenderedVerifier,
 } from "./execute";
-import {
-  buildRenderedScrapeRequest,
-  captureMeasurementFollowupWarning,
-} from "./execute.server";
+import { buildRenderedScrapeRequest, captureMeasurementFollowupWarning } from "./execute.server";
 
 const changes = parseFieldChanges([
   {
@@ -56,7 +53,6 @@ function makeRequest(overrides: Partial<ExecutableRequest> = {}): ExecutableRequ
   };
 }
 
-
 function makeStore(
   request: ExecutableRequest | null,
   options: { proofResult?: { changed: boolean; warning?: string } } = {},
@@ -96,7 +92,11 @@ function makeGithub(
   return { github, writes };
 }
 
-function makeRenderer(page: { title: string | null; heading: string | null; finalUrl?: string }): RenderedVerifier {
+function makeRenderer(page: {
+  title: string | null;
+  heading: string | null;
+  finalUrl?: string;
+}): RenderedVerifier {
   return {
     name: "TestRenderer",
     render: async (url) => ({
@@ -243,9 +243,7 @@ describe("executeSourceChange", () => {
 describe("buildRenderedScrapeRequest", () => {
   it("forces a fresh Firecrawl render for publish proof", () => {
     expect(
-      buildRenderedScrapeRequest(
-        "https://trumoveinc.com/services/corporate-relocation",
-      ),
+      buildRenderedScrapeRequest("https://trumoveinc.com/services/corporate-relocation"),
     ).toEqual({
       url: "https://trumoveinc.com/services/corporate-relocation",
       formats: ["rawHtml", "markdown"],
@@ -289,9 +287,7 @@ describe("checkPublishedPage", () => {
       throw new Error("temporary database error");
     });
 
-    expect(warning).toBe(
-      "Measurement anchor follow-up failed: temporary database error",
-    );
+    expect(warning).toBe("Measurement anchor follow-up failed: temporary database error");
   });
 
   it("marks applied through one atomic routine when the rendered page proves the change", async () => {

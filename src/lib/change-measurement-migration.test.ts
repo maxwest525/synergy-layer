@@ -12,7 +12,9 @@ describe("change measurement database contract", () => {
   it("keeps all lifecycle tables tenant-consistent and read-only to authenticated users", () => {
     expect(sql).toMatch(/FOREIGN KEY \(cycle_id, tenant_id\)/g);
     expect(sql.match(/FOR SELECT TO authenticated/g)?.length).toBe(4);
-    expect(sql).toMatch(/REVOKE ALL ON public\.change_measurement_cycles[\s\S]*FROM PUBLIC, anon, authenticated/);
+    expect(sql).toMatch(
+      /REVOKE ALL ON public\.change_measurement_cycles[\s\S]*FROM PUBLIC, anon, authenticated/,
+    );
     expect(sql).not.toMatch(/GRANT (INSERT|UPDATE|DELETE).*authenticated/i);
   });
 
@@ -27,8 +29,14 @@ describe("change measurement database contract", () => {
   });
 
   it("anchors live_at only from rendered proof and never grants the append RPC to browsers", () => {
-    expect(sql).toMatch(/OLD\.published_proof_at IS NULL AND NEW\.published_proof_at IS NOT NULL[\s\S]*NEW\.live_at := NEW\.published_proof_at/);
-    expect(sql).toMatch(/REVOKE ALL ON FUNCTION public\.append_change_measurement_observation[\s\S]*authenticated/);
-    expect(sql).toMatch(/GRANT EXECUTE ON FUNCTION public\.append_change_measurement_observation[\s\S]*TO service_role/);
+    expect(sql).toMatch(
+      /OLD\.published_proof_at IS NULL AND NEW\.published_proof_at IS NOT NULL[\s\S]*NEW\.live_at := NEW\.published_proof_at/,
+    );
+    expect(sql).toMatch(
+      /REVOKE ALL ON FUNCTION public\.append_change_measurement_observation[\s\S]*authenticated/,
+    );
+    expect(sql).toMatch(
+      /GRANT EXECUTE ON FUNCTION public\.append_change_measurement_observation[\s\S]*TO service_role/,
+    );
   });
 });

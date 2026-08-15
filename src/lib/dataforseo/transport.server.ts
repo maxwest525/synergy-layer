@@ -110,8 +110,6 @@ export async function dataforseoGet(path: string): Promise<DataForSeoEnvelope> {
   }
 }
 
-
-
 /** Stable, order-insensitive fingerprint: endpoint + normalized params + reporting date. */
 export function fingerprint(endpoint: string, params: unknown, reportingDate: string): string {
   const normalized = normalize(params);
@@ -122,7 +120,10 @@ export function fingerprint(endpoint: string, params: unknown, reportingDate: st
 }
 
 export function checksum(value: unknown): string {
-  return createHash("sha256").update(JSON.stringify(normalize(value))).digest("hex").slice(0, 32);
+  return createHash("sha256")
+    .update(JSON.stringify(normalize(value)))
+    .digest("hex")
+    .slice(0, 32);
 }
 
 function normalize(value: unknown): unknown {
@@ -188,7 +189,10 @@ export async function dataforseoPost(client: Client, options: PostOptions): Prom
           body: JSON.stringify(options.tasks),
         });
       } catch (error) {
-        lastError = new DataForSeoFailure("transport", `DataForSEO request failed: ${String(error)}`);
+        lastError = new DataForSeoFailure(
+          "transport",
+          `DataForSEO request failed: ${String(error)}`,
+        );
         if (attempt < MAX_ATTEMPTS) {
           await delay(attempt);
           continue;
@@ -203,7 +207,10 @@ export async function dataforseoPost(client: Client, options: PostOptions): Prom
         break;
       }
       if (response.status === 402) {
-        lastError = new DataForSeoFailure("budget", "DataForSEO reports a payment or balance problem.");
+        lastError = new DataForSeoFailure(
+          "budget",
+          "DataForSEO reports a payment or balance problem.",
+        );
         break;
       }
       if (response.status >= 500) {
@@ -241,7 +248,10 @@ export async function dataforseoPost(client: Client, options: PostOptions): Prom
       }
 
       const costUsd = Number(envelope.cost ?? 0);
-      const rows = (envelope.tasks ?? []).reduce((total, task) => total + (task.result_count ?? 0), 0);
+      const rows = (envelope.tasks ?? []).reduce(
+        (total, task) => total + (task.result_count ?? 0),
+        0,
+      );
 
       const requestId = await ledger(client, options, {
         mode,
@@ -399,7 +409,11 @@ export async function persistSnapshot(
       target: input.target,
       mode: input.mode ?? "live",
       request_fingerprint: input.requestFingerprint,
-      checksum: checksum({ endpoint: input.endpoint, params: input.requestParams, rows: input.rows }),
+      checksum: checksum({
+        endpoint: input.endpoint,
+        params: input.requestParams,
+        rows: input.rows,
+      }),
       api_version: API_VERSION,
       provider_task_id: input.task?.id ?? null,
       provider_status_code: input.task?.status_code ?? null,

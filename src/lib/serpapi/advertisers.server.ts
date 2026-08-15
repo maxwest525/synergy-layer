@@ -35,7 +35,11 @@ export type ResolutionResult = {
 };
 
 export function rootDomain(value: string): string {
-  return value.toLowerCase().replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/.*$/, "");
+  return value
+    .toLowerCase()
+    .replace(/^https?:\/\//, "")
+    .replace(/^www\./, "")
+    .replace(/\/.*$/, "");
 }
 
 /**
@@ -51,10 +55,17 @@ export function extractAdvertiserCandidates(
     (row) => typeof row.advertiser_id === "string",
   );
 
-  const grouped = new Map<string, { name: string | null; creatives: number; domains: Set<string> }>();
+  const grouped = new Map<
+    string,
+    { name: string | null; creatives: number; domains: Set<string> }
+  >();
   for (const row of creatives) {
     const id = row.advertiser_id as string;
-    const entry = grouped.get(id) ?? { name: row.advertiser ?? null, creatives: 0, domains: new Set<string>() };
+    const entry = grouped.get(id) ?? {
+      name: row.advertiser ?? null,
+      creatives: 0,
+      domains: new Set<string>(),
+    };
     entry.creatives += 1;
     if (!entry.name && row.advertiser) entry.name = row.advertiser;
     if (row.target_domain) entry.domains.add(rootDomain(row.target_domain));
@@ -155,7 +166,10 @@ export async function syncAdvertiserReviewInbox(
       const { error } = await client
         .from("inbox_items")
         .update({ resolved_at: new Date().toISOString(), lane: "completed" })
-        .in("id", existing.map((row) => row.id));
+        .in(
+          "id",
+          existing.map((row) => row.id),
+        );
       if (error) throw new Error(`Inbox resolve failed: ${error.message}`);
     }
     return { pending: 0, itemId: null };
@@ -179,7 +193,10 @@ export async function syncAdvertiserReviewInbox(
     const { error } = await client
       .from("inbox_items")
       .update({ resolved_at: new Date().toISOString(), lane: "completed" })
-      .in("id", duplicates.map((row) => row.id));
+      .in(
+        "id",
+        duplicates.map((row) => row.id),
+      );
     if (error) throw new Error(`Inbox dedupe failed: ${error.message}`);
   }
 

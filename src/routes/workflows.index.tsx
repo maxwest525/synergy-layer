@@ -1,7 +1,14 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 
-import { EmptyState, GlassCard, PageHeader, StatePill, formatWhen, toneForState } from "@/components/os/primitives";
+import {
+  EmptyState,
+  GlassCard,
+  PageHeader,
+  StatePill,
+  formatWhen,
+  toneForState,
+} from "@/components/os/primitives";
 import { getWorkflows } from "@/lib/os.functions";
 
 const workflowsQuery = { queryKey: ["workflows"], queryFn: () => getWorkflows() };
@@ -21,7 +28,8 @@ export const Route = createFileRoute("/workflows/")({
       { title: "Workflow Registry — AOOS" },
       {
         name: "description",
-        content: "Declarative workflows with full run history, step-level state, durations, and failure reasons.",
+        content:
+          "Declarative workflows with full run history, step-level state, durations, and failure reasons.",
       },
       { property: "og:title", content: "Workflow Registry — AOOS" },
       { property: "og:description", content: "How work runs, and what happened on every run." },
@@ -71,9 +79,13 @@ function WorkflowsPage() {
                       )}
                       <span className="flex flex-wrap items-center gap-3">
                         <StatePill label={run.state} tone={toneForState(run.state)} />
-                        <span className="text-xs text-muted-foreground">{formatWhen(run.created_at)}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {formatWhen(run.created_at)}
+                        </span>
                         {run.duration_ms !== null && run.duration_ms !== undefined ? (
-                          <span className="text-xs text-muted-foreground">{run.duration_ms} ms</span>
+                          <span className="text-xs text-muted-foreground">
+                            {run.duration_ms} ms
+                          </span>
                         ) : null}
                         <span className="text-xs text-muted-foreground">{run.trigger_source}</span>
                       </span>
@@ -89,30 +101,43 @@ function WorkflowsPage() {
         </section>
       ) : null}
 
-
       {data.workflows.length === 0 ? (
-        <EmptyState title="No workflows" description="Declare a workflow in a module, then sync the registry." />
+        <EmptyState
+          title="No workflows"
+          description="Declare a workflow in a module, then sync the registry."
+        />
       ) : (
         <div className="grid gap-3 md:grid-cols-2">
           {data.workflows.map((workflow) => {
             const runs = data.runs.filter((run) => run.workflow_id === workflow.id);
             const latest = runs[0];
             return (
-              <Link key={workflow.id} to="/workflows/$id" params={{ id: workflow.id }} className="block">
+              <Link
+                key={workflow.id}
+                to="/workflows/$id"
+                params={{ id: workflow.id }}
+                className="block"
+              >
                 <GlassCard className="h-full p-5 transition-colors hover:border-primary/40">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-foreground">{workflow.name}</p>
+                      <p className="truncate text-sm font-medium text-foreground">
+                        {workflow.name}
+                      </p>
                       <p className="truncate text-xs text-muted-foreground">{workflow.key}</p>
                     </div>
                     <StatePill label={workflow.health} tone={toneForState(workflow.health)} />
                   </div>
                   {workflow.description ? (
-                    <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">{workflow.description}</p>
+                    <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">
+                      {workflow.description}
+                    </p>
                   ) : null}
                   <div className="mt-3 flex flex-wrap items-center gap-2">
                     <StatePill label={`trigger: ${workflow.trigger_kind}`} />
-                    {latest ? <StatePill label={latest.state} tone={toneForState(latest.state)} /> : null}
+                    {latest ? (
+                      <StatePill label={latest.state} tone={toneForState(latest.state)} />
+                    ) : null}
                     <span className="text-xs text-muted-foreground">
                       {runs.length} recent runs · last {formatWhen(latest?.created_at ?? null)}
                     </span>

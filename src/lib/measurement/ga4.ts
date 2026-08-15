@@ -15,17 +15,10 @@ export function ga4PropertyForSearchConsoleProperty(
   searchConsoleProperty: string | null | undefined,
 ): string | null {
   if (!searchConsoleProperty) return null;
-  return (
-    GA4_PROPERTY_BY_GSC_PROPERTY[
-      searchConsoleProperty.trim().toLowerCase()
-    ] ?? null
-  );
+  return GA4_PROPERTY_BY_GSC_PROPERTY[searchConsoleProperty.trim().toLowerCase()] ?? null;
 }
 
-export type Ga4CredentialKind =
-  | "service_account"
-  | "oauth_refresh_token"
-  | null;
+export type Ga4CredentialKind = "service_account" | "oauth_refresh_token" | null;
 
 export type Ga4ConnectionState = {
   configured: boolean;
@@ -52,10 +45,7 @@ export function describeGa4Connection(
   authenticationProven = false,
 ): Ga4ConnectionState {
   const serviceAccount = presence.serviceAccountJson;
-  const oauth =
-    presence.oauthRefreshToken &&
-    presence.oauthClientId &&
-    presence.oauthClientSecret;
+  const oauth = presence.oauthRefreshToken && presence.oauthClientId && presence.oauthClientSecret;
   const credentialKind: Ga4CredentialKind = serviceAccount
     ? "service_account"
     : oauth
@@ -68,8 +58,7 @@ export function describeGa4Connection(
       authenticated: false,
       connected: false,
       credentialKind,
-      statement:
-        "No GA4 property is bound to this tenant's selected Search Console property.",
+      statement: "No GA4 property is bound to this tenant's selected Search Console property.",
       requirements: [
         "Select a supported Search Console property for this tenant before refreshing GA4.",
       ],
@@ -94,13 +83,8 @@ export function describeGa4Connection(
   }
 
   const requirements: string[] = [];
-  if (
-    presence.oauthRefreshToken ||
-    presence.oauthClientId ||
-    presence.oauthClientSecret
-  ) {
-    if (!presence.oauthClientId)
-      requirements.push("GA4_OAUTH_CLIENT_ID is not set on the server.");
+  if (presence.oauthRefreshToken || presence.oauthClientId || presence.oauthClientSecret) {
+    if (!presence.oauthClientId) requirements.push("GA4_OAUTH_CLIENT_ID is not set on the server.");
     if (!presence.oauthClientSecret)
       requirements.push("GA4_OAUTH_CLIENT_SECRET is not set on the server.");
     if (!presence.oauthRefreshToken)
@@ -109,9 +93,7 @@ export function describeGa4Connection(
     requirements.push(
       "A Google service account JSON with Analytics read access, stored as the server secret GA4_SERVICE_ACCOUNT_JSON.",
     );
-    requirements.push(
-      `That service account must have Viewer access on ${property}.`,
-    );
+    requirements.push(`That service account must have Viewer access on ${property}.`);
     requirements.push(
       "The Google Analytics Data API must be enabled on the same Google Cloud project.",
     );
@@ -131,19 +113,15 @@ export function describeGa4Connection(
 }
 
 /** Reads presence only. No value is ever returned or logged. */
-export function readGa4EnvPresence(
-  env: Record<string, string | undefined>,
-): Ga4EnvPresence {
-  const has = (key: string) =>
-    typeof env[key] === "string" && env[key]!.trim().length > 0;
+export function readGa4EnvPresence(env: Record<string, string | undefined>): Ga4EnvPresence {
+  const has = (key: string) => typeof env[key] === "string" && env[key]!.trim().length > 0;
   return {
     serviceAccountJson: has("GA4_SERVICE_ACCOUNT_JSON"),
     oauthRefreshToken: has("GA4_OAUTH_REFRESH_TOKEN"),
     oauthClientId: has("GA4_OAUTH_CLIENT_ID"),
     oauthClientSecret: has("GA4_OAUTH_CLIENT_SECRET"),
     measurementId:
-      has("VITE_GA4_MEASUREMENT_ID") ||
-      has("VITE_LOVABLE_CONNECTOR_GOOGLE_ANALYTICS_API_KEY"),
+      has("VITE_GA4_MEASUREMENT_ID") || has("VITE_LOVABLE_CONNECTOR_GOOGLE_ANALYTICS_API_KEY"),
   };
 }
 

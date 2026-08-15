@@ -31,7 +31,6 @@ export function TenantSwitcher() {
     retry: false,
   });
 
-
   const mutation = useMutation({
     mutationFn: (tenantId: string) => switchFn({ data: { tenantId } }),
     onSuccess: async () => {
@@ -47,10 +46,10 @@ export function TenantSwitcher() {
     },
   });
 
-
   if (isLoading || !data || data.tenants.length === 0) return null;
 
-  const active = data.tenants.find((tenant) => tenant.id === data.activeTenantId) ?? data.tenants[0]!;
+  const active =
+    data.tenants.find((tenant) => tenant.id === data.activeTenantId) ?? data.tenants[0]!;
 
   return (
     <div className="relative mb-4 px-1">
@@ -86,7 +85,9 @@ export function TenantSwitcher() {
                   onClick={() => (selected ? setOpen(false) : mutation.mutate(tenant.id))}
                   className={cn(
                     "flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors",
-                    selected ? "text-primary" : "text-muted-foreground hover:bg-primary/5 hover:text-foreground",
+                    selected
+                      ? "text-primary"
+                      : "text-muted-foreground hover:bg-primary/5 hover:text-foreground",
                   )}
                 >
                   <span className="min-w-0 flex-1 truncate">{tenant.name}</span>

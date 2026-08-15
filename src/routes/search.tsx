@@ -5,7 +5,14 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { OperatorRouteError } from "@/components/os/route-error";
-import { EmptyState, GlassCard, MetricTile, PageHeader, StatePill, formatWhen } from "@/components/os/primitives";
+import {
+  EmptyState,
+  GlassCard,
+  MetricTile,
+  PageHeader,
+  StatePill,
+  formatWhen,
+} from "@/components/os/primitives";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,7 +33,6 @@ import {
   submitSearchConsoleSitemap,
 } from "@/lib/search-console.functions";
 import { getTenantContext } from "@/lib/tenant.functions";
-
 
 export const Route = createFileRoute("/search")({
   // Operator-only workspace: rendering it server side without the operator
@@ -141,10 +147,18 @@ function RowTable({
                   trimUrl(row.keys[0] ?? "Unknown")
                 )}
               </td>
-              <td className="py-2 pr-4 text-right tabular-nums text-foreground">{fmtInt(row.clicks)}</td>
-              <td className="py-2 pr-4 text-right tabular-nums text-foreground">{fmtInt(row.impressions)}</td>
-              <td className="py-2 pr-4 text-right tabular-nums text-muted-foreground">{fmtCtr(row.ctr)}</td>
-              <td className="py-2 text-right tabular-nums text-muted-foreground">{fmtPosition(row.position)}</td>
+              <td className="py-2 pr-4 text-right tabular-nums text-foreground">
+                {fmtInt(row.clicks)}
+              </td>
+              <td className="py-2 pr-4 text-right tabular-nums text-foreground">
+                {fmtInt(row.impressions)}
+              </td>
+              <td className="py-2 pr-4 text-right tabular-nums text-muted-foreground">
+                {fmtCtr(row.ctr)}
+              </td>
+              <td className="py-2 text-right tabular-nums text-muted-foreground">
+                {fmtPosition(row.position)}
+              </td>
             </tr>
           ))}
         </tbody>
@@ -257,7 +271,6 @@ function SearchWorkspacePage() {
   const busy =
     collectionMutation.isPending || inspectionMutation.isPending || sitemapMutation.isPending;
 
-
   return (
     <div className="space-y-6">
       <PageHeader
@@ -292,14 +305,19 @@ function SearchWorkspacePage() {
           <GlassCard className="p-5">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Selected property</p>
+                <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                  Selected property
+                </p>
                 <p className="mt-1 text-sm font-medium text-foreground">{data.property.siteUrl}</p>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Google reports {data.property.permissionLevel} · {data.snapshotCount} stored snapshots ·
-                  last observed {formatWhen(data.property.lastObservedAt)}
+                  Google reports {data.property.permissionLevel} · {data.snapshotCount} stored
+                  snapshots · last observed {formatWhen(data.property.lastObservedAt)}
                 </p>
               </div>
-              <StatePill label={data.property.eligible ? "eligible" : "not eligible"} tone={data.property.eligible ? "positive" : "warning"} />
+              <StatePill
+                label={data.property.eligible ? "eligible" : "not eligible"}
+                tone={data.property.eligible ? "positive" : "warning"}
+              />
             </div>
             <p className="mt-4 rounded-xl border border-border/60 bg-muted/20 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
               {data.comparison.status === "ready"
@@ -315,13 +333,21 @@ function SearchWorkspacePage() {
             description={`Property totals for each finalized Pacific date. Latest finalized date: ${fmtDate(data.latestDate)}.`}
           >
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <MetricTile label="Clicks" value={latest ? fmtInt(latest.clicks) : "—"} hint={fmtDate(data.latestDate)} />
+              <MetricTile
+                label="Clicks"
+                value={latest ? fmtInt(latest.clicks) : "—"}
+                hint={fmtDate(data.latestDate)}
+              />
               <MetricTile
                 label="Impressions"
                 value={latest ? fmtInt(latest.impressions) : "—"}
                 hint={fmtDate(data.latestDate)}
               />
-              <MetricTile label="CTR" value={latest ? fmtCtr(latest.ctr) : "—"} hint="Clicks divided by impressions" />
+              <MetricTile
+                label="CTR"
+                value={latest ? fmtCtr(latest.ctr) : "—"}
+                hint="Clicks divided by impressions"
+              />
               <MetricTile
                 label="Avg position"
                 value={latest ? fmtPosition(latest.position) : "—"}
@@ -342,33 +368,55 @@ function SearchWorkspacePage() {
                   <table className="w-full min-w-[38rem] text-sm">
                     <thead>
                       <tr className="border-b border-border/60 text-left text-xs uppercase tracking-[0.14em] text-muted-foreground">
-                        <th className="py-2 pr-4 font-medium" scope="col">Metric</th>
-                        <th className="py-2 pr-4 text-right font-medium" scope="col">
-                          Previous ({data.comparison.previous.startDate}–{data.comparison.previous.endDate})
+                        <th className="py-2 pr-4 font-medium" scope="col">
+                          Metric
                         </th>
                         <th className="py-2 pr-4 text-right font-medium" scope="col">
-                          Current ({data.comparison.current.startDate}–{data.comparison.current.endDate})
+                          Previous ({data.comparison.previous.startDate}–
+                          {data.comparison.previous.endDate})
                         </th>
-                        <th className="py-2 text-right font-medium" scope="col">Change</th>
+                        <th className="py-2 pr-4 text-right font-medium" scope="col">
+                          Current ({data.comparison.current.startDate}–
+                          {data.comparison.current.endDate})
+                        </th>
+                        <th className="py-2 text-right font-medium" scope="col">
+                          Change
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
                       <tr className="border-b border-border/40">
                         <td className="py-2 pr-4 text-foreground">Clicks</td>
-                        <td className="py-2 pr-4 text-right tabular-nums">{fmtInt(data.comparison.previous.clicks)}</td>
-                        <td className="py-2 pr-4 text-right tabular-nums">{fmtInt(data.comparison.current.clicks)}</td>
-                        <td className="py-2 text-right text-muted-foreground">{percentChange(data.comparison.change.clicksPercent)}</td>
+                        <td className="py-2 pr-4 text-right tabular-nums">
+                          {fmtInt(data.comparison.previous.clicks)}
+                        </td>
+                        <td className="py-2 pr-4 text-right tabular-nums">
+                          {fmtInt(data.comparison.current.clicks)}
+                        </td>
+                        <td className="py-2 text-right text-muted-foreground">
+                          {percentChange(data.comparison.change.clicksPercent)}
+                        </td>
                       </tr>
                       <tr className="border-b border-border/40">
                         <td className="py-2 pr-4 text-foreground">Impressions</td>
-                        <td className="py-2 pr-4 text-right tabular-nums">{fmtInt(data.comparison.previous.impressions)}</td>
-                        <td className="py-2 pr-4 text-right tabular-nums">{fmtInt(data.comparison.current.impressions)}</td>
-                        <td className="py-2 text-right text-muted-foreground">{percentChange(data.comparison.change.impressionsPercent)}</td>
+                        <td className="py-2 pr-4 text-right tabular-nums">
+                          {fmtInt(data.comparison.previous.impressions)}
+                        </td>
+                        <td className="py-2 pr-4 text-right tabular-nums">
+                          {fmtInt(data.comparison.current.impressions)}
+                        </td>
+                        <td className="py-2 text-right text-muted-foreground">
+                          {percentChange(data.comparison.change.impressionsPercent)}
+                        </td>
                       </tr>
                       <tr className="border-b border-border/40">
                         <td className="py-2 pr-4 text-foreground">CTR</td>
-                        <td className="py-2 pr-4 text-right tabular-nums">{fmtCtr(data.comparison.previous.ctr)}</td>
-                        <td className="py-2 pr-4 text-right tabular-nums">{fmtCtr(data.comparison.current.ctr)}</td>
+                        <td className="py-2 pr-4 text-right tabular-nums">
+                          {fmtCtr(data.comparison.previous.ctr)}
+                        </td>
+                        <td className="py-2 pr-4 text-right tabular-nums">
+                          {fmtCtr(data.comparison.current.ctr)}
+                        </td>
                         <td className="py-2 text-right text-muted-foreground">
                           {data.comparison.change.ctrPoints === null
                             ? "No comparison"
@@ -377,8 +425,12 @@ function SearchWorkspacePage() {
                       </tr>
                       <tr>
                         <td className="py-2 pr-4 text-foreground">Avg position</td>
-                        <td className="py-2 pr-4 text-right tabular-nums">{fmtPosition(data.comparison.previous.position)}</td>
-                        <td className="py-2 pr-4 text-right tabular-nums">{fmtPosition(data.comparison.current.position)}</td>
+                        <td className="py-2 pr-4 text-right tabular-nums">
+                          {fmtPosition(data.comparison.previous.position)}
+                        </td>
+                        <td className="py-2 pr-4 text-right tabular-nums">
+                          {fmtPosition(data.comparison.current.position)}
+                        </td>
                         <td className="py-2 text-right text-muted-foreground">
                           {data.comparison.change.position === null
                             ? "No comparison"
@@ -388,7 +440,8 @@ function SearchWorkspacePage() {
                     </tbody>
                   </table>
                   <p className="mt-2 text-xs text-muted-foreground">
-                    CTR is recomputed from total clicks and impressions. Average position is impression-weighted; lower is better.
+                    CTR is recomputed from total clicks and impressions. Average position is
+                    impression-weighted; lower is better.
                   </p>
                 </div>
               )}
@@ -422,13 +475,21 @@ function SearchWorkspacePage() {
                   {data.dailyTotals.map((day) => (
                     <tr key={day.date} className="border-b border-border/40 last:border-b-0">
                       <td className="py-2 pr-4 text-foreground">{day.date}</td>
-                      <td className="py-2 pr-4 text-right tabular-nums text-foreground">{fmtInt(day.clicks)}</td>
-                      <td className="py-2 pr-4 text-right tabular-nums text-foreground">{fmtInt(day.impressions)}</td>
-                      <td className="py-2 pr-4 text-right tabular-nums text-muted-foreground">{fmtCtr(day.ctr)}</td>
+                      <td className="py-2 pr-4 text-right tabular-nums text-foreground">
+                        {fmtInt(day.clicks)}
+                      </td>
+                      <td className="py-2 pr-4 text-right tabular-nums text-foreground">
+                        {fmtInt(day.impressions)}
+                      </td>
+                      <td className="py-2 pr-4 text-right tabular-nums text-muted-foreground">
+                        {fmtCtr(day.ctr)}
+                      </td>
                       <td className="py-2 pr-4 text-right tabular-nums text-muted-foreground">
                         {fmtPosition(day.position)}
                       </td>
-                      <td className="py-2 text-right text-xs text-muted-foreground">{formatWhen(day.collectedAt)}</td>
+                      <td className="py-2 text-right text-xs text-muted-foreground">
+                        {formatWhen(day.collectedAt)}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -457,14 +518,26 @@ function SearchWorkspacePage() {
             title="Page + query"
             description={`Which query brought impressions to which page on ${fmtDate(data.latestDate)}.`}
           >
-            <RowTable rows={data.pageQueries} label="Page and query" emptyTitle="No page and query pairs stored" />
+            <RowTable
+              rows={data.pageQueries}
+              label="Page and query"
+              emptyTitle="No page and query pairs stored"
+            />
           </SectionCard>
 
           <div className="grid gap-4 lg:grid-cols-2">
-            <SectionCard id="devices" title="Devices" description="Device split for the latest finalized date.">
+            <SectionCard
+              id="devices"
+              title="Devices"
+              description="Device split for the latest finalized date."
+            >
               <RowTable rows={data.devices} label="Device" emptyTitle="No device rows stored" />
             </SectionCard>
-            <SectionCard id="countries" title="Countries" description="Country split for the latest finalized date.">
+            <SectionCard
+              id="countries"
+              title="Countries"
+              description="Country split for the latest finalized date."
+            >
               <RowTable rows={data.countries} label="Country" emptyTitle="No country rows stored" />
             </SectionCard>
           </div>
@@ -480,7 +553,8 @@ function SearchWorkspacePage() {
                   Inspect one page
                 </h3>
                 <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                  This read-only call reports the version Google has indexed. It does not test the live page and it does not request indexing.
+                  This read-only call reports the version Google has indexed. It does not test the
+                  live page and it does not request indexing.
                 </p>
                 <form
                   className="mt-3 flex flex-col gap-2 sm:flex-row"
@@ -521,22 +595,64 @@ function SearchWorkspacePage() {
                               {trimUrl(inspection.inspectedUrl)}
                             </p>
                             <p className="mt-1 text-xs text-muted-foreground">
-                              Inspected {formatWhen(inspection.inspectedAt)} · last crawled {formatWhen(inspection.lastCrawlTime)}
+                              Inspected {formatWhen(inspection.inspectedAt)} · last crawled{" "}
+                              {formatWhen(inspection.lastCrawlTime)}
                             </p>
                           </div>
                           <StatePill
                             label={inspection.verdict.toLowerCase()}
-                            tone={inspection.verdict === "PASS" ? "positive" : inspection.verdict === "FAIL" ? "danger" : "neutral"}
+                            tone={
+                              inspection.verdict === "PASS"
+                                ? "positive"
+                                : inspection.verdict === "FAIL"
+                                  ? "danger"
+                                  : "neutral"
+                            }
                           />
                         </div>
                         <dl className="mt-3 grid gap-x-6 gap-y-1 text-xs text-muted-foreground sm:grid-cols-2 lg:grid-cols-4">
-                          <div><dt className="inline">Coverage: </dt><dd className="inline text-foreground">{inspection.coverageState ?? "—"}</dd></div>
-                          <div><dt className="inline">Fetch: </dt><dd className="inline text-foreground">{inspection.pageFetchState ?? "—"}</dd></div>
-                          <div><dt className="inline">Indexing: </dt><dd className="inline text-foreground">{inspection.indexingState ?? "—"}</dd></div>
-                          <div><dt className="inline">robots.txt: </dt><dd className="inline text-foreground">{inspection.robotsTxtState ?? "—"}</dd></div>
-                          <div><dt className="inline">Crawled as: </dt><dd className="inline text-foreground">{inspection.crawledAs ?? "—"}</dd></div>
-                          <div className="sm:col-span-2"><dt className="inline">Google canonical: </dt><dd className="inline break-all text-foreground">{inspection.googleCanonical ?? "—"}</dd></div>
-                          <div className="sm:col-span-2"><dt className="inline">Declared canonical: </dt><dd className="inline break-all text-foreground">{inspection.userCanonical ?? "—"}</dd></div>
+                          <div>
+                            <dt className="inline">Coverage: </dt>
+                            <dd className="inline text-foreground">
+                              {inspection.coverageState ?? "—"}
+                            </dd>
+                          </div>
+                          <div>
+                            <dt className="inline">Fetch: </dt>
+                            <dd className="inline text-foreground">
+                              {inspection.pageFetchState ?? "—"}
+                            </dd>
+                          </div>
+                          <div>
+                            <dt className="inline">Indexing: </dt>
+                            <dd className="inline text-foreground">
+                              {inspection.indexingState ?? "—"}
+                            </dd>
+                          </div>
+                          <div>
+                            <dt className="inline">robots.txt: </dt>
+                            <dd className="inline text-foreground">
+                              {inspection.robotsTxtState ?? "—"}
+                            </dd>
+                          </div>
+                          <div>
+                            <dt className="inline">Crawled as: </dt>
+                            <dd className="inline text-foreground">
+                              {inspection.crawledAs ?? "—"}
+                            </dd>
+                          </div>
+                          <div className="sm:col-span-2">
+                            <dt className="inline">Google canonical: </dt>
+                            <dd className="inline break-all text-foreground">
+                              {inspection.googleCanonical ?? "—"}
+                            </dd>
+                          </div>
+                          <div className="sm:col-span-2">
+                            <dt className="inline">Declared canonical: </dt>
+                            <dd className="inline break-all text-foreground">
+                              {inspection.userCanonical ?? "—"}
+                            </dd>
+                          </div>
                         </dl>
                         {inspection.inspectionResultLink ? (
                           <a
@@ -555,9 +671,12 @@ function SearchWorkspacePage() {
               </section>
 
               <section aria-labelledby="sitemap-heading" className="border-t border-border/60 pt-5">
-                <h3 id="sitemap-heading" className="text-sm font-semibold text-foreground">Submit or resubmit a sitemap</h3>
+                <h3 id="sitemap-heading" className="text-sm font-semibold text-foreground">
+                  Submit or resubmit a sitemap
+                </h3>
                 <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                  Submission asks Google to process the sitemap; it does not guarantee crawling or indexing. Nothing is sent until you confirm the exact URL.
+                  Submission asks Google to process the sitemap; it does not guarantee crawling or
+                  indexing. Nothing is sent until you confirm the exact URL.
                 </p>
                 <form
                   className="mt-3 flex flex-col gap-2 sm:flex-row"
@@ -579,7 +698,11 @@ function SearchWorkspacePage() {
                     placeholder={`${ownedRoot.replace(/\/$/, "")}/sitemap.xml`}
                     disabled={busy}
                   />
-                  <Button type="submit" variant="outline" disabled={busy || sitemapUrl.trim() === ""}>
+                  <Button
+                    type="submit"
+                    variant="outline"
+                    disabled={busy || sitemapUrl.trim() === ""}
+                  >
                     Submit sitemap
                   </Button>
                 </form>
@@ -592,13 +715,30 @@ function SearchWorkspacePage() {
                 ) : (
                   <ul className="mt-4 space-y-3">
                     {data.sitemaps.map((sitemap) => (
-                      <li key={sitemap.path} className="border-b border-border/40 pb-3 last:border-b-0 last:pb-0">
+                      <li
+                        key={sitemap.path}
+                        className="border-b border-border/40 pb-3 last:border-b-0 last:pb-0"
+                      >
                         <div className="flex flex-wrap items-center justify-between gap-2">
-                          <p className="break-all text-sm font-medium text-foreground">{trimUrl(sitemap.path)}</p>
+                          <p className="break-all text-sm font-medium text-foreground">
+                            {trimUrl(sitemap.path)}
+                          </p>
                           <div className="flex items-center gap-2">
                             <StatePill
-                              label={sitemap.isPending ? "pending" : (sitemap.errors ?? 0) > 0 ? "errors" : "processed"}
-                              tone={sitemap.isPending ? "warning" : (sitemap.errors ?? 0) > 0 ? "danger" : "positive"}
+                              label={
+                                sitemap.isPending
+                                  ? "pending"
+                                  : (sitemap.errors ?? 0) > 0
+                                    ? "errors"
+                                    : "processed"
+                              }
+                              tone={
+                                sitemap.isPending
+                                  ? "warning"
+                                  : (sitemap.errors ?? 0) > 0
+                                    ? "danger"
+                                    : "positive"
+                              }
                             />
                             <Button
                               type="button"
@@ -615,13 +755,38 @@ function SearchWorkspacePage() {
                           </div>
                         </div>
                         <dl className="mt-2 grid gap-x-6 gap-y-1 text-xs text-muted-foreground sm:grid-cols-3">
-                          <div><dt className="inline">Submitted URLs: </dt><dd className="inline text-foreground">{sitemap.submitted ?? "—"}</dd></div>
-                          <div><dt className="inline">Indexed URLs: </dt><dd className="inline text-foreground">{sitemap.indexed ?? "—"}</dd></div>
-                          <div><dt className="inline">Type: </dt><dd className="inline text-foreground">{sitemap.type ?? "—"}</dd></div>
-                          <div><dt className="inline">Warnings: </dt><dd className="inline text-foreground">{sitemap.warnings ?? "—"}</dd></div>
-                          <div><dt className="inline">Errors: </dt><dd className="inline text-foreground">{sitemap.errors ?? "—"}</dd></div>
-                          <div><dt className="inline">Last submitted: </dt><dd className="inline text-foreground">{formatWhen(sitemap.lastSubmitted)}</dd></div>
-                          <div><dt className="inline">Last downloaded: </dt><dd className="inline text-foreground">{formatWhen(sitemap.lastDownloaded)}</dd></div>
+                          <div>
+                            <dt className="inline">Submitted URLs: </dt>
+                            <dd className="inline text-foreground">{sitemap.submitted ?? "—"}</dd>
+                          </div>
+                          <div>
+                            <dt className="inline">Indexed URLs: </dt>
+                            <dd className="inline text-foreground">{sitemap.indexed ?? "—"}</dd>
+                          </div>
+                          <div>
+                            <dt className="inline">Type: </dt>
+                            <dd className="inline text-foreground">{sitemap.type ?? "—"}</dd>
+                          </div>
+                          <div>
+                            <dt className="inline">Warnings: </dt>
+                            <dd className="inline text-foreground">{sitemap.warnings ?? "—"}</dd>
+                          </div>
+                          <div>
+                            <dt className="inline">Errors: </dt>
+                            <dd className="inline text-foreground">{sitemap.errors ?? "—"}</dd>
+                          </div>
+                          <div>
+                            <dt className="inline">Last submitted: </dt>
+                            <dd className="inline text-foreground">
+                              {formatWhen(sitemap.lastSubmitted)}
+                            </dd>
+                          </div>
+                          <div>
+                            <dt className="inline">Last downloaded: </dt>
+                            <dd className="inline text-foreground">
+                              {formatWhen(sitemap.lastDownloaded)}
+                            </dd>
+                          </div>
                         </dl>
                       </li>
                     ))}
@@ -630,16 +795,31 @@ function SearchWorkspacePage() {
 
                 {data.sitemapSubmissions.length > 0 ? (
                   <div className="mt-4 rounded-xl border border-border/60 p-3">
-                    <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">AOOS submission history</h4>
+                    <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      AOOS submission history
+                    </h4>
                     <ul className="mt-2 space-y-2 text-xs">
                       {data.sitemapSubmissions.slice(0, 5).map((submission) => (
-                        <li key={submission.id} className="flex flex-wrap items-start justify-between gap-2">
-                          <span className="break-all text-foreground">{trimUrl(submission.sitemapUrl)}</span>
-                          <span className={submission.status === "submitted" ? "text-emerald-600" : "text-destructive"}>
+                        <li
+                          key={submission.id}
+                          className="flex flex-wrap items-start justify-between gap-2"
+                        >
+                          <span className="break-all text-foreground">
+                            {trimUrl(submission.sitemapUrl)}
+                          </span>
+                          <span
+                            className={
+                              submission.status === "submitted"
+                                ? "text-emerald-600"
+                                : "text-destructive"
+                            }
+                          >
                             {submission.status} · {formatWhen(submission.submittedAt)}
                           </span>
                           {submission.failureReason ? (
-                            <span className="w-full text-destructive">{submission.failureReason}</span>
+                            <span className="w-full text-destructive">
+                              {submission.failureReason}
+                            </span>
                           ) : null}
                         </li>
                       ))}
@@ -648,7 +828,8 @@ function SearchWorkspacePage() {
                 ) : null}
 
                 <p className="mt-3 text-xs text-muted-foreground">
-                  Google provider charge: $0 per request. Google API quota still applies. This direct screen action does not run Lovable AI.
+                  Google provider charge: $0 per request. Google API quota still applies. This
+                  direct screen action does not run Lovable AI.
                 </p>
               </section>
             </div>
@@ -663,8 +844,10 @@ function SearchWorkspacePage() {
                 <AlertDialogHeader>
                   <AlertDialogTitle>Submit this sitemap to Google?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    AOOS will send one Search Console sitemap submission for {pendingSitemap ?? "the selected URL"}.
-                    Google may accept the request without crawling or indexing every URL. The attempt and any error will be retained in AOOS.
+                    AOOS will send one Search Console sitemap submission for{" "}
+                    {pendingSitemap ?? "the selected URL"}. Google may accept the request without
+                    crawling or indexing every URL. The attempt and any error will be retained in
+                    AOOS.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>

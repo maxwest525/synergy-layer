@@ -12,9 +12,15 @@ type AuthorizationDetails = {
 };
 
 type OAuthNamespace = {
-  getAuthorizationDetails: (id: string) => Promise<{ data: AuthorizationDetails | null; error: Error | null }>;
-  approveAuthorization: (id: string) => Promise<{ data: AuthorizationDetails | null; error: Error | null }>;
-  denyAuthorization: (id: string) => Promise<{ data: AuthorizationDetails | null; error: Error | null }>;
+  getAuthorizationDetails: (
+    id: string,
+  ) => Promise<{ data: AuthorizationDetails | null; error: Error | null }>;
+  approveAuthorization: (
+    id: string,
+  ) => Promise<{ data: AuthorizationDetails | null; error: Error | null }>;
+  denyAuthorization: (
+    id: string,
+  ) => Promise<{ data: AuthorizationDetails | null; error: Error | null }>;
 };
 
 function oauthApi(): OAuthNamespace {
@@ -27,14 +33,21 @@ export const Route = createFileRoute("/.lovable/oauth/consent")({
   head: () => ({
     meta: [
       { title: "Authorize access — AOOS" },
-      { name: "description", content: "Approve or deny an agent client requesting access to your AOOS account." },
+      {
+        name: "description",
+        content: "Approve or deny an agent client requesting access to your AOOS account.",
+      },
       { property: "og:title", content: "Authorize access — AOOS" },
-      { property: "og:description", content: "Approve or deny an agent client requesting access to AOOS." },
+      {
+        property: "og:description",
+        content: "Approve or deny an agent client requesting access to AOOS.",
+      },
       { name: "robots", content: "noindex" },
     ],
   }),
   validateSearch: (search: Record<string, unknown>) => ({
-    authorization_id: typeof search['authorization_id'] === "string" ? search['authorization_id'] : "",
+    authorization_id:
+      typeof search["authorization_id"] === "string" ? search["authorization_id"] : "",
   }),
   beforeLoad: async ({ search, location }) => {
     if (!search.authorization_id) throw new Error("Missing authorization_id");
@@ -102,8 +115,8 @@ function ConsentPage() {
 
       <GlassCard glow className="space-y-4 p-6">
         <p className="text-sm text-muted-foreground">
-          {clientName} is requesting read access to your inbox, recommendations, workflow runs, capabilities, and
-          assets. It cannot approve work or run anything on your behalf.
+          {clientName} is requesting read access to your inbox, recommendations, workflow runs,
+          capabilities, and assets. It cannot approve work or run anything on your behalf.
         </p>
         {error ? (
           <p role="alert" className="text-sm text-destructive">

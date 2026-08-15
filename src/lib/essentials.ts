@@ -5,13 +5,7 @@ import type { Tone } from "@/components/os/primitives";
  * reads the same six words everywhere. None of these words is derived from a
  * credential existing: configuration is not connection.
  */
-export type EssentialStatus =
-  | "live"
-  | "partial"
-  | "ready"
-  | "local"
-  | "not_wired"
-  | "reference";
+export type EssentialStatus = "live" | "partial" | "ready" | "local" | "not_wired" | "reference";
 
 export const STATUS_LABELS: Record<EssentialStatus, string> = {
   live: "Live data",
@@ -53,7 +47,10 @@ export function systemStatus(system: SystemFacts | null): EssentialStatus {
   if (connected && system.implemented_state === "implemented") return "live";
   if (connected && system.implemented_state === "partially_implemented") return "partial";
   if (system.installed_state === "installed") return "local";
-  if (system.credential_state === "configured" || system.credential_state === "encrypted_not_enumerated") {
+  if (
+    system.credential_state === "configured" ||
+    system.credential_state === "encrypted_not_enumerated"
+  ) {
     return "ready";
   }
   return "not_wired";
@@ -157,26 +154,31 @@ function sum(values: (number | null)[]): number | null {
 
 function numeric(value: unknown): number | null {
   if (typeof value === "number" && Number.isFinite(value)) return value;
-  if (typeof value === "string" && value.trim() !== "" && Number.isFinite(Number(value))) return Number(value);
+  if (typeof value === "string" && value.trim() !== "" && Number.isFinite(Number(value)))
+    return Number(value);
   return null;
 }
 
 export function summarizeSitemaps(payload: unknown): SitemapSummary {
   const container = (payload ?? {}) as { sitemap?: unknown };
-  const entries = Array.isArray(container.sitemap) ? (container.sitemap as Record<string, unknown>[]) : [];
+  const entries = Array.isArray(container.sitemap)
+    ? (container.sitemap as Record<string, unknown>[])
+    : [];
   const submitted: (number | null)[] = [];
   const indexed: (number | null)[] = [];
   for (const entry of entries) {
-    const contents = Array.isArray(entry['contents']) ? (entry['contents'] as Record<string, unknown>[]) : [];
-    submitted.push(sum(contents.map((block) => numeric(block['submitted']))));
-    indexed.push(sum(contents.map((block) => numeric(block['indexed']))));
+    const contents = Array.isArray(entry["contents"])
+      ? (entry["contents"] as Record<string, unknown>[])
+      : [];
+    submitted.push(sum(contents.map((block) => numeric(block["submitted"]))));
+    indexed.push(sum(contents.map((block) => numeric(block["indexed"]))));
   }
   return {
     count: entries.length,
     submitted: sum(submitted),
     indexed: sum(indexed),
-    warnings: sum(entries.map((entry) => numeric(entry['warnings']))),
-    errors: sum(entries.map((entry) => numeric(entry['errors']))),
+    warnings: sum(entries.map((entry) => numeric(entry["warnings"]))),
+    errors: sum(entries.map((entry) => numeric(entry["errors"]))),
   };
 }
 
@@ -195,11 +197,13 @@ export class EssentialsReadError extends Error {
  * Guards a Supabase result. A failed read must surface as an error, never as a
  * zero count that would mislabel a capability as Not wired.
  */
-export function assertRead<T extends { error: { message: string } | null }>(source: string, result: T): T {
+export function assertRead<T extends { error: { message: string } | null }>(
+  source: string,
+  result: T,
+): T {
   if (result.error) throw new EssentialsReadError(source, result.error.message);
   return result;
 }
-
 
 /** Recommended page changes: only concrete asset changes count. */
 export function changeStatus(proposedCount: number, totalCount: number): EssentialStatus {
@@ -259,7 +263,8 @@ export function describePageSpeed(facts: PageSpeedFacts): {
   }
   return {
     status,
-    evidence: "The AOOS PageSpeed bridge is implemented and callable. No run has been attempted yet, so nothing is measured.",
+    evidence:
+      "The AOOS PageSpeed bridge is implemented and callable. No run has been attempted yet, so nothing is measured.",
     gap: "An operator has to run one check from Measurement before any Lighthouse figure exists here.",
   };
 }

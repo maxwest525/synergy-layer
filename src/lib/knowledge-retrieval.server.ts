@@ -32,13 +32,15 @@ const COLLECTION_WEIGHT: Record<string, number> = {
 };
 
 function tokens(value: string): string[] {
-  return [...new Set(
-    value
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, " ")
-      .split(" ")
-      .filter((token) => token.length >= 3),
-  )];
+  return [
+    ...new Set(
+      value
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, " ")
+        .split(" ")
+        .filter((token) => token.length >= 3),
+    ),
+  ];
 }
 
 export function rankKnowledgeEntries(
@@ -115,14 +117,16 @@ export async function retrieveKnowledgeGuidance(
     (entries ?? []).flatMap((entry) => {
       const collectionKey = keyById.get(entry.collection_id);
       if (!collectionKey) return [];
-      return [{
-        id: entry.id,
-        collectionKey,
-        title: entry.title,
-        body: entry.body,
-        sourceRef: entry.source_ref,
-        tags: entry.tags,
-      }];
+      return [
+        {
+          id: entry.id,
+          collectionKey,
+          title: entry.title,
+          body: entry.body,
+          sourceRef: entry.source_ref,
+          tags: entry.tags,
+        },
+      ];
     }),
     query,
     options.limit,

@@ -1,7 +1,14 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 
-import { EmptyState, GlassCard, PageHeader, StatePill, formatWhen, toneForState } from "@/components/os/primitives";
+import {
+  EmptyState,
+  GlassCard,
+  PageHeader,
+  StatePill,
+  formatWhen,
+  toneForState,
+} from "@/components/os/primitives";
 import { getAssets } from "@/lib/os.functions";
 
 const assetsQuery = { queryKey: ["assets"], queryFn: () => getAssets() };
@@ -44,7 +51,10 @@ function AssetsPage() {
       />
 
       {data.length === 0 ? (
-        <EmptyState title="No assets registered" description="Register an asset to bring it under the OS." />
+        <EmptyState
+          title="No assets registered"
+          description="Register an asset to bring it under the OS."
+        />
       ) : (
         groups.map((kind) => (
           <section key={kind} className="space-y-3">
@@ -59,9 +69,13 @@ function AssetsPage() {
                     <GlassCard className="h-full p-4 transition-colors hover:border-primary/40">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                          <p className="truncate text-sm font-medium text-foreground">{asset.name}</p>
+                          <p className="truncate text-sm font-medium text-foreground">
+                            {asset.name}
+                          </p>
                           {asset.description ? (
-                            <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{asset.description}</p>
+                            <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
+                              {asset.description}
+                            </p>
                           ) : null}
                         </div>
                         <StatePill label={asset.health} tone={toneForState(asset.health)} />

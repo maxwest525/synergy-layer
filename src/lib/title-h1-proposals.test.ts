@@ -207,7 +207,7 @@ describe("title/H1 proposal evidence contract", () => {
     const groups = buildProposalEvidenceGroups(complete);
 
     expect(groups).toHaveLength(3);
-    expect(groups.map((group) => group['source'])).toEqual([
+    expect(groups.map((group) => group["source"])).toEqual([
       "live_page",
       "google_search_console",
       "dataforseo_competitors",
@@ -223,7 +223,6 @@ describe("title/H1 proposal evidence contract", () => {
       },
     });
   });
-
 });
 
 describe("rendered proposal redirect boundary", () => {
@@ -237,13 +236,14 @@ describe("rendered proposal redirect boundary", () => {
 
   it("refuses a different same-origin rendered path before generation", () => {
     expect(() =>
-      assertSameCanonicalProposalPage(requested, "https://trumoveinc.com/services/residential-moving"),
+      assertSameCanonicalProposalPage(
+        requested,
+        "https://trumoveinc.com/services/residential-moving",
+      ),
     ).toThrow(/same canonical page/i);
   });
 
   it("allows only the explicit trailing-slash canonical equivalent", () => {
-    expect(() =>
-      assertSameCanonicalProposalPage(requested, `${requested}/`),
-    ).not.toThrow();
+    expect(() => assertSameCanonicalProposalPage(requested, `${requested}/`)).not.toThrow();
   });
 });

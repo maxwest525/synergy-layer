@@ -15,7 +15,13 @@ describe("post-change Search Console parser", () => {
     const rows = parsePostChangeRows(
       [
         snapshot("2026-08-20", [
-          { keys: [TARGET, "employee relocation movers"], clicks: 0, impressions: 3, ctr: 0, position: 41.5 },
+          {
+            keys: [TARGET, "employee relocation movers"],
+            clicks: 0,
+            impressions: 3,
+            ctr: 0,
+            position: 41.5,
+          },
         ]),
       ],
       TARGET,
@@ -64,12 +70,16 @@ describe("post-change Search Console parser", () => {
 
 describe("verification evidence gate", () => {
   it("refuses verification with zero post-change rows", () => {
-    expect(canVerifyWithEvidence({ appliedAt: "2026-08-11T00:00:00Z", postChangeRows: [] })).toBe(false);
+    expect(canVerifyWithEvidence({ appliedAt: "2026-08-11T00:00:00Z", postChangeRows: [] })).toBe(
+      false,
+    );
     expect(canVerifyWithEvidence({ appliedAt: null, postChangeRows: [{}] })).toBe(false);
   });
 
   it("allows verification once at least one row exists", () => {
-    expect(canVerifyWithEvidence({ appliedAt: "2026-08-11T00:00:00Z", postChangeRows: [{}] })).toBe(true);
+    expect(canVerifyWithEvidence({ appliedAt: "2026-08-11T00:00:00Z", postChangeRows: [{}] })).toBe(
+      true,
+    );
   });
 });
 
@@ -78,7 +88,13 @@ describe("automatic outcome evidence notice", () => {
     expect(
       summarizeOutcomeEvidence([
         { date: "2026-08-14", query: "corporate movers", position: 31, impressions: 2, clicks: 0 },
-        { date: "2026-08-13", query: "employee relocation", position: 22, impressions: 4, clicks: 1 },
+        {
+          date: "2026-08-13",
+          query: "employee relocation",
+          position: 22,
+          impressions: 4,
+          clicks: 1,
+        },
       ]),
     ).toEqual({
       ready: true,

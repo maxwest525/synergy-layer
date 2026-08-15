@@ -11,7 +11,10 @@ import { assertRunnableGraph } from "./workflow-runner.server";
 describe("signal integrity", () => {
   it("keeps the recovery trigger function validly dollar-quoted", () => {
     const migration = readFileSync(
-      new URL("../../supabase/migrations/20260814070000_signal_integrity_recovery.sql", import.meta.url),
+      new URL(
+        "../../supabase/migrations/20260814070000_signal_integrity_recovery.sql",
+        import.meta.url,
+      ),
       "utf8",
     ).replaceAll("\r\n", "\n");
     expect(migration.split("$sync_action$")).toHaveLength(3);
@@ -48,14 +51,23 @@ $sync_action$;`);
         ...base,
         lane: "pending_approval",
         subject_kind: "change_request",
-        changeRequest: { state: "proposed", changes: [], source_commit_sha: null, published_proof_at: null },
+        changeRequest: {
+          state: "proposed",
+          changes: [],
+          source_commit_sha: null,
+          published_proof_at: null,
+        },
       }),
     ).toBe(true);
     expect(isActionCenterItem({ ...base, metadata: { category: "failure" } })).toBe(true);
     expect(isActionCenterItem({ ...base, lane: "fyi" })).toBe(false);
     expect(isActionCenterItem({ ...base, lane: "scheduled" })).toBe(false);
-    expect(isActionCenterItem({ ...base, lane: "pending_approval", subject_kind: "agent" })).toBe(false);
-    expect(isActionCenterItem({ ...base, lane: "pending_approval", subject_kind: "workflow_run" })).toBe(false);
+    expect(isActionCenterItem({ ...base, lane: "pending_approval", subject_kind: "agent" })).toBe(
+      false,
+    );
+    expect(
+      isActionCenterItem({ ...base, lane: "pending_approval", subject_kind: "workflow_run" }),
+    ).toBe(false);
     expect(
       isActionCenterItem({
         ...base,
@@ -99,7 +111,9 @@ $sync_action$;`);
 
   it("requires an explicit non-empty scheduler allowlist", () => {
     expect(() => requireScheduleAllowlist({})).toThrow(/explicit schedule allowlist/i);
-    expect(() => requireScheduleAllowlist({ onlyKeys: [] })).toThrow(/explicit schedule allowlist/i);
+    expect(() => requireScheduleAllowlist({ onlyKeys: [] })).toThrow(
+      /explicit schedule allowlist/i,
+    );
     expect(requireScheduleAllowlist({ onlyKeys: ["gsc-daily-observe"] })).toEqual(
       new Set(["gsc-daily-observe"]),
     );

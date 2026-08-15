@@ -18,9 +18,21 @@ export const definition: ModuleDefinition = {
       integrationState: "real",
       authKind: "basic",
       operations: [
-        { name: "keywords.for_site", description: "Keywords the provider already associates with the owned domain.", mutates: false },
-        { name: "keywords.suggest", description: "Expansions of the property's own Search Console queries.", mutates: false },
-        { name: "keywords.ranked", description: "Collect the ranked keyword landscape for a domain.", mutates: false },
+        {
+          name: "keywords.for_site",
+          description: "Keywords the provider already associates with the owned domain.",
+          mutates: false,
+        },
+        {
+          name: "keywords.suggest",
+          description: "Expansions of the property's own Search Console queries.",
+          mutates: false,
+        },
+        {
+          name: "keywords.ranked",
+          description: "Collect the ranked keyword landscape for a domain.",
+          mutates: false,
+        },
       ],
       config: {
         mutating: false,
@@ -42,7 +54,11 @@ export const definition: ModuleDefinition = {
         "Rebuilds the competitor set from the SERPs AOOS actually observed. A domain becomes a competitor by repeatedly ranking for approved keywords, not by sharing a couple of keywords in a database. Aggregators and social networks are classified as surfaces, never competitors.",
       integrationState: "real",
       operations: [
-        { name: "competitors.derive", description: "Re-read stored SERP snapshots and classify ranking domains.", mutates: false },
+        {
+          name: "competitors.derive",
+          description: "Re-read stored SERP snapshots and classify ranking domains.",
+          mutates: false,
+        },
       ],
       config: {
         mutating: false,
@@ -60,8 +76,16 @@ export const definition: ModuleDefinition = {
         "Second pass over stored SERP evidence. Profiles every observed domain with keyword overlap, SERP share, position statistics, head to head wins and losses against the owned property, and SERP features, then scores significance and selects a small shortlist for deeper observation. Classification stays heuristic: ranking is never treated as proof of business competition.",
       integrationState: "real",
       operations: [
-        { name: "competitors.profile", description: "Recompute evidence-backed competitor profiles from stored SERPs.", mutates: false },
-        { name: "competitors.shortlist", description: "Select a reviewable shortlist by significance score.", mutates: false },
+        {
+          name: "competitors.profile",
+          description: "Recompute evidence-backed competitor profiles from stored SERPs.",
+          mutates: false,
+        },
+        {
+          name: "competitors.shortlist",
+          description: "Select a reviewable shortlist by significance score.",
+          mutates: false,
+        },
       ],
       config: {
         mutating: false,
@@ -82,7 +106,11 @@ export const definition: ModuleDefinition = {
       integrationState: "real",
       authKind: "api_key",
       operations: [
-        { name: "page.observe", description: "Scrape and normalise one ranking page per shortlisted domain.", mutates: false },
+        {
+          name: "page.observe",
+          description: "Scrape and normalise one ranking page per shortlisted domain.",
+          mutates: false,
+        },
       ],
       config: {
         mutating: false,
@@ -103,9 +131,21 @@ export const definition: ModuleDefinition = {
       integrationState: "real",
       authKind: "basic",
       operations: [
-        { name: "serp.queue", description: "Queue Standard SERP tasks with a postback callback.", mutates: false },
-        { name: "serp.ingest_postback", description: "Store a provider callback as an immutable snapshot.", mutates: false },
-        { name: "serp.live", description: "Operator-initiated real-time SERP inspection.", mutates: false },
+        {
+          name: "serp.queue",
+          description: "Queue Standard SERP tasks with a postback callback.",
+          mutates: false,
+        },
+        {
+          name: "serp.ingest_postback",
+          description: "Store a provider callback as an immutable snapshot.",
+          mutates: false,
+        },
+        {
+          name: "serp.live",
+          description: "Operator-initiated real-time SERP inspection.",
+          mutates: false,
+        },
       ],
       config: {
         mutating: false,
@@ -125,9 +165,21 @@ export const definition: ModuleDefinition = {
       integrationState: "real",
       authKind: "basic",
       operations: [
-        { name: "backlinks.summary", description: "Whole-profile authority, spam score, and dofollow split.", mutates: false },
-        { name: "backlinks.referring_domains", description: "Referring-domain baseline.", mutates: false },
-        { name: "backlinks.backlinks", description: "One backlink per referring domain, deduplicated server-side.", mutates: false },
+        {
+          name: "backlinks.summary",
+          description: "Whole-profile authority, spam score, and dofollow split.",
+          mutates: false,
+        },
+        {
+          name: "backlinks.referring_domains",
+          description: "Referring-domain baseline.",
+          mutates: false,
+        },
+        {
+          name: "backlinks.backlinks",
+          description: "One backlink per referring domain, deduplicated server-side.",
+          mutates: false,
+        },
       ],
       config: {
         mutating: false,

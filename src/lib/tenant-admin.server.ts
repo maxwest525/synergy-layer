@@ -17,7 +17,11 @@ export async function createTenantWorkspace(
   userId: string,
   input: NewTenantInput,
 ): Promise<{ id: string; slug: string; name: string }> {
-  const { data: existing } = await client.from("tenants").select("id").eq("slug", input.slug).maybeSingle();
+  const { data: existing } = await client
+    .from("tenants")
+    .select("id")
+    .eq("slug", input.slug)
+    .maybeSingle();
   if (existing) throw new Error(`A client workspace with the slug "${input.slug}" already exists.`);
 
   const { data, error } = await client

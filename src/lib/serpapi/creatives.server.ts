@@ -2,7 +2,12 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database } from "@/integrations/supabase/types";
 import { fileInboxItem, logActivity } from "../os.server";
-import { MAX_SEARCHES_PER_RUN, checksum, recordSerpApiSpend, serpApiSearch } from "./transport.server";
+import {
+  MAX_SEARCHES_PER_RUN,
+  checksum,
+  recordSerpApiSpend,
+  serpApiSearch,
+} from "./transport.server";
 
 type Client = SupabaseClient<Database>;
 
@@ -54,7 +59,23 @@ function epochToIso(value: number | undefined): string | null {
   return new Date(value * 1000).toISOString();
 }
 
-const STOPWORDS = new Set(["the", "a", "an", "your", "you", "our", "for", "and", "to", "with", "of", "in", "on", "get", "now"]);
+const STOPWORDS = new Set([
+  "the",
+  "a",
+  "an",
+  "your",
+  "you",
+  "our",
+  "for",
+  "and",
+  "to",
+  "with",
+  "of",
+  "in",
+  "on",
+  "get",
+  "now",
+]);
 
 function tokens(text: string): string[] {
   return text
@@ -69,7 +90,11 @@ function tokens(text: string): string[] {
  * twenty strategies, so the key is built from the stable signal in a creative:
  * its destination, its format, and the strongest tokens of its message.
  */
-function familyKey(input: { targetDomain: string | null; format: string | null; text: string }): string {
+function familyKey(input: {
+  targetDomain: string | null;
+  format: string | null;
+  text: string;
+}): string {
   const core = [...new Set(tokens(input.text))].sort().slice(0, 6).join("-");
   return [input.targetDomain ?? "unknown", input.format ?? "unknown", core || "no-copy"].join("|");
 }
@@ -103,18 +128,30 @@ export function normalizeMessaging(input: {
   const text = [input.headline, input.longHeadline, input.snippet, input.callToAction]
     .filter(Boolean)
     .join(" ");
-  const promises = PROMISE_PATTERNS.filter(([, pattern]) => pattern.test(text)).map(([label]) => label);
+  const promises = PROMISE_PATTERNS.filter(([, pattern]) => pattern.test(text)).map(
+    ([label]) => label,
+  );
   const funnel = FUNNEL_PATTERNS.find(([, pattern]) => pattern.test(text))?.[0] ?? "unclassified";
-  const brandTerms = (input.advertiserName ?? "").toLowerCase().split(/\s+/).filter((term) => term.length > 3);
+  const brandTerms = (input.advertiserName ?? "")
+    .toLowerCase()
+    .split(/\s+/)
+    .filter((term) => term.length > 3);
   const brandPositioned = brandTerms.some((term) => text.toLowerCase().includes(term));
 
   return {
     mainSubject: input.headline ?? input.longHeadline ?? null,
     consumerProblem: /\b(moving|move|relocat|storage|pack)\b/i.test(text) ? "relocation" : null,
     promise: promises,
-    offer: /\b(free|no obligation|\$\d+|% off)\b/i.test(text) ? text.match(/\b(free[^.,!]*|\$\d[^.,!]*|\d+% off)/i)?.[0]?.trim() ?? null : null,
-    audience: /\b(long distance|interstate|cross country|local|commercial|office)\b/i.exec(text)?.[0]?.toLowerCase() ?? null,
-    trustMechanism: /\b(licensed|insured|bbb|reviews?|rated|verified|years)\b/i.exec(text)?.[0]?.toLowerCase() ?? null,
+    offer: /\b(free|no obligation|\$\d+|% off)\b/i.test(text)
+      ? (text.match(/\b(free[^.,!]*|\$\d[^.,!]*|\d+% off)/i)?.[0]?.trim() ?? null)
+      : null,
+    audience:
+      /\b(long distance|interstate|cross country|local|commercial|office)\b/i
+        .exec(text)?.[0]
+        ?.toLowerCase() ?? null,
+    trustMechanism:
+      /\b(licensed|insured|bbb|reviews?|rated|verified|years)\b/i.exec(text)?.[0]?.toLowerCase() ??
+      null,
     urgency: /\b(today|now|limited|book now|hurry|last minute)\b/i.test(text),
     differentiator: promises[0] ?? null,
     cta: input.callToAction ?? null,
@@ -187,7 +224,11 @@ export async function ingestAdvertiserCreatives(
         if (existing) {
           await client
             .from("ad_creatives")
-            .update({ last_detected_at: now, last_shown: epochToIso(row.last_shown), retired_at: null })
+            .update({
+              last_detected_at: now,
+              last_shown: epochToIso(row.last_shown),
+              retired_at: null,
+            })
             .eq("id", existing.id);
           result.creativesUpdated += 1;
           continue;
@@ -204,7 +245,8 @@ export async function ingestAdvertiserCreatives(
             });
             result.credits += response.credits;
             result.detailFetches += 1;
-            detail = ((response.data["ad_creatives"] as DetailCreative[] | undefined) ?? [])[0] ?? {};
+            detail =
+              ((response.data["ad_creatives"] as DetailCreative[] | undefined) ?? [])[0] ?? {};
             detailSource = response.sourceUrl;
           } catch {
             detail = {};
@@ -223,7 +265,9 @@ export async function ingestAdvertiserCreatives(
         const family = familyKey({
           targetDomain: row.target_domain ?? null,
           format: row.format ?? null,
-          text: [headline, detail.long_headline, detail.snippet, detail.call_to_action].filter(Boolean).join(" "),
+          text: [headline, detail.long_headline, detail.snippet, detail.call_to_action]
+            .filter(Boolean)
+            .join(" "),
         });
 
         const { error } = await client.from("ad_creatives").insert({
@@ -243,7 +287,13 @@ export async function ingestAdvertiserCreatives(
           })) ?? []) as never,
           image_ref: detail.image ?? row.image ?? null,
           video_ref: detail.video_link ?? row.video_link ?? null,
-          content_checksum: checksum([headline, detail.long_headline, detail.snippet, detail.call_to_action, row.target_domain]),
+          content_checksum: checksum([
+            headline,
+            detail.long_headline,
+            detail.snippet,
+            detail.call_to_action,
+            row.target_domain,
+          ]),
           first_shown: epochToIso(row.first_shown),
           last_shown: epochToIso(row.last_shown),
           total_days_shown: row.total_days_shown ?? null,
@@ -321,7 +371,11 @@ export async function rebuildCreativeFamilies(
   const groups = new Map<string, { advertiser: string; ids: string[]; representative: string }>();
   for (const creative of creatives ?? []) {
     const key = creative.family_key ?? "unassigned";
-    const entry = groups.get(key) ?? { advertiser: creative.advertiser_fk, ids: [], representative: creative.id };
+    const entry = groups.get(key) ?? {
+      advertiser: creative.advertiser_fk,
+      ids: [],
+      representative: creative.id,
+    };
     entry.ids.push(creative.ad_creative_id);
     groups.set(key, entry);
   }
@@ -339,7 +393,11 @@ export async function rebuildCreativeFamilies(
     if (existing) {
       await client
         .from("ad_creative_families")
-        .update({ member_creative_ids: entry.ids, member_count: entry.ids.length, last_detected_at: now })
+        .update({
+          member_creative_ids: entry.ids,
+          member_count: entry.ids.length,
+          last_detected_at: now,
+        })
         .eq("id", existing.id);
       continue;
     }

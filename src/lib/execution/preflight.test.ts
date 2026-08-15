@@ -150,7 +150,9 @@ describe("runGithubPreflight", () => {
 
   it("reports a 401 as a rejected token", async () => {
     const { store } = makeStore(makeRequest());
-    const { github } = makeGithub({ headError: new GithubStatusError(401, "/repos/x/branches/main") });
+    const { github } = makeGithub({
+      headError: new GithubStatusError(401, "/repos/x/branches/main"),
+    });
     const outcome = await runGithubPreflight({
       store,
       github,
@@ -163,7 +165,9 @@ describe("runGithubPreflight", () => {
 
   it("reports a 403 as a scope or access failure", async () => {
     const { store } = makeStore(makeRequest());
-    const { github } = makeGithub({ headError: new GithubStatusError(403, "/repos/x/branches/main") });
+    const { github } = makeGithub({
+      headError: new GithubStatusError(403, "/repos/x/branches/main"),
+    });
     const outcome = await runGithubPreflight({
       store,
       github,

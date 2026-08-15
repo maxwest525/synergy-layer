@@ -15,14 +15,15 @@ export const Route = createFileRoute("/api/public/hooks/scheduler-tick")({
           });
         }
 
-        const { supabaseAdmin } =
-          await import("@/integrations/supabase/client.server");
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const { tickScheduler } = await import("@/lib/scheduler.server");
 
-        const { data: authorized, error: authorizationError } =
-          await supabaseAdmin.rpc("verify_scheduler_hook_token", {
+        const { data: authorized, error: authorizationError } = await supabaseAdmin.rpc(
+          "verify_scheduler_hook_token",
+          {
             _token: presented,
-          });
+          },
+        );
         if (authorizationError || authorized !== true) {
           return new Response(JSON.stringify({ error: "Unauthorized" }), {
             status: 401,
@@ -36,13 +37,10 @@ export const Route = createFileRoute("/api/public/hooks/scheduler-tick")({
             ? (body as { scheduleKey?: unknown }).scheduleKey
             : null;
         if (scheduleKey !== AUTOMATED_SCHEDULE_KEY) {
-          return new Response(
-            JSON.stringify({ error: "Unsupported schedule" }),
-            {
-              status: 400,
-              headers: { "Content-Type": "application/json" },
-            },
-          );
+          return new Response(JSON.stringify({ error: "Unsupported schedule" }), {
+            status: 400,
+            headers: { "Content-Type": "application/json" },
+          });
         }
 
         try {
@@ -53,13 +51,10 @@ export const Route = createFileRoute("/api/public/hooks/scheduler-tick")({
           });
           return Response.json({ ok: true, ...result });
         } catch (error) {
-          return new Response(
-            JSON.stringify({ ok: false, error: (error as Error).message }),
-            {
-              status: 500,
-              headers: { "Content-Type": "application/json" },
-            },
-          );
+          return new Response(JSON.stringify({ ok: false, error: (error as Error).message }), {
+            status: 500,
+            headers: { "Content-Type": "application/json" },
+          });
         }
       },
     },

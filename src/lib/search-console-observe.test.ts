@@ -73,7 +73,12 @@ describe("Search Console observation tracking", () => {
     expect(collectDaily).toHaveBeenCalledWith(client, "sc-domain:trumoveinc.com");
     expect(reconcileAppliedChangeEvidence).toHaveBeenCalledWith(client);
     expect(reconcileChangeMeasurements).toHaveBeenCalledWith(client);
-    expect(updates.some((entry) => entry.table === "search_console_properties" && "last_observed_at" in entry.values)).toBe(true);
+    expect(
+      updates.some(
+        (entry) =>
+          entry.table === "search_console_properties" && "last_observed_at" in entry.values,
+      ),
+    ).toBe(true);
     expect(logActivity).toHaveBeenCalledWith(
       client,
       expect.objectContaining({

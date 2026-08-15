@@ -9,7 +9,8 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 export const provisionSession = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { provisionUser, currentRoles, recordAuthEvent } = await import("./auth-provisioning.server");
+    const { provisionUser, currentRoles, recordAuthEvent } =
+      await import("./auth-provisioning.server");
 
     const outcome = await provisionUser(context.userId);
     const roles = await currentRoles(context.supabase, context.userId);
