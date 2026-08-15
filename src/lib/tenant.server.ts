@@ -1,5 +1,5 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { getRequest } from "@tanstack/react-start/server";
+import { getRequestHeader } from "@tanstack/react-start/server";
 
 import type { Database } from "@/integrations/supabase/types";
 
@@ -39,7 +39,7 @@ export function createRequestClient(): { db: Client; authenticated: boolean } {
 
   let token: string | null = null;
   try {
-    const header = getRequest()?.headers.get("authorization") ?? null;
+    const header = getRequestHeader("authorization") ?? null;
     if (header?.startsWith("Bearer ")) {
       const candidate = header.slice(7);
       if (candidate.split(".").length === 3) token = candidate;
