@@ -1,7 +1,5 @@
-import type { SeoRunState } from "./types";
-
 type SeoRunPreparationCandidate = {
-  state: SeoRunState;
+  state: string;
   change_request_id: string | null;
 };
 
