@@ -18,6 +18,7 @@ import type { ReactNode } from "react";
 
 import { TenantSwitcher } from "./tenant-switcher";
 import { useOperatorSession } from "@/hooks/use-operator-session";
+import { getWorkspaceAccessState } from "@/lib/operator-session-gate";
 import { cn } from "@/lib/utils";
 
 const workspaces = [
@@ -45,6 +46,11 @@ export function Shell({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const session = useOperatorSession();
   const onAuthRoute = pathname.startsWith("/auth");
+  const accessState = getWorkspaceAccessState({
+    ready: session.ready,
+    signedIn: session.signedIn,
+    onAuthRoute,
+  });
 
   return (
     <div className="relative min-h-screen w-full bg-background">
@@ -122,15 +128,16 @@ export function Shell({ children }: { children: ReactNode }) {
             ))}
           </div>
 
-          {session.ready && !session.signedIn && !onAuthRoute ? (
-            <div className="mx-auto w-full max-w-6xl px-5 pt-6 md:px-8">
-              <div className="rounded-2xl border border-primary/30 bg-primary/5 px-4 py-3">
-                <p className="text-sm font-medium text-foreground">
-                  You are signed out, so every workspace reads as empty.
-                </p>
+          <main className="mx-auto w-full max-w-6xl flex-1 px-5 py-8 md:px-8">
+            {accessState === "loading" ? (
+              <div className="rounded-2xl border border-border/60 px-4 py-6" role="status">
+                <p className="text-sm text-muted-foreground">Checking operator session…</p>
+              </div>
+            ) : accessState === "signed-out" ? (
+              <div className="rounded-2xl border border-primary/30 bg-primary/5 px-4 py-4">
+                <p className="text-sm font-medium text-foreground">Operator sign-in required</p>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Operational state, evidence, and spend are hidden until an operator signs in.
-                  These zeros are an access state, not the state of the system.
+                  Operational state, evidence, and spend remain hidden until an operator signs in.
                 </p>
                 <Link
                   to="/auth"
@@ -139,10 +146,10 @@ export function Shell({ children }: { children: ReactNode }) {
                   Sign in as operator
                 </Link>
               </div>
-            </div>
-          ) : null}
-
-          <main className="mx-auto w-full max-w-6xl flex-1 px-5 py-8 md:px-8">{children}</main>
+            ) : (
+              children
+            )}
+          </main>
         </div>
       </div>
     </div>
