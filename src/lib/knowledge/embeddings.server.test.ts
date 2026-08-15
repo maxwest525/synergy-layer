@@ -29,12 +29,11 @@ describe("Gemini knowledge embeddings", () => {
     const body = JSON.parse(String(init?.body));
     expect(body.requests[0]).toMatchObject({
       model: "models/gemini-embedding-001",
-      embedContentConfig: {
-        taskType: "RETRIEVAL_DOCUMENT",
-        title: "Authority Science",
-        outputDimensionality: 768,
-      },
+      taskType: "RETRIEVAL_DOCUMENT",
+      title: "Authority Science",
+      outputDimensionality: 768,
     });
+    expect(body.requests[0]).not.toHaveProperty("embedContentConfig");
   });
 
   it("embeds queries with retrieval-query semantics", async () => {
@@ -46,10 +45,11 @@ describe("Gemini knowledge embeddings", () => {
 
     expect(result).toHaveLength(768);
     const body = JSON.parse(String(fetcher.mock.calls[0]![1]?.body));
-    expect(body.embedContentConfig).toEqual({
+    expect(body).toMatchObject({
       taskType: "RETRIEVAL_QUERY",
       outputDimensionality: 768,
     });
+    expect(body).not.toHaveProperty("embedContentConfig");
   });
 
   it("rejects malformed or wrong-sized vectors", async () => {
