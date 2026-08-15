@@ -5,24 +5,6 @@ import { basename, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import type { KnowledgeSourceInput } from "./runtime.server";
-import topicText from "../../../docs/execution-handbook/_topic.md?raw";
-import brandClaimsText from "../../../docs/execution-handbook/BRAND_AND_CLAIMS.md?raw";
-import componentRegistryText from "../../../docs/execution-handbook/COMPONENT_REGISTRY.md?raw";
-import detectionRulesText from "../../../docs/execution-handbook/DETECTION_RULES.md?raw";
-import diagnosisRemedyText from "../../../docs/execution-handbook/DIAGNOSIS_REMEDY_MATRIX.md?raw";
-import evidencePolicyText from "../../../docs/execution-handbook/EVIDENCE_POLICY.md?raw";
-import executionRollbackText from "../../../docs/execution-handbook/EXECUTION_ROLLBACK.md?raw";
-import indexText from "../../../docs/execution-handbook/INDEX.md?raw";
-import knowledgeIngestionText from "../../../docs/execution-handbook/KNOWLEDGE_INGESTION.md?raw";
-import outcomeMeasurementText from "../../../docs/execution-handbook/OUTCOME_MEASUREMENT.md?raw";
-import proposalContractText from "../../../docs/execution-handbook/PROPOSAL_DATA_CONTRACT.md?raw";
-import sitePageMapText from "../../../docs/execution-handbook/SITE_PAGE_KEYWORD_MAP.md?raw";
-import sourceOfTruthText from "../../../docs/execution-handbook/SOURCE_OF_TRUTH.md?raw";
-import tenancyPermissionsText from "../../../docs/execution-handbook/TENANCY_PERMISSIONS.md?raw";
-import testCasesText from "../../../docs/execution-handbook/TEST_CASES.md?raw";
-import validationGatesText from "../../../docs/execution-handbook/VALIDATION_GATES.md?raw";
-import dataforseoText from "../../../docs/knowledge-sources/DATAFORSEO_MASTER_PLAYBOOK.txt?raw";
-import seoAeoText from "../../../docs/knowledge-sources/SEO_AEO_LAWS_ALGORITHMS_DECISION_MODELS.txt?raw";
 
 const REPO_ROOT = fileURLToPath(new URL("../../..", import.meta.url));
 export const EXECUTION_HANDBOOK_FILES = [
@@ -43,25 +25,6 @@ export const EXECUTION_HANDBOOK_FILES = [
   "TEST_CASES.md",
   "VALIDATION_GATES.md",
 ] as const;
-
-const BUNDLED_HANDBOOK: Record<(typeof EXECUTION_HANDBOOK_FILES)[number], string> = {
-  "_topic.md": topicText,
-  "BRAND_AND_CLAIMS.md": brandClaimsText,
-  "COMPONENT_REGISTRY.md": componentRegistryText,
-  "DETECTION_RULES.md": detectionRulesText,
-  "DIAGNOSIS_REMEDY_MATRIX.md": diagnosisRemedyText,
-  "EVIDENCE_POLICY.md": evidencePolicyText,
-  "EXECUTION_ROLLBACK.md": executionRollbackText,
-  "INDEX.md": indexText,
-  "KNOWLEDGE_INGESTION.md": knowledgeIngestionText,
-  "OUTCOME_MEASUREMENT.md": outcomeMeasurementText,
-  "PROPOSAL_DATA_CONTRACT.md": proposalContractText,
-  "SITE_PAGE_KEYWORD_MAP.md": sitePageMapText,
-  "SOURCE_OF_TRUTH.md": sourceOfTruthText,
-  "TENANCY_PERMISSIONS.md": tenancyPermissionsText,
-  "TEST_CASES.md": testCasesText,
-  "VALIDATION_GATES.md": validationGatesText,
-};
 
 export type LoadedKnowledgeSource = KnowledgeSourceInput & {
   contentSha256: string;
@@ -92,12 +55,38 @@ function handbookTitle(content: string, file: string): string {
   return heading ?? basename(file, ".md").replace(/^_/, "").replaceAll("_", " ");
 }
 
+function loadBundledDefaults() {
+  const handbookModules = import.meta.glob("../../../docs/execution-handbook/*.md", {
+    eager: true,
+    query: "?raw",
+    import: "default",
+  }) as Record<string, string>;
+  const playbookModules = import.meta.glob("../../../docs/knowledge-sources/*.txt", {
+    eager: true,
+    query: "?raw",
+    import: "default",
+  }) as Record<string, string>;
+  const byBasename = (modules: Record<string, string>, file: string) => {
+    const entry = Object.entries(modules).find(([path]) => path.endsWith(`/${file}`));
+    if (!entry) throw new Error(`Bundled governed knowledge source is missing: ${file}`);
+    return entry[1];
+  };
+  return {
+    handbook: Object.fromEntries(
+      EXECUTION_HANDBOOK_FILES.map((file) => [file, byBasename(handbookModules, file)]),
+    ) as Record<(typeof EXECUTION_HANDBOOK_FILES)[number], string>,
+    seoAeo: byBasename(playbookModules, "SEO_AEO_LAWS_ALGORITHMS_DECISION_MODELS.txt"),
+    dataforseo: byBasename(playbookModules, "DATAFORSEO_MASTER_PLAYBOOK.txt"),
+  };
+}
+
 export function loadGovernedKnowledgeSources(
   options: {
     repoRoot?: string;
     seoAeoPath?: string;
     dataforseoPath?: string;
     handbookVersion?: string;
+    bundled?: boolean;
   } = {},
 ): LoadedKnowledgeSource[] {
   const repoRoot = options.repoRoot ?? REPO_ROOT;
@@ -111,7 +100,7 @@ export function loadGovernedKnowledgeSources(
     join(repoRoot, "docs", "knowledge-sources", "DATAFORSEO_MASTER_PLAYBOOK.txt");
   const handbookVersion =
     options.handbookVersion ?? process.env["AOOS_KNOWLEDGE_VERSION"] ?? "2026-08-14";
-  const usesBundledDefaults = options.repoRoot === undefined;
+  const bundledDefaults = options.bundled ? loadBundledDefaults() : null;
 
   const playbooks = [
     loadContent(
@@ -127,7 +116,7 @@ export function loadGovernedKnowledgeSources(
       },
       options.seoAeoPath || process.env["SEO_AEO_PLAYBOOK_PATH"]
         ? readFileSync(seoAeoPath, "utf8")
-        : seoAeoText,
+        : (bundledDefaults?.seoAeo ?? readFileSync(seoAeoPath, "utf8")),
     ),
     loadContent(
       {
@@ -141,13 +130,13 @@ export function loadGovernedKnowledgeSources(
       },
       options.dataforseoPath || process.env["DATAFORSEO_PLAYBOOK_PATH"]
         ? readFileSync(dataforseoPath, "utf8")
-        : dataforseoText,
+        : (bundledDefaults?.dataforseo ?? readFileSync(dataforseoPath, "utf8")),
     ),
   ];
 
   const handbook = EXECUTION_HANDBOOK_FILES.map((file) => {
     const localPath = join(repoRoot, "docs", "execution-handbook", file);
-    const content = usesBundledDefaults ? BUNDLED_HANDBOOK[file] : readFileSync(localPath, "utf8");
+    const content = bundledDefaults?.handbook[file] ?? readFileSync(localPath, "utf8");
     const slug = basename(file, ".md").replace(/^_/, "").toLowerCase().replaceAll("_", "-");
     return loadContent(
       {
