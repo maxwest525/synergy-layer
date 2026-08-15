@@ -1,16 +1,21 @@
 import { useMemo, useState } from "react";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
+import { toast } from "sonner";
 
 import { OperatorRouteError } from "@/components/os/route-error";
-import { EmptyState, GlassCard, MetricTile, PageHeader } from "@/components/os/primitives";
+import { EmptyState, GlassCard, MetricTile, PageHeader, StatePill } from "@/components/os/primitives";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AvailabilityBadge } from "@/components/os/availability-badge";
 import { getTenantContext } from "@/lib/tenant.functions";
 import { getToolEstate } from "@/lib/tool-estate.functions";
 import { KIND_LABELS, type EstateFilter } from "@/lib/tool-estate-display";
+import {
+  checkConnectorReadiness,
+  getConnectorReadiness,
+} from "@/lib/connectors/functions";
 
 export const Route = createFileRoute("/capabilities/systems/")({
   // Operator-only surface: rendering it on the server without the operator
@@ -101,6 +106,9 @@ function matches(system: ReadinessInput, filter: EstateFilter): boolean {
 function SystemsPage() {
   const loadTenantContext = useServerFn(getTenantContext);
   const loadEstate = useServerFn(getToolEstate);
+  const loadConnections = useServerFn(getConnectorReadiness);
+  const checkConnections = useServerFn(checkConnectorReadiness);
+  const queryClient = useQueryClient();
 
   const tenant = useSuspenseQuery({
     queryKey: ["tenant-context"],
@@ -113,6 +121,22 @@ function SystemsPage() {
     queryKey: ["tool-estate", activeTenantId],
     queryFn: () => loadEstate(),
     retry: false,
+  });
+
+  const connectorLedger = useSuspenseQuery({
+    queryKey: ["connector-readiness", activeTenantId],
+    queryFn: () => loadConnections(),
+    retry: false,
+  });
+  const check = useMutation({
+    mutationFn: () => checkConnections(),
+    onSuccess: async (result) => {
+      await queryClient.invalidateQueries({ queryKey: ["connector-readiness"] });
+      toast.success(
+        `Checked ${result.checkedCount} connectors; ${result.healthyCount} returned healthy proof.`,
+      );
+    },
+    onError: (error: Error) => toast.error(error.message),
   });
 
   const [view, setView] = useState<View>("essentials");
@@ -180,6 +204,59 @@ function SystemsPage() {
           </Button>
         }
       />
+
+      <GlassCard className="p-5">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h2 className="text-sm font-semibold text-foreground">Runtime connector ledger</h2>
+            <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
+              Secrets stay server-side. Configured means the required environment names are
+              present; healthy requires a dated, bounded probe. Providers without a safe free
+              probe remain degraded until real operational evidence exists.
+            </p>
+          </div>
+          <Button disabled={check.isPending} onClick={() => check.mutate()}>
+            {check.isPending ? "Checking…" : "Check connections"}
+          </Button>
+        </div>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {connectorLedger.data.connections.map((connection) => {
+            const health = connection.persisted?.health ?? connection.health;
+            const outcome =
+              connection.persisted?.config &&
+              typeof connection.persisted.config === "object" &&
+              !Array.isArray(connection.persisted.config)
+                ? String(connection.persisted.config["probe_outcome"] ?? "not checked")
+                : "not checked";
+            return (
+              <div key={connection.key} className="rounded-xl border border-border/60 p-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-medium text-foreground">{connection.label}</p>
+                    <p className="text-xs text-muted-foreground">{connection.provider}</p>
+                  </div>
+                  <StatePill
+                    label={health}
+                    {...(health === "healthy"
+                      ? { tone: "success" }
+                      : health === "failing"
+                        ? { tone: "danger" }
+                        : {})}
+                  />
+                </div>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  {connection.state} · {outcome.replaceAll("_", " ")}
+                </p>
+                {connection.missing.length ? (
+                  <p className="mt-1 text-xs text-destructive">
+                    Missing: {connection.missing.join(", ")}
+                  </p>
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
+      </GlassCard>
 
       <div className="flex flex-wrap gap-2">
         {(
