@@ -20,4 +20,16 @@ describe("Lovable knowledge server-function compiler contract", () => {
       "exactly 18",
     );
   });
+
+  it("requires a separate explicit one-request approval for the embedding probe", async () => {
+    const functions = (await import("./functions")) as unknown as Record<string, unknown>;
+    const validate = functions["validateKnowledgeEmbeddingProbeApproval"];
+    expect(validate).toBeTypeOf("function");
+    expect((validate as (value: unknown) => unknown)({ approvedModelRequests: 1 })).toEqual({
+      approvedModelRequests: 1,
+    });
+    expect(() => (validate as (value: unknown) => unknown)({ approvedModelRequests: 18 })).toThrow(
+      "exactly 1",
+    );
+  });
 });

@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import {
   getGovernedKnowledge,
   ingestAndActivateGovernedKnowledge,
+  probeGovernedKnowledgeEmbedding,
 } from "@/lib/knowledge/functions";
 
 const knowledgeQuery = { queryKey: ["knowledge"], queryFn: () => getKnowledge() };
@@ -51,6 +52,7 @@ function KnowledgePage() {
   const { data } = useSuspenseQuery(knowledgeQuery);
   const loadGoverned = useServerFn(getGovernedKnowledge);
   const ingestGoverned = useServerFn(ingestAndActivateGovernedKnowledge);
+  const probeEmbedding = useServerFn(probeGovernedKnowledgeEmbedding);
   const queryClient = useQueryClient();
   const governed = useSuspenseQuery({
     queryKey: ["governed-knowledge"],
@@ -69,6 +71,13 @@ function KnowledgePage() {
       toast.success(
         `Activated ${result.sourceCount} sources and ${result.embeddedChunkCount} embedded chunks.`,
       );
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+  const embeddingProbe = useMutation({
+    mutationFn: () => probeEmbedding({ data: { approvedModelRequests: 1 } }),
+    onSuccess: (result) => {
+      toast.success(`Gemini embedding healthy: ${result.model} · ${result.dimensions} dimensions.`);
     },
     onError: (error: Error) => toast.error(error.message),
   });
@@ -107,15 +116,20 @@ function KnowledgePage() {
               activates the immutable source versions. It does not run automatically or in the
               background.
             </p>
-            <Button
-              className="mt-3"
-              disabled={ingestion.isPending}
-              onClick={() => ingestion.mutate()}
-            >
-              {ingestion.isPending
-                ? "Embedding and activating…"
-                : "Ingest and activate · maximum 18 requests"}
-            </Button>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Button
+                variant="outline"
+                disabled={embeddingProbe.isPending || ingestion.isPending}
+                onClick={() => embeddingProbe.mutate()}
+              >
+                {embeddingProbe.isPending ? "Testing Gemini…" : "Test Gemini · exactly 1 request"}
+              </Button>
+              <Button disabled={ingestion.isPending} onClick={() => ingestion.mutate()}>
+                {ingestion.isPending
+                  ? "Embedding and activating…"
+                  : "Ingest and activate · maximum 18 requests"}
+              </Button>
+            </div>
           </div>
         ) : null}
         <div className="mt-4 grid gap-3 sm:grid-cols-3">
