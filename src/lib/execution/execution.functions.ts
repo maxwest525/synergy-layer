@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
-import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { parseUuidInput } from "../server-input";
 import {
   GOVERNED_BRANCH,
   GOVERNED_FILE,
@@ -9,8 +9,6 @@ import {
   GOVERNED_PROJECT_ID,
   GOVERNED_REPO,
 } from "./allowlist";
-
-const idInput = z.object({ id: z.string().uuid() });
 
 export type ExecutionAttemptView = {
   id: string;
@@ -203,7 +201,7 @@ function latestPreflight(attempts: AttemptRow[]): PreflightView | null {
 }
 
 export const getExecutionState = createServerFn({ method: "GET" })
-  .inputValidator((data: unknown) => idInput.parse(data))
+  .inputValidator(parseUuidInput)
   .handler(async ({ data }): Promise<ExecutionStateView> => {
     const { createRequestClient } = await import("../tenant.server");
     const { fetchExecutionAttempts } = await import("./execute.server");
@@ -299,7 +297,7 @@ export const getExecutionState = createServerFn({ method: "GET" })
  */
 export const testGithubConnection = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) => idInput.parse(data))
+  .inputValidator(parseUuidInput)
   .handler(async ({ data, context }) => {
     const { assertOperator } = await import("../os-admin.server");
     await assertOperator(context.supabase, context.userId);
@@ -316,7 +314,7 @@ export const testGithubConnection = createServerFn({ method: "POST" })
 
 export const executeChangeRequest = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) => idInput.parse(data))
+  .inputValidator(parseUuidInput)
   .handler(async ({ data, context }) => {
     const { assertOperator } = await import("../os-admin.server");
     await assertOperator(context.supabase, context.userId);
@@ -333,7 +331,7 @@ export const executeChangeRequest = createServerFn({ method: "POST" })
 
 export const checkChangeRequestPublished = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) => idInput.parse(data))
+  .inputValidator(parseUuidInput)
   .handler(async ({ data, context }) => {
     const { assertOperator } = await import("../os-admin.server");
     await assertOperator(context.supabase, context.userId);
