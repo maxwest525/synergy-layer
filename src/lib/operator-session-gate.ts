@@ -4,6 +4,14 @@ type WorkspaceAccessInput = {
   onAuthRoute: boolean;
 };
 
+export function getInitialOperatorSession(): {
+  ready: true;
+  email: null;
+  signedIn: false;
+} {
+  return { ready: true, email: null, signedIn: false };
+}
+
 export function getWorkspaceAccessState({
   ready,
   signedIn,
