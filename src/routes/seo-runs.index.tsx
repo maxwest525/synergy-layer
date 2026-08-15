@@ -22,6 +22,7 @@ import {
   parseSeoRunTargets,
   runCreatedSeoBatch,
 } from "@/lib/seo-runs/batch";
+import { isSeoRunEligibleForPreparation } from "@/lib/seo-runs/eligibility";
 import { createSeoRuns, evaluateSeoRun, getSeoRuns } from "@/lib/seo-runs/functions";
 
 export const Route = createFileRoute("/seo-runs/")({
@@ -82,9 +83,7 @@ function SeoRunsPage() {
     mutationFn: (id: string) => evaluateRun({ data: { id } }),
     onSuccess: async () => queryClient.invalidateQueries({ queryKey: ["seo-runs"] }),
   });
-  const actionableRuns = runs
-    .filter((run) => ["draft", "preflight_blocked", "failed"].includes(run.state))
-    .slice(0, 10);
+  const actionableRuns = runs.filter(isSeoRunEligibleForPreparation).slice(0, 10);
   const batchEvaluation = useMutation({
     mutationFn: async () => {
       return runCreatedSeoBatch(actionableRuns, (id) => evaluateRun({ data: { id } }));
@@ -261,9 +260,7 @@ function SeoRunsPage() {
                 ? `Concrete proposal linked: ${run.change_request_id}`
                 : "No concrete change proposal has been generated."}
             </p>
-            {run.state === "draft" ||
-            run.state === "preflight_blocked" ||
-            run.state === "failed" ? (
+            {isSeoRunEligibleForPreparation(run) ? (
               <div className="mt-4 flex flex-wrap items-center gap-3">
                 <Button
                   size="sm"
