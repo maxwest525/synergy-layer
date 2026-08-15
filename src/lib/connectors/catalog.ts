@@ -50,7 +50,7 @@ export const AOOS_CONNECTOR_DEFAULTS = {
 
 export function withConnectorDefaults(
   env: Record<string, string | undefined>,
-): Record<string, string | undefined> {
+): Record<string, string> {
   const configured = Object.fromEntries(
     Object.entries(env).filter((entry): entry is [string, string] => Boolean(entry[1]?.trim())),
   );
