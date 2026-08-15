@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { supabase } from "@/integrations/supabase/client";
-import { resolveOperatorEmail } from "@/lib/operator-session-gate";
+import { getInitialOperatorSession, resolveOperatorEmail } from "@/lib/operator-session-gate";
 
 export type OperatorSession = {
   ready: boolean;
@@ -15,11 +15,7 @@ export type OperatorSession = {
  * anyone is signed in, so an empty screen is never mistaken for empty data.
  */
 export function useOperatorSession(): OperatorSession {
-  const [state, setState] = useState<OperatorSession>({
-    ready: false,
-    email: null,
-    signedIn: false,
-  });
+  const [state, setState] = useState<OperatorSession>(getInitialOperatorSession);
 
   useEffect(() => {
     let active = true;
