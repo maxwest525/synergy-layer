@@ -7,11 +7,6 @@ import { fileURLToPath } from "node:url";
 import type { KnowledgeSourceInput } from "./runtime.server";
 
 const REPO_ROOT = fileURLToPath(new URL("../../..", import.meta.url));
-const DEFAULT_SEO_AEO_PATH =
-  "C:\\Users\\maxwe\\.codex\\attachments\\e2e515ae-64d7-4dd1-abe4-2465637842bf\\pasted-text.txt";
-const DEFAULT_DATAFORSEO_PATH =
-  "C:\\Users\\maxwe\\.codex\\attachments\\da318028-e85f-4aac-a0f2-c0ed2bcf07f8\\pasted-text.txt";
-
 export const EXECUTION_HANDBOOK_FILES = [
   "_topic.md",
   "BRAND_AND_CLAIMS.md",
@@ -69,9 +64,13 @@ export function loadGovernedKnowledgeSources(
 ): LoadedKnowledgeSource[] {
   const repoRoot = options.repoRoot ?? REPO_ROOT;
   const seoAeoPath =
-    options.seoAeoPath ?? process.env["SEO_AEO_PLAYBOOK_PATH"] ?? DEFAULT_SEO_AEO_PATH;
+    options.seoAeoPath ??
+    process.env["SEO_AEO_PLAYBOOK_PATH"] ??
+    join(repoRoot, "docs", "knowledge-sources", "SEO_AEO_LAWS_ALGORITHMS_DECISION_MODELS.txt");
   const dataforseoPath =
-    options.dataforseoPath ?? process.env["DATAFORSEO_PLAYBOOK_PATH"] ?? DEFAULT_DATAFORSEO_PATH;
+    options.dataforseoPath ??
+    process.env["DATAFORSEO_PLAYBOOK_PATH"] ??
+    join(repoRoot, "docs", "knowledge-sources", "DATAFORSEO_MASTER_PLAYBOOK.txt");
   const handbookVersion =
     options.handbookVersion ?? process.env["AOOS_KNOWLEDGE_VERSION"] ?? "2026-08-14";
 
