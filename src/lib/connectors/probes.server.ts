@@ -43,6 +43,13 @@ const noSafeProbe = new Set<ConnectorKey>([
   "perplexity",
   "selfhosted_firecrawl",
 ]);
+const DATAFORSEO_MAX_PROBE_BODY_BYTES = 32 * 1024;
+
+type DataForSeoEnvelope = {
+  status_code: number;
+  status_message: string;
+  tasks: Array<{ status_code: number }>;
+};
 
 function basic(username: string | undefined, password: string | undefined): string {
   return `Basic ${btoa(`${username}:${password}`)}`;
@@ -133,6 +140,76 @@ function redactedEndpoint(rawUrl: string): string {
   return `${url.origin}${url.pathname}`;
 }
 
+async function readBoundedResponseBody(response: Response): Promise<string | null> {
+  const declaredLength = response.headers.get("content-length");
+  if (declaredLength && Number(declaredLength) > DATAFORSEO_MAX_PROBE_BODY_BYTES) {
+    return null;
+  }
+
+  const reader = response.body?.getReader();
+  if (!reader) return null;
+
+  const chunks: Uint8Array[] = [];
+  let totalBytes = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      totalBytes += value.byteLength;
+      if (totalBytes > DATAFORSEO_MAX_PROBE_BODY_BYTES) return null;
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  const bytes = new Uint8Array(totalBytes);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return new TextDecoder().decode(bytes);
+}
+
+function isDataForSeoSuccessEnvelope(value: unknown): value is DataForSeoEnvelope {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const envelope = value as Record<string, unknown>;
+  const statusCode = envelope["status_code"];
+  const statusMessage = envelope["status_message"];
+  const tasks = envelope["tasks"];
+  if (
+    typeof statusCode !== "number" ||
+    typeof statusMessage !== "string" ||
+    !Array.isArray(tasks)
+  ) {
+    return false;
+  }
+
+  return (
+    isDataForSeoSuccessStatus(statusCode) &&
+    tasks.every(
+      (task) =>
+        !!task &&
+        typeof task === "object" &&
+        isDataForSeoSuccessStatus((task as Record<string, unknown>)["status_code"]),
+    )
+  );
+}
+
+function isDataForSeoSuccessStatus(statusCode: unknown): statusCode is number {
+  return statusCode === 20000 || statusCode === 20100;
+}
+
+async function hasDataForSeoSuccessEnvelope(response: Response): Promise<boolean> {
+  try {
+    const body = await readBoundedResponseBody(response);
+    return body !== null && isDataForSeoSuccessEnvelope(JSON.parse(body));
+  } catch {
+    return false;
+  }
+}
+
 export async function probeConnector(
   key: ConnectorKey,
   options: ProbeOptions = {},
@@ -186,10 +263,12 @@ export async function probeConnector(
       headers: descriptor.headers,
       signal: controller.signal,
     });
+    const schemaValid =
+      key !== "dataforseo" || !response.ok || (await hasDataForSeoSuccessEnvelope(response));
     return {
       key,
-      health: response.ok ? "healthy" : "failing",
-      outcome: response.ok ? "success" : "http_error",
+      health: response.ok ? (schemaValid ? "healthy" : "degraded") : "failing",
+      outcome: response.ok ? (schemaValid ? "success" : "schema_error") : "http_error",
       checkedAt,
       missing: [],
       proof: {
