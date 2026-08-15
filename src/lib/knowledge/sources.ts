@@ -6,7 +6,9 @@ import { fileURLToPath } from "node:url";
 
 import type { KnowledgeSourceInput } from "./runtime.server";
 
-const REPO_ROOT = fileURLToPath(new URL("../../..", import.meta.url));
+function resolveRepoRoot(): string {
+  return fileURLToPath(new URL("../../..", import.meta.url));
+}
 export const EXECUTION_HANDBOOK_FILES = [
   "_topic.md",
   "BRAND_AND_CLAIMS.md",
@@ -89,7 +91,10 @@ export function loadGovernedKnowledgeSources(
     bundled?: boolean;
   } = {},
 ): LoadedKnowledgeSource[] {
-  const repoRoot = options.repoRoot ?? REPO_ROOT;
+  const bundledDefaults = options.bundled ? loadBundledDefaults() : null;
+  // Lovable rewrites import.meta.url in the server bundle. Bundled sources do not
+  // need a filesystem root, so avoid parsing that rewritten value at runtime.
+  const repoRoot = options.repoRoot ?? (bundledDefaults ? "." : resolveRepoRoot());
   const seoAeoPath =
     options.seoAeoPath ??
     process.env["SEO_AEO_PLAYBOOK_PATH"] ??
@@ -100,8 +105,6 @@ export function loadGovernedKnowledgeSources(
     join(repoRoot, "docs", "knowledge-sources", "DATAFORSEO_MASTER_PLAYBOOK.txt");
   const handbookVersion =
     options.handbookVersion ?? process.env["AOOS_KNOWLEDGE_VERSION"] ?? "2026-08-14";
-  const bundledDefaults = options.bundled ? loadBundledDefaults() : null;
-
   const playbooks = [
     loadContent(
       {

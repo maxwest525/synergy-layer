@@ -1,8 +1,17 @@
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+
 import { describe, expect, it } from "vitest";
 
 import { loadGovernedKnowledgeSources } from "./sources";
 
 describe("governed production source manifest", () => {
+  it("does not resolve the repository URL while the bundled server module initializes", () => {
+    const source = readFileSync(fileURLToPath(new URL("./sources.ts", import.meta.url)), "utf8");
+
+    expect(source).not.toMatch(/const REPO_ROOT\s*=\s*fileURLToPath\(new URL/);
+  });
+
   it("loads exactly the two supplied playbooks and all 16 handbook documents", () => {
     const sources = loadGovernedKnowledgeSources();
     const playbooks = sources.filter((source) => source.sourceType === "playbook");
