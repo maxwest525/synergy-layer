@@ -1,0 +1,197 @@
+DataForSEO Master Playbook
+Aug 13, 2026, 8:42 PM UTC
+Technical Summary
+This standalone playbook maps DataForSEO to all 12 page components, an ordered 22-step endpoint runbook, a reproducible X → Y → Z recommendation algorithm and the first-party systems required to validate outcomes.
+
+HOUSE classification: DataForSEO directly observes the core state for 9 components, provides partial evidence for the opening and trust block, and supplies context/implementation inspection—but not a winning decision—for the CTA.
+
+Main operating rule: use DataForSEO as the evidence and verification layer. Use frozen HOUSE rules to select a recommendation. Use Search Console, analytics, call tracking, CRM and finance to prove clicks, qualified leads and contribution.
+
+The Governing Boundary
+DataForSEO can observe current X, identify many technical failures, describe competitors and SERPs, estimate demand/visibility, generate candidate Y and verify that Y was deployed. It does not return a guaranteed best replacement or deterministic business outcome.
+
+Use exactly three output labels:
+
+Deterministic repair — X is objectively broken, missing, invalid or inconsistent; Y repairs it.
+Evidence-based candidate — Y is selected reproducibly from official data and HOUSE rules, but has not yet won.
+Validated winner — Y improved the component's local outcome Z against a credible comparison while downstream quality and contribution guardrails passed.
+A proprietary DataForSEO rank, content score, traffic estimate or generated answer is not Google's secret ranking score, an E-E-A-T score, actual traffic or causal proof.
+
+Where DataForSEO Is Strongest
+The chart separates direct component observation from partial/contextual support. A lower score does not mean the component is less important; it means first-party or human evidence carries more of the decision.
+
+Direct observability by page component
+Direct observability by page component data
+Component	Score
+URL	3
+Title	3
+Meta description	3
+H1	3
+Opening	2
+H2/H3	3
+Body	3
+Internal links	3
+Images/media	3
+Trust block	2
+CTA	1
+Structured data	3
+Master Use List for the 12 Page Components
+For each component, start with the exact evidence DataForSEO can return, issue an X → Y recommendation only through the stated decision rule, then validate the nearest outcome Z with the named source of truth.
+
+Master DataForSEO map for all 12 page components
+Master DataForSEO map for all 12 page components
+#	Component	What to collect	Exact endpoints	How to choose X → Y	Nearest outcome Z	How to prove Z	Recommendation class
+1	URL	OnPage Pages, Redirect Chains and Non-Indexable for status, redirect, canonical, click depth and URL checks; Ranked Keywords, Relevant Pages and live SERPs for query-to-URL mapping.	api:v3/on_page/pages; api:redirect_chains; api:non_indexable; api:v3/dataforseo_labs/google/ranked_keywords/live; api:relevant_pages/live	Repair broken, redirected, non-indexable or canonical-conflicted URLs. For intent mismatch, select one stable canonical subject URL, 301 the old URL and update internal links only when expected gain exceeds migration risk.	One reachable 200, intended canonical/indexable URL serves the target query cluster with controlled click depth.	DataForSEO re-crawl verifies implementation and live rank. Search Console verifies Google impressions/query mapping; analytics and CRM verify downstream value.	Deterministic for defects; candidate for slug or consolidation changes
+2	Title element	OnPage title, length, duplicate and title-to-content consistency; live organic SERP titles/snippets; Ranked Keywords and Search Intent; Generate Meta Tags for candidates.	api:v3/on_page/pages; api:duplicate_tags; api:v3/serp/google/organic/live/advanced; api:v3/dataforseo_labs/google/search_intent/live; api:v3/content_generation/generate_meta_tags/live	Generate a bounded candidate set, reject unsupported promises, then score intent match 30, useful promise 25, differentiation 15, specificity 10, fluency 10, brand clarity 5 and page consistency 5. Select the highest passing candidate.	Clear task recognition and more qualified clicks per impression at comparable position, device, query and search surface.	Search Console position-adjusted CTR and query cohorts, sampled title rendering, analytics progression and qualified outcomes. DataForSEO traffic estimates are not actual clicks.	Evidence-based candidate until measured
+3	Meta description	OnPage description, length, duplicates and description-to-content consistency; live SERP rendered description, pre-snippet, extended snippet and highlighted terms; Generate Meta Tags for candidates.	api:v3/on_page/pages; api:duplicate_tags; api:v3/serp/google/organic/live/advanced; api:v3/content_generation/generate_meta_tags/live	Replace missing, duplicated or mismatched copy with a factual, query-relevant summary that states the solution, a decision-relevant specific and the next step. Treat the generated text as a candidate because Google may choose another passage.	Improved qualified click choice without a false expectation or landing-page mismatch.	Search Console query-level normalized CTR plus analytics/CRM quality. Sample the rendered snippet because the HTML description is not guaranteed to display.	Deterministic for missing/duplicate; candidate for copy
+4	H1	OnPage htags.h1 and no_h1_tag; Content Parsing main_title, h_title and level; target queries, search intent and comparable competitors' parsed headings.	api:v3/on_page/pages; api:v3/on_page/content_parsing; api:content_parsing/live; api:v3/dataforseo_labs/google/search_intent/live; api:v3/serp/google/organic/live/advanced	Use one primary page promise that names the dominant user job, subject and necessary scope. Replace a missing, repeated or intent-misaligned H1 with the highest-scoring truthful candidate; do not copy a competitor phrase.	Users correctly identify the page purpose; the page earns relevant query coverage and supports the next journey step.	Re-crawl verifies the deployed H1. Five-second user testing, Search Console and analytics verify comprehension, search performance and progression.	Deterministic for missing H1; candidate for wording
+5	Opening	Define the opening as the first non-boilerplate paragraph after H1 and extract it from primary_content, page_as_markdown, Raw HTML or custom JavaScript; use intent, PAA and featured snippets for the job context.	api:v3/on_page/content_parsing; api:content_parsing/live; api:raw_html; api:v3/serp/google/organic/live/advanced	Replace the opening with the shortest accurate answer or service-fit statement that confirms scope, provides proof or a key condition and exposes the next useful path.	Fast page-fit confirmation, accurate expectation and progression into the relevant section or action.	User comprehension test and first-party scroll, section and CTA events. DataForSEO can re-extract the text but cannot score persuasion or lead impact.	Evidence-based candidate
+6	H2/H3 structure	OnPage H2/H3 arrays and parsed topic levels; PAA, related searches, Keyword Suggestions/Ideas, Page Intersection and comparable competitor headings.	api:v3/on_page/pages; api:content_parsing; api:v3/dataforseo_labs/google/keyword_suggestions/live; api:keyword_ideas/live; api:page_intersection/live; api:v3/serp/google/organic/live/advanced	Build a required sub-intent map, add missing decision questions, remove redundant headings and order sections by the user's decision sequence. Generated subtopics are candidates, never automatic requirements.	Complete, non-redundant coverage whose heading hierarchy predicts each section accurately.	Re-crawl, query coverage, AEO citation monitoring, section interaction and task testing. Frequency in competitor pages is evidence, not a mandate.	Deterministic for broken hierarchy; candidate for topic map
+7	Body content	Parsed text/markdown, word count, readability, spelling, density, duplicates, tables, author, offers and ratings; competitor keyword/page gaps; snippets, AI references, web citations and LLM mentions.	api:v3/on_page/content_parsing; api:pages; api:keyword_density; api:duplicate_content; api:v3/dataforseo_labs/google/page_intersection/live; api:v3/content_analysis/search/live; api:v3/ai_optimization/llm_mentions/top_mentioned_pages/live	Add, replace or remove only the answer units, claims, primary evidence, examples, entities or decision support needed to satisfy the intent. Never target a universal word count or keyword density.	Accurate intent completion, relevant query coverage, citation eligibility, comprehension and qualified progression.	Primary-source fact review, Search Console, repeated AEO panels and first-party behavior/CRM. Generated text is a draft, not evidence or a ranking guarantee.	Evidence-based candidate; facts require independent verification
+8	Internal links	OnPage link graph with source, destination, anchor, direction, follow state and status; Pages for inbound count, click depth, redirects and orphan checks; Relevant Pages and Ranked Keywords for destination fit.	api:v3/on_page/links; api:pages; api:v3/dataforseo_labs/google/relevant_pages/live; api:ranked_keywords/live	Issue an exact instruction: on source S, add/change/remove the link to canonical target T using accurate descriptive anchor A. Fix broken or redirecting links first; add links only when context and destination priority are both present.	Reliable crawler/user reachability, lower avoidable depth and stronger discovery of the intended target without anchor deception.	Re-crawl verifies graph changes; Search Console and analytics verify target visibility and user link use. Link count alone is not usefulness or PageRank.	Deterministic for defects; candidate for relevance/value
+9	Images/media	Resources and Pages for URL, status, size, transfer size, original/display dimensions, alt/title and missing-alt checks; Page Screenshot for placement; image/video SERP features for visual demand.	api:v3/on_page/resources; api:pages_by_resource; api:pages; api:page_screenshot; api:v3/serp/google/images/live/advanced; api:v3/serp/google/organic/live/advanced	Repair broken media, right-size/compress oversized files, write literal contextual alt for meaningful images and empty alt for decorative images. Add new media only when visual intent or comprehension value is demonstrated.	Clean resources, accessible semantics, acceptable performance and improved understanding or image/video visibility.	DataForSEO re-crawl plus Core Web Vitals/Lighthouse, Search Console image/video data, accessibility review and user behavior. DataForSEO cannot judge authenticity, licensing or emotional effect.	Deterministic for technical defects; candidate for creative choice
+10	Trust block	Parsed author/contact/rating/offer text, Microdata, Raw HTML and custom JavaScript; Business Profile/listings/reviews/Q&A; Backlinks, mentions, sentiment and citation trends.	api:v3/on_page/content_parsing; api:microdata; api:v3/business_data/google/my_business_info/live; api:business_listings/search/live; api:google/reviews/task_post; api:v3/backlinks/summary/live; api:v3/content_analysis/search/live	Add only verified identity, author/reviewer credentials, methodology, review date, policies, third-party proof or operational facts that resolve the dominant objection. Never generate a credential, review or proof claim.	Accurate entity/proof completeness, lower decision uncertainty and more qualified progression.	Authoritative business records and human compliance review validate truth; analytics/CRM validate downstream effect. DataForSEO scores do not equal E-E-A-T or legal authority.	Evidence-based candidate using verified facts
+11	CTA	Use custom JavaScript, Raw HTML, Links and desktop/mobile screenshots to extract button/link text, visibility, viewport position, destination, form action/method and field count; Search Intent supplies journey stage.	api:v3/on_page/task_post with custom_js; api:pages; api:raw_html; api:links; api:page_screenshot; api:v3/dataforseo_labs/google/search_intent/live	Repair broken or misleading actions and add a usable CTA when a transactional page has none. Otherwise generate stage-matched candidates such as learn, compare, calculate, check availability, request a quote or contact.	Correct next-action comprehension, CTA start/completion, qualified lead rate and contribution per eligible visit or impression.	First-party analytics, call tracking, CRM and controlled experiments. DataForSEO can inspect the DOM but cannot identify the winning CTA or optimal form friction.	Weak/contextual for copy; deterministic only for broken behavior
+12	Structured data	Enable validate_micromarkup, then retrieve JSON-LD/Microdata types, properties and fatal/error/warning/info results; compare relevant SERP enhancement types.	api:v3/on_page/task_post; api:v3/on_page/microdata; api:pages; api:v3/serp/google/organic/live/advanced	Correct fatal/error properties, remove contradictions and add only an applicable schema type supported by visible page content and verified business facts. Never copy competitor markup merely because it exists.	Zero blocking validation errors, truthful markup and eligibility for the intended enhancement.	DataForSEO verifies syntax/structure; Google Rich Results Test and Search Console verify Google eligibility/appearance. No validator can guarantee a rich result or ranking lift.	Deterministic for validation; candidate for new markup
+DataForSEO Minimum Collection Recipes
+1. Full-site evidence crawl
+POST /v3/on_page/task_post
+[{
+  "target": "example.com",
+  "max_crawl_pages": 1000,
+  "store_raw_html": true,
+  "enable_content_parsing": true,
+  "load_resources": true,
+  "enable_javascript": true,
+  "enable_browser_rendering": true,
+  "calculate_keyword_density": true,
+  "validate_micromarkup": true,
+  "check_spell": true,
+  "respect_sitemap": true
+}]
+Use a bounded max_crawl_pages, validate the chosen fields against the current official endpoint reference and retrieve the task through the component endpoints below. Custom JavaScript is appropriate for template-defined trust blocks, CTAs and forms that DataForSEO does not name natively.
+
+2. Query intent
+POST /v3/dataforseo_labs/google/search_intent/live
+[{
+  "keywords": ["long distance movers dallas"],
+  "location_name": "United States",
+  "language_code": "en"
+}]
+3. Comparable live SERP
+POST /v3/serp/google/organic/live/advanced
+[{
+  "keyword": "long distance movers dallas",
+  "location_name": "Dallas,Texas,United States",
+  "language_code": "en",
+  "device": "desktop",
+  "os": "windows",
+  "depth": 20
+}]
+Freeze keyword, geography, language, device, OS, depth and collection time in every decision receipt. Use the DataForSEO Sandbox for integration tests, but remember that it returns dummy data rather than a live market result. Never store API credentials in the playbook or exposed report.
+
+Endpoint Runbook
+The table is ordered from foundational crawl evidence to query/SERP context, candidate generation, authority/local evidence and AI visibility. Run only the steps required by the component decision; do not buy every endpoint call by default.
+
+DataForSEO endpoint runbook
+DataForSEO endpoint runbook
+Step	Purpose	Endpoint	Required setup	Evidence returned	Components	When to run
+1	Full-site technical/content crawl	POST api:v3/on_page/task_post	target, max_crawl_pages, store_raw_html, enable_content_parsing, load_resources, enable_javascript, enable_browser_rendering, calculate_keyword_density, validate_micromarkup, check_spell; use respect_sitemap for orphan checks	Creates the crawl task used by Pages, Links, Resources, Content Parsing, duplicates and Microdata	All 12	Baseline, after template/migration changes, then scheduled monitoring
+2	Page inventory and checks	POST api:v3/on_page/pages	completed task id plus filters, order_by and limit	URL/status/canonical, titles/descriptions/headings, counts, readability, timing, click depth and issue flags	URL, title, meta, H1, headings, body, links, images, schema	Each crawl; diff against prior crawl
+3	Structured page content	POST api:v3/on_page/content_parsing or api:content_parsing/live	enable_content_parsing:true for task endpoint; markdown_view:true when useful	main/secondary topics, ordered text, headings, author, tables, offers, ratings, links and page_as_markdown	H1, opening, headings, body, trust, CTA	Priority pages on every material copy change
+4	DOM-specific extraction	POST api:v3/on_page/raw_html plus custom_js in task_post/instant_pages	store_raw_html:true; define bounded selectors for opening, trust, CTA and forms	Raw rendered/source markup and custom_js_response; custom code identifies fields DataForSEO does not name natively	Opening, media, trust, CTA	When components are template-specific or JavaScript-rendered
+5	Internal/external link graph	POST api:v3/on_page/links	completed crawl task; filter by direction, broken state or source/target	page_from/page_to, link_from/link_to, anchor text, attributes, follow state and target status	Internal links, citations, image links, CTA destinations	Each crawl and after navigation/content migrations
+6	Image/resource audit	POST api:v3/on_page/resources and api:pages_by_resource	load_resources:true; filter resource_type:image	Resource URL/status/size/timing, alt/title, original/display dimensions and every page using the asset	Images/media	Each crawl; immediate recheck after asset deployment
+7	Duplication and density diagnostics	POST api:v3/on_page/duplicate_tags; api:duplicate_content; api:keyword_density	calculate_keyword_density:true for density; choose duplicate tag type	Duplicate titles/descriptions, SimHash similarity and observed 1–5 word phrase frequency/density	Title, meta, body	Site crawl; never use density as a target
+8	Structured-data validation	POST api:v3/on_page/microdata	validate_micromarkup:true	JSON-LD/Microdata types, fields and fatal/error/warning/info messages	Structured data, trust block	Every schema deployment and template release
+9	Fast live page verification	POST api:v3/on_page/instant_pages and api:page_screenshot	URL plus browser preset/rendering; optionally resources, raw HTML, microdata, spellcheck and custom_js	Live per-page audit, rendered screenshot, timing and extracted component state	All deployable page components	Immediately before/after a high-priority change
+10	Existing query-to-page map	POST api:v3/dataforseo_labs/google/ranked_keywords/live	target, location/language, filters and include_serp_info	Ranking URL/query, position, volume, intent/SERP context and modeled ETV	URL, title, H1, headings, body, internal links	Weekly/monthly; database rankings are not first-party clicks
+11	Query intent classification	POST api:v3/dataforseo_labs/google/search_intent/live	up to 1,000 keywords with location/language	Informational, navigational, commercial or transactional intent with probabilities	Title, meta, H1, opening, headings, body, CTA	During research and whenever SERP intent changes
+12	Query and subtopic expansion	POST api:v3/dataforseo_labs/google/keyword_suggestions/live; api:keyword_ideas/live; api:related_keywords/live	seed, location/language, filters; request SERP/intent fields where supported	Containing terms, category-related terms, semantic relatives, volume, trends, CPC and competition	H1, headings, body	Research and quarterly refresh; filter by actual page job
+13	Demand/competition summary	POST api:v3/dataforseo_labs/google/keyword_overview/live	keyword set, location/language; optional clickstream data	Search volume/trends, CPC, competition, intent, SERP and backlink context	All strategic components through query priority	Research and material market shifts
+14	Gap and competitor definition	POST api:v3/dataforseo_labs/google/page_intersection/live; api:relevant_pages/live; api:serp_competitors/live	comparable page/domain targets, exclusions, same market/language	Shared/missing queries, relevant owned pages and domains competing across the chosen keyword set	URL, title, H1, headings, body, links	Before new pages or major rewrites
+15	Live search-result benchmark	POST api:v3/serp/google/organic/live/advanced	keyword, precise location/language/device/OS and depth	Ordered organic results, titles, snippets, breadcrumbs, PAA, related searches, image/video/featured/AI elements	URL, title, meta, opening, headings, body, images, schema	At decision time and after material SERP changes
+22 results · Showing first 15
+
+From DataForSEO Evidence to an Exact X → Y → Z Recommendation
+Query opportunity prior
+Normalize each input to 0–1 inside one market/query class:
+
+QueryPriority = Demand × IntentFit × BusinessValue × Attainability × ClickOpportunity
+
+A zero means the opportunity fails a required dimension. Use documented smoothing/floors only when deliberate; never hide a missing business-value input behind vendor search volume.
+
+Candidate selection
+For a frozen candidate set Y:
+
+Y* = argmax CandidateScore(y)
+
+CandidateScore = .25 IntentMatch + .15 QueryCoverage + .10 Specificity + .15 Evidence + .10 Differentiation + .10 Clarity + .10 NextStepFit + .05 PageConsistency − RiskPenalty
+
+Hard gates for truth, technical validity, page-promise delivery, accessibility, compliance and brand safety dominate the score. Default HOUSE issue threshold: select only when score is at least 0.80 and at least 0.05 above the current component; otherwise issue no change / inconclusive. Re-estimate these uncalibrated HOUSE weights from your results; they are not Google weights.
+
+Required recommendation receipt
+Change [component] from [current X] to [selected Y] because [evidence + failed rule], targeting [local Z], guarding [qualified lead/contribution/safety metric], confidence [vector], revalidate [date or trigger].
+
+The recommendation can be deterministic. The realized outcome cannot.
+
+Deterministic X → Y → Z decision algorithm
+Deterministic X → Y → Z decision algorithm
+Stage	Decision step	Rule	Required output	Pass condition
+1	Observe X	Collect the current component, query context, comparable SERP, technical state and evidence timestamp.	Immutable observation record	Inputs, scope, location/device/language and freshness are complete
+2	Classify the problem	Assign defect, mismatch, opportunity or no-action. Mechanical breakage outranks subjective optimization.	Failure class and failed rule	Direct observation is separated from DataForSEO or HOUSE inference
+3	Choose local Z	Set the component's nearest measurable job; never force every page element to use lead conversion as its primary metric.	Primary local metric plus downstream guardrails	Metric belongs to the causal stage the component can plausibly affect
+4	Generate bounded Y candidates	Use SERP/query/evidence constraints and optional generation endpoints. Include no-change as a candidate.	Candidate set with source evidence	Every candidate is truthful, implementable, brand-safe and page-consistent
+5	Score deterministically	CandidateScore = .25 IntentMatch + .15 QueryCoverage + .10 Specificity + .15 Evidence + .10 Differentiation + .10 Clarity + .10 NextStepFit + .05 PageConsistency − RiskPenalty.	Ranked candidates and tie-break record	Truth/technical/accessibility/compliance gates pass; score ≥0.80 and ≥0.05 above current, or classify inconclusive
+6	Issue X → Y → Z	Write the exact change, reason, target local outcome, business guardrail, confidence vector and expiration trigger.	Deployable recommendation receipt	The recommendation is labeled deterministic repair or evidence-based candidate
+7	Verify implementation	Re-run the same extraction/audit and compare deployed state with the recommendation.	Implementation pass/fail	Y is present, defects are resolved and no guardrail regressed technically
+8	Validate outcome	Estimate ΔZ against matched pre-period/control. Adopt only when the interval clears the minimum meaningful effect and downstream quality does not worsen.	Validated winner, rejection or inconclusive	P(ΔZ ≥ MDE) ≥ .95 or equivalent pre-registered rule; causal limits disclosed
+9	Learn and revalidate	Store outcomes, re-estimate weights by component/query class and review the rule quarterly or when drift/source changes trigger.	Updated priors and immutable rule version	No silent weight/threshold changes; historical receipts remain reproducible
+DataForSEO Proof Boundaries and Required Joins
+Do not make lead conversion the blanket primary goal for every component. Give each component the closest outcome it can plausibly influence, then preserve qualified leads and contribution as downstream guardrails. A URL repair may succeed by restoring indexable reachability before it produces a lead; a title may succeed on qualified clicks; a CTA may be judged on starts, completions and qualified contribution.
+
+Total business value = incremental qualified contribution, estimated separately after the local stage works. Never add rank, clicks, assists and leads as independent value buckets when they describe the same customer path.
+
+What DataForSEO can and cannot prove
+What DataForSEO can and cannot prove
+Decision question	DataForSEO role	What it supplies	What must be joined	Allowed conclusion
+Did it create qualified leads, sales or contribution?	Cannot measure	No lead identity, quality, sales or margin ledger	CRM, operations and finance	Measured business outcome
+Did the change cause the outcome?	Cannot prove causality	Observational benchmark and covariates	Randomized/matched page tests, geo holdout, DiD or synthetic control	Incremental effect estimate
+Did the change increase Google clicks or CTR?	Insufficient alone	Ranks and modeled traffic estimates, not owned actual clicks	Google Search Console query/page/device/surface data	Measured click outcome
+Did users progress, start or complete the form?	Cannot measure	Can inspect links/forms/CTA DOM only	Analytics, call tracking and consent-aware event warehouse	Measured behavior outcome
+Is a claim, credential, review or license true and usable?	Discovery only	Public text, listings, mentions, reviews and model scores	Primary records, human verification and legal/compliance review when material	Verified evidence
+Is the page/component deployed as specified?	Strong	Re-crawl, DOM/content, resource, link and markup state	None for implementation proof	Implementation verified
+What currently ranks and appears in the live SERP?	Strong observation	Rank, result types, titles, snippets, PAA and features for a specified context	Repeated samples for volatility; Search Console for owned impressions	Observed visibility
+What is Google's internal authority/E-E-A-T score or ranking weight?	Not observable	Proprietary link/quality metrics and public outcomes only	No tool can reveal secret internal weights; use scoped experiments	HOUSE estimate, never platform fact
+What keywords/demand/competitors should enter the decision?	Strong research input	Modeled search volume, intent, rankings, gaps, competitors and ETV	First-party revenue/margin and market constraints	Prioritized opportunity estimate
+Will schema produce a rich result?	Validation only	Markup types, fields and errors/warnings	Google Rich Results Test and Search Console enhancement/performance data	Eligible/observed, never guaranteed
+Recommended Production Workflow
+Create one canonical page/query/component record with market, language, device, page type and collection time.
+Run the smallest endpoint set that can observe X and its comparable SERP/query context.
+Classify the issue before generating copy: defect, mismatch, opportunity or no action.
+Choose the component's nearest measurable Z and downstream business guardrails.
+Generate a bounded candidate set that includes no change.
+Apply the frozen score, hard gates and tie-break rules; store every candidate and API response.
+Issue an exact recommendation receipt and re-crawl after deployment.
+Validate Z with the proper first-party system and a pre-registered comparison.
+Preserve the result as deterministic repair, evidence-based candidate, validated winner, rejection or inconclusive.
+Revalidate endpoint contracts, sources, HOUSE weights and thresholds quarterly or immediately when drift/source changes trigger.
+DataForSEO Official Source Index
+Use the official documentation as the authority for endpoint contracts and returned fields: API overview, Sandbox, OnPage task setup, Pages, Content Parsing, Links, Resources, Microdata, Ranked Keywords, Search Intent, Keyword Suggestions, Page Intersection, Live Organic SERP, Generate Meta Tags, Backlinks Summary, Business Profile Info, Google Maps Live Advanced and Content Analysis Search.
+
+Source law: DataForSEO documentation is authoritative for what DataForSEO says an endpoint returns. It is not proof of Google's ranking weights, a page's factual truth, or the size of a business effect. Current request schemas and response examples control over this summary whenever they change.
+
+Limitations and Failure Modes
+API fields, limits, supported engines and endpoint contracts can change; the current official documentation controls.
+DataForSEO SERPs are context-specific samples and ignore some personalization; repeated measurement is required for volatile surfaces.
+Search volume, traffic/ETV, intent, quality, sentiment, spam and link-rank values are estimates or vendor model outputs, not first-party truth.
+Competitor recurrence is evidence of expected coverage, not permission to copy or proof of causality.
+Generated titles, descriptions, subtopics and text are candidates; they may be inaccurate, generic or conversion-inferior.
+DataForSEO cannot validate factual/legal truth, credentials, review authenticity, copyright, accessibility quality, form completion, lead quality, sales or margin.
+A recommendation can be reproducible while its realized outcome remains uncertain. Never label an untested candidate a winner.
+Reproducibility Record
+Snapshot generated: 2026-08-13T20:42:50.379Z.
+
+Every production decision receipt must store: DataForSEO endpoint and API version; sanitized request body; response/task ID or immutable response snapshot; collection timestamp; market/language/device/engine/surface; page and query cohort; candidate set; scoring weights and thresholds; model/code version; selected Y; local Z and MDE; implementation re-crawl; first-party outcome window; control/comparison method; confidence interval or posterior; guardrail result; reviewer; and next review trigger.
+
+This playbook is a hosted snapshot, not a live DataForSEO connection.
