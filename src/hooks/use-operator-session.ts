@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { supabase } from "@/integrations/supabase/client";
+import { resolveOperatorEmail } from "@/lib/operator-session-gate";
 
 export type OperatorSession = {
   ready: boolean;
@@ -27,7 +28,10 @@ export function useOperatorSession(): OperatorSession {
       if (active) setState({ ready: true, email, signedIn: email !== null });
     };
 
-    void supabase.auth.getSession().then(({ data }) => apply(data.session?.user.email ?? null));
+    void resolveOperatorEmail(async () => {
+      const { data } = await supabase.auth.getSession();
+      return data.session?.user.email ?? null;
+    }).then(apply);
 
     const { data: subscription } = supabase.auth.onAuthStateChange((_event, session) => {
       apply(session?.user.email ?? null);
