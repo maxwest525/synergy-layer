@@ -2,8 +2,8 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 const sql = [
-  "../../supabase/migrations/20260814123000_change_measurement_engine.sql",
-  "../../supabase/migrations/20260814123500_change_measurement_rpcs.sql",
+  "../../supabase/migrations/20260814103007_60f61bc3-b4ce-4ff4-a663-ccea36894966.sql",
+  "../../supabase/migrations/20260814104303_bbbbecf6-47d9-46b7-8907-cc40aa0df615.sql",
 ]
   .map((path) => readFileSync(new URL(path, import.meta.url), "utf8"))
   .join("\n");
