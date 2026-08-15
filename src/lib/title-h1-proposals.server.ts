@@ -51,9 +51,7 @@ function payloadRows(value: unknown): Record<string, unknown>[] {
     value && typeof value === "object" && !Array.isArray(value)
       ? (value as Record<string, unknown>)
       : {};
-  return Array.isArray(payload["rows"])
-    ? (payload["rows"] as Record<string, unknown>[])
-    : [];
+  return Array.isArray(payload["rows"]) ? (payload["rows"] as Record<string, unknown>[]) : [];
 }
 
 function pageLabel(targetUrl: string): string {
@@ -72,7 +70,9 @@ export async function prepareTitleH1Proposal(
 
   const renderer = createRenderedVerifier();
   if (!renderer) {
-    throw new Error("Required live-page evidence is unavailable: FIRECRAWL_API_KEY is not configured.");
+    throw new Error(
+      "Required live-page evidence is unavailable: FIRECRAWL_API_KEY is not configured.",
+    );
   }
   const rendered = await renderer.render(targetUrl);
   assertSameCanonicalProposalPage(targetUrl, rendered.finalUrl);
@@ -98,12 +98,10 @@ export async function prepareTitleH1Proposal(
 
   const gsc = selectGscProposalEvidence({
     targetUrl,
-    snapshots: (gscSnapshots ?? []).map(
-      (snapshot): GscSnapshotInput => ({
-        periodStart: snapshot.period_start_pt,
-        rows: payloadRows(snapshot.payload),
-      }),
-    ),
+    snapshots: (gscSnapshots ?? []).map((snapshot): GscSnapshotInput => ({
+      periodStart: snapshot.period_start_pt,
+      rows: payloadRows(snapshot.payload),
+    })),
   });
   const queries = [...new Set(gsc.map((row) => row.query))].slice(0, 12);
 
@@ -172,36 +170,88 @@ export async function prepareTitleH1Proposal(
     : "exact_query";
 
   // Optional sources enrich/corroborate the wording brief but never gate proposal eligibility.
-  const [{ data: ga4Rows, error: ga4Error }, { data: transparencyRows, error: transparencyError }, { data: paidRows, error: paidError }] = await Promise.all([
-    client.from("ga4_snapshots").select("id,start_date,end_date,metrics,provenance,collected_at").eq("tenant_id", tenantId).order("collected_at", { ascending: false }).limit(20),
-    client.from("ad_creatives").select("id,headline,long_headline,snippet,call_to_action,target_domain,first_shown,last_shown,retrieved_at,source_url,content_checksum").eq("tenant_id", tenantId).order("retrieved_at", { ascending: false }).limit(30),
-    queries.length ? client.from("ad_live_serp_observations").select("id,keyword,reporting_date,ad_count,ads_payload,source_url,request_fingerprint,observed_at").eq("tenant_id", tenantId).in("keyword", queries).order("observed_at", { ascending: false }).limit(30) : Promise.resolve({ data: [], error: null }),
+  const [
+    { data: ga4Rows, error: ga4Error },
+    { data: transparencyRows, error: transparencyError },
+    { data: paidRows, error: paidError },
+  ] = await Promise.all([
+    client
+      .from("ga4_snapshots")
+      .select("id,start_date,end_date,metrics,provenance,collected_at")
+      .eq("tenant_id", tenantId)
+      .order("collected_at", { ascending: false })
+      .limit(20),
+    client
+      .from("ad_creatives")
+      .select(
+        "id,headline,long_headline,snippet,call_to_action,target_domain,first_shown,last_shown,retrieved_at,source_url,content_checksum",
+      )
+      .eq("tenant_id", tenantId)
+      .order("retrieved_at", { ascending: false })
+      .limit(30),
+    queries.length
+      ? client
+          .from("ad_live_serp_observations")
+          .select(
+            "id,keyword,reporting_date,ad_count,ads_payload,source_url,request_fingerprint,observed_at",
+          )
+          .eq("tenant_id", tenantId)
+          .in("keyword", queries)
+          .order("observed_at", { ascending: false })
+          .limit(30)
+      : Promise.resolve({ data: [], error: null }),
   ]);
   if (ga4Error) throw new Error(ga4Error.message);
   if (transparencyError) throw new Error(transparencyError.message);
   if (paidError) throw new Error(paidError.message);
   const exactGa4 = (ga4Rows ?? []).filter((row) => {
-    const metrics = row.metrics && typeof row.metrics === "object" && !Array.isArray(row.metrics) ? row.metrics as Record<string, unknown> : {};
-    return metrics['targetUrl'] === targetUrl || metrics['pageLocation'] === targetUrl;
+    const metrics =
+      row.metrics && typeof row.metrics === "object" && !Array.isArray(row.metrics)
+        ? (row.metrics as Record<string, unknown>)
+        : {};
+    return metrics["targetUrl"] === targetUrl || metrics["pageLocation"] === targetUrl;
   });
   const optionalContext: ProposalOptionalContext = {
-    ga4: { status: exactGa4.length ? "available" : "missing", rows: exactGa4, provenance: { scope: "exact page behavioral baseline/event inventory", note: exactGa4.length ? "measurement only" : "No exact-page GA4 snapshot is available; generation continues." } },
-    serpapiTransparency: { status: transparencyRows?.length ? "available" : "missing", rows: transparencyRows ?? [], provenance: { scope: "paid creative history", note: "corroboration only" } },
-    serpapiPaidSerp: { status: paidRows?.length ? "available" : "missing", rows: paidRows ?? [], provenance: { scope: "live paid SERP for exact GSC queries", note: "corroboration only" } },
+    ga4: {
+      status: exactGa4.length ? "available" : "missing",
+      rows: exactGa4,
+      provenance: {
+        scope: "exact page behavioral baseline/event inventory",
+        note: exactGa4.length
+          ? "measurement only"
+          : "No exact-page GA4 snapshot is available; generation continues.",
+      },
+    },
+    serpapiTransparency: {
+      status: transparencyRows?.length ? "available" : "missing",
+      rows: transparencyRows ?? [],
+      provenance: { scope: "paid creative history", note: "corroboration only" },
+    },
+    serpapiPaidSerp: {
+      status: paidRows?.length ? "available" : "missing",
+      rows: paidRows ?? [],
+      provenance: { scope: "live paid SERP for exact GSC queries", note: "corroboration only" },
+    },
     contradictionFlags: [],
   };
 
   const github = createGithubApi();
   if (!github) {
-    throw new Error("An executable source baseline cannot be proven: GITHUB_EXECUTOR_TOKEN is not configured.");
+    throw new Error(
+      "An executable source baseline cannot be proven: GITHUB_EXECUTOR_TOKEN is not configured.",
+    );
   }
   const head = await github.branchHead(GOVERNED_REPO, GOVERNED_BRANCH);
   const source = await github.readFile(GOVERNED_REPO, GOVERNED_FILE, head);
   if (countOccurrences(source.content, evidence.livePage.title) !== 1) {
-    throw new Error("The rendered live title is not one unique literal in the allowlisted source file.");
+    throw new Error(
+      "The rendered live title is not one unique literal in the allowlisted source file.",
+    );
   }
   if (countOccurrences(source.content, evidence.livePage.h1) !== 1) {
-    throw new Error("The rendered live H1 is not one unique literal in the allowlisted source file.");
+    throw new Error(
+      "The rendered live H1 is not one unique literal in the allowlisted source file.",
+    );
   }
 
   const guidance = (
@@ -253,16 +303,25 @@ export async function prepareTitleH1Proposal(
         ? "Development-mode wording bypassed Gemini only. Operator review is required, and approval locks the exact wording and source revision."
         : "Operator review is required. Approval locks the exact wording and source revision.",
     generationContext: {
-      provider:
-        wordingMode === "deterministic_dev"
-          ? "deterministic_dev"
-          : "google_gemini_direct",
+      provider: wordingMode === "deterministic_dev" ? "deterministic_dev" : "google_gemini_direct",
       model: wordingMode === "deterministic_dev" ? null : model,
       wordingMode,
       generatedAt: new Date().toISOString(),
       competitorEvidenceMode,
-      sourceRoles: { live_page: "source_of_truth", google_search_console: "source_of_truth", ga4: "source_of_truth", dataforseo_competitors: "enrichment", serpapi_transparency: "corroboration", serpapi_paid_serp: "corroboration", knowledge: "devils_advocate" },
-      optionalSourceStatus: { ga4: optionalContext.ga4.status, serpapiTransparency: optionalContext.serpapiTransparency.status, serpapiPaidSerp: optionalContext.serpapiPaidSerp.status },
+      sourceRoles: {
+        live_page: "source_of_truth",
+        google_search_console: "source_of_truth",
+        ga4: "source_of_truth",
+        dataforseo_competitors: "enrichment",
+        serpapi_transparency: "corroboration",
+        serpapi_paid_serp: "corroboration",
+        knowledge: "devils_advocate",
+      },
+      optionalSourceStatus: {
+        ga4: optionalContext.ga4.status,
+        serpapiTransparency: optionalContext.serpapiTransparency.status,
+        serpapiPaidSerp: optionalContext.serpapiPaidSerp.status,
+      },
       contradictionFlags: optionalContext.contradictionFlags,
       guidanceEntryIds: guidance.map((entry) => entry.id),
       guidanceSourceRefs: guidance.map((entry) => entry.sourceRef).filter(Boolean),
@@ -304,7 +363,9 @@ export async function proveEditedWordingAgainstSource(input: {
   );
   const simulation = applyExactReplacements(source.content, changes);
   if (!simulation.ok || simulation.value.alreadyApplied) {
-    throw new Error(simulation.ok ? "The edited wording already exists in source." : simulation.reason);
+    throw new Error(
+      simulation.ok ? "The edited wording already exists in source." : simulation.reason,
+    );
   }
   return changes;
 }

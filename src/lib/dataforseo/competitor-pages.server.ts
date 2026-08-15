@@ -132,7 +132,8 @@ function classifyPageType(url: string, markdown: string, headings: string[]): st
   if (/\/(location|city|state|areas?-we-serve)/.test(path)) return "location landing page";
   if (/(cost|price|pricing|calculator|quote)/.test(path)) return "cost / quote page";
   if (/(service|moving|movers)/.test(path)) return "service landing page";
-  if (headings.some((heading) => /^\d+\s/.test(heading)) && markdown.length > 6000) return "long-form list article";
+  if (headings.some((heading) => /^\d+\s/.test(heading)) && markdown.length > 6000)
+    return "long-form list article";
   return "content page";
 }
 
@@ -180,14 +181,17 @@ function observe(
     wordCount: markdown.split(/\s+/).filter(Boolean).length,
     headingCounts,
     headingSamples: headingLines.slice(0, 12),
-    topicalCoverage: TOPIC_TERMS.filter((term) => term.pattern.test(markdown)).map((term) => term.label),
+    topicalCoverage: TOPIC_TERMS.filter((term) => term.pattern.test(markdown)).map(
+      (term) => term.label,
+    ),
     schemaTypes: schemaTypesFrom(page.html),
     internalLinks: links.internal,
     externalLinks: links.external,
     hasPhoneCta: /tel:\+?\d/.test(page.html),
     hasQuoteForm: /<form[\s>]/i.test(page.html) || /request a (free )?quote/i.test(markdown),
     hasReviewSignals: /\b\d\.\d\s*(out of 5|stars?)\b|google reviews|trustpilot/i.test(markdown),
-    hasFaqBlock: /frequently asked questions/i.test(markdown) || /"@type"\s*:\s*"FAQPage"/i.test(page.html),
+    hasFaqBlock:
+      /frequently asked questions/i.test(markdown) || /"@type"\s*:\s*"FAQPage"/i.test(page.html),
     observedAt: new Date().toISOString(),
   };
 }
@@ -202,22 +206,31 @@ function repeatedTactics(observations: PageObservation[]): { tactic: string; dom
 
   for (const observation of observations) {
     if (observation.hasQuoteForm) add("Quote request form on the ranking page", observation.domain);
-    if (observation.hasPhoneCta) add("Click-to-call phone CTA in the page markup", observation.domain);
+    if (observation.hasPhoneCta)
+      add("Click-to-call phone CTA in the page markup", observation.domain);
     if (observation.hasFaqBlock) add("FAQ block on the ranking page", observation.domain);
-    if (observation.hasReviewSignals) add("Review or rating proof on the ranking page", observation.domain);
+    if (observation.hasReviewSignals)
+      add("Review or rating proof on the ranking page", observation.domain);
     if (observation.schemaTypes.length > 0) {
-      add(`Structured data present (${observation.schemaTypes.slice(0, 3).join(", ")})`, observation.domain);
+      add(
+        `Structured data present (${observation.schemaTypes.slice(0, 3).join(", ")})`,
+        observation.domain,
+      );
     }
     if (observation.wordCount >= 1200) add("Long-form page (1,200+ words)", observation.domain);
-    if (observation.internalLinks >= 60) add("Dense internal linking (60+ internal links)", observation.domain);
-    for (const topic of observation.topicalCoverage) add(`Covers topic: ${topic}`, observation.domain);
+    if (observation.internalLinks >= 60)
+      add("Dense internal linking (60+ internal links)", observation.domain);
+    for (const topic of observation.topicalCoverage)
+      add(`Covers topic: ${topic}`, observation.domain);
   }
 
-  return [...buckets.entries()]
-    .map(([tactic, domains]) => ({ tactic, domains: [...domains] }))
-    // A tactic is only "repeated" when more than one winner does it.
-    .filter((entry) => entry.domains.length > 1)
-    .sort((a, b) => b.domains.length - a.domains.length);
+  return (
+    [...buckets.entries()]
+      .map(([tactic, domains]) => ({ tactic, domains: [...domains] }))
+      // A tactic is only "repeated" when more than one winner does it.
+      .filter((entry) => entry.domains.length > 1)
+      .sort((a, b) => b.domains.length - a.domains.length)
+  );
 }
 
 /**
@@ -284,14 +297,16 @@ export async function inspectShortlistPages(
         `Heading structure: ${observation.headingCounts.h1} H1, ${observation.headingCounts.h2} H2, ${observation.headingCounts.h3} H3`,
         `Structured data: ${observation.schemaTypes.length > 0 ? observation.schemaTypes.join(", ") : "none detected"}`,
         `Internal links: ${observation.internalLinks} | External links: ${observation.externalLinks}`,
-        `Conversion elements: ${[
-          observation.hasQuoteForm ? "quote form" : null,
-          observation.hasPhoneCta ? "click-to-call" : null,
-          observation.hasReviewSignals ? "review proof" : null,
-          observation.hasFaqBlock ? "FAQ block" : null,
-        ]
-          .filter(Boolean)
-          .join(", ") || "none detected"}`,
+        `Conversion elements: ${
+          [
+            observation.hasQuoteForm ? "quote form" : null,
+            observation.hasPhoneCta ? "click-to-call" : null,
+            observation.hasReviewSignals ? "review proof" : null,
+            observation.hasFaqBlock ? "FAQ block" : null,
+          ]
+            .filter(Boolean)
+            .join(", ") || "none detected"
+        }`,
         `Topical coverage: ${observation.topicalCoverage.join(", ") || "none matched"}`,
         "",
         "Section outline observed on the page (structure only):",
@@ -355,14 +370,21 @@ export async function inspectShortlistPages(
         body: [
           `Observed across ${observations.length} shortlisted competitor pages that rank for operator-approved keywords.`,
           "",
-          ...tactics.map((entry) => `- ${entry.tactic} — ${entry.domains.length} of ${observations.length} winners (${entry.domains.join(", ")})`),
+          ...tactics.map(
+            (entry) =>
+              `- ${entry.tactic} — ${entry.domains.length} of ${observations.length} winners (${entry.domains.join(", ")})`,
+          ),
           "",
           "Repetition across winners is a pattern, not a cause. Nothing here claims these tactics produce the ranking.",
         ].join("\n"),
         source_ref: sourceRef,
         tags: ["competitor-evidence", "pattern", "observation"],
         status: "active",
-        metadata: { tactics, observations: observations.length, evidence_label: "observed" } as never,
+        metadata: {
+          tactics,
+          observations: observations.length,
+          evidence_label: "observed",
+        } as never,
       });
       if (insertError) throw new Error(insertError.message);
       knowledgeEntriesCreated += 1;

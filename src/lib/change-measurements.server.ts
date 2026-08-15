@@ -7,10 +7,7 @@ import {
   type GscSnapshot,
   type MeasurementProvider,
 } from "./change-measurement";
-import {
-  ga4PropertyForSearchConsoleProperty,
-  readGa4EnvPresence,
-} from "./measurement/ga4";
+import { ga4PropertyForSearchConsoleProperty, readGa4EnvPresence } from "./measurement/ga4";
 
 type Client = SupabaseClient<Database>;
 type Cycle = Database["public"]["Tables"]["change_measurement_cycles"]["Row"];
@@ -50,11 +47,8 @@ async function append(
   if (error) throw new Error(error.message);
 }
 
-function evidenceGroup(
-  evidence: unknown,
-  source: string,
-): Record<string, unknown> | null {
-  return asRecords(evidence).find((row) => row['source'] === source) ?? null;
+function evidenceGroup(evidence: unknown, source: string): Record<string, unknown> | null {
+  return asRecords(evidence).find((row) => row["source"] === source) ?? null;
 }
 
 async function captureApprovalContext(
@@ -76,14 +70,14 @@ async function captureApprovalContext(
     },
   });
   const organic = evidenceGroup(change.evidence, "dataforseo_competitors");
-  const organicRows = asRecords(organic?.['rows']);
+  const organicRows = asRecords(organic?.["rows"]);
   await append(admin, {
     cycleId: cycle.id,
     windowId: window.id,
     provider: "dataforseo_organic",
     status: organicRows.length ? "complete" : "empty",
     payload: { rows: organicRows },
-    refs: organicRows.map((row) => row['snapshotId']).filter(Boolean),
+    refs: organicRows.map((row) => row["snapshotId"]).filter(Boolean),
     provenance: {
       capturedFrom: "approved_proposal_evidence",
       role: "enrichment",
@@ -96,11 +90,11 @@ async function captureApprovalContext(
     !Array.isArray(change.generation_context)
       ? (change.generation_context as Record<string, unknown>)
       : {};
-  const knowledgeIds = Array.isArray(context['guidanceEntryIds'])
-    ? context['guidanceEntryIds']
+  const knowledgeIds = Array.isArray(context["guidanceEntryIds"])
+    ? context["guidanceEntryIds"]
     : [];
-  const knowledgeRefs = Array.isArray(context['guidanceSourceRefs'])
-    ? context['guidanceSourceRefs']
+  const knowledgeRefs = Array.isArray(context["guidanceSourceRefs"])
+    ? context["guidanceSourceRefs"]
     : [];
   await append(admin, {
     cycleId: cycle.id,
@@ -119,29 +113,27 @@ async function captureApprovalContext(
     },
   });
 
-  const [
-    { data: creatives, error: creativeError },
-    { data: paid, error: paidError },
-  ] = await Promise.all([
-    admin
-      .from("ad_creatives")
-      .select(
-        "id,advertiser_fk,headline,long_headline,snippet,call_to_action,target_domain,first_shown,last_shown,retrieved_at,source_url,content_checksum",
-      )
-      .eq("tenant_id", cycle.tenant_id)
-      .lte("retrieved_at", cycle.approved_at)
-      .order("retrieved_at", { ascending: false })
-      .limit(50),
-    admin
-      .from("ad_live_serp_observations")
-      .select(
-        "id,keyword,reporting_date,ad_count,ads_payload,source_url,request_fingerprint,observed_at",
-      )
-      .eq("tenant_id", cycle.tenant_id)
-      .lte("observed_at", cycle.approved_at)
-      .order("observed_at", { ascending: false })
-      .limit(50),
-  ]);
+  const [{ data: creatives, error: creativeError }, { data: paid, error: paidError }] =
+    await Promise.all([
+      admin
+        .from("ad_creatives")
+        .select(
+          "id,advertiser_fk,headline,long_headline,snippet,call_to_action,target_domain,first_shown,last_shown,retrieved_at,source_url,content_checksum",
+        )
+        .eq("tenant_id", cycle.tenant_id)
+        .lte("retrieved_at", cycle.approved_at)
+        .order("retrieved_at", { ascending: false })
+        .limit(50),
+      admin
+        .from("ad_live_serp_observations")
+        .select(
+          "id,keyword,reporting_date,ad_count,ads_payload,source_url,request_fingerprint,observed_at",
+        )
+        .eq("tenant_id", cycle.tenant_id)
+        .lte("observed_at", cycle.approved_at)
+        .order("observed_at", { ascending: false })
+        .limit(50),
+    ]);
   if (creativeError) throw new Error(creativeError.message);
   if (paidError) throw new Error(paidError.message);
   await append(admin, {
@@ -252,9 +244,7 @@ async function captureGa4(admin: Client, cycle: Cycle, window: Window) {
   const presence = readGa4EnvPresence(process.env);
   const configured =
     presence.serviceAccountJson ||
-    (presence.oauthRefreshToken &&
-      presence.oauthClientId &&
-      presence.oauthClientSecret);
+    (presence.oauthRefreshToken && presence.oauthClientId && presence.oauthClientSecret);
   if (!configured) {
     await append(admin, {
       cycleId: cycle.id,
@@ -292,11 +282,7 @@ async function captureGa4(admin: Client, cycle: Cycle, window: Window) {
       cycleId: cycle.id,
       windowId: window.id,
       provider: "ga4",
-      status: observation.truncated
-        ? "partial"
-        : observation.rowCount === 0
-          ? "empty"
-          : "complete",
+      status: observation.truncated ? "partial" : observation.rowCount === 0 ? "empty" : "complete",
       payload: {
         configured: true,
         readSucceeded: true,
@@ -356,29 +342,26 @@ export async function reconcileChangeMeasurements(
   let windowsProcessed = 0;
   const todayPt = ptDate(new Date());
   for (const cycle of cycles ?? []) {
-    const [
-      { data: change, error: changeError },
-      { data: windows, error: windowError },
-    ] = await Promise.all([
-      admin
-        .from("change_requests")
-        .select("*")
-        .eq("id", cycle.change_request_id)
-        .eq("tenant_id", cycle.tenant_id)
-        .single(),
-      admin
-        .from("change_measurement_windows")
-        .select("*")
-        .eq("cycle_id", cycle.id)
-        .eq("tenant_id", cycle.tenant_id)
-        .lte("available_after_pt", todayPt)
-        .order("window_days"),
-    ]);
+    const [{ data: change, error: changeError }, { data: windows, error: windowError }] =
+      await Promise.all([
+        admin
+          .from("change_requests")
+          .select("*")
+          .eq("id", cycle.change_request_id)
+          .eq("tenant_id", cycle.tenant_id)
+          .single(),
+        admin
+          .from("change_measurement_windows")
+          .select("*")
+          .eq("cycle_id", cycle.id)
+          .eq("tenant_id", cycle.tenant_id)
+          .lte("available_after_pt", todayPt)
+          .order("window_days"),
+      ]);
     if (changeError) throw new Error(changeError.message);
     if (windowError) throw new Error(windowError.message);
     for (const window of windows ?? []) {
-      if (window.window_days === 0)
-        await captureApprovalContext(admin, cycle, window, change);
+      if (window.window_days === 0) await captureApprovalContext(admin, cycle, window, change);
       await captureGsc(admin, cycle, window);
       await captureGa4(admin, cycle, window);
       windowsProcessed += 1;
@@ -399,19 +382,16 @@ export async function recordRenderedLiveAnchor(
     .eq("change_request_id", changeRequestId)
     .single();
   if (error) throw new Error(error.message);
-  const { error: revisionError } = await admin.rpc(
-    "append_change_measurement_revision",
-    {
-      _cycle_id: cycle.id,
-      // The SQL parameter is nullable; the generated Args type is not.
-      _window_id: null as unknown as string,
-      _actor_id: actorId,
-      _kind: "live_anchor",
-      _summary:
-        "Exact approved wording was proven on the rendered canonical page. This anchors measurement; it is not a success judgment.",
-      _detail: json(proof),
-    },
-  );
+  const { error: revisionError } = await admin.rpc("append_change_measurement_revision", {
+    _cycle_id: cycle.id,
+    // The SQL parameter is nullable; the generated Args type is not.
+    _window_id: null as unknown as string,
+    _actor_id: actorId,
+    _kind: "live_anchor",
+    _summary:
+      "Exact approved wording was proven on the rendered canonical page. This anchors measurement; it is not a success judgment.",
+    _detail: json(proof),
+  });
   if (revisionError) throw new Error(revisionError.message);
   await reconcileChangeMeasurements(admin, cycle.tenant_id);
 }
@@ -428,8 +408,7 @@ export async function fetchChangeMeasurementHistory(
     .eq("change_request_id", changeRequestId)
     .maybeSingle();
   if (error) throw new Error(error.message);
-  if (!cycle)
-    return { cycle: null, windows: [], observations: [], revisions: [] };
+  if (!cycle) return { cycle: null, windows: [], observations: [], revisions: [] };
   const [
     { data: windows, error: windowError },
     { data: observations, error: observationError },

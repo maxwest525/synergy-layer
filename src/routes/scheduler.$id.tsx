@@ -1,7 +1,14 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 
-import { DetailRow, GlassCard, PageHeader, StatePill, formatWhen, toneForState } from "@/components/os/primitives";
+import {
+  DetailRow,
+  GlassCard,
+  PageHeader,
+  StatePill,
+  formatWhen,
+  toneForState,
+} from "@/components/os/primitives";
 import { getSchedule } from "@/lib/os.functions";
 
 const scheduleQuery = (id: string) => ({
@@ -20,8 +27,11 @@ export const Route = createFileRoute("/scheduler/$id")({
     return data;
   },
   head: ({ loaderData }) => {
-    const title = loaderData?.schedule ? `${loaderData.schedule.name} — Scheduler — AOOS` : "Schedule — AOOS";
-    const description = loaderData?.schedule?.description ?? "Schedule cadence, dependencies, and last outcome.";
+    const title = loaderData?.schedule
+      ? `${loaderData.schedule.name} — Scheduler — AOOS`
+      : "Schedule — AOOS";
+    const description =
+      loaderData?.schedule?.description ?? "Schedule cadence, dependencies, and last outcome.";
     return {
       meta: [
         { title },
@@ -98,7 +108,9 @@ function ScheduleDetailPage() {
                       >
                         {dependency.schedules.name}
                       </Link>
-                      <p className="text-xs text-muted-foreground">{dependency.condition.replace(/_/g, " ")}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {dependency.condition.replace(/_/g, " ")}
+                      </p>
                     </div>
                     {dependency.schedules.last_state ? (
                       <StatePill

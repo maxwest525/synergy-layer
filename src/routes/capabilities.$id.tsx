@@ -1,7 +1,14 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 
-import { DetailRow, GlassCard, PageHeader, StatePill, formatWhen, toneForState } from "@/components/os/primitives";
+import {
+  DetailRow,
+  GlassCard,
+  PageHeader,
+  StatePill,
+  formatWhen,
+  toneForState,
+} from "@/components/os/primitives";
 import { DataForSeoPanel } from "@/components/os/dataforseo-panel";
 import { McpPanel } from "@/components/os/mcp-panel";
 import { SearchConsolePanel } from "@/components/os/search-console-panel";
@@ -30,7 +37,8 @@ export const Route = createFileRoute("/capabilities/$id")({
       ? `${loaderData.capability.name} — Capabilities — AOOS`
       : "Capability — AOOS";
     const description =
-      loaderData?.capability?.description ?? "Capability detail, operations, and integration state.";
+      loaderData?.capability?.description ??
+      "Capability detail, operations, and integration state.";
     return {
       meta: [
         { title },
@@ -57,7 +65,10 @@ function CapabilityDetailPage() {
         title={capability.name}
         description={capability.description ?? "No description recorded for this capability."}
         actions={
-          <StatePill label={capability.integration_state} tone={toneForState(capability.integration_state)} />
+          <StatePill
+            label={capability.integration_state}
+            tone={toneForState(capability.integration_state)}
+          />
         }
       />
 
@@ -68,7 +79,10 @@ function CapabilityDetailPage() {
             <DetailRow label="Key" value={capability.key} />
             <DetailRow label="Category" value={capability.category ?? "Uncategorised"} />
             <DetailRow label="Auth" value={capability.auth_kind ?? "None"} />
-            <DetailRow label="Health" value={<StatePill label={capability.health} tone={toneForState(capability.health)} />} />
+            <DetailRow
+              label="Health"
+              value={<StatePill label={capability.health} tone={toneForState(capability.health)} />}
+            />
             <DetailRow label="Last run" value={formatWhen(capability.last_run_at)} />
           </dl>
         </GlassCard>
@@ -80,7 +94,10 @@ function CapabilityDetailPage() {
           ) : (
             <ul className="mt-3 space-y-3">
               {operations.map((operation) => (
-                <li key={operation.name} className="border-b border-border/50 pb-3 last:border-b-0 last:pb-0">
+                <li
+                  key={operation.name}
+                  className="border-b border-border/50 pb-3 last:border-b-0 last:pb-0"
+                >
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium text-foreground">{operation.name}</span>
                     {operation.mutates ? <StatePill label="mutating" tone="warning" /> : null}
@@ -98,9 +115,6 @@ function CapabilityDetailPage() {
       {capability.key === "search.console" ? <SearchConsolePanel /> : null}
       {capability.key === "aoos.mcp" ? <McpPanel /> : null}
       {capability.key.startsWith("cap.dataforseo") ? <DataForSeoPanel /> : null}
-
-
-
 
       <GlassCard className="p-5">
         <h2 className="text-sm font-semibold text-foreground">Granted to agents</h2>

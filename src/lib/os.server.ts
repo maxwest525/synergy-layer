@@ -100,7 +100,6 @@ export async function fileInboxItem(
   if (error) throw new Error(error.message);
 }
 
-
 /** List variant of unwrap: a missing rowset is an empty list, never null. */
 export function rows<T>(result: { data: T[] | null; error: { message: string } | null }): T[] {
   if (result.error) throw new Error(result.error.message);

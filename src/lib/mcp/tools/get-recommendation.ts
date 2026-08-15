@@ -29,11 +29,12 @@ const RECOMMENDATION_FIELDS = [
 
 /** The suggested action can carry connector arguments, so only its shape is exposed. */
 function summariseAction(action: unknown): Record<string, unknown> {
-  if (!action || typeof action !== "object" || Array.isArray(action)) return { kind: null, fields: [] };
+  if (!action || typeof action !== "object" || Array.isArray(action))
+    return { kind: null, fields: [] };
   const record = action as Record<string, unknown>;
   return {
-    kind: typeof record['kind'] === "string" ? record['kind'] : null,
-    capability: typeof record['capability'] === "string" ? record['capability'] : null,
+    kind: typeof record["kind"] === "string" ? record["kind"] : null,
+    capability: typeof record["capability"] === "string" ? record["capability"] : null,
     fields: Object.keys(record),
   };
 }
@@ -47,30 +48,35 @@ export default defineTool({
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   handler: async (args, ctx) => {
     const { id } = args;
-    return guardedRead(ctx, "get_recommendation", args as Record<string, unknown>, async (supabase) => {
-      const { data, error } = await supabase
-        .from("recommendations")
-        .select(RECOMMENDATION_FIELDS)
-        .eq("id", id)
-        .maybeSingle();
-      if (error) return errorResult(error.message);
-      if (!data) return errorResult(`No recommendation found with id ${id}`);
+    return guardedRead(
+      ctx,
+      "get_recommendation",
+      args as Record<string, unknown>,
+      async (supabase) => {
+        const { data, error } = await supabase
+          .from("recommendations")
+          .select(RECOMMENDATION_FIELDS)
+          .eq("id", id)
+          .maybeSingle();
+        if (error) return errorResult(error.message);
+        if (!data) return errorResult(`No recommendation found with id ${id}`);
 
-      const { data: action } = await supabase
-        .from("recommendations")
-        .select("suggested_action")
-        .eq("id", id)
-        .maybeSingle();
-      const { data: targets } = await supabase
-        .from("recommendation_targets")
-        .select("subject_kind, subject_id")
-        .eq("recommendation_id", id);
+        const { data: action } = await supabase
+          .from("recommendations")
+          .select("suggested_action")
+          .eq("id", id)
+          .maybeSingle();
+        const { data: targets } = await supabase
+          .from("recommendation_targets")
+          .select("subject_kind, subject_id")
+          .eq("recommendation_id", id);
 
-      return jsonResult({
-        recommendation: data,
-        suggested_action: summariseAction(action?.suggested_action),
-        targets: targets ?? [],
-      });
-    });
+        return jsonResult({
+          recommendation: data,
+          suggested_action: summariseAction(action?.suggested_action),
+          targets: targets ?? [],
+        });
+      },
+    );
   },
 });

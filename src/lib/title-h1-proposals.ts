@@ -56,9 +56,7 @@ export type TitleH1Wording = {
  * is not configured. Evidence and source-proof gates still run before this is
  * used, and the resulting proposal remains a normal review-required draft.
  */
-export function buildDeterministicDevWording(
-  evidence: ProposalEvidence,
-): TitleH1Wording {
+export function buildDeterministicDevWording(evidence: ProposalEvidence): TitleH1Wording {
   const observedQuery = [...evidence.gsc]
     .sort((a, b) => b.impressions - a.impressions || a.position - b.position)[0]
     ?.query.trim();
@@ -100,7 +98,10 @@ function finiteNumber(value: unknown): number {
 }
 
 function normalizeDomain(value: string): string {
-  return value.trim().toLowerCase().replace(/^www\./, "");
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/^www\./, "");
 }
 
 function normalizeQuery(value: string): string {
@@ -141,14 +142,9 @@ function queryTokens(value: string): Set<string> {
  * moving company" without admitting a generic one-word overlap such as
  * "movers".
  */
-export function matchRelevantGscQuery(
-  gscQueries: string[],
-  snapshotTarget: string,
-): string | null {
+export function matchRelevantGscQuery(gscQueries: string[], snapshotTarget: string): string | null {
   const normalizedTarget = normalizeQuery(snapshotTarget);
-  const exact = gscQueries.find(
-    (query) => normalizeQuery(query) === normalizedTarget,
-  );
+  const exact = gscQueries.find((query) => normalizeQuery(query) === normalizedTarget);
   if (exact) return exact;
 
   const targetTokens = queryTokens(snapshotTarget);
@@ -208,10 +204,7 @@ export function assertSameCanonicalProposalPage(
   } catch {
     throw new Error("The rendered redirect left the governed origin; proposal generation refused.");
   }
-  if (
-    canonicalProposalPageIdentity(requested) !==
-    canonicalProposalPageIdentity(rendered)
-  ) {
+  if (canonicalProposalPageIdentity(requested) !== canonicalProposalPageIdentity(rendered)) {
     throw new Error(
       "The rendered redirect did not resolve to the same canonical page; proposal generation refused.",
     );
@@ -253,10 +246,7 @@ export function selectRelevantCompetitorEvidence(input: {
   const evidence: CompetitorProposalEvidence[] = [];
 
   for (const snapshot of input.snapshots) {
-    const matchedGscQuery = matchRelevantGscQuery(
-      input.gscQueries,
-      snapshot.target,
-    );
+    const matchedGscQuery = matchRelevantGscQuery(input.gscQueries, snapshot.target);
     if (!matchedGscQuery) continue;
     for (const row of snapshot.rows) {
       if (row["type"] !== "organic") continue;
@@ -285,7 +275,9 @@ export function selectRelevantCompetitorEvidence(input: {
     .slice(0, input.limit ?? 20);
 }
 
-export function assertCompleteEvidence(input: ProposalEvidenceInput): asserts input is ProposalEvidence {
+export function assertCompleteEvidence(
+  input: ProposalEvidenceInput,
+): asserts input is ProposalEvidence {
   if (!input.livePage?.title || !input.livePage.h1) {
     throw new Error("Required live-page title and H1 evidence is missing.");
   }
@@ -298,9 +290,21 @@ export function assertCompleteEvidence(input: ProposalEvidenceInput): asserts in
 }
 
 export type ProposalOptionalContext = {
-  ga4: { status: "available" | "missing"; rows: Record<string, unknown>[]; provenance: Record<string, unknown> };
-  serpapiTransparency: { status: "available" | "missing"; rows: Record<string, unknown>[]; provenance: Record<string, unknown> };
-  serpapiPaidSerp: { status: "available" | "missing"; rows: Record<string, unknown>[]; provenance: Record<string, unknown> };
+  ga4: {
+    status: "available" | "missing";
+    rows: Record<string, unknown>[];
+    provenance: Record<string, unknown>;
+  };
+  serpapiTransparency: {
+    status: "available" | "missing";
+    rows: Record<string, unknown>[];
+    provenance: Record<string, unknown>;
+  };
+  serpapiPaidSerp: {
+    status: "available" | "missing";
+    rows: Record<string, unknown>[];
+    provenance: Record<string, unknown>;
+  };
   contradictionFlags: { code: string; message: string; providers: string[] }[];
 };
 
@@ -366,17 +370,49 @@ export function buildTitleH1Prompt(
     "Preserve the live page's business meaning while using query language naturally.",
     "",
     "SOURCE OF TRUTH — observed page/search/behavior (GA4 may be missing and never gates):",
-    JSON.stringify({
-      livePage: { role: "source_of_truth", provenance: { renderer: evidence.livePage.renderedBy, observedAt: evidence.livePage.observedAt }, value: evidence.livePage },
-      gsc: { role: "source_of_truth", provenance: { scope: "exact page/query" }, rows: evidence.gsc },
-      ga4: { role: "source_of_truth", ...optional.ga4 },
-    }, null, 2),
+    JSON.stringify(
+      {
+        livePage: {
+          role: "source_of_truth",
+          provenance: {
+            renderer: evidence.livePage.renderedBy,
+            observedAt: evidence.livePage.observedAt,
+          },
+          value: evidence.livePage,
+        },
+        gsc: {
+          role: "source_of_truth",
+          provenance: { scope: "exact page/query" },
+          rows: evidence.gsc,
+        },
+        ga4: { role: "source_of_truth", ...optional.ga4 },
+      },
+      null,
+      2,
+    ),
     "",
     "ENRICHMENT — organic market context; not causal outcome evidence:",
-    JSON.stringify({ dataforseoOrganic: { role: "enrichment", provenance: { scope: "relevant active tracked competitors" }, rows: evidence.competitors } }, null, 2),
+    JSON.stringify(
+      {
+        dataforseoOrganic: {
+          role: "enrichment",
+          provenance: { scope: "relevant active tracked competitors" },
+          rows: evidence.competitors,
+        },
+      },
+      null,
+      2,
+    ),
     "",
     "CORROBORATION — paid messaging/pressure only; never equivalent to organic or behavioral truth:",
-    JSON.stringify({ serpapiTransparency: { role: "corroboration", ...optional.serpapiTransparency }, serpapiPaidSerp: { role: "corroboration", ...optional.serpapiPaidSerp } }, null, 2),
+    JSON.stringify(
+      {
+        serpapiTransparency: { role: "corroboration", ...optional.serpapiTransparency },
+        serpapiPaidSerp: { role: "corroboration", ...optional.serpapiPaidSerp },
+      },
+      null,
+      2,
+    ),
     "",
     "CROSS-SOURCE REVIEW FLAGS (questions, never verdicts):",
     JSON.stringify(optional.contradictionFlags, null, 2),
@@ -402,7 +438,8 @@ function requiredText(value: unknown, label: string, max: number): string {
     throw new Error(`Gemini did not return a usable ${label}.`);
   }
   const text = value.trim();
-  if (text.length > max) throw new Error(`Gemini returned a ${label} longer than ${max} characters.`);
+  if (text.length > max)
+    throw new Error(`Gemini returned a ${label} longer than ${max} characters.`);
   return text;
 }
 

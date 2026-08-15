@@ -531,8 +531,7 @@ function InboxPage() {
     onError: (error: Error) => toast.error(error.message),
   });
 
-  const busy =
-    mutation.isPending || decisionMutation.isPending || executeMutation.isPending;
+  const busy = mutation.isPending || decisionMutation.isPending || executeMutation.isPending;
 
   const clear = useCallback((id: string) => mutation.mutate(id), [mutation]);
 
@@ -611,8 +610,8 @@ function InboxPage() {
       </div>
 
       <p className="text-xs text-muted-foreground">
-        Draft title/H1 proposals can be edited or regenerated from their detail page. Every edit
-        or regeneration creates an immutable revision; approved wording stays locked. Looking for
+        Draft title/H1 proposals can be edited or regenerated from their detail page. Every edit or
+        regeneration creates an immutable revision; approved wording stays locked. Looking for
         system-wide state? Open the{" "}
         <Link to="/command-center" className="text-primary underline-offset-4 hover:underline">
           Command Center

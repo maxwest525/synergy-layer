@@ -3,11 +3,7 @@ import { createSign } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database } from "@/integrations/supabase/types";
-import {
-  ga4Window,
-  readGa4EnvPresence,
-  type Ga4CredentialKind,
-} from "./ga4";
+import { ga4Window, readGa4EnvPresence, type Ga4CredentialKind } from "./ga4";
 
 type AdminClient = SupabaseClient<Database>;
 
@@ -39,11 +35,7 @@ export class Ga4ProviderError extends Error {
   readonly httpStatus: number | null;
   readonly authenticationSucceeded: boolean;
 
-  constructor(
-    message: string,
-    httpStatus: number | null = null,
-    authenticationSucceeded = false,
-  ) {
+  constructor(message: string, httpStatus: number | null = null, authenticationSucceeded = false) {
     super(message);
     this.name = "Ga4ProviderError";
     this.httpStatus = httpStatus;
@@ -66,16 +58,8 @@ export function buildGa4InventoryRequest(
   const pagePath = target ? `${target.pathname}${target.search}` : null;
   return {
     dateRanges: [window],
-    dimensions: [
-      { name: "hostName" },
-      { name: "pagePathPlusQueryString" },
-      { name: "eventName" },
-    ],
-    metrics: [
-      { name: "eventCount" },
-      { name: "activeUsers" },
-      { name: "sessions" },
-    ],
+    dimensions: [{ name: "hostName" }, { name: "pagePathPlusQueryString" }, { name: "eventName" }],
+    metrics: [{ name: "eventCount" }, { name: "activeUsers" }, { name: "sessions" }],
     metricAggregations: ["TOTAL"],
     orderBys: [{ metric: { metricName: "eventCount" }, desc: true }],
     keepEmptyRows: false,
@@ -114,26 +98,19 @@ export function buildGa4InventoryRequest(
   };
 }
 
-function numberAt(
-  values: Array<{ value?: string }> | undefined,
-  index: number,
-): number {
+function numberAt(values: Array<{ value?: string }> | undefined, index: number): number {
   const value = Number(values?.[index]?.value ?? 0);
   return Number.isFinite(value) ? value : 0;
 }
 
 export function normalizeGa4Inventory(payload: unknown): Ga4Inventory {
-  const report =
-    payload && typeof payload === "object"
-      ? (payload as Record<string, unknown>)
-      : {};
+  const report = payload && typeof payload === "object" ? (payload as Record<string, unknown>) : {};
   const rows = Array.isArray(report["rows"]) ? report["rows"] : [];
   const totals = Array.isArray(report["totals"])
     ? (report["totals"] as Array<{ metricValues?: Array<{ value?: string }> }>)
     : [];
   const normalized: Ga4InventoryRow[] = rows.map((raw) => {
-    const row =
-      raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+    const row = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
     const dimensions = Array.isArray(row["dimensionValues"])
       ? (row["dimensionValues"] as Array<{ value?: string }>)
       : [];
@@ -151,16 +128,9 @@ export function normalizeGa4Inventory(payload: unknown): Ga4Inventory {
   });
 
   return {
-    rowCount:
-      typeof report["rowCount"] === "number"
-        ? report["rowCount"]
-        : normalized.length,
-    pageCount: new Set(
-      normalized.map((row) => `${row.hostName}${row.pagePath}`),
-    ).size,
-    eventNameCount: new Set(
-      normalized.map((row) => row.eventName).filter(Boolean),
-    ).size,
+    rowCount: typeof report["rowCount"] === "number" ? report["rowCount"] : normalized.length,
+    pageCount: new Set(normalized.map((row) => `${row.hostName}${row.pagePath}`)).size,
+    eventNameCount: new Set(normalized.map((row) => row.eventName).filter(Boolean)).size,
     totalEventCount:
       totals.length > 0
         ? numberAt(totals[0]?.metricValues, 0)
@@ -169,9 +139,7 @@ export function normalizeGa4Inventory(payload: unknown): Ga4Inventory {
       totals.length > 0
         ? numberAt(totals[0]?.metricValues, 2)
         : normalized.reduce((sum, row) => sum + row.sessions, 0),
-    truncated:
-      typeof report["rowCount"] === "number" &&
-      report["rowCount"] > normalized.length,
+    truncated: typeof report["rowCount"] === "number" && report["rowCount"] > normalized.length,
     rows: normalized,
     quota:
       report["propertyQuota"] && typeof report["propertyQuota"] === "object"
@@ -217,9 +185,7 @@ async function serviceAccountToken(raw: string): Promise<string> {
     throw new Ga4ProviderError("GA4_SERVICE_ACCOUNT_JSON is not valid JSON.");
   }
   if (!account.client_email || !account.private_key) {
-    throw new Ga4ProviderError(
-      "GA4_SERVICE_ACCOUNT_JSON is missing client_email or private_key.",
-    );
+    throw new Ga4ProviderError("GA4_SERVICE_ACCOUNT_JSON is missing client_email or private_key.");
   }
 
   const now = Math.floor(Date.now() / 1000);
@@ -247,9 +213,7 @@ async function serviceAccountToken(raw: string): Promise<string> {
   );
 }
 
-async function oauthRefreshToken(
-  env: Record<string, string | undefined>,
-): Promise<string> {
+async function oauthRefreshToken(env: Record<string, string | undefined>): Promise<string> {
   return tokenResponse(
     new URLSearchParams({
       grant_type: "refresh_token",
@@ -271,19 +235,13 @@ async function accessToken(env: Record<string, string | undefined>): Promise<{
       credentialKind: "service_account",
     };
   }
-  if (
-    presence.oauthRefreshToken &&
-    presence.oauthClientId &&
-    presence.oauthClientSecret
-  ) {
+  if (presence.oauthRefreshToken && presence.oauthClientId && presence.oauthClientSecret) {
     return {
       token: await oauthRefreshToken(env),
       credentialKind: "oauth_refresh_token",
     };
   }
-  throw new Ga4ProviderError(
-    "A complete server-side GA4 credential is not configured.",
-  );
+  throw new Ga4ProviderError("A complete server-side GA4 credential is not configured.");
 }
 
 export async function fetchGa4Inventory(
@@ -353,9 +311,7 @@ export async function runGa4Inventory(
     .select("id")
     .single();
   if (runError || !run)
-    throw new Error(
-      `Could not open a GA4 measurement run: ${runError?.message ?? "no row"}`,
-    );
+    throw new Error(`Could not open a GA4 measurement run: ${runError?.message ?? "no row"}`);
 
   const startedAt = Date.now();
   const finish = async (patch: Record<string, unknown>) => {
@@ -367,10 +323,7 @@ export async function runGa4Inventory(
         ...patch,
       })
       .eq("id", run.id);
-    if (error)
-      throw new Error(
-        `Could not close the GA4 measurement run: ${error.message}`,
-      );
+    if (error) throw new Error(`Could not close the GA4 measurement run: ${error.message}`);
   };
 
   let authenticationSucceeded = false;
@@ -422,8 +375,7 @@ export async function runGa4Inventory(
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    const httpStatus =
-      error instanceof Ga4ProviderError ? error.httpStatus : null;
+    const httpStatus = error instanceof Ga4ProviderError ? error.httpStatus : null;
     await finish({
       status: "failed",
       error: message,
@@ -483,10 +435,7 @@ export async function runGa4PageWindow(
         ...patch,
       })
       .eq("id", run.id);
-    if (error)
-      throw new Error(
-        `Could not close the GA4 change-measurement run: ${error.message}`,
-      );
+    if (error) throw new Error(`Could not close the GA4 change-measurement run: ${error.message}`);
   };
 
   let authenticationSucceeded = false;
@@ -506,8 +455,7 @@ export async function runGa4PageWindow(
     return { runId: run.id, ...result };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    const httpStatus =
-      error instanceof Ga4ProviderError ? error.httpStatus : null;
+    const httpStatus = error instanceof Ga4ProviderError ? error.httpStatus : null;
     await finish({
       status: "failed",
       error: message,

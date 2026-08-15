@@ -43,7 +43,12 @@ export async function labsCall(
     .eq("request_fingerprint", requestFingerprint)
     .maybeSingle();
   if (existing) {
-    return { snapshotId: existing.id, created: false, rows: existing.returned_row_count, costUsd: 0 };
+    return {
+      snapshotId: existing.id,
+      created: false,
+      rows: existing.returned_row_count,
+      costUsd: 0,
+    };
   }
 
   const { envelope, requestId, costUsd } = await dataforseoPost(client, {
@@ -123,9 +128,9 @@ export async function discoverCompetitors(
     .eq("id", result.snapshotId)
     .single();
 
-  const items = ((snapshot?.payload as { rows?: Record<string, unknown>[] } | null)?.rows ?? []).filter(
-    (item) => typeof item["domain"] === "string" && item["domain"] !== seedDomain,
-  );
+  const items = (
+    (snapshot?.payload as { rows?: Record<string, unknown>[] } | null)?.rows ?? []
+  ).filter((item) => typeof item["domain"] === "string" && item["domain"] !== seedDomain);
 
   let inserted = 0;
   for (const item of items) {
@@ -151,7 +156,12 @@ export async function discoverCompetitors(
     if (!error) inserted += 1;
   }
 
-  return { snapshotId: result.snapshotId, discovered: items.length, inserted, costUsd: result.costUsd };
+  return {
+    snapshotId: result.snapshotId,
+    discovered: items.length,
+    inserted,
+    costUsd: result.costUsd,
+  };
 }
 
 /** Ranked keyword landscape for a domain. Labs values are estimates, labelled as such. */

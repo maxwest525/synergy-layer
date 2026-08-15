@@ -49,8 +49,7 @@ async function serviceRpc(
   return {
     changeRequest: { id: change["id"] },
     changed: payload["changed"] === true,
-    versionNumber:
-      typeof payload["version_number"] === "number" ? payload["version_number"] : null,
+    versionNumber: typeof payload["version_number"] === "number" ? payload["version_number"] : null,
   };
 }
 

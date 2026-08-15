@@ -25,7 +25,13 @@ export type EssentialsFacts = {
   changes: {
     total: number;
     proposed: number;
-    latest: { id: string; title: string; targetUrl: string; state: string; proposedAt: string } | null;
+    latest: {
+      id: string;
+      title: string;
+      targetUrl: string;
+      state: string;
+      proposedAt: string;
+    } | null;
   };
   keywords: { tracked: number; pendingCandidates: number; latestCandidateAt: string | null };
   serp: { snapshots: number; latestAt: string | null };
@@ -40,7 +46,6 @@ export type EssentialsFacts = {
   pagespeed: PageSpeedFacts;
   systems: Record<string, SystemFacts | null>;
 };
-
 
 const SYSTEM_KEYS = [
   "api.search_console",
@@ -83,57 +88,71 @@ export const getEssentials = createServerFn({ method: "GET" })
     const propertyRows = properties.data ?? [];
     const selected = propertyRows.find((row) => row.selected) ?? propertyRows[0] ?? null;
 
-    const [gscSnapshots, changeRows, trackedKeywords, keywordCandidates, dfs, systems, psRuns, psSnapshots] =
-      await Promise.all([
-        selected
-          ? db
-              .from("search_console_snapshots")
-              .select("kind, dimensions, period_end_pt, returned_row_count, totals, collected_at, payload")
-              .eq("tenant_id", tenantId)
-              .eq("property", selected.site_url)
-              .order("period_end_pt", { ascending: false })
-              .limit(500)
-          : Promise.resolve({ data: [], error: null } as const),
-        db
-          .from("change_requests")
-          .select("id, title, target_url, state, proposed_at")
-          .eq("tenant_id", tenantId)
-          .order("proposed_at", { ascending: false })
-          .limit(50),
-        db.from("tracked_keywords").select("id", { count: "exact", head: true }).eq("tenant_id", tenantId).eq("active", true),
-        db
-          .from("keyword_candidates")
-          .select("created_at")
-          .eq("tenant_id", tenantId)
-          .eq("review_state", "pending")
-          .order("created_at", { ascending: false })
-          .limit(200),
-        db
-          .from("dataforseo_snapshots")
-          .select("kind, totals, collected_at")
-          .eq("tenant_id", tenantId)
-          .order("collected_at", { ascending: false })
-          .limit(200),
-        db
-          .from("tool_systems")
-          .select(
-            "stable_key, name, installed_state, credential_state, verification_state, aoos_connection_state, implemented_state",
-          )
-          .eq("tenant_id", tenantId)
-          .eq("visible_in_aoos", true)
-          .in("stable_key", SYSTEM_KEYS as unknown as string[]),
-        db
-          .from("measurement_runs")
-          .select("status, error, started_at")
-          .eq("tenant_id", tenantId)
-          .eq("provider", "pagespeed")
-          .order("started_at", { ascending: false })
-          .limit(200),
-        db
-          .from("pagespeed_snapshots")
-          .select("id", { count: "exact", head: true })
-          .eq("tenant_id", tenantId),
-      ]);
+    const [
+      gscSnapshots,
+      changeRows,
+      trackedKeywords,
+      keywordCandidates,
+      dfs,
+      systems,
+      psRuns,
+      psSnapshots,
+    ] = await Promise.all([
+      selected
+        ? db
+            .from("search_console_snapshots")
+            .select(
+              "kind, dimensions, period_end_pt, returned_row_count, totals, collected_at, payload",
+            )
+            .eq("tenant_id", tenantId)
+            .eq("property", selected.site_url)
+            .order("period_end_pt", { ascending: false })
+            .limit(500)
+        : Promise.resolve({ data: [], error: null } as const),
+      db
+        .from("change_requests")
+        .select("id, title, target_url, state, proposed_at")
+        .eq("tenant_id", tenantId)
+        .order("proposed_at", { ascending: false })
+        .limit(50),
+      db
+        .from("tracked_keywords")
+        .select("id", { count: "exact", head: true })
+        .eq("tenant_id", tenantId)
+        .eq("active", true),
+      db
+        .from("keyword_candidates")
+        .select("created_at")
+        .eq("tenant_id", tenantId)
+        .eq("review_state", "pending")
+        .order("created_at", { ascending: false })
+        .limit(200),
+      db
+        .from("dataforseo_snapshots")
+        .select("kind, totals, collected_at")
+        .eq("tenant_id", tenantId)
+        .order("collected_at", { ascending: false })
+        .limit(200),
+      db
+        .from("tool_systems")
+        .select(
+          "stable_key, name, installed_state, credential_state, verification_state, aoos_connection_state, implemented_state",
+        )
+        .eq("tenant_id", tenantId)
+        .eq("visible_in_aoos", true)
+        .in("stable_key", SYSTEM_KEYS as unknown as string[]),
+      db
+        .from("measurement_runs")
+        .select("status, error, started_at")
+        .eq("tenant_id", tenantId)
+        .eq("provider", "pagespeed")
+        .order("started_at", { ascending: false })
+        .limit(200),
+      db
+        .from("pagespeed_snapshots")
+        .select("id", { count: "exact", head: true })
+        .eq("tenant_id", tenantId),
+    ]);
 
     assertRead("Search Console snapshots", gscSnapshots);
     assertRead("Change requests", changeRows);
@@ -150,7 +169,9 @@ export const getEssentials = createServerFn({ method: "GET" })
     const latestTotals = (totals[0]?.totals ?? {}) as Record<string, unknown>;
     const latest = snapshots.filter((row) => row.period_end_pt === latestDate);
     const dimensionMatch = (row: (typeof snapshots)[number], dimension: string) =>
-      row.kind === "dimensional_rows" && (row.dimensions ?? []).length === 1 && (row.dimensions ?? [])[0] === dimension;
+      row.kind === "dimensional_rows" &&
+      (row.dimensions ?? []).length === 1 &&
+      (row.dimensions ?? [])[0] === dimension;
     const sitemapRow = latest.find((row) => dimensionMatch(row, "sitemap")) ?? null;
     const sitemaps = summarizeSitemaps(sitemapRow?.payload ?? null);
 
@@ -161,13 +182,13 @@ export const getEssentials = createServerFn({ method: "GET" })
     const dfsRows = dfs.data ?? [];
     const serpRows = dfsRows.filter((row) => row.kind === "serp_organic");
     const backlinkRows = dfsRows.filter((row) => row.kind.startsWith("backlinks_"));
-    const summary = (backlinkRows.find((row) => row.kind === "backlinks_summary")?.totals ?? {}) as Record<string, unknown>;
-    const evidenceTotals = (backlinkRows.find((row) => row.kind === "backlinks_evidence")?.totals ?? null) as
-      | Record<string, unknown>
-      | null;
+    const summary = (backlinkRows.find((row) => row.kind === "backlinks_summary")?.totals ??
+      {}) as Record<string, unknown>;
+    const evidenceTotals = (backlinkRows.find((row) => row.kind === "backlinks_evidence")?.totals ??
+      null) as Record<string, unknown> | null;
     const storedSufficient =
-      evidenceTotals && typeof evidenceTotals['sufficient'] === "boolean"
-        ? (evidenceTotals['sufficient'] as boolean)
+      evidenceTotals && typeof evidenceTotals["sufficient"] === "boolean"
+        ? (evidenceTotals["sufficient"] as boolean)
         : null;
 
     const systemMap: Record<string, SystemFacts | null> = {};
@@ -185,7 +206,6 @@ export const getEssentials = createServerFn({ method: "GET" })
           }
         : null;
     }
-
 
     const psRunRows = psRuns.data ?? [];
     const psFailures = psRunRows.filter((row) => row.status !== "succeeded");
@@ -214,13 +234,12 @@ export const getEssentials = createServerFn({ method: "GET" })
         latestDate,
         collectedAt: totals[0]?.collected_at ?? snapshots[0]?.collected_at ?? null,
         totalsDays: totals.length,
-        latestClicks: num(latestTotals['clicks']),
-        latestImpressions: num(latestTotals['impressions']),
+        latestClicks: num(latestTotals["clicks"]),
+        latestImpressions: num(latestTotals["impressions"]),
         pageRows: latest.find((row) => dimensionMatch(row, "page"))?.returned_row_count ?? 0,
         queryRows: latest.find((row) => dimensionMatch(row, "query"))?.returned_row_count ?? 0,
         sitemapCount: sitemapRow?.returned_row_count ?? 0,
         sitemaps,
-
       },
       changes: {
         total: changes.length,
@@ -244,10 +263,12 @@ export const getEssentials = createServerFn({ method: "GET" })
       backlinks: {
         snapshots: backlinkRows.length,
         latestAt: backlinkRows[0]?.collected_at ?? null,
-        referringDomains: num(summary['referring_domains']),
-        backlinks: num(summary['backlinks']),
+        referringDomains: num(summary["referring_domains"]),
+        backlinks: num(summary["backlinks"]),
         spamScore:
-          typeof summary['backlinks_spam_score'] === "number" ? summary['backlinks_spam_score'] : null,
+          typeof summary["backlinks_spam_score"] === "number"
+            ? summary["backlinks_spam_score"]
+            : null,
         storedSufficient,
       },
 

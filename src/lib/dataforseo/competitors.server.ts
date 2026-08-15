@@ -79,7 +79,10 @@ const SURFACE_DOMAINS = new Set([
 ]);
 
 function normaliseDomain(value: string): string {
-  return value.trim().toLowerCase().replace(/^www\./, "");
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/^www\./, "");
 }
 
 function classify(domain: string): "competitor" | "surface" {
@@ -135,7 +138,7 @@ export async function deriveCompetitorsFromSerp(
     const keyword = snapshot.target;
     keywords.add(keyword);
 
-    const rows = ((snapshot.payload as { rows?: Record<string, unknown>[] } | null)?.rows ?? []);
+    const rows = (snapshot.payload as { rows?: Record<string, unknown>[] } | null)?.rows ?? [];
     const seenInThisSerp = new Set<string>();
 
     for (const row of rows) {

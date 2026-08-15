@@ -129,7 +129,6 @@ export async function runGithubPreflight(input: {
     );
   }
 
-
   return record(
     {
       ...base,

@@ -12,7 +12,11 @@ export const getMyAccess = createServerFn({ method: "GET" })
       .eq("user_id", context.userId);
     if (error) throw new Error(error.message);
     const roles = (data ?? []).map((row) => row.role);
-    return { userId: context.userId, roles, canOperate: roles.some((role) => role === "admin" || role === "operator") };
+    return {
+      userId: context.userId,
+      roles,
+      canOperate: roles.some((role) => role === "admin" || role === "operator"),
+    };
   });
 
 export const runWorkflowNow = createServerFn({ method: "POST" })

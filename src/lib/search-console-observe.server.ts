@@ -21,7 +21,11 @@ async function setHealth(
     .eq("key", CAPABILITY_KEY);
 }
 
-async function markPropertyObserved(client: Client, property: string, observedAt: string): Promise<void> {
+async function markPropertyObserved(
+  client: Client,
+  property: string,
+  observedAt: string,
+): Promise<void> {
   const { error } = await client
     .from("search_console_properties")
     .update({ last_observed_at: observedAt })
@@ -112,7 +116,10 @@ export async function observeSearchConsole(client: Client): Promise<ObserveResul
     const failure =
       error instanceof SearchConsoleFailure
         ? error
-        : new SearchConsoleFailure("unknown", error instanceof Error ? error.message : String(error));
+        : new SearchConsoleFailure(
+            "unknown",
+            error instanceof Error ? error.message : String(error),
+          );
 
     await setHealth(client, "failing");
     await logActivity(client, {

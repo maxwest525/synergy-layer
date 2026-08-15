@@ -49,7 +49,17 @@ const ACTION_CLASS =
   "inline-flex items-center rounded-lg border border-primary/50 px-3 py-1.5 text-sm font-medium text-primary transition-colors hover:bg-primary/10";
 
 type Action =
-  | { label: string; to: "/search" | "/keywords" | "/competitors" | "/capabilities/systems" | "/ads/advertisers" | "/recommendations" | "/measurement" }
+  | {
+      label: string;
+      to:
+        | "/search"
+        | "/keywords"
+        | "/competitors"
+        | "/capabilities/systems"
+        | "/ads/advertisers"
+        | "/recommendations"
+        | "/measurement";
+    }
   | { label: string; to: "/changes/$id"; params: { id: string } }
   | { label: string; to: "/capabilities/systems/$key"; params: { key: string } };
 
@@ -95,7 +105,11 @@ function ConcernCard({ concern }: { concern: Concern }) {
               {concern.action.label}
             </Link>
           ) : concern.action.to === "/capabilities/systems/$key" ? (
-            <Link to="/capabilities/systems/$key" params={concern.action.params} className={ACTION_CLASS}>
+            <Link
+              to="/capabilities/systems/$key"
+              params={concern.action.params}
+              className={ACTION_CLASS}
+            >
               {concern.action.label}
             </Link>
           ) : (
@@ -148,7 +162,6 @@ function EssentialsPage() {
     backlinks: data.backlinks.backlinks,
     storedSufficient: data.backlinks.storedSufficient,
   });
-
 
   const searchConsole: Concern[] = [
     {
@@ -204,24 +217,40 @@ function EssentialsPage() {
         : "No concrete page change has been proposed yet.",
       gap: "Approval authorizes the exact before/after values on the change request. AOOS does not edit or publish the site.",
       ...(data.changes.latest
-        ? { action: { label: "Open the proposed change", to: "/changes/$id" as const, params: { id: data.changes.latest.id } } }
+        ? {
+            action: {
+              label: "Open the proposed change",
+              to: "/changes/$id" as const,
+              params: { id: data.changes.latest.id },
+            },
+          }
         : { action: { label: "Open recommendations", to: "/recommendations" as const } }),
     },
     {
       id: "onpage",
       title: "On-page technical SEO",
       status: systemStatus(system("sys.openseo")),
-      evidence: "OpenSEO is catalogued in the tool estate. AOOS holds no crawl, audit, or on-page finding from it.",
+      evidence:
+        "OpenSEO is catalogued in the tool estate. AOOS holds no crawl, audit, or on-page finding from it.",
       gap: systemGap(system("sys.openseo"), "OpenSEO"),
-      action: { label: "Open the OpenSEO system record", to: "/capabilities/systems/$key" as const, params: { key: "sys.openseo" } },
+      action: {
+        label: "Open the OpenSEO system record",
+        to: "/capabilities/systems/$key" as const,
+        params: { key: "sys.openseo" },
+      },
     },
     {
       id: "meta-checks",
       title: "Title, meta and H1 character checks",
       status: systemStatus(system("sys.openseo")) === "local" ? "local" : "not_wired",
-      evidence: "No stored title, description, or heading length measurement exists in AOOS for any page.",
+      evidence:
+        "No stored title, description, or heading length measurement exists in AOOS for any page.",
       gap: "Character length checks would come from an on-page crawl, and no crawl result is connected to AOOS yet.",
-      action: { label: "Open the OpenSEO system record", to: "/capabilities/systems/$key" as const, params: { key: "sys.openseo" } },
+      action: {
+        label: "Open the OpenSEO system record",
+        to: "/capabilities/systems/$key" as const,
+        params: { key: "sys.openseo" },
+      },
     },
     {
       id: "pagespeed",
@@ -235,10 +264,14 @@ function EssentialsPage() {
       id: "guidance",
       title: "Google Search guidance",
       status: "reference",
-      evidence: "Reference documentation only. Nothing on this row is measured, stored, or scored by AOOS.",
+      evidence:
+        "Reference documentation only. Nothing on this row is measured, stored, or scored by AOOS.",
       gap: "Guidance is not evidence. Any change it inspires still has to become a proposed page change.",
       references: [
-        { label: "Search Essentials", href: "https://developers.google.com/search/docs/essentials" },
+        {
+          label: "Search Essentials",
+          href: "https://developers.google.com/search/docs/essentials",
+        },
         {
           label: "AI optimization guide",
           href: "https://developers.google.com/search/docs/fundamentals/ai-optimization-guide",
@@ -274,15 +307,24 @@ function EssentialsPage() {
       status: systemStatus(system("api.google_ads_v25")),
       evidence: "No negative keyword list is stored in AOOS.",
       gap: "Negative keywords live on the Google Ads surface, which is catalogued but not wired into AOOS.",
-      action: { label: "Open the Google Ads system record", to: "/capabilities/systems/$key" as const, params: { key: "api.google_ads_v25" } },
+      action: {
+        label: "Open the Google Ads system record",
+        to: "/capabilities/systems/$key" as const,
+        params: { key: "api.google_ads_v25" },
+      },
     },
     {
       id: "keyword-planner",
       title: "Google Keyword Planner",
       status: systemStatus(system("api.google_ads_v25")),
-      evidence: "No Keyword Planner volume or forecast data is stored in AOOS. Keyword volume shown elsewhere comes from DataForSEO.",
+      evidence:
+        "No Keyword Planner volume or forecast data is stored in AOOS. Keyword volume shown elsewhere comes from DataForSEO.",
       gap: "Keyword Planner is reached through the Google Ads API, which is catalogued but not wired into AOOS.",
-      action: { label: "Open the Google Ads system record", to: "/capabilities/systems/$key" as const, params: { key: "api.google_ads_v25" } },
+      action: {
+        label: "Open the Google Ads system record",
+        to: "/capabilities/systems/$key" as const,
+        params: { key: "api.google_ads_v25" },
+      },
     },
   ];
 
@@ -312,15 +354,19 @@ function EssentialsPage() {
     },
   ];
 
-
   const measurement: Concern[] = [
     {
       id: "analytics",
       title: "Google Analytics",
       status: systemStatus(system("api.ga4_data")),
-      evidence: "GA4 Data API, Analytics Admin API, and Tag Manager have configuration metadata catalogued. No session, conversion, or traffic row is stored in AOOS.",
+      evidence:
+        "GA4 Data API, Analytics Admin API, and Tag Manager have configuration metadata catalogued. No session, conversion, or traffic row is stored in AOOS.",
       gap: systemGap(system("api.ga4_data"), "GA4 Data API"),
-      action: { label: "Open the GA4 system record", to: "/capabilities/systems/$key" as const, params: { key: "api.ga4_data" } },
+      action: {
+        label: "Open the GA4 system record",
+        to: "/capabilities/systems/$key" as const,
+        params: { key: "api.ga4_data" },
+      },
     },
     {
       id: "google-ads",
@@ -328,9 +374,12 @@ function EssentialsPage() {
       status: systemStatus(system("api.google_ads_v25")),
       evidence: "No Google Ads account, campaign, or spend row is stored in AOOS.",
       gap: systemGap(system("api.google_ads_v25"), "Google Ads API"),
-      action: { label: "Open the Google Ads system record", to: "/capabilities/systems/$key" as const, params: { key: "api.google_ads_v25" } },
+      action: {
+        label: "Open the Google Ads system record",
+        to: "/capabilities/systems/$key" as const,
+        params: { key: "api.google_ads_v25" },
+      },
     },
-
   ];
 
   return (

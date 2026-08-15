@@ -1,8 +1,4 @@
-import {
-  useMutation,
-  useQueryClient,
-  useSuspenseQuery,
-} from "@tanstack/react-query";
+import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
@@ -60,18 +56,14 @@ export const Route = createFileRoute("/measurement")({
 
 function ms(value: number | null): string {
   if (value === null) return "not returned";
-  return value >= 1000
-    ? `${(value / 1000).toFixed(2)} s`
-    : `${Math.round(value)} ms`;
+  return value >= 1000 ? `${(value / 1000).toFixed(2)} s` : `${Math.round(value)} ms`;
 }
 
 function score(value: number | null): string {
   return value === null ? "not returned" : String(value);
 }
 
-function scoreTone(
-  value: number | null,
-): "success" | "warning" | "danger" | "neutral" {
+function scoreTone(value: number | null): "success" | "warning" | "danger" | "neutral" {
   if (value === null) return "neutral";
   if (value >= 90) return "success";
   if (value >= 50) return "warning";
@@ -117,22 +109,16 @@ function RunRow({ run }: { run: MeasurementRunView }) {
         </span>
         <span className="flex items-center gap-3">
           <StatePill label={run.status} tone={toneForState(run.status)} />
-          <span className="text-xs text-muted-foreground">
-            {formatWhen(run.startedAt)}
-          </span>
+          <span className="text-xs text-muted-foreground">{formatWhen(run.startedAt)}</span>
           {run.durationMs !== null ? (
-            <span className="text-xs text-muted-foreground">
-              {Math.round(run.durationMs)} ms
-            </span>
+            <span className="text-xs text-muted-foreground">{Math.round(run.durationMs)} ms</span>
           ) : null}
         </span>
       </div>
       {run.error ? (
         <p
           className={
-            run.status === "failed"
-              ? "text-xs text-destructive"
-              : "text-xs text-muted-foreground"
+            run.status === "failed" ? "text-xs text-destructive" : "text-xs text-muted-foreground"
           }
         >
           {run.error}
@@ -148,15 +134,11 @@ function SnapshotCard({ snapshot }: { snapshot: PageSpeedSnapshotView }) {
     <GlassCard glow className="p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-sm font-semibold text-foreground">
-            Latest Lighthouse evidence
-          </h2>
+          <h2 className="text-sm font-semibold text-foreground">Latest Lighthouse evidence</h2>
           <p className="mt-1 text-xs text-muted-foreground">
-            {snapshot.finalUrl ?? snapshot.url} · {snapshot.strategy} ·
-            collected {formatWhen(snapshot.collectedAt)}
-            {snapshot.lighthouseVersion
-              ? ` · Lighthouse ${snapshot.lighthouseVersion}`
-              : ""}
+            {snapshot.finalUrl ?? snapshot.url} · {snapshot.strategy} · collected{" "}
+            {formatWhen(snapshot.collectedAt)}
+            {snapshot.lighthouseVersion ? ` · Lighthouse ${snapshot.lighthouseVersion}` : ""}
           </p>
         </div>
         <StatePill label="Evidence, not a decision" tone="primary" />
@@ -173,30 +155,16 @@ function SnapshotCard({ snapshot }: { snapshot: PageSpeedSnapshotView }) {
           value={score(snapshot.seoScore)}
           hint="Lighthouse technical SEO audits"
         />
-        <MetricTile
-          label="LCP"
-          value={ms(snapshot.lcpMs)}
-          hint="Largest contentful paint"
-        />
+        <MetricTile label="LCP" value={ms(snapshot.lcpMs)} hint="Largest contentful paint" />
         <MetricTile
           label="CLS"
-          value={
-            snapshot.cls === null ? "not returned" : snapshot.cls.toFixed(3)
-          }
+          value={snapshot.cls === null ? "not returned" : snapshot.cls.toFixed(3)}
           hint="Cumulative layout shift"
         />
       </div>
       <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <MetricTile
-          label="TBT"
-          value={ms(snapshot.tbtMs)}
-          hint="Total blocking time"
-        />
-        <MetricTile
-          label="FCP"
-          value={ms(snapshot.fcpMs)}
-          hint="First contentful paint"
-        />
+        <MetricTile label="TBT" value={ms(snapshot.tbtMs)} hint="Total blocking time" />
+        <MetricTile label="FCP" value={ms(snapshot.fcpMs)} hint="First contentful paint" />
         <MetricTile
           label="Speed Index"
           value={ms(snapshot.speedIndexMs)}
@@ -210,9 +178,7 @@ function SnapshotCard({ snapshot }: { snapshot: PageSpeedSnapshotView }) {
       </div>
 
       <div className="mt-5">
-        <h3 className="text-sm font-semibold text-foreground">
-          Returned opportunities
-        </h3>
+        <h3 className="text-sm font-semibold text-foreground">Returned opportunities</h3>
         {snapshot.opportunities.length === 0 ? (
           <p className="mt-2 text-sm text-muted-foreground">
             This run returned no opportunity with an estimated saving.
@@ -220,19 +186,12 @@ function SnapshotCard({ snapshot }: { snapshot: PageSpeedSnapshotView }) {
         ) : (
           <ul className="mt-3 space-y-3">
             {snapshot.opportunities.map((row) => (
-              <li
-                key={row.id}
-                className="border-b border-border/50 pb-3 last:border-b-0 last:pb-0"
-              >
+              <li key={row.id} className="border-b border-border/50 pb-3 last:border-b-0 last:pb-0">
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
                   <span className="text-sm text-foreground">{row.title}</span>
                   <span className="text-xs text-primary">
-                    {row.savingsMs !== null
-                      ? `${Math.round(row.savingsMs)} ms est. saving`
-                      : null}
-                    {row.savingsMs !== null && row.savingsBytes !== null
-                      ? " · "
-                      : null}
+                    {row.savingsMs !== null ? `${Math.round(row.savingsMs)} ms est. saving` : null}
+                    {row.savingsMs !== null && row.savingsBytes !== null ? " · " : null}
                     {row.savingsBytes !== null
                       ? `${Math.round(row.savingsBytes / 1024)} KiB`
                       : null}
@@ -252,10 +211,9 @@ function SnapshotCard({ snapshot }: { snapshot: PageSpeedSnapshotView }) {
       </div>
 
       <p className="mt-5 rounded-xl border border-border/60 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
-        These are measurements, not proposals. Nothing here asks you to approve
-        a score. Turning any finding into a site edit requires a separate
-        proposed change with an exact target, before and after, execution
-        method, risk, and tracking.
+        These are measurements, not proposals. Nothing here asks you to approve a score. Turning any
+        finding into a site edit requires a separate proposed change with an exact target, before
+        and after, execution method, risk, and tracking.
       </p>
     </GlassCard>
   );
@@ -323,18 +281,15 @@ function MeasurementPage() {
 
       <GlassCard className="p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-sm font-semibold text-foreground">
-            Run PageSpeed
-          </h2>
+          <h2 className="text-sm font-semibold text-foreground">Run PageSpeed</h2>
           <span className="flex items-center gap-2">
             <StatePill label="Provider cost $0" tone="success" />
             <StatePill label="Google quota limited" tone="warning" />
           </span>
         </div>
         <p className="mt-1 text-sm text-muted-foreground">
-          One click makes exactly one request to the official PageSpeed Insights
-          v5 endpoint. There is no automatic rerun, no schedule, and no
-          background job.
+          One click makes exactly one request to the official PageSpeed Insights v5 endpoint. There
+          is no automatic rerun, no schedule, and no background job.
         </p>
 
         <div className="mt-4 flex flex-wrap items-end gap-3">
@@ -357,9 +312,7 @@ function MeasurementPage() {
                   variant="outline"
                   size="sm"
                   aria-pressed={strategy === option}
-                  className={
-                    strategy === option ? "border-primary/60 text-primary" : ""
-                  }
+                  className={strategy === option ? "border-primary/60 text-primary" : ""}
                   onClick={() => setStrategy(option)}
                 >
                   {option}
@@ -379,14 +332,12 @@ function MeasurementPage() {
 
         {!data.isOperator ? (
           <p className="mt-3 text-sm text-muted-foreground">
-            You can read stored measurements. Running a check requires an
-            operator role.
+            You can read stored measurements. Running a check requires an operator role.
           </p>
         ) : null}
         {data.ownedUrls.length > 0 ? (
           <p className="mt-3 text-xs text-muted-foreground">
-            Owned targets: {data.ownedUrls.join(", ")}. A URL outside these
-            hosts is refused.
+            Owned targets: {data.ownedUrls.join(", ")}. A URL outside these hosts is refused.
           </p>
         ) : null}
       </GlassCard>
@@ -420,28 +371,18 @@ function MeasurementPage() {
 
       <GlassCard className="p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-sm font-semibold text-foreground">
-            Google Analytics 4
-          </h2>
+          <h2 className="text-sm font-semibold text-foreground">Google Analytics 4</h2>
           <span className="flex items-center gap-2">
             <StatePill
-              label={
-                ga4.connection.configured ? "Configured" : "Not configured"
-              }
+              label={ga4.connection.configured ? "Configured" : "Not configured"}
               tone={ga4.connection.configured ? "success" : "warning"}
             />
             <StatePill
-              label={
-                ga4.connection.authenticated
-                  ? "Authenticated"
-                  : "Auth not proven"
-              }
+              label={ga4.connection.authenticated ? "Authenticated" : "Auth not proven"}
               tone={ga4.connection.authenticated ? "success" : "warning"}
             />
             <StatePill
-              label={
-                ga4.connection.connected ? "Read succeeded" : "Read not proven"
-              }
+              label={ga4.connection.connected ? "Read succeeded" : "Read not proven"}
               tone={ga4.connection.connected ? "success" : "warning"}
             />
             <StatePill label="Provider cost $0" tone="success" />
@@ -452,34 +393,22 @@ function MeasurementPage() {
         <div className="mt-4 space-y-1">
           <DetailRow
             label="Tenant GA4 property"
-            value={
-              ga4.property ??
-              "not bound to the selected Search Console property"
-            }
+            value={ga4.property ?? "not bound to the selected Search Console property"}
           />
-          <DetailRow
-            label="Reporting window"
-            value="28 days through yesterday, once connected"
-          />
+          <DetailRow label="Reporting window" value="28 days through yesterday, once connected" />
           <DetailRow
             label="Last successful refresh"
             value={ga4.latest ? formatWhen(ga4.latest.collectedAt) : "never"}
           />
         </div>
 
-        <p className="mt-4 text-sm text-muted-foreground">
-          {ga4.connection.statement}
-        </p>
+        <p className="mt-4 text-sm text-muted-foreground">{ga4.connection.statement}</p>
 
         <Button
           type="button"
           variant="outline"
           className="mt-4"
-          disabled={
-            !data.isOperator ||
-            !ga4.connection.configured ||
-            ga4Mutation.isPending
-          }
+          disabled={!data.isOperator || !ga4.connection.configured || ga4Mutation.isPending}
           onClick={() => ga4Mutation.mutate()}
         >
           {ga4Mutation.isPending ? "Refreshing GA4" : "Refresh GA4"}
@@ -496,20 +425,19 @@ function MeasurementPage() {
               ))}
             </ul>
             <p className="mt-2 text-xs text-muted-foreground">
-              No local credential is copied in, and no historical figures are
-              shown. Configuration, authentication, and a successful property
-              read are reported separately.
+              No local credential is copied in, and no historical figures are shown. Configuration,
+              authentication, and a successful property read are reported separately.
             </p>
           </div>
         )}
 
         {ga4.connection.configured && !ga4.connection.authenticated ? (
           <p className="mt-3 rounded-xl border border-primary/30 bg-primary/5 px-3 py-3 text-sm text-muted-foreground">
-            One-time Google step: enable the Google Analytics Data API and grant
-            the service account client_email from GA4_SERVICE_ACCOUNT_JSON
-            Viewer access to {ga4.property ?? "the tenant-bound GA4 property"}.
-            For OAuth mode, reconnect the Google user and ensure that user has
-            Viewer access to the same property. Then select Refresh GA4.
+            One-time Google step: enable the Google Analytics Data API and grant the service account
+            client_email from GA4_SERVICE_ACCOUNT_JSON Viewer access to{" "}
+            {ga4.property ?? "the tenant-bound GA4 property"}. For OAuth mode, reconnect the Google
+            user and ensure that user has Viewer access to the same property. Then select Refresh
+            GA4.
           </p>
         ) : null}
 
@@ -558,8 +486,8 @@ function MeasurementPage() {
                         {row.pagePath} · {row.eventName}
                       </span>
                       <span className="text-xs text-muted-foreground">
-                        {row.eventCount} event(s) · {row.activeUsers} active
-                        user(s) · {row.sessions} session(s)
+                        {row.eventCount} event(s) · {row.activeUsers} active user(s) ·{" "}
+                        {row.sessions} session(s)
                       </span>
                     </li>
                   ))}

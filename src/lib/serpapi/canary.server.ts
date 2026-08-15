@@ -2,7 +2,11 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database } from "@/integrations/supabase/types";
 import { logActivity } from "../os.server";
-import { checkSerpApiAccount, recordSerpApiAccountStatus, type AccountStatus } from "./account.server";
+import {
+  checkSerpApiAccount,
+  recordSerpApiAccountStatus,
+  type AccountStatus,
+} from "./account.server";
 import {
   extractAdvertiserCandidates,
   persistAdvertiserCandidates,
@@ -151,17 +155,25 @@ export async function runAdvertiserCanary(
     try {
       parsed = JSON.parse(body) as Record<string, unknown>;
     } catch {
-      throw new SerpApiFailure("api_error", `SerpApi returned an unreadable response [${response.status}].`);
+      throw new SerpApiFailure(
+        "api_error",
+        `SerpApi returned an unreadable response [${response.status}].`,
+      );
     }
     const providerError = typeof parsed["error"] === "string" ? (parsed["error"] as string) : null;
     // "No results" is a real, successful observation: the provider searched and
     // found nothing. It is not a transport failure and must not stop a sweep.
-    const emptyResult = providerError !== null && /hasn't returned any results|no results/i.test(providerError);
+    const emptyResult =
+      providerError !== null && /hasn't returned any results|no results/i.test(providerError);
     if (!response.ok || (providerError && !emptyResult)) {
-      throw new SerpApiFailure("api_error", providerError ?? `SerpApi request failed [${response.status}].`);
+      throw new SerpApiFailure(
+        "api_error",
+        providerError ?? `SerpApi request failed [${response.status}].`,
+      );
     }
-    payload = emptyResult ? { search_metadata: parsed["search_metadata"] ?? {}, ad_creatives: [] } : parsed;
-
+    payload = emptyResult
+      ? { search_metadata: parsed["search_metadata"] ?? {}, ad_creatives: [] }
+      : parsed;
   } catch (error) {
     const aborted = error instanceof Error && error.name === "AbortError";
     const reason = aborted
@@ -183,7 +195,11 @@ export async function runAdvertiserCanary(
       summary: `Google Ads Transparency canary for ${domain} failed: ${reason}`,
       payload: { domain, ledgerId: reservation.id, reason } as never,
     });
-    return { ...blocked(reason, before), ledgerId: reservation.id, reservedCredits: CANARY_MAX_CREDITS };
+    return {
+      ...blocked(reason, before),
+      ledgerId: reservation.id,
+      reservedCredits: CANARY_MAX_CREDITS,
+    };
   } finally {
     clearTimeout(timer);
   }
@@ -226,7 +242,9 @@ export async function runAdvertiserCanary(
   if (watchlist?.id) {
     await client
       .from("ad_vendor_watchlist")
-      .update({ resolution_state: candidates.length > 0 ? "pending_review" : "no_advertiser_found" })
+      .update({
+        resolution_state: candidates.length > 0 ? "pending_review" : "no_advertiser_found",
+      })
       .eq("id", watchlist.id);
   }
 

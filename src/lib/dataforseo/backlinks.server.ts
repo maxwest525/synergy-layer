@@ -34,7 +34,10 @@ async function backlinksCall(
   kind: string,
   target: string,
   params: Record<string, unknown>,
-  extract: (result: Record<string, unknown>[]) => { rows: unknown[]; totals: Record<string, unknown> },
+  extract: (result: Record<string, unknown>[]) => {
+    rows: unknown[];
+    totals: Record<string, unknown>;
+  },
   workflow?: { runId?: string | null; key?: string | null },
 ): Promise<BacklinksResult> {
   const reportingDate = today();
@@ -47,7 +50,12 @@ async function backlinksCall(
     .eq("request_fingerprint", requestFingerprint)
     .maybeSingle();
   if (existing) {
-    return { snapshotId: existing.id, created: false, rows: existing.returned_row_count, costUsd: 0 };
+    return {
+      snapshotId: existing.id,
+      created: false,
+      rows: existing.returned_row_count,
+      costUsd: 0,
+    };
   }
 
   const { envelope, requestId, costUsd } = await dataforseoPost(client, {
@@ -101,7 +109,12 @@ export async function collectBacklinkSummary(
     "/backlinks/summary/live",
     "backlinks_summary",
     target,
-    { target, internal_list_limit: 10, backlinks_status_type: "live", rank_scale: BACKLINKS_CONFIG.rankScale },
+    {
+      target,
+      internal_list_limit: 10,
+      backlinks_status_type: "live",
+      rank_scale: BACKLINKS_CONFIG.rankScale,
+    },
     (result) => ({ rows: result, totals: (result[0] ?? {}) as Record<string, unknown> }),
     workflow,
   );
@@ -128,7 +141,7 @@ export async function collectReferringDomains(
       rank_scale: BACKLINKS_CONFIG.rankScale,
     },
     (result) => ({
-      rows: ((result[0]?.["items"] as unknown[]) ?? []),
+      rows: (result[0]?.["items"] as unknown[]) ?? [],
       totals: { totalCount: result[0]?.["total_count"] ?? null },
     }),
     workflow,
@@ -157,7 +170,7 @@ export async function collectBacklinks(
       rank_scale: BACKLINKS_CONFIG.rankScale,
     },
     (result) => ({
-      rows: ((result[0]?.["items"] as unknown[]) ?? []),
+      rows: (result[0]?.["items"] as unknown[]) ?? [],
       totals: { totalCount: result[0]?.["total_count"] ?? null },
     }),
     workflow,
@@ -186,7 +199,7 @@ export async function collectAnchors(
       rank_scale: BACKLINKS_CONFIG.rankScale,
     },
     (result) => ({
-      rows: ((result[0]?.["items"] as unknown[]) ?? []),
+      rows: (result[0]?.["items"] as unknown[]) ?? [],
       totals: { totalCount: result[0]?.["total_count"] ?? null },
     }),
     workflow,
@@ -212,7 +225,7 @@ export async function collectTopLinkedPages(
       backlinks_status_type: "live",
     },
     (result) => ({
-      rows: ((result[0]?.["items"] as unknown[]) ?? []),
+      rows: (result[0]?.["items"] as unknown[]) ?? [],
       totals: { totalCount: result[0]?.["total_count"] ?? null },
     }),
     workflow,
@@ -238,7 +251,11 @@ export async function collectBacklinkHistory(
     "/backlinks/history/live",
     "backlinks_history",
     target,
-    { target, date_from: monthsAgo(BACKLINKS_CONFIG.historyMonths), rank_scale: BACKLINKS_CONFIG.rankScale },
+    {
+      target,
+      date_from: monthsAgo(BACKLINKS_CONFIG.historyMonths),
+      rank_scale: BACKLINKS_CONFIG.rankScale,
+    },
     (result) => ({ rows: result, totals: { months: result.length } }),
     workflow,
   );

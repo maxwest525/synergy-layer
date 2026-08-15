@@ -3,7 +3,14 @@ import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 
-import { DetailRow, GlassCard, PageHeader, StatePill, formatWhen, toneForState } from "@/components/os/primitives";
+import {
+  DetailRow,
+  GlassCard,
+  PageHeader,
+  StatePill,
+  formatWhen,
+  toneForState,
+} from "@/components/os/primitives";
 import { Button } from "@/components/ui/button";
 import { decideRecommendation } from "@/lib/os-admin.functions";
 import { getRecommendation } from "@/lib/os.functions";
@@ -29,7 +36,8 @@ export const Route = createFileRoute("/recommendations/$id")({
       ? `${loaderData.recommendation.title} — Recommendations — AOOS`
       : "Recommendation — AOOS";
     const description =
-      loaderData?.recommendation?.description ?? "Recommendation detail, impact scoring, and reasoning.";
+      loaderData?.recommendation?.description ??
+      "Recommendation detail, impact scoring, and reasoning.";
     return {
       meta: [
         { title },
@@ -50,7 +58,8 @@ function RecommendationDetailPage() {
   const decide = useServerFn(decideRecommendation);
   const recommendation = data.recommendation!;
   const decided = recommendation.state === "approved" || recommendation.state === "rejected";
-  const observation = isObservationOnly(recommendation.metadata) || recommendation.state === "observed";
+  const observation =
+    isObservationOnly(recommendation.metadata) || recommendation.state === "observed";
   const action = describeSuggestedAction(recommendation.suggested_action);
   const canDecide = !decided && !observation && action.executable;
 
@@ -68,7 +77,9 @@ function RecommendationDetailPage() {
       <PageHeader
         eyebrow={observation ? "Observed evidence" : recommendation.source_module}
         title={recommendation.title}
-        description={recommendation.description ?? "No description recorded for this recommendation."}
+        description={
+          recommendation.description ?? "No description recorded for this recommendation."
+        }
         actions={
           <>
             <StatePill
@@ -101,8 +112,8 @@ function RecommendationDetailPage() {
         <GlassCard className="p-5">
           <h2 className="text-sm font-semibold text-foreground">This is a concrete page change</h2>
           <p className="mt-2 text-sm text-muted-foreground">
-            The exact before and after values, the evidence, and the approval live on the change request for{" "}
-            {data.changeRequest.target_url}.
+            The exact before and after values, the evidence, and the approval live on the change
+            request for {data.changeRequest.target_url}.
           </p>
           <div className="mt-3">
             <Button asChild variant="outline" size="sm">
@@ -115,11 +126,15 @@ function RecommendationDetailPage() {
       ) : null}
 
       {observation ? (
-
         <GlassCard className="p-5">
-          <h2 className="text-sm font-semibold text-foreground">This is an observation, not a proposal</h2>
+          <h2 className="text-sm font-semibold text-foreground">
+            This is an observation, not a proposal
+          </h2>
           <dl className="mt-3">
-            <DetailRow label="What this is" value="Observed SERP evidence collected from a real provider response." />
+            <DetailRow
+              label="What this is"
+              value="Observed SERP evidence collected from a real provider response."
+            />
             <DetailRow
               label="What it means"
               value="A domain or page was seen in results for keywords this workspace tracks, and that sighting is now dated and stored."
@@ -148,9 +163,15 @@ function RecommendationDetailPage() {
             <DetailRow label="Revenue impact" value={recommendation.revenue_impact} />
             <DetailRow label="Business impact" value={recommendation.business_impact} />
             <DetailRow label="Risk" value={recommendation.risk} />
-            <DetailRow label="Confidence" value={`${Math.round(recommendation.confidence * 100)}%`} />
+            <DetailRow
+              label="Confidence"
+              value={`${Math.round(recommendation.confidence * 100)}%`}
+            />
             <DetailRow label="Time saved" value={`${recommendation.time_saved_minutes} minutes`} />
-            <DetailRow label="Approval" value={recommendation.requires_approval ? "Required" : "Not required"} />
+            <DetailRow
+              label="Approval"
+              value={recommendation.requires_approval ? "Required" : "Not required"}
+            />
             <DetailRow label="Decided" value={formatWhen(recommendation.approved_at)} />
           </dl>
         </GlassCard>
@@ -167,8 +188,8 @@ function RecommendationDetailPage() {
             <h2 className="text-sm font-semibold text-foreground">Suggested action</h2>
             {data.changeRequest ? (
               <p className="mt-2 text-sm text-muted-foreground">
-                The decision lives on the linked page-change request above. Approval authorizes the exact
-                before/after values there; it does not edit or publish the site.
+                The decision lives on the linked page-change request above. Approval authorizes the
+                exact before/after values there; it does not edit or publish the site.
               </p>
             ) : (
               <>
@@ -185,12 +206,12 @@ function RecommendationDetailPage() {
             )}
           </GlassCard>
 
-
-
           <GlassCard className="p-5">
             <h2 className="text-sm font-semibold text-foreground">Dependencies</h2>
             {data.dependencies.length === 0 ? (
-              <p className="mt-2 text-sm text-muted-foreground">This recommendation stands alone.</p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                This recommendation stands alone.
+              </p>
             ) : (
               <ul className="mt-3 space-y-2">
                 {data.dependencies.map((dependency) =>
@@ -219,7 +240,10 @@ function RecommendationDetailPage() {
         </div>
       </div>
 
-      <Link to="/recommendations" className="text-sm text-primary underline-offset-4 hover:underline">
+      <Link
+        to="/recommendations"
+        className="text-sm text-primary underline-offset-4 hover:underline"
+      >
         Back to recommendations
       </Link>
     </div>

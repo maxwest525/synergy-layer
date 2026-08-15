@@ -20,14 +20,18 @@ export const getDataForSeoState = createServerFn({ method: "POST" })
 
     const { data: requests } = await context.supabase
       .from("dataforseo_requests")
-      .select("id, capability_key, family, endpoint, mode, outcome, cost_usd, returned_row_count, created_at, error")
+      .select(
+        "id, capability_key, family, endpoint, mode, outcome, cost_usd, returned_row_count, created_at, error",
+      )
       .eq("tenant_id", tenantId)
       .order("created_at", { ascending: false })
       .limit(20);
 
     const { data: snapshots } = await context.supabase
       .from("dataforseo_snapshots")
-      .select("id, kind, target, endpoint, returned_row_count, provider_cost_usd, reporting_date, collected_at")
+      .select(
+        "id, kind, target, endpoint, returned_row_count, provider_cost_usd, reporting_date, collected_at",
+      )
       .eq("tenant_id", tenantId)
       .order("collected_at", { ascending: false })
       .limit(12);

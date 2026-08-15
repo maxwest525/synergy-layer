@@ -31,7 +31,11 @@ function system(overrides: Partial<SystemFacts>): SystemFacts {
 
 describe("essentials status derivation", () => {
   it("never presents configured credentials as connected", () => {
-    const ga4 = system({ key: "api.ga4_data", name: "GA4 Data API", credential_state: "configured" });
+    const ga4 = system({
+      key: "api.ga4_data",
+      name: "GA4 Data API",
+      credential_state: "configured",
+    });
     expect(systemStatus(ga4)).toBe("ready");
     expect(systemGap(ga4, "GA4")).toContain("not implemented or connected in AOOS");
   });
@@ -82,31 +86,48 @@ describe("essentials status derivation", () => {
     expect(thin.note).toContain("No stored evidence pass");
 
     expect(
-      backlinkAuthority({ snapshotCount: 0, referringDomains: 0, backlinks: 0, storedSufficient: null }).status,
+      backlinkAuthority({
+        snapshotCount: 0,
+        referringDomains: 0,
+        backlinks: 0,
+        storedSufficient: null,
+      }).status,
     ).toBe("not_wired");
 
     // Counts alone never promote a sample to sufficient.
     expect(
-      backlinkAuthority({ snapshotCount: 4, referringDomains: 24, backlinks: 120, storedSufficient: null })
-        .sufficient,
+      backlinkAuthority({
+        snapshotCount: 4,
+        referringDomains: 24,
+        backlinks: 120,
+        storedSufficient: null,
+      }).sufficient,
     ).toBe(false);
     expect(
-      backlinkAuthority({ snapshotCount: 4, referringDomains: 24, backlinks: 120, storedSufficient: false })
-        .sufficient,
+      backlinkAuthority({
+        snapshotCount: 4,
+        referringDomains: 24,
+        backlinks: 120,
+        storedSufficient: false,
+      }).sufficient,
     ).toBe(false);
     expect(
-      backlinkAuthority({ snapshotCount: 4, referringDomains: 24, backlinks: 120, storedSufficient: true })
-        .sufficient,
+      backlinkAuthority({
+        snapshotCount: 4,
+        referringDomains: 24,
+        backlinks: 120,
+        storedSufficient: true,
+      }).sufficient,
     ).toBe(true);
   });
 
   it("throws a source-specific error instead of zeroing a failed read", () => {
-    expect(() => assertRead("Search Console snapshots", { error: { message: "permission denied" } })).toThrow(
-      EssentialsReadError,
-    );
-    expect(() => assertRead("Search Console snapshots", { error: { message: "permission denied" } })).toThrow(
-      /Search Console snapshots could not be read: permission denied/,
-    );
+    expect(() =>
+      assertRead("Search Console snapshots", { error: { message: "permission denied" } }),
+    ).toThrow(EssentialsReadError);
+    expect(() =>
+      assertRead("Search Console snapshots", { error: { message: "permission denied" } }),
+    ).toThrow(/Search Console snapshots could not be read: permission denied/);
     const ok = assertRead("Tool systems", { error: null, data: [1] });
     expect(ok.data).toEqual([1]);
   });
@@ -127,7 +148,6 @@ describe("essentials status derivation", () => {
       errors: null,
     });
   });
-
 
   it("grades stored evidence by rows, not by prose", () => {
     expect(evidenceStatus(0, true)).toBe("not_wired");

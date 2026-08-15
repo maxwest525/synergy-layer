@@ -14,7 +14,11 @@ export type OperatorSession = {
  * anyone is signed in, so an empty screen is never mistaken for empty data.
  */
 export function useOperatorSession(): OperatorSession {
-  const [state, setState] = useState<OperatorSession>({ ready: false, email: null, signedIn: false });
+  const [state, setState] = useState<OperatorSession>({
+    ready: false,
+    email: null,
+    signedIn: false,
+  });
 
   useEffect(() => {
     let active = true;

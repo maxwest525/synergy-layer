@@ -47,12 +47,7 @@ export const definition: ModuleDefinition = {
         pendingGateAction: "free_account_probe_only",
         digest: "docs/integrations/serpapi/DIGEST.md",
         plan: "docs/integrations/serpapi/PLAN.md",
-        prohibited: [
-          "spend_inference",
-          "performance_inference",
-          "ad_generation",
-          "ad_deployment",
-        ],
+        prohibited: ["spend_inference", "performance_inference", "ad_generation", "ad_deployment"],
       },
     },
     {
@@ -66,8 +61,7 @@ export const definition: ModuleDefinition = {
       operations: [
         {
           name: "advertisers.resolve",
-          description:
-            "Search each watchlist domain and group rows by advertiser ID.",
+          description: "Search each watchlist domain and group rows by advertiser ID.",
           mutates: false,
         },
       ],
@@ -115,8 +109,7 @@ export const definition: ModuleDefinition = {
       operations: [
         {
           name: "destination.observe",
-          description:
-            "Fetch and normalise one destination per unique ad link.",
+          description: "Fetch and normalise one destination per unique ad link.",
           mutates: false,
         },
       ],
@@ -161,8 +154,7 @@ export const definition: ModuleDefinition = {
       operations: [
         {
           name: "network.analyze",
-          description:
-            "Recompute overlap across stored advertisers and creatives.",
+          description: "Recompute overlap across stored advertisers and creatives.",
           mutates: false,
         },
       ],

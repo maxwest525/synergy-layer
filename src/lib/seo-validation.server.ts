@@ -75,7 +75,6 @@ export type CompetitorEvidence = {
   }[];
 };
 
-
 type Metrics = { clicks: number; impressions: number; ctr: number; position: number };
 
 type Finding = {
@@ -227,7 +226,10 @@ export function evaluateSeoRules(
         description: `${now.impressions} impressions produced ${now.clicks} clicks (${(now.ctr * 100).toFixed(2)}% CTR) at average position ${now.position.toFixed(1)}.`,
         current: now,
         previous: before,
-        change: { ctrAbsolute: before ? now.ctr - before.ctr : null, ctrPercent: before ? ratio(now.ctr, before.ctr) : null },
+        change: {
+          ctrAbsolute: before ? now.ctr - before.ctr : null,
+          ctrPercent: before ? ratio(now.ctr, before.ctr) : null,
+        },
         snapshotId: pageId,
         priorSnapshotId: priorPageId,
         businessImpact: "medium",
@@ -245,7 +247,10 @@ export function evaluateSeoRules(
         description: `${now.impressions} impressions returned no clicks at average position ${now.position.toFixed(1)}.`,
         current: now,
         previous: before,
-        change: { clicksAbsolute: before ? now.clicks - before.clicks : null, clicksPercent: clickChange },
+        change: {
+          clicksAbsolute: before ? now.clicks - before.clicks : null,
+          clicksPercent: clickChange,
+        },
         snapshotId: pageId,
         priorSnapshotId: priorPageId,
         businessImpact: "medium",
@@ -398,7 +403,6 @@ export function evaluateSeoRules(
     }
   }
 
-
   return findings;
 }
 
@@ -411,7 +415,10 @@ async function loadCompetitorEvidence(
   client: Client,
   property: string,
 ): Promise<CompetitorEvidence | null> {
-  const ownDomain = property.replace(/^sc-domain:/, "").replace(/^https?:\/\//, "").replace(/\/$/, "");
+  const ownDomain = property
+    .replace(/^sc-domain:/, "")
+    .replace(/^https?:\/\//, "")
+    .replace(/\/$/, "");
   const { data, error } = await client
     .from("competitor_candidates")
     .select("domain, domain_class, metrics")
@@ -438,8 +445,10 @@ async function loadCompetitorEvidence(
       serpsPresent: Number(pass["serps_present"] ?? 0),
       serpShare: Number(pass["serp_share"] ?? 0),
       medianPosition: Number(pass["median_position"] ?? 0),
-      outranksOwned: (pass["outranks_owned"] ?? []) as CompetitorEvidence["profiles"][number]["outranksOwned"],
-      ownedOutranks: (pass["owned_outranks"] ?? []) as CompetitorEvidence["profiles"][number]["ownedOutranks"],
+      outranksOwned: (pass["outranks_owned"] ??
+        []) as CompetitorEvidence["profiles"][number]["outranksOwned"],
+      ownedOutranks: (pass["owned_outranks"] ??
+        []) as CompetitorEvidence["profiles"][number]["ownedOutranks"],
       confidence: Number(pass["confidence"] ?? 0),
       shortlisted: Boolean(pass["shortlisted"]),
       pageEvidence: (metrics["page_evidence"] as Record<string, unknown>) ?? null,
@@ -449,7 +458,6 @@ async function loadCompetitorEvidence(
   if (profiles.length === 0 || serpsAnalysed === 0) return null;
   return { ownDomain, serpsAnalysed, ownedAbsentSerps, profiles };
 }
-
 
 /**
  * Competitor rules. They only become eligible once real SERP-derived competitor
@@ -513,7 +521,10 @@ export function evaluateCompetitorRules(evidence: CompetitorEvidence | null): Fi
       description: `${evidence.ownDomain} does not appear in the observed top 20 organic results for ${evidence.ownedAbsentSerps.length} of ${evidence.serpsAnalysed} operator-approved keywords (${Math.round(absentShare * 100)}%). This is observed SERP absence, not a Search Console decline: those queries may never have produced impressions.`,
       current: null,
       previous: null,
-      change: { absentQueries: evidence.ownedAbsentSerps.slice(0, 40), absentShare: Number(absentShare.toFixed(3)) },
+      change: {
+        absentQueries: evidence.ownedAbsentSerps.slice(0, 40),
+        absentShare: Number(absentShare.toFixed(3)),
+      },
       snapshotId: null,
       priorSnapshotId: null,
       businessImpact: absentShare >= 0.6 ? "high" : "medium",
@@ -527,7 +538,6 @@ export function evaluateCompetitorRules(evidence: CompetitorEvidence | null): Fi
 
   return findings;
 }
-
 
 export type SeoValidationResult = {
   property: string | null;
@@ -648,7 +658,11 @@ export async function runSeoValidation(
   for (const finding of findings) {
     triggered.add(finding.rule);
     const issueFingerprint = checksum([property, "seo_validation", finding.rule, finding.target]);
-    const observationFingerprint = checksum([issueFingerprint, reportingDate, comparisonDate ?? "none"]);
+    const observationFingerprint = checksum([
+      issueFingerprint,
+      reportingDate,
+      comparisonDate ?? "none",
+    ]);
 
     const evidence = {
       property,
@@ -684,35 +698,39 @@ export async function runSeoValidation(
     if (recommendationId) {
       const { error: updateError } = await client
         .from("recommendations")
-        .update(observationRecommendationRecord({
-          description: finding.description,
-          confidence: finding.confidence,
-          run_id: workflowRunId,
-          metadata: evidence as never,
-        }))
+        .update(
+          observationRecommendationRecord({
+            description: finding.description,
+            confidence: finding.confidence,
+            run_id: workflowRunId,
+            metadata: evidence as never,
+          }),
+        )
         .eq("id", recommendationId);
       if (updateError) throw new SearchConsoleFailure("persistence", updateError.message);
       updated += 1;
     } else {
       const { data: inserted, error: insertError } = await client
         .from("recommendations")
-        .insert(observationRecommendationRecord({
-          tenant_id: await requireTenantId(client),
-          title: finding.title,
-          description: finding.description,
-          source_module: "seo-validation",
-          business_impact: finding.businessImpact,
-          revenue_impact: finding.businessImpact,
-          traffic_impact: finding.businessImpact,
-          time_saved_minutes: 0,
-          risk: "none",
-          confidence: finding.confidence,
-          reasoning: `Rule ${finding.rule} over finalized Search Console snapshots for ${reportingDate} (Pacific), compared against ${comparisonDate ?? "no prior period"}.`,
-          suggested_action: finding.suggestedAction as never,
-          issue_fingerprint: issueFingerprint,
-          run_id: workflowRunId,
-          metadata: evidence as never,
-        }))
+        .insert(
+          observationRecommendationRecord({
+            tenant_id: await requireTenantId(client),
+            title: finding.title,
+            description: finding.description,
+            source_module: "seo-validation",
+            business_impact: finding.businessImpact,
+            revenue_impact: finding.businessImpact,
+            traffic_impact: finding.businessImpact,
+            time_saved_minutes: 0,
+            risk: "none",
+            confidence: finding.confidence,
+            reasoning: `Rule ${finding.rule} over finalized Search Console snapshots for ${reportingDate} (Pacific), compared against ${comparisonDate ?? "no prior period"}.`,
+            suggested_action: finding.suggestedAction as never,
+            issue_fingerprint: issueFingerprint,
+            run_id: workflowRunId,
+            metadata: evidence as never,
+          }),
+        )
         .select("id")
         .single();
       if (insertError) throw new SearchConsoleFailure("persistence", insertError.message);
@@ -727,7 +745,6 @@ export async function runSeoValidation(
         });
         if (targetError) throw new SearchConsoleFailure("persistence", targetError.message);
       }
-
     }
 
     const { error: observationError } = await client.from("search_console_observations").upsert(

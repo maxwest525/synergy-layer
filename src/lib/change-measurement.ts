@@ -32,7 +32,7 @@ export function ptDate(instant: string | Date): string {
   const date = instant instanceof Date ? instant : new Date(instant);
   if (!Number.isFinite(date.valueOf())) throw new Error("A valid instant is required.");
   const parts = Object.fromEntries(ptFormatter.formatToParts(date).map((p) => [p.type, p.value]));
-  return `${parts['year']}-${parts['month']}-${parts['day']}`;
+  return `${parts["year"]}-${parts["month"]}-${parts["day"]}`;
 }
 
 export function addCalendarDays(date: string, amount: number): string {
@@ -45,12 +45,20 @@ export function addCalendarDays(date: string, amount: number): string {
 
 export function approvalBaselineWindow(approvedAt: string): DateWindow {
   const approvedDate = ptDate(approvedAt);
-  return { windowDays: 0, periodStartPt: addCalendarDays(approvedDate, -28), periodEndPt: addCalendarDays(approvedDate, -1) };
+  return {
+    windowDays: 0,
+    periodStartPt: addCalendarDays(approvedDate, -28),
+    periodEndPt: addCalendarDays(approvedDate, -1),
+  };
 }
 
 export function outcomeWindow(liveAt: string, windowDays: 7 | 14 | 28): DateWindow {
   const firstFullDay = addCalendarDays(ptDate(liveAt), 1);
-  return { windowDays, periodStartPt: firstFullDay, periodEndPt: addCalendarDays(firstFullDay, windowDays - 1) };
+  return {
+    windowDays,
+    periodStartPt: firstFullDay,
+    periodEndPt: addCalendarDays(firstFullDay, windowDays - 1),
+  };
 }
 
 export type GscSnapshot = {
@@ -66,11 +74,22 @@ export type GscSnapshot = {
   payload: unknown;
 };
 
-type GscRow = { date: string; query: string; clicks: number; impressions: number; position: number };
+type GscRow = {
+  date: string;
+  query: string;
+  clicks: number;
+  impressions: number;
+  position: number;
+};
 export type GscWindowObservation = {
   status: "complete" | "empty" | "partial";
   rows: GscRow[];
-  coverage: { expectedDays: number; observedDays: number; missingDates: string[]; truncatedDates: string[] };
+  coverage: {
+    expectedDays: number;
+    observedDays: number;
+    missingDates: string[];
+    truncatedDates: string[];
+  };
   totals: { clicks: number; impressions: number; averagePosition: number | null };
   sourceRefs: string[];
 };
@@ -81,7 +100,8 @@ function numberOrZero(value: unknown): number {
 
 function datesInWindow(window: DateWindow): string[] {
   const dates: string[] = [];
-  for (let date = window.periodStartPt; date <= window.periodEndPt; date = addCalendarDays(date, 1)) dates.push(date);
+  for (let date = window.periodStartPt; date <= window.periodEndPt; date = addCalendarDays(date, 1))
+    dates.push(date);
   return dates;
 }
 
@@ -95,24 +115,46 @@ export function buildGscWindowObservation(input: {
   const expected = datesInWindow(input.window);
   const latestByDate = new Map<string, GscSnapshot>();
   for (const snapshot of input.snapshots) {
-    if (snapshot.property !== input.property || snapshot.kind !== "page_query" || snapshot.data_state !== "final") continue;
-    if (snapshot.period_start_pt !== snapshot.period_end_pt || !expected.includes(snapshot.period_start_pt)) continue;
+    if (
+      snapshot.property !== input.property ||
+      snapshot.kind !== "page_query" ||
+      snapshot.data_state !== "final"
+    )
+      continue;
+    if (
+      snapshot.period_start_pt !== snapshot.period_end_pt ||
+      !expected.includes(snapshot.period_start_pt)
+    )
+      continue;
     const prior = latestByDate.get(snapshot.period_start_pt);
-    if (!prior || snapshot.collected_at > prior.collected_at || (snapshot.collected_at === prior.collected_at && snapshot.checksum > prior.checksum)) {
+    if (
+      !prior ||
+      snapshot.collected_at > prior.collected_at ||
+      (snapshot.collected_at === prior.collected_at && snapshot.checksum > prior.checksum)
+    ) {
       latestByDate.set(snapshot.period_start_pt, snapshot);
     }
   }
   const missingDates = expected.filter((date) => !latestByDate.has(date));
-  const truncatedDates = [...latestByDate.values()].filter((s) => s.possibly_truncated).map((s) => s.period_start_pt).sort();
+  const truncatedDates = [...latestByDate.values()]
+    .filter((s) => s.possibly_truncated)
+    .map((s) => s.period_start_pt)
+    .sort();
   const rows: GscRow[] = [];
   for (const snapshot of latestByDate.values()) {
     const payload = snapshot.payload as { rows?: unknown } | null;
     if (!Array.isArray(payload?.rows)) continue;
     for (const item of payload.rows) {
       const row = (item ?? {}) as Record<string, unknown>;
-      const keys = Array.isArray(row['keys']) ? row['keys'] : [];
+      const keys = Array.isArray(row["keys"]) ? row["keys"] : [];
       if (keys[0] !== input.targetUrl) continue;
-      rows.push({ date: snapshot.period_start_pt, query: typeof keys[1] === "string" ? keys[1] : "(unknown query)", clicks: numberOrZero(row['clicks']), impressions: numberOrZero(row['impressions']), position: numberOrZero(row['position']) });
+      rows.push({
+        date: snapshot.period_start_pt,
+        query: typeof keys[1] === "string" ? keys[1] : "(unknown query)",
+        clicks: numberOrZero(row["clicks"]),
+        impressions: numberOrZero(row["impressions"]),
+        position: numberOrZero(row["position"]),
+      });
     }
   }
   rows.sort((a, b) => a.date.localeCompare(b.date) || a.query.localeCompare(b.query));
@@ -123,8 +165,17 @@ export function buildGscWindowObservation(input: {
   return {
     status: partial ? "partial" : rows.length === 0 ? "empty" : "complete",
     rows,
-    coverage: { expectedDays: expected.length, observedDays: latestByDate.size, missingDates, truncatedDates },
-    totals: { clicks, impressions, averagePosition: impressions > 0 ? weightedPosition / impressions : null },
+    coverage: {
+      expectedDays: expected.length,
+      observedDays: latestByDate.size,
+      missingDates,
+      truncatedDates,
+    },
+    totals: {
+      clicks,
+      impressions,
+      averagePosition: impressions > 0 ? weightedPosition / impressions : null,
+    },
     sourceRefs: [...latestByDate.values()].map((s) => s.id ?? s.checksum).sort(),
   };
 }
@@ -141,10 +192,39 @@ export function findMeasurementContradictions(input: {
   paidPressureChanged?: boolean;
 }): Contradiction[] {
   const out: Contradiction[] = [];
-  if (input.approvedWordingStillLive === false) out.push({ code: "live_drift", message: "The approved wording is no longer live, so attribution needs operator review.", providers: ["live_page"] });
-  if (input.gscPartial) out.push({ code: "partial_organic_data", message: "Search Console coverage is partial or truncated; do not infer from the gap.", providers: ["gsc"] });
-  if (input.gscClicksDelta != null && input.ga4SessionsDelta != null && Math.sign(input.gscClicksDelta) !== Math.sign(input.ga4SessionsDelta)) out.push({ code: "search_behavior_disagree", message: "Organic clicks and onsite sessions moved in different directions.", providers: ["gsc", "ga4"] });
-  if (input.landscapeChanged) out.push({ code: "organic_landscape_changed", message: "The tracked organic landscape changed during the observation period.", providers: ["gsc", "dataforseo_organic"] });
-  if (input.paidPressureChanged) out.push({ code: "paid_pressure_changed", message: "Paid messaging or paid-SERP pressure changed during the observation period.", providers: ["serpapi_transparency", "serpapi_paid_serp"] });
+  if (input.approvedWordingStillLive === false)
+    out.push({
+      code: "live_drift",
+      message: "The approved wording is no longer live, so attribution needs operator review.",
+      providers: ["live_page"],
+    });
+  if (input.gscPartial)
+    out.push({
+      code: "partial_organic_data",
+      message: "Search Console coverage is partial or truncated; do not infer from the gap.",
+      providers: ["gsc"],
+    });
+  if (
+    input.gscClicksDelta != null &&
+    input.ga4SessionsDelta != null &&
+    Math.sign(input.gscClicksDelta) !== Math.sign(input.ga4SessionsDelta)
+  )
+    out.push({
+      code: "search_behavior_disagree",
+      message: "Organic clicks and onsite sessions moved in different directions.",
+      providers: ["gsc", "ga4"],
+    });
+  if (input.landscapeChanged)
+    out.push({
+      code: "organic_landscape_changed",
+      message: "The tracked organic landscape changed during the observation period.",
+      providers: ["gsc", "dataforseo_organic"],
+    });
+  if (input.paidPressureChanged)
+    out.push({
+      code: "paid_pressure_changed",
+      message: "Paid messaging or paid-SERP pressure changed during the observation period.",
+      providers: ["serpapi_transparency", "serpapi_paid_serp"],
+    });
   return out;
 }

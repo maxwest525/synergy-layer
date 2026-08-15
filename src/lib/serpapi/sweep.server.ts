@@ -84,9 +84,14 @@ export async function sweepVendorAdvertisers(
     try {
       outcome = await runAdvertiserCanary(client, tenantId, { domain, runKey });
     } catch (cause) {
-
       const reason = cause instanceof Error ? cause.message : String(cause);
-      result.outcomes.push({ domain, ran: false, blocked: reason, chargedCredits: 0, candidatesFiled: 0 });
+      result.outcomes.push({
+        domain,
+        ran: false,
+        blocked: reason,
+        chargedCredits: 0,
+        candidatesFiled: 0,
+      });
       result.stoppedEarly = reason;
       break;
     }

@@ -28,7 +28,6 @@ export function postbackUrl(origin: string): string {
   return `${origin}/api/public/hooks/dataforseo-postback?id=$id&tag=$tag&key=${encodeURIComponent(key)}`;
 }
 
-
 /**
  * Scheduled observation path: queue the SERP task and let the provider call
  * back. Live mode is never used here, per the documentation digest.
@@ -43,7 +42,8 @@ export async function queueSerpTasks(
   const reportingDate = today();
   const endpoint = "/serp/google/organic/task_post";
 
-  const pending: { keyword: string; tag: string; params: Record<string, unknown>; fp: string }[] = [];
+  const pending: { keyword: string; tag: string; params: Record<string, unknown>; fp: string }[] =
+    [];
   let skipped = 0;
 
   for (const keyword of keywords) {
@@ -79,7 +79,11 @@ export async function queueSerpTasks(
 
   if (pending.length === 0) return { queued: 0, skipped, costUsd: 0 };
 
-  const batchFingerprint = fingerprint(endpoint, pending.map((entry) => entry.fp), reportingDate);
+  const batchFingerprint = fingerprint(
+    endpoint,
+    pending.map((entry) => entry.fp),
+    reportingDate,
+  );
 
   const { envelope, costUsd } = await dataforseoPost(client, {
     tenantId,
@@ -126,7 +130,17 @@ export async function queueSerpTasks(
 export async function ingestSerpPostback(
   client: Client,
   tenantId: string,
-  body: { tasks?: { id: string; status_code: number; status_message: string; cost?: number; result?: unknown[] | null; data?: Record<string, unknown>; path?: string[] }[] },
+  body: {
+    tasks?: {
+      id: string;
+      status_code: number;
+      status_message: string;
+      cost?: number;
+      result?: unknown[] | null;
+      data?: Record<string, unknown>;
+      path?: string[];
+    }[];
+  },
 ): Promise<{ stored: number }> {
   let stored = 0;
 
@@ -169,7 +183,11 @@ export async function ingestSerpPostback(
 
     await client
       .from("dataforseo_serp_tasks")
-      .update({ state: "received", received_at: new Date().toISOString(), snapshot_id: snapshot.id })
+      .update({
+        state: "received",
+        received_at: new Date().toISOString(),
+        snapshot_id: snapshot.id,
+      })
       .eq("id", queued.id);
 
     stored += 1;
@@ -210,9 +228,7 @@ export async function collectReadySerpTasks(
   let costUsd = 0;
 
   for (const providerTaskId of collectable) {
-    const envelope = await dataforseoGet(
-      `/serp/google/organic/task_get/regular/${providerTaskId}`,
-    );
+    const envelope = await dataforseoGet(`/serp/google/organic/task_get/regular/${providerTaskId}`);
     costUsd += Number(envelope.cost ?? 0);
     const stored = await ingestSerpPostback(client, tenantId, {
       tasks: (envelope.tasks ?? []) as never,
@@ -228,7 +244,6 @@ export async function collectReadySerpTasks(
   };
 }
 
-
 /** Operator-initiated real-time inspection only. Never used by a schedule. */
 export async function liveSerp(
   client: Client,
@@ -243,7 +258,11 @@ export async function liveSerp(
     depth: SERP_CONFIG.depth,
   };
   const reportingDate = today();
-  const fp = fingerprint(`${endpoint}#live`, { ...params, at: new Date().toISOString() }, reportingDate);
+  const fp = fingerprint(
+    `${endpoint}#live`,
+    { ...params, at: new Date().toISOString() },
+    reportingDate,
+  );
 
   const { envelope, requestId, costUsd } = await dataforseoPost(client, {
     tenantId,

@@ -215,7 +215,6 @@ function SystemDetailPage() {
         </section>
       ) : null}
 
-
       <section className="space-y-3">
         <h2 className="text-sm font-semibold text-foreground">Operations ({operations.length})</h2>
         {operations.length === 0 ? (

@@ -52,7 +52,9 @@ describe("facts are not approvable", () => {
 
 describe("outcome reporting", () => {
   it("waits before anything is applied", () => {
-    expect(describeOutcome({ state: "approved", appliedAt: null, postChangeRows: [] }).waiting).toBe(true);
+    expect(
+      describeOutcome({ state: "approved", appliedAt: null, postChangeRows: [] }).waiting,
+    ).toBe(true);
   });
 
   it("waits for finalized data after application", () => {

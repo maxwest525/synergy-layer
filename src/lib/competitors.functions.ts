@@ -4,7 +4,6 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { COMPANY_CLASSIFICATIONS, setCompanyClassification } from "./company-classification.server";
 
-
 /** Client-safe mirror of the stored page observation shape. */
 type PageEvidenceView = {
   domain: string;
@@ -157,7 +156,9 @@ export const decideCompetitorCandidates = createServerFn({ method: "POST" })
       return pass?.["shortlisted"] === true;
     });
     if (eligible.length === 0 || eligible.length !== domains.length) {
-      throw new Error("Every selected competitor must be shortlisted and pending for the active tenant.");
+      throw new Error(
+        "Every selected competitor must be shortlisted and pending for the active tenant.",
+      );
     }
 
     const now = new Date().toISOString();
@@ -168,7 +169,10 @@ export const decideCompetitorCandidates = createServerFn({ method: "POST" })
       .update({ review_state: reviewState, reviewed_by: context.userId, reviewed_at: now })
       .eq("tenant_id", tenantId)
       .eq("review_state", "pending")
-      .in("id", eligible.map((row) => row.id))
+      .in(
+        "id",
+        eligible.map((row) => row.id),
+      )
       .select("id, domain");
     if (error) throw new Error(error.message);
     if ((updated ?? []).length !== eligible.length) {
@@ -226,7 +230,10 @@ export const decideCompetitorCandidates = createServerFn({ method: "POST" })
         .is("resolved_at", null);
       const ids = (items ?? []).map((item) => item.id);
       if (ids.length > 0) {
-        await context.supabase.from("inbox_items").update({ lane: "completed", resolved_at: now }).in("id", ids);
+        await context.supabase
+          .from("inbox_items")
+          .update({ lane: "completed", resolved_at: now })
+          .in("id", ids);
         inboxResolved = true;
       }
     } else {

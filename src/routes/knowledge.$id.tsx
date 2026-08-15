@@ -1,7 +1,13 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 
-import { EmptyState, GlassCard, PageHeader, StatePill, formatWhen } from "@/components/os/primitives";
+import {
+  EmptyState,
+  GlassCard,
+  PageHeader,
+  StatePill,
+  formatWhen,
+} from "@/components/os/primitives";
 import { getKnowledgeCollection } from "@/lib/os.functions";
 
 const collectionQuery = (id: string) => ({
@@ -23,7 +29,8 @@ export const Route = createFileRoute("/knowledge/$id")({
     const title = loaderData?.collection
       ? `${loaderData.collection.name} — Knowledge — AOOS`
       : "Knowledge collection — AOOS";
-    const description = loaderData?.collection?.description ?? "Knowledge collection contents in AOOS.";
+    const description =
+      loaderData?.collection?.description ?? "Knowledge collection contents in AOOS.";
     return {
       meta: [
         { title },
@@ -60,7 +67,9 @@ function KnowledgeCollectionPage() {
               <GlassCard className="p-4">
                 <div className="flex items-start justify-between gap-3">
                   <p className="text-sm font-medium text-foreground">{entry.title}</p>
-                  <span className="shrink-0 text-xs text-muted-foreground">{formatWhen(entry.updated_at)}</span>
+                  <span className="shrink-0 text-xs text-muted-foreground">
+                    {formatWhen(entry.updated_at)}
+                  </span>
                 </div>
                 {entry.body ? (
                   <p className="mt-2 line-clamp-3 text-sm text-muted-foreground">{entry.body}</p>

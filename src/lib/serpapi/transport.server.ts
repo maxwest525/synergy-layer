@@ -53,7 +53,9 @@ export function fingerprint(engine: string, params: Record<string, unknown>): st
 }
 
 export function checksum(parts: (string | null | undefined)[]): string {
-  return createHash("sha256").update(parts.map((part) => part ?? "").join("\u0000")).digest("hex");
+  return createHash("sha256")
+    .update(parts.map((part) => part ?? "").join("\u0000"))
+    .digest("hex");
 }
 
 export type SerpApiResponse = Record<string, unknown> & {
@@ -92,7 +94,10 @@ export async function serpApiSearch(
   try {
     parsed = JSON.parse(body) as SerpApiResponse;
   } catch {
-    throw new SerpApiFailure("api_error", `SerpApi returned an unreadable response [${response.status}].`);
+    throw new SerpApiFailure(
+      "api_error",
+      `SerpApi returned an unreadable response [${response.status}].`,
+    );
   }
 
   if (!response.ok || parsed.error) {
@@ -144,6 +149,11 @@ export async function recordSerpApiSpend(
     verb: "serpapi.spend",
     subjectKind: "capability",
     summary: `${detail.credits} SerpApi search credit${detail.credits === 1 ? "" : "s"} spent by ${detail.module}.`,
-    payload: { credits: detail.credits, module: detail.module, note: detail.note, runId: detail.runId ?? null },
+    payload: {
+      credits: detail.credits,
+      module: detail.module,
+      note: detail.note,
+      runId: detail.runId ?? null,
+    },
   });
 }

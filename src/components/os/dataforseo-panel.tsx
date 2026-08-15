@@ -1,6 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 
-import { EmptyState, GlassCard, MetricTile, StatePill, formatWhen, toneForState } from "@/components/os/primitives";
+import {
+  EmptyState,
+  GlassCard,
+  MetricTile,
+  StatePill,
+  formatWhen,
+  toneForState,
+} from "@/components/os/primitives";
 import { getDataForSeoState } from "@/lib/dataforseo.functions";
 
 function usd(value: number | string | null | undefined): string {
@@ -44,7 +51,9 @@ export function DataForSeoPanel() {
     <div className="space-y-4">
       <GlassCard className="p-5">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-foreground">Budget, {data.budget.periodMonth}</h2>
+          <h2 className="text-sm font-semibold text-foreground">
+            Budget, {data.budget.periodMonth}
+          </h2>
           <StatePill
             label={data.budget.hardStop ? "hard stop armed" : "hard stop off"}
             tone={data.budget.hardStop ? "success" : "warning"}
@@ -58,8 +67,8 @@ export function DataForSeoPanel() {
         </div>
         {data.pendingKeywordCandidates > 0 ? (
           <p className="mt-4 text-sm text-muted-foreground">
-            {data.pendingKeywordCandidates} keyword candidates are waiting for operator approval. SERP
-            observation stays idle until at least one is approved.
+            {data.pendingKeywordCandidates} keyword candidates are waiting for operator approval.
+            SERP observation stays idle until at least one is approved.
           </p>
         ) : null}
       </GlassCard>

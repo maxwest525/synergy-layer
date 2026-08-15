@@ -27,12 +27,7 @@ export const selectSearchConsoleProperty = createServerFn({ method: "POST" })
     const { assertOperator } = await import("./os-admin.server");
     await assertOperator(context.supabase, context.userId);
     const { selectProperty } = await import("./search-console.server");
-    return selectProperty(
-      context.supabase,
-      data.siteUrl,
-      context.userId,
-      data.assetId ?? null,
-    );
+    return selectProperty(context.supabase, data.siteUrl, context.userId, data.assetId ?? null);
   });
 
 export const runSearchConsoleObservation = createServerFn({ method: "POST" })
@@ -40,34 +35,22 @@ export const runSearchConsoleObservation = createServerFn({ method: "POST" })
   .handler(async ({ context }) => {
     const { assertOperator } = await import("./os-admin.server");
     await assertOperator(context.supabase, context.userId);
-    const { observeSearchConsole } =
-      await import("./search-console-observe.server");
+    const { observeSearchConsole } = await import("./search-console-observe.server");
     return observeSearchConsole(context.supabase);
   });
 
 /** Read-only provider action: inspect Google's indexed version of one owned URL. */
 export const inspectSearchConsoleUrl = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) =>
-    z.object({ url: z.string().min(1).max(2048) }).parse(data),
-  )
+  .inputValidator((data: unknown) => z.object({ url: z.string().min(1).max(2048) }).parse(data))
   .handler(async ({ data, context }) => {
     const { assertOperator } = await import("./os-admin.server");
     await assertOperator(context.supabase, context.userId);
-    const { getSelectedProperty, inspectUrl } =
-      await import("./search-console.server");
+    const { getSelectedProperty, inspectUrl } = await import("./search-console.server");
     const property = await getSelectedProperty(context.supabase);
-    if (!property)
-      throw new Error(
-        "Select a Search Console property before inspecting a URL.",
-      );
+    if (!property) throw new Error("Select a Search Console property before inspecting a URL.");
     return {
-      inspection: await inspectUrl(
-        context.supabase,
-        property,
-        data.url,
-        context.userId,
-      ),
+      inspection: await inspectUrl(context.supabase, property, data.url, context.userId),
     };
   });
 
@@ -80,20 +63,11 @@ export const submitSearchConsoleSitemap = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { assertOperator } = await import("./os-admin.server");
     await assertOperator(context.supabase, context.userId);
-    const { getSelectedProperty, submitSitemap } =
-      await import("./search-console.server");
+    const { getSelectedProperty, submitSitemap } = await import("./search-console.server");
     const property = await getSelectedProperty(context.supabase);
-    if (!property)
-      throw new Error(
-        "Select a Search Console property before submitting a sitemap.",
-      );
+    if (!property) throw new Error("Select a Search Console property before submitting a sitemap.");
     return {
-      submission: await submitSitemap(
-        context.supabase,
-        property,
-        data.sitemapUrl,
-        context.userId,
-      ),
+      submission: await submitSitemap(context.supabase, property, data.sitemapUrl, context.userId),
     };
   });
 
@@ -107,9 +81,7 @@ export const getSearchConsoleState = createServerFn({ method: "GET" })
     const properties = rows(
       await client
         .from("search_console_properties")
-        .select(
-          "site_url, permission_level, eligible, selected, last_observed_at",
-        )
+        .select("site_url, permission_level, eligible, selected, last_observed_at")
         .order("site_url"),
     );
 
@@ -131,11 +103,7 @@ export const getSearchConsoleState = createServerFn({ method: "GET" })
         .limit(1),
     );
     const workflows = rows(
-      await client
-        .from("workflows")
-        .select("id")
-        .eq("key", "gsc-daily-observe")
-        .limit(1),
+      await client.from("workflows").select("id").eq("key", "gsc-daily-observe").limit(1),
     );
     const workflowId = workflows[0]?.id ?? null;
     const attempts = workflowId
@@ -156,18 +124,14 @@ export const getSearchConsoleState = createServerFn({ method: "GET" })
         .sort()
         .at(-1) ?? null;
     const readSucceededAt = snapshots[0]?.collected_at ?? null;
-    const {
-      describeSearchConsoleConnection,
-      readSearchConsoleCredentialPresence,
-    } = await import("./search-console-connection");
+    const { describeSearchConsoleConnection, readSearchConsoleCredentialPresence } =
+      await import("./search-console-connection");
     const connection = describeSearchConsoleConnection({
       presence: readSearchConsoleCredentialPresence(process.env),
       authenticatedAt,
       readSucceededAt,
-      lastAttemptState:
-        latestAttempt?.state ?? schedules[0]?.last_state ?? null,
-      lastAttemptAt:
-        latestAttempt?.started_at ?? schedules[0]?.last_run_at ?? null,
+      lastAttemptState: latestAttempt?.state ?? schedules[0]?.last_state ?? null,
+      lastAttemptAt: latestAttempt?.started_at ?? schedules[0]?.last_run_at ?? null,
       lastAttemptError: latestAttempt?.error ?? null,
     });
 

@@ -28,13 +28,15 @@ export const Route = createFileRoute("/command-center")({
         content: "Live system state across assets, capabilities, agents, workflows, and schedules.",
       },
       { property: "og:title", content: "Command Center — AOOS" },
-      { property: "og:description", content: "Live system state for the marketing operating system." },
+      {
+        property: "og:description",
+        content: "Live system state for the marketing operating system.",
+      },
     ],
   }),
   errorComponent: OperatorRouteError,
   component: CommandCenterPage,
 });
-
 
 const tiles = [
   { key: "assets", label: "Assets", to: "/assets" },
@@ -66,7 +68,9 @@ function QuickAction({
       <GlassCard className="h-full p-4 transition-colors hover:border-primary/40">
         <div className="flex items-baseline justify-between gap-3">
           <span className="text-sm font-medium text-foreground">{label}</span>
-          {count === undefined ? null : <span className="text-lg font-semibold text-primary">{count}</span>}
+          {count === undefined ? null : (
+            <span className="text-lg font-semibold text-primary">{count}</span>
+          )}
         </div>
         <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{outcome}</p>
       </GlassCard>
@@ -162,8 +166,6 @@ function CommandCenterPage() {
             count={quick.failedRuns}
             outcome="Read the stored error on each failure before deciding to rerun anything."
           />
-
-
         </div>
       </section>
 
@@ -174,7 +176,6 @@ function CommandCenterPage() {
           </Link>
         ))}
       </div>
-
 
       <GlassCard glow className="p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -212,13 +213,21 @@ function CommandCenterPage() {
             value={evidence.pendingKeywordCandidates}
             hint="Awaiting operator approval"
           />
-          <MetricTile label="Tracked keywords" value={evidence.trackedKeywords} hint="Approved and active" />
+          <MetricTile
+            label="Tracked keywords"
+            value={evidence.trackedKeywords}
+            hint="Approved and active"
+          />
           <MetricTile
             label="Competitor candidates"
             value={evidence.competitorCandidates}
             hint="Derived from observed SERPs"
           />
-          <MetricTile label="Tracked competitors" value={evidence.trackedCompetitors} hint="Approved and active" />
+          <MetricTile
+            label="Tracked competitors"
+            value={evidence.trackedCompetitors}
+            hint="Approved and active"
+          />
         </div>
         {data.pendingApprovals > 0 ? (
           <p className="mt-4 text-sm text-muted-foreground">
@@ -266,7 +275,11 @@ function CommandCenterPage() {
         <div className="space-y-4">
           <div className="grid gap-3 sm:grid-cols-2">
             <MetricTile label="Failed runs" value={failedRuns} hint="Last 50 workflow runs" />
-            <MetricTile label="Failing capabilities" value={failing.length} hint="Health check state" />
+            <MetricTile
+              label="Failing capabilities"
+              value={failing.length}
+              hint="Health check state"
+            />
           </div>
 
           <GlassCard className="p-5">
@@ -297,8 +310,12 @@ function CommandCenterPage() {
                         )}
                         <span className="flex items-center gap-3">
                           <StatePill label={run.state} tone={toneForState(run.state)} />
-                          <span className="text-xs text-muted-foreground">{run.trigger_source}</span>
-                          <span className="text-xs text-muted-foreground">{formatWhen(run.created_at)}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {run.trigger_source}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {formatWhen(run.created_at)}
+                          </span>
                         </span>
                       </div>
                       {run.state === "failed" ? (
@@ -323,10 +340,15 @@ function CommandCenterPage() {
             <h2 className="text-sm font-semibold text-foreground">Recent activity</h2>
             <ul className="mt-3 space-y-3">
               {data.activity.map((event) => (
-                <li key={event.id} className="space-y-1 border-b border-border/50 pb-3 last:border-b-0 last:pb-0">
+                <li
+                  key={event.id}
+                  className="space-y-1 border-b border-border/50 pb-3 last:border-b-0 last:pb-0"
+                >
                   <div className="flex items-center gap-2">
                     <StatePill label={event.verb} tone="primary" />
-                    <span className="text-xs text-muted-foreground">{formatWhen(event.occurred_at)}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {formatWhen(event.occurred_at)}
+                    </span>
                   </div>
                   <p className="text-sm text-foreground">{event.summary}</p>
                 </li>

@@ -91,11 +91,11 @@ function readRows(payload: unknown): SearchRow[] {
   return container.rows.map((entry) => {
     const row = (entry ?? {}) as Record<string, unknown>;
     return {
-      keys: Array.isArray(row['keys']) ? row['keys'].map((key) => String(key)) : [],
-      clicks: num(row['clicks']),
-      impressions: num(row['impressions']),
-      ctr: num(row['ctr']),
-      position: num(row['position']),
+      keys: Array.isArray(row["keys"]) ? row["keys"].map((key) => String(key)) : [],
+      clicks: num(row["clicks"]),
+      impressions: num(row["impressions"]),
+      ctr: num(row["ctr"]),
+      position: num(row["position"]),
     };
   });
 }
@@ -105,25 +105,29 @@ function readSitemaps(payload: unknown): SitemapEntry[] {
   if (!Array.isArray(container.sitemap)) return [];
   return container.sitemap.map((entry) => {
     const item = (entry ?? {}) as Record<string, unknown>;
-    const contents = Array.isArray(item['contents']) ? (item['contents'] as Record<string, unknown>[]) : [];
+    const contents = Array.isArray(item["contents"])
+      ? (item["contents"] as Record<string, unknown>[])
+      : [];
     const submitted = contents.reduce<number | null>(
-      (sum, block) => (optionalNum(block['submitted']) === null ? sum : (sum ?? 0) + num(block['submitted'])),
+      (sum, block) =>
+        optionalNum(block["submitted"]) === null ? sum : (sum ?? 0) + num(block["submitted"]),
       null,
     );
     const indexed = contents.reduce<number | null>(
-      (sum, block) => (optionalNum(block['indexed']) === null ? sum : (sum ?? 0) + num(block['indexed'])),
+      (sum, block) =>
+        optionalNum(block["indexed"]) === null ? sum : (sum ?? 0) + num(block["indexed"]),
       null,
     );
     return {
-      path: String(item['path'] ?? "Unknown sitemap"),
-      type: optionalText(item['type']),
+      path: String(item["path"] ?? "Unknown sitemap"),
+      type: optionalText(item["type"]),
       submitted,
       indexed,
-      warnings: optionalNum(item['warnings']),
-      errors: optionalNum(item['errors']),
-      isPending: item['isPending'] === true,
-      lastSubmitted: optionalText(item['lastSubmitted']),
-      lastDownloaded: optionalText(item['lastDownloaded']),
+      warnings: optionalNum(item["warnings"]),
+      errors: optionalNum(item["errors"]),
+      isPending: item["isPending"] === true,
+      lastSubmitted: optionalText(item["lastSubmitted"]),
+      lastDownloaded: optionalText(item["lastDownloaded"]),
     };
   });
 }
@@ -155,11 +159,15 @@ export const getSearchWorkspace = createServerFn({ method: "GET" })
       .eq("tenant_id", tenantId)
       .order("site_url");
     if (propertyResult.error) {
-      throw new Error(`Search Console properties could not be read: ${propertyResult.error.message}`);
+      throw new Error(
+        `Search Console properties could not be read: ${propertyResult.error.message}`,
+      );
     }
 
     const selectedProperty =
-      propertyResult.data?.find((property) => property.selected) ?? propertyResult.data?.[0] ?? null;
+      propertyResult.data?.find((property) => property.selected) ??
+      propertyResult.data?.[0] ??
+      null;
 
     if (!selectedProperty) {
       return {
@@ -183,7 +191,9 @@ export const getSearchWorkspace = createServerFn({ method: "GET" })
     const [snapshotResult, inspectionResult, submissionResult] = await Promise.all([
       client
         .from("search_console_snapshots")
-        .select("kind, dimensions, period_end_pt, returned_row_count, totals, payload, collected_at")
+        .select(
+          "kind, dimensions, period_end_pt, returned_row_count, totals, payload, collected_at",
+        )
         .eq("tenant_id", tenantId)
         .eq("property", selectedProperty.site_url)
         .order("period_end_pt", { ascending: false }),
@@ -205,13 +215,19 @@ export const getSearchWorkspace = createServerFn({ method: "GET" })
         .limit(12),
     ]);
     if (snapshotResult.error) {
-      throw new Error(`Search Console snapshots could not be read: ${snapshotResult.error.message}`);
+      throw new Error(
+        `Search Console snapshots could not be read: ${snapshotResult.error.message}`,
+      );
     }
     if (inspectionResult.error) {
-      throw new Error(`URL Inspection history could not be read: ${inspectionResult.error.message}`);
+      throw new Error(
+        `URL Inspection history could not be read: ${inspectionResult.error.message}`,
+      );
     }
     if (submissionResult.error) {
-      throw new Error(`Sitemap submission history could not be read: ${submissionResult.error.message}`);
+      throw new Error(
+        `Sitemap submission history could not be read: ${submissionResult.error.message}`,
+      );
     }
 
     const snapshots = (snapshotResult.data ?? []) as unknown as SnapshotRow[];
@@ -222,10 +238,10 @@ export const getSearchWorkspace = createServerFn({ method: "GET" })
         const totals = (snapshot.totals ?? {}) as Record<string, unknown>;
         return {
           date: snapshot.period_end_pt,
-          clicks: num(totals['clicks']),
-          impressions: num(totals['impressions']),
-          ctr: optionalNum(totals['ctr']),
-          position: optionalNum(totals['position']),
+          clicks: num(totals["clicks"]),
+          impressions: num(totals["impressions"]),
+          ctr: optionalNum(totals["ctr"]),
+          position: optionalNum(totals["position"]),
           collectedAt: snapshot.collected_at,
         };
       })
@@ -239,7 +255,9 @@ export const getSearchWorkspace = createServerFn({ method: "GET" })
       return snapshot ? readRows(snapshot.payload) : [];
     };
 
-    const sitemapSnapshot = latest.find((snapshot) => matches(snapshot, "dimensional_rows", ["sitemap"]));
+    const sitemapSnapshot = latest.find((snapshot) =>
+      matches(snapshot, "dimensional_rows", ["sitemap"]),
+    );
 
     return {
       property: {

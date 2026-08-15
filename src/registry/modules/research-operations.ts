@@ -18,7 +18,10 @@ export const definition: ModuleDefinition = {
       integrationState: "real",
       authKind: "api_key",
       operations: [
-        { name: "search.grounded", description: "Run a grounded Perplexity search with citations." },
+        {
+          name: "search.grounded",
+          description: "Run a grounded Perplexity search with citations.",
+        },
         { name: "source.scrape", description: "Read a cited source page through Firecrawl." },
         { name: "knowledge.file", description: "File the briefing and sources into kb.research." },
       ],

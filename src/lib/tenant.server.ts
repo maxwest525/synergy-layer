@@ -59,8 +59,6 @@ export function createRequestClient(): { db: Client; authenticated: boolean } {
   return { db, authenticated: token !== null };
 }
 
-
-
 /** Tenants the current caller may work in. Empty for anonymous requests. */
 export async function listTenants(db: Client): Promise<TenantSummary[]> {
   const { data, error } = await db
@@ -80,7 +78,10 @@ const resolvedCache = new WeakMap<Client, string>();
  * saved active tenant wins, then their first membership, then the sole tenant
  * when the installation still has exactly one.
  */
-export async function resolveTenantId(db: Client, explicit?: string | null): Promise<string | null> {
+export async function resolveTenantId(
+  db: Client,
+  explicit?: string | null,
+): Promise<string | null> {
   if (explicit) {
     const { data } = await db.from("tenants").select("id").eq("id", explicit).maybeSingle();
     if (data?.id) return data.id;
@@ -100,7 +101,11 @@ export async function resolveTenantId(db: Client, explicit?: string | null): Pro
     return profile.active_tenant_id;
   }
 
-  const { data: membership } = await db.from("tenant_members").select("tenant_id").limit(1).maybeSingle();
+  const { data: membership } = await db
+    .from("tenant_members")
+    .select("tenant_id")
+    .limit(1)
+    .maybeSingle();
   if (membership?.tenant_id) {
     resolvedCache.set(db, membership.tenant_id);
     return membership.tenant_id;
@@ -126,12 +131,17 @@ export async function requireTenantId(db: Client, explicit?: string | null): Pro
 
 /** Remembers which client workspace an operator is working in. */
 export async function setActiveTenant(db: Client, userId: string, tenantId: string): Promise<void> {
-  const { data, error: lookupError } = await db.from("tenants").select("id").eq("id", tenantId).maybeSingle();
+  const { data, error: lookupError } = await db
+    .from("tenants")
+    .select("id")
+    .eq("id", tenantId)
+    .maybeSingle();
   if (lookupError) throw new Error(lookupError.message);
   if (!data) throw new Error("That client workspace is not available to this account.");
 
-  const { error } = await db.from("profiles").update({ active_tenant_id: tenantId }).eq("id", userId);
+  const { error } = await db
+    .from("profiles")
+    .update({ active_tenant_id: tenantId })
+    .eq("id", userId);
   if (error) throw new Error(error.message);
 }
-
-

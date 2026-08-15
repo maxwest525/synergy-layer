@@ -18,15 +18,22 @@ export default defineTool({
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   handler: async (args, ctx) => {
     const { integration_state } = args;
-    return guardedRead(ctx, "list_capabilities", args as Record<string, unknown>, async (supabase) => {
-      let query = supabase
-        .from("capabilities")
-        .select("id, key, name, description, kind, category, integration_state, status, health, last_run_at")
-        .order("name", { ascending: true });
-      if (integration_state) query = query.eq("integration_state", integration_state);
-      const { data, error } = await query;
-      if (error) return errorResult(error.message);
-      return jsonResult({ capabilities: data ?? [], count: data?.length ?? 0 });
-    });
+    return guardedRead(
+      ctx,
+      "list_capabilities",
+      args as Record<string, unknown>,
+      async (supabase) => {
+        let query = supabase
+          .from("capabilities")
+          .select(
+            "id, key, name, description, kind, category, integration_state, status, health, last_run_at",
+          )
+          .order("name", { ascending: true });
+        if (integration_state) query = query.eq("integration_state", integration_state);
+        const { data, error } = await query;
+        if (error) return errorResult(error.message);
+        return jsonResult({ capabilities: data ?? [], count: data?.length ?? 0 });
+      },
+    );
   },
 });

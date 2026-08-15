@@ -52,7 +52,6 @@ export type AttemptRecord = {
   detail?: Record<string, unknown>;
 };
 
-
 export type ExecutionStore = {
   load(id: string): Promise<ExecutableRequest | null>;
   recordAttempt(attempt: AttemptRecord): Promise<void>;
@@ -112,7 +111,9 @@ export async function executeSourceChange(input: {
   const request = await input.store.load(input.requestId);
   if (!request) throw new Error("That change request is not visible to this account.");
 
-  const record = async (attempt: Omit<AttemptRecord, "tenantId" | "changeRequestId" | "actorId">) => {
+  const record = async (
+    attempt: Omit<AttemptRecord, "tenantId" | "changeRequestId" | "actorId">,
+  ) => {
     await input.store.recordAttempt({
       tenantId: request.tenantId,
       changeRequestId: request.id,
@@ -296,7 +297,9 @@ export async function checkPublishedPage(input: {
   const request = await input.store.load(input.requestId);
   if (!request) throw new Error("That change request is not visible to this account.");
 
-  const record = async (attempt: Omit<AttemptRecord, "tenantId" | "changeRequestId" | "actorId">) => {
+  const record = async (
+    attempt: Omit<AttemptRecord, "tenantId" | "changeRequestId" | "actorId">,
+  ) => {
     await input.store.recordAttempt({
       tenantId: request.tenantId,
       changeRequestId: request.id,
@@ -390,4 +393,3 @@ export async function checkPublishedPage(input: {
     ...(warning ? { warning } : {}),
   };
 }
-

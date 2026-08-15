@@ -18,7 +18,10 @@ export type NetworkResult = {
  * evidence and reports overlap between advertisers. Shared infrastructure is an
  * observation, never an accusation.
  */
-export async function analyzeVendorNetwork(client: Client, tenantId: string): Promise<NetworkResult> {
+export async function analyzeVendorNetwork(
+  client: Client,
+  tenantId: string,
+): Promise<NetworkResult> {
   const { data: advertisers } = await client
     .from("ad_advertisers")
     .select("id, advertiser_id, ad_funded_by")
@@ -42,9 +45,14 @@ export async function analyzeVendorNetwork(client: Client, tenantId: string): Pr
       set.add(advertiserId);
       domainMap.set(creative.target_domain, set);
     }
-    const messaging = (creative.messaging ?? {}) as { offer?: string | null; funnelType?: string | null };
-    if (messaging.offer) offerCounts.set(messaging.offer, (offerCounts.get(messaging.offer) ?? 0) + 1);
-    if (messaging.funnelType) funnelCounts.set(messaging.funnelType, (funnelCounts.get(messaging.funnelType) ?? 0) + 1);
+    const messaging = (creative.messaging ?? {}) as {
+      offer?: string | null;
+      funnelType?: string | null;
+    };
+    if (messaging.offer)
+      offerCounts.set(messaging.offer, (offerCounts.get(messaging.offer) ?? 0) + 1);
+    if (messaging.funnelType)
+      funnelCounts.set(messaging.funnelType, (funnelCounts.get(messaging.funnelType) ?? 0) + 1);
   }
 
   const funderMap = new Map<string, string[]>();

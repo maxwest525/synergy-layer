@@ -26,7 +26,8 @@ function query(result: QueryResult) {
   for (const method of ["select", "eq", "or", "order", "limit", "update"]) {
     chain[method] = vi.fn(() => chain);
   }
-  chain["then"] = (resolve: (value: QueryResult) => unknown) => Promise.resolve(result).then(resolve);
+  chain["then"] = (resolve: (value: QueryResult) => unknown) =>
+    Promise.resolve(result).then(resolve);
   return chain;
 }
 

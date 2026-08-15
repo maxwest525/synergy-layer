@@ -62,12 +62,16 @@ export function McpPanel() {
         <h2 className="text-sm font-semibold text-foreground">Active OAuth grants</h2>
         {data.grants.length === 0 ? (
           <p className="mt-3 text-sm text-muted-foreground">
-            No client has called AOOS over MCP yet. Grants appear here after the first authorised tool call.
+            No client has called AOOS over MCP yet. Grants appear here after the first authorised
+            tool call.
           </p>
         ) : (
           <ul className="mt-3 space-y-3">
             {data.grants.map((grant) => (
-              <li key={grant.clientId} className="border-b border-border/50 pb-3 last:border-b-0 last:pb-0">
+              <li
+                key={grant.clientId}
+                className="border-b border-border/50 pb-3 last:border-b-0 last:pb-0"
+              >
                 <div className="flex items-center justify-between gap-3">
                   <span className="text-sm font-medium text-foreground">{grant.clientId}</span>
                   <StatePill
@@ -76,8 +80,9 @@ export function McpPanel() {
                   />
                 </div>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  {grant.operators.join(", ") || "unidentified operator"} — {grant.calls} calls, {grant.denied} denied,
-                  last {grant.lastTool ?? "call"} {formatWhen(grant.lastCallAt)}
+                  {grant.operators.join(", ") || "unidentified operator"} — {grant.calls} calls,{" "}
+                  {grant.denied} denied, last {grant.lastTool ?? "call"}{" "}
+                  {formatWhen(grant.lastCallAt)}
                 </p>
               </li>
             ))}
@@ -98,7 +103,8 @@ export function McpPanel() {
                 </span>
                 <span className="text-muted-foreground">
                   {call.clientId} · {call.outcome}
-                  {call.durationMs === null ? "" : ` · ${call.durationMs} ms`} · {formatWhen(call.at)}
+                  {call.durationMs === null ? "" : ` · ${call.durationMs} ms`} ·{" "}
+                  {formatWhen(call.at)}
                 </span>
               </li>
             ))}

@@ -17,8 +17,14 @@ export const definition: ModuleDefinition = {
       integrationState: "real",
       authKind: "oauth",
       operations: [
-        { name: "properties.list", description: "List accessible properties with the permission level Google reports." },
-        { name: "performance.query", description: "Read finalized search performance for a selected property." },
+        {
+          name: "properties.list",
+          description: "List accessible properties with the permission level Google reports.",
+        },
+        {
+          name: "performance.query",
+          description: "Read finalized search performance for a selected property.",
+        },
         { name: "sitemaps.status", description: "Read reported sitemap status. No submission." },
       ],
       config: {
@@ -36,7 +42,9 @@ export const definition: ModuleDefinition = {
       description:
         "Evaluates stored snapshots and files evidence-backed observations. Zero rows is a valid no-change outcome.",
       integrationState: "real",
-      operations: [{ name: "rules.evaluate", description: "Score stored snapshots against typed thresholds." }],
+      operations: [
+        { name: "rules.evaluate", description: "Score stored snapshots against typed thresholds." },
+      ],
     },
     {
       key: "seo.validation",
@@ -82,5 +90,4 @@ export const definition: ModuleDefinition = {
       },
     },
   ],
-
 };

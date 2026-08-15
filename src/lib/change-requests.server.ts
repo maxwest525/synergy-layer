@@ -71,12 +71,7 @@ export async function fetchChangeRequest(client: Client, tenantId: string, id: s
       .eq("tenant_id", tenantId)
       .eq("change_request_id", id)
       .order("version_number", { ascending: false }),
-    fetchPostChangeRows(
-      client,
-      tenantId,
-      data.target_url,
-      data.applied_at,
-    ),
+    fetchPostChangeRows(client, tenantId, data.target_url, data.applied_at),
     fetchChangeMeasurementHistory(client, tenantId, id),
   ]);
   if (versionError) throw new Error(versionError.message);
@@ -106,9 +101,7 @@ export async function reconcileAppliedChangeEvidence(client: Client): Promise<{
   if (changeError) throw new Error(changeError.message);
   if (!changes || changes.length === 0) return { waiting: 0, ready: 0, newlyReady: 0 };
 
-  const firstAppliedDay = changes
-    .map((change) => change.applied_at!.slice(0, 10))
-    .sort()[0]!;
+  const firstAppliedDay = changes.map((change) => change.applied_at!.slice(0, 10)).sort()[0]!;
   const { data: snapshots, error: snapshotError } = await client
     .from("search_console_snapshots")
     .select("period_start_pt, payload")
