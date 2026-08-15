@@ -6,6 +6,7 @@ import type { AuthorityQueryClass } from "../authority/types";
 import { requireProposalTarget } from "../title-h1-proposals";
 import { canonicalSeoRunTarget, maxSeoRunBatchSize } from "./batch";
 import { describeSeoRunFailure } from "./failure";
+import { reconcileSeoRunProposalEvent, SEO_PROPOSAL_EVENT_SUMMARY } from "./proposal-event.server";
 
 const createInput = z.object({
   targetUrl: z.string().url().max(500),
@@ -185,10 +186,6 @@ export const evaluateSeoRun = createServerFn({ method: "POST" })
     const { assertOperator } = await import("../os-admin.server");
     const { requireTenantId } = await import("../tenant.server");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { assessSeoPreflight } = await import("./orchestrator.server");
-    const { evaluateAuthorityForTarget } = await import("../authority/evaluate.server");
-    const { prepareTitleH1Proposal } = await import("../title-h1-proposals.server");
-    const { serviceRpc } = await import("../title-h1-proposals.functions");
     await assertOperator(context.supabase, context.userId);
     const tenantId = await requireTenantId(context.supabase);
     const { data: run, error: runError } = await supabaseAdmin
@@ -198,7 +195,20 @@ export const evaluateSeoRun = createServerFn({ method: "POST" })
       .eq("id", data.id)
       .single();
     if (runError) throw new Error(runError.message);
-    if (run.change_request_id) return run;
+    if (run.change_request_id) {
+      await reconcileSeoRunProposalEvent({
+        run: { ...run, change_request_id: run.change_request_id },
+        tenantId,
+        actorId: context.userId,
+        admin: supabaseAdmin,
+      });
+      return run;
+    }
+
+    const { assessSeoPreflight } = await import("./orchestrator.server");
+    const { evaluateAuthorityForTarget } = await import("../authority/evaluate.server");
+    const { prepareTitleH1Proposal } = await import("../title-h1-proposals.server");
+    const { serviceRpc } = await import("../title-h1-proposals.functions");
 
     const [connectionsResult, gscResult, dfsResult] = await Promise.all([
       context.supabase.from("tenant_connections").select("*").eq("tenant_id", tenantId),
@@ -315,8 +325,7 @@ export const evaluateSeoRun = createServerFn({ method: "POST" })
           run_id: run.id,
           event_key: `proposal:${created.changeRequest.id}`,
           state: "awaiting_approval",
-          summary:
-            "Evidence and Authority Science produced a concrete proposal awaiting operator approval.",
+          summary: SEO_PROPOSAL_EVENT_SUMMARY,
           payload: {
             change_request_id: created.changeRequest.id,
             authority_finding_ids: authority.persisted.map((finding) => finding.id),
