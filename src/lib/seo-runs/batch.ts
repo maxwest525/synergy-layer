@@ -14,6 +14,12 @@ export type SeoBatchProgress = {
   stopped: number;
 };
 
+function returnedStoppedState(value: unknown) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const state = (value as Record<string, unknown>)["state"];
+  return state === "preflight_blocked" || state === "failed";
+}
+
 export function getSeoRunProviderBudget(pages: number) {
   if (!Number.isInteger(pages) || pages < 1 || pages > maxSeoRunBatchSize) {
     throw new Error(`A batch must contain between 1 and ${maxSeoRunBatchSize} pages.`);
@@ -49,8 +55,9 @@ export async function runCreatedSeoBatch(
         const run = runs[index];
         if (!run) break;
         try {
-          await evaluate(run.id);
-          advanced += 1;
+          const result = await evaluate(run.id);
+          if (returnedStoppedState(result)) stopped.add(index);
+          else advanced += 1;
         } catch {
           stopped.add(index);
         }

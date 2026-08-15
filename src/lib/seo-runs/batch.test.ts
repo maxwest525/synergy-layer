@@ -118,4 +118,21 @@ describe("SEO run batch execution", () => {
       { completed: 3, total: 3, advanced: 2, stopped: 1 },
     ]);
   });
+
+  it("counts a returned blocked state as stopped instead of advanced", async () => {
+    const result = await runCreatedSeoBatch(
+      [
+        { id: "run-1", target_url: "https://trumoveinc.com/one" },
+        { id: "run-2", target_url: "https://trumoveinc.com/two" },
+        { id: "run-3", target_url: "https://trumoveinc.com/three" },
+      ],
+      async (id) => ({ state: id === "run-2" ? "preflight_blocked" : "awaiting_approval" }),
+      { concurrency: 1 },
+    );
+
+    expect(result).toEqual({
+      advanced: 2,
+      stopped: ["https://trumoveinc.com/two"],
+    });
+  });
 });
