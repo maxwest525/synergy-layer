@@ -56,11 +56,60 @@ export type ProposalRepairAdminClient = {
         column: "tenant_id",
         value: string,
       ): {
-        eq(column: "id", value: string): PromiseLike<ProposalEventWriteResult>;
+        eq(
+          column: "id",
+          value: string,
+        ): {
+          eq(
+            column: "state",
+            value: "failed",
+          ): {
+            eq(
+              column: "change_request_id",
+              value: string,
+            ): {
+              eq(
+                column: "updated_at",
+                value: string,
+              ): {
+                select(columns: "id"): {
+                  maybeSingle(): PromiseLike<{
+                    data: { id: string } | null;
+                    error: { message: string } | null;
+                  }>;
+                };
+              };
+            };
+          };
+        };
       };
     };
   };
 };
+
+type ProposalEventRepairAssessment = {
+  run: FailedLinkedSeoRun;
+  eventKeys: readonly string[];
+  changeRequestState: string | null;
+};
+
+export function assessSeoRunProposalEventRepair({
+  run,
+  eventKeys,
+  changeRequestState,
+}: ProposalEventRepairAssessment): boolean {
+  const proposalEventKey = `proposal:${run.change_request_id}`;
+  const hasExecutionHistory = eventKeys.some(
+    (key) => key.startsWith("execution_started:") || key.startsWith("source_execution:"),
+  );
+  return (
+    run.state === "failed" &&
+    Boolean(run.change_request_id) &&
+    changeRequestState === "proposed" &&
+    !eventKeys.includes(proposalEventKey) &&
+    !hasExecutionHistory
+  );
+}
 
 type ReconcileSeoRunProposalEventInput = {
   run: LinkedSeoRun;
@@ -97,29 +146,37 @@ export async function reconcileSeoRunProposalEvent({
 
 export async function repairFailedSeoRunProposalEvent({
   run,
+  eventKeys,
+  changeRequestState,
   tenantId,
   actorId,
   admin,
 }: {
   run: FailedLinkedSeoRun;
+  eventKeys: readonly string[];
+  changeRequestState: string | null;
   tenantId: string;
   actorId: string;
   admin: ProposalRepairAdminClient;
-}): Promise<void> {
-  if (run.state !== "failed" || !run.change_request_id) {
-    throw new Error("Only a failed SEO run with a linked proposal can repair its timeline.");
-  }
+}): Promise<"repaired" | "noop"> {
+  if (!assessSeoRunProposalEventRepair({ run, eventKeys, changeRequestState })) return "noop";
   await reconcileSeoRunProposalEvent({
     run,
     tenantId,
     actorId,
     admin: admin as ProposalEventAdminClient,
   });
-  const { error } = await admin.from("seo_runs").update!({
+  const { data, error } = await admin.from("seo_runs").update!({
     state: "awaiting_approval",
     failure_reason: null,
   })
     .eq("tenant_id", tenantId)
-    .eq("id", run.id);
+    .eq("id", run.id)
+    .eq("state", "failed")
+    .eq("change_request_id", run.change_request_id)
+    .eq("updated_at", run.updated_at)
+    .select("id")
+    .maybeSingle();
   if (error) throw new Error(error.message);
+  return data ? "repaired" : "noop";
 }

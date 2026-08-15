@@ -4,10 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 
 import { GlassCard, PageHeader, StatePill, formatWhen } from "@/components/os/primitives";
 import { Button } from "@/components/ui/button";
-import {
-  isSeoRunEligibleForPreparation,
-  isSeoRunEligibleForProposalEventRepair,
-} from "@/lib/seo-runs/eligibility";
+import { isSeoRunEligibleForPreparation } from "@/lib/seo-runs/eligibility";
 import { evaluateSeoRun, getSeoRun, repairSeoRunProposalEvent } from "@/lib/seo-runs/functions";
 
 export const Route = createFileRoute("/seo-runs/$id")({
@@ -37,7 +34,7 @@ function SeoRunDetailPage() {
     queryKey: ["seo-run", id],
     queryFn: () => load({ data: { id } }),
   });
-  const { run, events } = data;
+  const { run, events, proposalEventRepairAvailable } = data;
   const evaluation = useMutation({
     mutationFn: () => evaluate({ data: { id } }),
     onSuccess: async () => {
@@ -117,7 +114,7 @@ function SeoRunDetailPage() {
             ) : null}
           </div>
         ) : null}
-        {isSeoRunEligibleForProposalEventRepair(run) ? (
+        {proposalEventRepairAvailable ? (
           <div className="mt-4">
             <Button
               type="button"

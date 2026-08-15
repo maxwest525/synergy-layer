@@ -22,16 +22,8 @@ import {
   parseSeoRunTargets,
   runCreatedSeoBatch,
 } from "@/lib/seo-runs/batch";
-import {
-  isSeoRunEligibleForPreparation,
-  isSeoRunEligibleForProposalEventRepair,
-} from "@/lib/seo-runs/eligibility";
-import {
-  createSeoRuns,
-  evaluateSeoRun,
-  getSeoRuns,
-  repairSeoRunProposalEvent,
-} from "@/lib/seo-runs/functions";
+import { isSeoRunEligibleForPreparation } from "@/lib/seo-runs/eligibility";
+import { createSeoRuns, evaluateSeoRun, getSeoRuns } from "@/lib/seo-runs/functions";
 
 export const Route = createFileRoute("/seo-runs/")({
   ssr: false,
@@ -54,7 +46,6 @@ function SeoRunsPage() {
   const loadRuns = useServerFn(getSeoRuns);
   const createRuns = useServerFn(createSeoRuns);
   const evaluateRun = useServerFn(evaluateSeoRun);
-  const repairProposalEvent = useServerFn(repairSeoRunProposalEvent);
   const queryClient = useQueryClient();
   const { data: runs } = useSuspenseQuery({ queryKey: ["seo-runs"], queryFn: () => loadRuns() });
   const [targets, setTargets] = useState("");
@@ -90,10 +81,6 @@ function SeoRunsPage() {
   });
   const evaluation = useMutation({
     mutationFn: (id: string) => evaluateRun({ data: { id } }),
-    onSuccess: async () => queryClient.invalidateQueries({ queryKey: ["seo-runs"] }),
-  });
-  const proposalEventRepair = useMutation({
-    mutationFn: (id: string) => repairProposalEvent({ data: { id } }),
     onSuccess: async () => queryClient.invalidateQueries({ queryKey: ["seo-runs"] }),
   });
   const actionableRuns = runs.filter(isSeoRunEligibleForPreparation).slice(0, 10);
@@ -294,35 +281,10 @@ function SeoRunsPage() {
                 </span>
               </div>
             ) : null}
-            {isSeoRunEligibleForProposalEventRepair(run) ? (
-              <div className="mt-4 flex flex-wrap items-center gap-3">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={proposalEventRepair.isPending}
-                  onClick={() => proposalEventRepair.mutate(run.id)}
-                >
-                  {proposalEventRepair.isPending
-                    ? "Repairing timeline…"
-                    : "Repair proposal timeline"}
-                </Button>
-                <Button asChild size="sm" variant="outline">
-                  <Link to="/seo-runs/$id" params={{ id: run.id }}>
-                    Open run
-                  </Link>
-                </Button>
-                <span className="text-xs text-muted-foreground">
-                  Restores the saved proposal event only. This makes no provider requests.
-                </span>
-              </div>
-            ) : null}
           </GlassCard>
         ))}
         {evaluation.error ? (
           <p className="text-sm text-destructive">{evaluation.error.message}</p>
-        ) : null}
-        {proposalEventRepair.error ? (
-          <p className="text-sm text-destructive">{proposalEventRepair.error.message}</p>
         ) : null}
         {runs.length === 0 ? (
           <p className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">

@@ -6,9 +6,11 @@ import type { AuthorityQueryClass } from "../authority/types";
 import { requireProposalTarget } from "../title-h1-proposals";
 import { canonicalSeoRunTarget, maxSeoRunBatchSize } from "./batch";
 import { describeSeoRunFailure } from "./failure";
-import { reconcileSeoRunProposalEvent, SEO_PROPOSAL_EVENT_SUMMARY } from "./proposal-event.server";
 import {
+  assessSeoRunProposalEventRepair,
+  reconcileSeoRunProposalEvent,
   repairFailedSeoRunProposalEvent,
+  SEO_PROPOSAL_EVENT_SUMMARY,
   type ProposalRepairAdminClient,
 } from "./proposal-event.server";
 
@@ -71,7 +73,28 @@ export const getSeoRun = createServerFn({ method: "GET" })
     ]);
     if (runResult.error) throw new Error(runResult.error.message);
     if (eventsResult.error) throw new Error(eventsResult.error.message);
-    return { run: runResult.data, events: eventsResult.data ?? [] };
+    const run = runResult.data;
+    const events = eventsResult.data ?? [];
+    const changeRequestResult = run.change_request_id
+      ? await context.supabase
+          .from("change_requests")
+          .select("state")
+          .eq("tenant_id", tenantId)
+          .eq("id", run.change_request_id)
+          .maybeSingle()
+      : { data: null, error: null };
+    if (changeRequestResult.error) throw new Error(changeRequestResult.error.message);
+    return {
+      run,
+      events,
+      proposalEventRepairAvailable: run.change_request_id
+        ? assessSeoRunProposalEventRepair({
+            run: { ...run, change_request_id: run.change_request_id },
+            eventKeys: events.map((event) => event.event_key),
+            changeRequestState: changeRequestResult.data?.state ?? null,
+          })
+        : false,
+    };
   });
 
 export const createSeoRuns = createServerFn({ method: "POST" })
@@ -379,11 +402,30 @@ export const repairSeoRunProposalEvent = createServerFn({ method: "POST" })
     if (!run.change_request_id) {
       throw new Error("Only a failed SEO run with a linked proposal can repair its timeline.");
     }
-    await repairFailedSeoRunProposalEvent({
+    const [eventsResult, changeRequestResult] = await Promise.all([
+      supabaseAdmin
+        .from("seo_run_events")
+        .select("event_key")
+        .eq("tenant_id", tenantId)
+        .eq("run_id", run.id),
+      supabaseAdmin
+        .from("change_requests")
+        .select("state")
+        .eq("tenant_id", tenantId)
+        .eq("id", run.change_request_id)
+        .maybeSingle(),
+    ]);
+    if (eventsResult.error) throw new Error(eventsResult.error.message);
+    if (changeRequestResult.error) throw new Error(changeRequestResult.error.message);
+    const repairStatus = await repairFailedSeoRunProposalEvent({
       run: { ...run, change_request_id: run.change_request_id },
+      eventKeys: (eventsResult.data ?? []).map((event) => event.event_key),
+      changeRequestState: changeRequestResult.data?.state ?? null,
       tenantId,
       actorId: context.userId,
       admin: supabaseAdmin as unknown as ProposalRepairAdminClient,
     });
-    return { ...run, state: "awaiting_approval" as const, failure_reason: null };
+    return repairStatus === "repaired"
+      ? { ...run, state: "awaiting_approval" as const, failure_reason: null, repairStatus }
+      : { ...run, repairStatus };
   });
