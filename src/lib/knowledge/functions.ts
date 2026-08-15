@@ -14,6 +14,18 @@ export function validateKnowledgeIngestionApproval(value: unknown) {
   return { approvedModelRequests: 18 as const };
 }
 
+export function validateKnowledgeEmbeddingProbeApproval(value: unknown) {
+  if (
+    !value ||
+    typeof value !== "object" ||
+    Array.isArray(value) ||
+    (value as Record<string, unknown>)["approvedModelRequests"] !== 1
+  ) {
+    throw new Error("Knowledge embedding probe requires approval for exactly 1 model request.");
+  }
+  return { approvedModelRequests: 1 as const };
+}
+
 export const getGovernedKnowledge = createServerFn({ method: "GET" }).handler(async () => {
   const { fetchGovernedKnowledge } = await import("./queries.server");
   return fetchGovernedKnowledge();
@@ -23,6 +35,26 @@ export const getExecutionManual = createServerFn({ method: "GET" }).handler(asyn
   const { fetchExecutionManual } = await import("./queries.server");
   return fetchExecutionManual();
 });
+
+export const probeGovernedKnowledgeEmbedding = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(validateKnowledgeEmbeddingProbeApproval)
+  .handler(async ({ context }) => {
+    const { assertOperator } = await import("../os-admin.server");
+    const { embedQuery, KNOWLEDGE_EMBEDDING_MODEL } = await import("./embeddings.server");
+    await assertOperator(context.supabase, context.userId);
+    const apiKey = process.env["GEMINI_API_KEY"]?.trim() ?? "";
+    if (!apiKey) throw new Error("GEMINI_API_KEY is not configured.");
+    const vector = await embedQuery({
+      apiKey,
+      query: "AOOS governed knowledge connector health probe",
+    });
+    return {
+      model: KNOWLEDGE_EMBEDDING_MODEL,
+      dimensions: vector.length,
+      modelRequestCount: 1 as const,
+    };
+  });
 
 export const ingestAndActivateGovernedKnowledge = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
