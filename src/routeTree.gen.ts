@@ -37,7 +37,6 @@ import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as CapabilitiesIndexRouteImport } from './routes/capabilities.index'
 import { Route as CapabilitiesIdRouteImport } from './routes/capabilities.$id'
 import { Route as ChangesIdRouteImport } from './routes/changes.$id'
-import { Route as ChangesNewRouteImport } from './routes/changes.new'
 import { Route as KnowledgeIndexRouteImport } from './routes/knowledge.index'
 import { Route as KnowledgeIdRouteImport } from './routes/knowledge.$id'
 import { Route as KnowledgeManualRouteImport } from './routes/knowledge.manual'
@@ -197,11 +196,6 @@ const ChangesIdRoute = ChangesIdRouteImport.update({
   path: '/changes/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ChangesNewRoute = ChangesNewRouteImport.update({
-  id: '/changes/new',
-  path: '/changes/new',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const KnowledgeIndexRoute = KnowledgeIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -313,7 +307,6 @@ export interface FileRoutesByFullPath {
   '/auth/callback': typeof AuthCallbackRoute
   '/capabilities/$id': typeof CapabilitiesIdRoute
   '/changes/$id': typeof ChangesIdRoute
-  '/changes/new': typeof ChangesNewRoute
   '/knowledge/$id': typeof KnowledgeIdRoute
   '/knowledge/manual': typeof KnowledgeManualRoute
   '/recommendations/$id': typeof RecommendationsIdRoute
@@ -352,7 +345,6 @@ export interface FileRoutesByTo {
   '/auth/callback': typeof AuthCallbackRoute
   '/capabilities/$id': typeof CapabilitiesIdRoute
   '/changes/$id': typeof ChangesIdRoute
-  '/changes/new': typeof ChangesNewRoute
   '/knowledge/$id': typeof KnowledgeIdRoute
   '/knowledge/manual': typeof KnowledgeManualRoute
   '/recommendations/$id': typeof RecommendationsIdRoute
@@ -400,7 +392,6 @@ export interface FileRoutesById {
   '/auth/callback': typeof AuthCallbackRoute
   '/capabilities/$id': typeof CapabilitiesIdRoute
   '/changes/$id': typeof ChangesIdRoute
-  '/changes/new': typeof ChangesNewRoute
   '/knowledge/$id': typeof KnowledgeIdRoute
   '/knowledge/manual': typeof KnowledgeManualRoute
   '/recommendations/$id': typeof RecommendationsIdRoute
@@ -449,7 +440,6 @@ export interface FileRouteTypes {
     | '/auth/callback'
     | '/capabilities/$id'
     | '/changes/$id'
-    | '/changes/new'
     | '/knowledge/$id'
     | '/knowledge/manual'
     | '/recommendations/$id'
@@ -488,7 +478,6 @@ export interface FileRouteTypes {
     | '/auth/callback'
     | '/capabilities/$id'
     | '/changes/$id'
-    | '/changes/new'
     | '/knowledge/$id'
     | '/knowledge/manual'
     | '/recommendations/$id'
@@ -535,7 +524,6 @@ export interface FileRouteTypes {
     | '/auth/callback'
     | '/capabilities/$id'
     | '/changes/$id'
-    | '/changes/new'
     | '/knowledge/$id'
     | '/knowledge/manual'
     | '/recommendations/$id'
@@ -579,7 +567,6 @@ export interface RootRouteChildren {
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   AdsAdvertisersRoute: typeof AdsAdvertisersRoute
   ChangesIdRoute: typeof ChangesIdRoute
-  ChangesNewRoute: typeof ChangesNewRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
   ApiPublicHooksDataforseoPostbackRoute: typeof ApiPublicHooksDataforseoPostbackRoute
@@ -782,13 +769,6 @@ declare module '@tanstack/react-router' {
       path: '/changes/$id'
       fullPath: '/changes/$id'
       preLoaderRoute: typeof ChangesIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/changes/new': {
-      id: '/changes/new'
-      path: '/changes/new'
-      fullPath: '/changes/new'
-      preLoaderRoute: typeof ChangesNewRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/knowledge/': {
@@ -1052,7 +1032,6 @@ const rootRouteChildren: RootRouteChildren = {
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
   AdsAdvertisersRoute: AdsAdvertisersRoute,
   ChangesIdRoute: ChangesIdRoute,
-  ChangesNewRoute: ChangesNewRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
   ApiPublicHooksDataforseoPostbackRoute: ApiPublicHooksDataforseoPostbackRoute,
