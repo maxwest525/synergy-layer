@@ -277,7 +277,9 @@ export async function probeConnector(
       signal: controller.signal,
     });
     const schemaValid =
-      key !== "dataforseo" || response.status !== 200 || (await hasDataForSeoSuccessEnvelope(response));
+      key !== "dataforseo" ||
+      response.status !== 200 ||
+      (await hasDataForSeoSuccessEnvelope(response));
     return {
       key,
       health: response.ok ? (schemaValid ? "healthy" : "degraded") : "failing",
