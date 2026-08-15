@@ -61,10 +61,15 @@ export async function fetchConnectorReadiness() {
     .order("capability_key");
   if (error) throw new Error(error.message);
   const persisted = new Map((data ?? []).map((row) => [row.capability_key, row]));
-  const connections = readiness.map((item) => ({
-    ...item,
-    persisted: persisted.get(item.key) ?? null,
-  }));
+  const connections = readiness.map((item) => {
+    const persistedConnection = persisted.get(item.key) ?? null;
+    const configured = item.state === "configured";
+    return {
+      ...item,
+      health: configured ? (persistedConnection?.health ?? "unknown") : "unknown",
+      persisted: configured ? persistedConnection : null,
+    };
+  });
   return {
     connections,
     configuredCount: connections.filter((item) => item.state === "configured").length,
