@@ -1,9 +1,18 @@
 import { createServerFn } from "@tanstack/react-start";
-import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-const ingestionApproval = z.object({ approvedModelRequests: z.literal(18) });
+export function validateKnowledgeIngestionApproval(value: unknown) {
+  if (
+    !value ||
+    typeof value !== "object" ||
+    Array.isArray(value) ||
+    (value as Record<string, unknown>)["approvedModelRequests"] !== 18
+  ) {
+    throw new Error("Knowledge ingestion requires approval for exactly 18 model requests.");
+  }
+  return { approvedModelRequests: 18 as const };
+}
 
 export const getGovernedKnowledge = createServerFn({ method: "GET" }).handler(async () => {
   const { fetchGovernedKnowledge } = await import("./queries.server");
@@ -17,7 +26,7 @@ export const getExecutionManual = createServerFn({ method: "GET" }).handler(asyn
 
 export const ingestAndActivateGovernedKnowledge = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((value: unknown) => ingestionApproval.parse(value))
+  .inputValidator(validateKnowledgeIngestionApproval)
   .handler(async ({ context }) => {
     const { assertOperator } = await import("../os-admin.server");
     const { requireTenantId } = await import("../tenant.server");
