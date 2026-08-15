@@ -5,17 +5,20 @@ import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 
 import { OperatorRouteError } from "@/components/os/route-error";
-import { EmptyState, GlassCard, MetricTile, PageHeader, StatePill } from "@/components/os/primitives";
+import {
+  EmptyState,
+  GlassCard,
+  MetricTile,
+  PageHeader,
+  StatePill,
+} from "@/components/os/primitives";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AvailabilityBadge } from "@/components/os/availability-badge";
 import { getTenantContext } from "@/lib/tenant.functions";
 import { getToolEstate } from "@/lib/tool-estate.functions";
 import { KIND_LABELS, type EstateFilter } from "@/lib/tool-estate-display";
-import {
-  checkConnectorReadiness,
-  getConnectorReadiness,
-} from "@/lib/connectors/functions";
+import { checkConnectorReadiness, getConnectorReadiness } from "@/lib/connectors/functions";
 
 export const Route = createFileRoute("/capabilities/systems/")({
   // Operator-only surface: rendering it on the server without the operator
@@ -210,9 +213,9 @@ function SystemsPage() {
           <div>
             <h2 className="text-sm font-semibold text-foreground">Runtime connector ledger</h2>
             <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
-              Secrets stay server-side. Configured means the required environment names are
-              present; healthy requires a dated, bounded probe. Providers without a safe free
-              probe remain degraded until real operational evidence exists.
+              Secrets stay server-side. Configured means the required environment names are present;
+              healthy requires a dated, bounded probe. Providers without a safe free probe remain
+              degraded until real operational evidence exists.
             </p>
           </div>
           <Button disabled={check.isPending} onClick={() => check.mutate()}>

@@ -19,6 +19,10 @@ describe("connector catalog", () => {
       "google_ads",
       "n8n",
       "vps_scraper",
+      "selfhosted_firecrawl",
+      "searxng",
+      "openseo",
+      "umami",
     ]);
   });
 
@@ -71,4 +75,3 @@ describe("connector catalog", () => {
     expect(n8n.health).toBe("unknown");
   });
 });
-

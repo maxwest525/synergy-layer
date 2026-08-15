@@ -26,7 +26,7 @@ export type TitleH1ProposalMutationResult = {
   versionNumber: number | null;
 };
 
-async function serviceRpc(
+export async function serviceRpc(
   name: string,
   args: Record<string, unknown>,
 ): Promise<TitleH1ProposalMutationResult> {

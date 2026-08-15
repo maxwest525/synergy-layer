@@ -44,4 +44,3 @@ describe("connection persistence mapping", () => {
     });
   });
 });
-

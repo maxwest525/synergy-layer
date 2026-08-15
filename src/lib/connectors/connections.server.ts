@@ -2,11 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database } from "@/integrations/supabase/types";
 import { createRequestClient, resolveTenantId } from "../tenant.server";
-import {
-  CONNECTOR_CATALOG,
-  describeConnectorReadiness,
-  type ConnectorReadiness,
-} from "./catalog";
+import { CONNECTOR_CATALOG, describeConnectorReadiness, type ConnectorReadiness } from "./catalog";
 import { probeConnector, type ConnectorProbeResult } from "./probes.server";
 
 type Client = SupabaseClient<Database>;
@@ -87,4 +83,3 @@ export async function checkAllConnectorReadiness() {
     healthyCount: connections.filter((row) => row.health === "healthy").length,
   };
 }
-

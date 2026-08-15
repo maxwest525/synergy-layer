@@ -25,6 +25,7 @@
 ### Task 1: Connector contract and runtime inventory
 
 **Files:**
+
 - Create: `src/lib/connectors/catalog.ts`
 - Create: `src/lib/connectors/catalog.test.ts`
 - Create: `src/lib/connectors/probes.server.ts`
@@ -34,6 +35,7 @@
 - Modify: `src/routes/capabilities.systems.index.tsx`
 
 **Interfaces:**
+
 - Produces: `CONNECTOR_CATALOG`, `describeConnectorReadiness(env)`, `probeConnector(key)`, and `syncConnectorReadiness(client, tenantId)`.
 - Consumes: existing provider environment variables and `tenant_connections`.
 
@@ -49,6 +51,7 @@
 ### Task 2: Governed knowledge schema and hybrid retrieval
 
 **Files:**
+
 - Create: `supabase/migrations/20260814150000_governed_knowledge_runtime.sql`
 - Create: `src/lib/knowledge/schema-migration.test.ts`
 - Create: `src/lib/knowledge/chunking.ts`
@@ -61,6 +64,7 @@
 - Modify: `src/lib/knowledge-retrieval.server.ts`
 
 **Interfaces:**
+
 - Produces: `chunkKnowledgeSource`, `embedDocuments`, `embedQuery`, `ingestKnowledgeVersion`, `activateKnowledgeVersion`, and `retrieveGovernedKnowledge`.
 - Consumes: tenant ID, source content/checksum/version metadata, Gemini key, and the `match_knowledge_chunks` RPC.
 
@@ -78,6 +82,7 @@
 ### Task 3: Source ingestion and visible Operating Manual
 
 **Files:**
+
 - Create: `scripts/ingest-governed-knowledge.mjs`
 - Create: `src/lib/knowledge/sources.ts`
 - Create: `src/lib/knowledge/sources.test.ts`
@@ -89,6 +94,7 @@
 - Modify: `src/components/os/shell.tsx`
 
 **Interfaces:**
+
 - Produces: an idempotent ingestion manifest for the two supplied playbooks and 16 handbook documents plus manual-source/version/chunk view models.
 - Consumes: the Task 2 ingestion functions and exact approved source paths.
 
@@ -103,6 +109,7 @@
 ### Task 4: Authority Science executable rules
 
 **Files:**
+
 - Create: `src/lib/authority/types.ts`
 - Create: `src/lib/authority/rules.ts`
 - Create: `src/lib/authority/rules.test.ts`
@@ -112,6 +119,7 @@
 - Modify: `src/integrations/supabase/types.ts`
 
 **Interfaces:**
+
 - Produces: `AuthorityFinding`, `AuthorityAction`, `evaluateAuthorityRules(input)`, and `persistAuthorityFindings`.
 - Consumes: dated rank/GSC/DataForSEO/page/entity/link/satisfaction observations and governed knowledge chunk IDs.
 
@@ -126,6 +134,7 @@
 ### Task 5: Visible SEO run lifecycle
 
 **Files:**
+
 - Create: `supabase/migrations/20260814170000_seo_runs.sql`
 - Create: `src/lib/seo-runs/types.ts`
 - Create: `src/lib/seo-runs/orchestrator.server.ts`
@@ -139,6 +148,7 @@
 - Modify: `src/routes/changes.$id.tsx`
 
 **Interfaces:**
+
 - Produces: `createSeoRun`, `runSeoPreflight`, `evaluateSeoRun`, and links to concrete existing change requests.
 - Consumes: connector readiness, live evidence adapters, governed knowledge retrieval, Authority findings, and existing title/H1 proposal/execution functions.
 
@@ -153,6 +163,7 @@
 ### Task 6: Google Ads, n8n, and VPS scraper operational bridges
 
 **Files:**
+
 - Create: `src/lib/connectors/google-ads.server.ts`
 - Create: `src/lib/connectors/google-ads.server.test.ts`
 - Create: `src/lib/connectors/n8n.server.ts`
@@ -163,6 +174,7 @@
 - Create: `src/registry/modules/automation-runtime.ts`
 
 **Interfaces:**
+
 - Produces: `probeGoogleAds`, `probeN8n`, `triggerN8nWorkflow`, `probeVpsScraper`, and `scrapeWithVps`.
 - Consumes: server-only credentials/endpoints and returns redacted proof.
 
@@ -176,11 +188,13 @@
 ### Task 7: Full verification, production migration, content activation, and delivery
 
 **Files:**
+
 - Modify: `docs/context/CURRENT_BUILD.md`
 - Modify: `docs/execution-handbook/KNOWLEDGE_INGESTION.md`
 - Create: `docs/verification/2026-08-14-governed-seo-runtime.md`
 
 **Interfaces:**
+
 - Produces: requirement-by-requirement proof with commands, row counts, vector coverage, connector health, run state, GitHub SHA, Lovable sync SHA, and production URL.
 - Consumes: all prior tasks.
 
@@ -195,4 +209,3 @@
 - [ ] Commit surgical files, push the feature branch, open and merge the PR only after checks pass.
 - [ ] Verify GitHub `main`, Lovable source synchronization, and Lovable production publish as three separate states.
 - [ ] Record the final proof ledger and close the goal only if every explicit requirement is evidenced.
-

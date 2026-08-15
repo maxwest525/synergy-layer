@@ -86,5 +86,29 @@ describe("connector probes", () => {
     expect(result).toMatchObject({ health: "degraded", outcome: "configured_no_safe_probe" });
     expect(fetcher).not.toHaveBeenCalled();
   });
-});
 
+  it("refreshes Google Ads OAuth and probes the current read-only v25 endpoint", async () => {
+    const fetcher = vi
+      .fn()
+      .mockResolvedValueOnce(new Response('{"access_token":"temporary"}', { status: 200 }))
+      .mockResolvedValueOnce(new Response('{"resourceNames":[]}', { status: 200 }));
+    const result = await probeConnector("google_ads", {
+      env: {
+        GOOGLE_ADS_DEVELOPER_TOKEN: "developer",
+        GOOGLE_ADS_CUSTOMER_ID: "1234567890",
+        GOOGLE_ADS_OAUTH_CLIENT_ID: "client",
+        GOOGLE_ADS_OAUTH_CLIENT_SECRET: "secret",
+        GOOGLE_ADS_OAUTH_REFRESH_TOKEN: "refresh",
+      },
+      fetcher,
+    });
+
+    expect(result.health).toBe("healthy");
+    expect(fetcher).toHaveBeenNthCalledWith(
+      2,
+      "https://googleads.googleapis.com/v25/customers:listAccessibleCustomers",
+      expect.objectContaining({ method: "GET" }),
+    );
+    expect(JSON.stringify(result)).not.toContain("temporary");
+  });
+});

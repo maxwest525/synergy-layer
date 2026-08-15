@@ -1,5 +1,6 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 
 import {
   EmptyState,
@@ -9,6 +10,8 @@ import {
   formatWhen,
 } from "@/components/os/primitives";
 import { getKnowledge } from "@/lib/os.functions";
+import { Button } from "@/components/ui/button";
+import { getGovernedKnowledge } from "@/lib/knowledge/functions";
 
 const knowledgeQuery = { queryKey: ["knowledge"], queryFn: () => getKnowledge() };
 
@@ -42,14 +45,85 @@ export const Route = createFileRoute("/knowledge/")({
 
 function KnowledgePage() {
   const { data } = useSuspenseQuery(knowledgeQuery);
+  const loadGoverned = useServerFn(getGovernedKnowledge);
+  const governed = useSuspenseQuery({
+    queryKey: ["governed-knowledge"],
+    queryFn: () => loadGoverned(),
+    retry: false,
+  });
+  const activeVersions = governed.data.versions.filter((version) => version.status === "active");
+  const activeVersionIds = new Set(activeVersions.map((version) => version.id));
+  const activeChunks = governed.data.chunks.filter((chunk) =>
+    activeVersionIds.has(chunk.source_version_id),
+  );
 
   return (
     <div className="space-y-8">
       <PageHeader
         eyebrow="What the OS knows"
         title="Knowledge"
-        description="Collections of documents, repositories, prompts, playbooks, research, and memory that agents read from."
+        description="Collections of documents, repositories, prompts, playbooks, research, and memory that agents read from. Governed sources below are versioned, chunked, embedded, and activated separately from legacy entries."
+        actions={
+          <Button asChild>
+            <Link to="/knowledge/manual">Open Execution Handbook</Link>
+          </Button>
+        }
       />
+
+      <GlassCard className="p-5">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h2 className="text-sm font-semibold text-foreground">Runtime knowledge activation</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Only chunks belonging to an active immutable source version are eligible for proposal
+              retrieval and Authority Science decisions.
+            </p>
+          </div>
+          <StatePill
+            label={activeChunks.length ? "runtime active" : "not activated"}
+            tone={activeChunks.length ? "success" : "warning"}
+          />
+        </div>
+        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+          <div className="rounded-xl border border-border/60 p-3">
+            <p className="text-xs text-muted-foreground">Governed sources</p>
+            <p className="mt-1 text-2xl font-semibold text-foreground">
+              {governed.data.sources.length}
+            </p>
+          </div>
+          <div className="rounded-xl border border-border/60 p-3">
+            <p className="text-xs text-muted-foreground">Active versions</p>
+            <p className="mt-1 text-2xl font-semibold text-foreground">{activeVersions.length}</p>
+          </div>
+          <div className="rounded-xl border border-border/60 p-3">
+            <p className="text-xs text-muted-foreground">Active embedded chunks</p>
+            <p className="mt-1 text-2xl font-semibold text-foreground">{activeChunks.length}</p>
+          </div>
+        </div>
+        {governed.data.sources.length ? (
+          <ul className="mt-4 space-y-2">
+            {governed.data.sources.map((source) => {
+              const version = activeVersions.find((item) => item.source_id === source.id);
+              const chunks = version
+                ? activeChunks.filter((chunk) => chunk.source_version_id === version.id).length
+                : 0;
+              return (
+                <li
+                  key={source.id}
+                  className="flex flex-wrap items-center justify-between gap-2 text-sm"
+                >
+                  <span className="text-foreground">{source.title}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {version
+                      ? `${version.version_label} · ${chunks} chunks · ${version.embedding_model}`
+                      : "no active version"}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        ) : null}
+      </GlassCard>
 
       {data.collections.length === 0 ? (
         <EmptyState

@@ -113,4 +113,3 @@ Knowledge gains source/version/activation status and an Operating Manual view th
 ## Production proof
 
 Completion requires passing unit tests, TypeScript, lint, and production build; applied migration; populated source/version/chunk rows; non-null 768-dimensional embeddings for every active chunk; active-version uniqueness; visible handbook and run UI; connector rows with honest health; at least one real existing target capable of reaching proposal review; GitHub main verification; Lovable source synchronization; and a separately verified production publish.
-

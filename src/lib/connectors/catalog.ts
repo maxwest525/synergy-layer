@@ -12,7 +12,11 @@ export type ConnectorKey =
   | "perplexity"
   | "google_ads"
   | "n8n"
-  | "vps_scraper";
+  | "vps_scraper"
+  | "selfhosted_firecrawl"
+  | "searxng"
+  | "openseo"
+  | "umami";
 
 export type ConnectorCatalogItem = {
   key: ConnectorKey;
@@ -64,10 +68,7 @@ export const CONNECTOR_CATALOG = [
     key: "dataforseo",
     label: "DataForSEO",
     provider: "DataForSEO",
-    credentialStrategies: [
-      ["DATAFORSEO_BASIC_TOKEN"],
-      ["DATAFORSEO_LOGIN", "DATAFORSEO_PASSWORD"],
-    ],
+    credentialStrategies: [["DATAFORSEO_BASIC_TOKEN"], ["DATAFORSEO_LOGIN", "DATAFORSEO_PASSWORD"]],
   }),
   item({
     key: "firecrawl",
@@ -140,11 +141,43 @@ export const CONNECTOR_CATALOG = [
   }),
   item({
     key: "vps_scraper",
-    label: "VPS scraper",
+    label: "Crawl4AI",
     provider: "Self-hosted",
     credentialStrategies: [["VPS_SCRAPER_API_KEY"]],
     configRequirements: ["VPS_SCRAPER_BASE_URL"],
     safeConfig: { baseUrl: "VPS_SCRAPER_BASE_URL" },
+  }),
+  item({
+    key: "selfhosted_firecrawl",
+    label: "Firecrawl (VPS)",
+    provider: "Self-hosted",
+    credentialStrategies: [["SELFHOSTED_FIRECRAWL_API_KEY"]],
+    configRequirements: ["SELFHOSTED_FIRECRAWL_BASE_URL"],
+    safeConfig: { baseUrl: "SELFHOSTED_FIRECRAWL_BASE_URL" },
+  }),
+  item({
+    key: "searxng",
+    label: "SearXNG",
+    provider: "Self-hosted",
+    credentialStrategies: [["SEARXNG_USERNAME", "SEARXNG_PASSWORD"]],
+    configRequirements: ["SEARXNG_BASE_URL"],
+    safeConfig: { baseUrl: "SEARXNG_BASE_URL" },
+  }),
+  item({
+    key: "openseo",
+    label: "OpenSEO",
+    provider: "Self-hosted",
+    credentialStrategies: [["OPENSEO_USERNAME", "OPENSEO_PASSWORD"]],
+    configRequirements: ["OPENSEO_BASE_URL"],
+    safeConfig: { baseUrl: "OPENSEO_BASE_URL" },
+  }),
+  item({
+    key: "umami",
+    label: "Umami analytics",
+    provider: "Self-hosted",
+    credentialStrategies: [["UMAMI_API_TOKEN"]],
+    configRequirements: ["UMAMI_BASE_URL"],
+    safeConfig: { baseUrl: "UMAMI_BASE_URL" },
   }),
 ] as const satisfies readonly ConnectorCatalogItem[];
 
@@ -170,7 +203,8 @@ export function describeConnectorReadiness(
     const selected =
       strategies.find((strategy) => strategy.missing.length === 0) ??
       [...strategies].sort(
-        (left, right) => left.missing.length - right.missing.length || left.names.length - right.names.length,
+        (left, right) =>
+          left.missing.length - right.missing.length || left.names.length - right.names.length,
       )[0]!;
     const missingConfig = (connector.configRequirements ?? []).filter(
       (name) => !present(env, name),
@@ -198,4 +232,3 @@ export function describeConnectorReadiness(
     };
   });
 }
-

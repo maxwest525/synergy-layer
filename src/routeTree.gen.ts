@@ -24,6 +24,7 @@ import { Route as MeasurementRouteImport } from './routes/measurement'
 import { Route as RecommendationsRouteImport } from './routes/recommendations'
 import { Route as SchedulerRouteImport } from './routes/scheduler'
 import { Route as SearchRouteImport } from './routes/search'
+import { Route as SeoRunsRouteImport } from './routes/seo-runs'
 import { Route as WorkflowsRouteImport } from './routes/workflows'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
@@ -39,10 +40,12 @@ import { Route as ChangesIdRouteImport } from './routes/changes.$id'
 import { Route as ChangesNewRouteImport } from './routes/changes.new'
 import { Route as KnowledgeIndexRouteImport } from './routes/knowledge.index'
 import { Route as KnowledgeIdRouteImport } from './routes/knowledge.$id'
+import { Route as KnowledgeManualRouteImport } from './routes/knowledge.manual'
 import { Route as RecommendationsIndexRouteImport } from './routes/recommendations.index'
 import { Route as RecommendationsIdRouteImport } from './routes/recommendations.$id'
 import { Route as SchedulerIndexRouteImport } from './routes/scheduler.index'
 import { Route as SchedulerIdRouteImport } from './routes/scheduler.$id'
+import { Route as SeoRunsIndexRouteImport } from './routes/seo-runs.index'
 import { Route as WorkflowsIndexRouteImport } from './routes/workflows.index'
 import { Route as WorkflowsIdRouteImport } from './routes/workflows.$id'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
@@ -127,6 +130,11 @@ const SearchRoute = SearchRouteImport.update({
   path: '/search',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SeoRunsRoute = SeoRunsRouteImport.update({
+  id: '/seo-runs',
+  path: '/seo-runs',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const WorkflowsRoute = WorkflowsRouteImport.update({
   id: '/workflows',
   path: '/workflows',
@@ -204,6 +212,11 @@ const KnowledgeIdRoute = KnowledgeIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => KnowledgeRoute,
 } as any)
+const KnowledgeManualRoute = KnowledgeManualRouteImport.update({
+  id: '/manual',
+  path: '/manual',
+  getParentRoute: () => KnowledgeRoute,
+} as any)
 const RecommendationsIndexRoute = RecommendationsIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -223,6 +236,11 @@ const SchedulerIdRoute = SchedulerIdRouteImport.update({
   id: '/$id',
   path: '/$id',
   getParentRoute: () => SchedulerRoute,
+} as any)
+const SeoRunsIndexRoute = SeoRunsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => SeoRunsRoute,
 } as any)
 const WorkflowsIndexRoute = WorkflowsIndexRouteImport.update({
   id: '/',
@@ -285,6 +303,7 @@ export interface FileRoutesByFullPath {
   '/recommendations': typeof RecommendationsRouteWithChildren
   '/scheduler': typeof SchedulerRouteWithChildren
   '/search': typeof SearchRoute
+  '/seo-runs': typeof SeoRunsRouteWithChildren
   '/workflows': typeof WorkflowsRouteWithChildren
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -296,6 +315,7 @@ export interface FileRoutesByFullPath {
   '/changes/$id': typeof ChangesIdRoute
   '/changes/new': typeof ChangesNewRoute
   '/knowledge/$id': typeof KnowledgeIdRoute
+  '/knowledge/manual': typeof KnowledgeManualRoute
   '/recommendations/$id': typeof RecommendationsIdRoute
   '/scheduler/$id': typeof SchedulerIdRoute
   '/workflows/$id': typeof WorkflowsIdRoute
@@ -305,6 +325,7 @@ export interface FileRoutesByFullPath {
   '/knowledge/': typeof KnowledgeIndexRoute
   '/recommendations/': typeof RecommendationsIndexRoute
   '/scheduler/': typeof SchedulerIndexRoute
+  '/seo-runs/': typeof SeoRunsIndexRoute
   '/workflows/': typeof WorkflowsIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -333,6 +354,7 @@ export interface FileRoutesByTo {
   '/changes/$id': typeof ChangesIdRoute
   '/changes/new': typeof ChangesNewRoute
   '/knowledge/$id': typeof KnowledgeIdRoute
+  '/knowledge/manual': typeof KnowledgeManualRoute
   '/recommendations/$id': typeof RecommendationsIdRoute
   '/scheduler/$id': typeof SchedulerIdRoute
   '/workflows/$id': typeof WorkflowsIdRoute
@@ -342,6 +364,7 @@ export interface FileRoutesByTo {
   '/knowledge': typeof KnowledgeIndexRoute
   '/recommendations': typeof RecommendationsIndexRoute
   '/scheduler': typeof SchedulerIndexRoute
+  '/seo-runs': typeof SeoRunsIndexRoute
   '/workflows': typeof WorkflowsIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -367,6 +390,7 @@ export interface FileRoutesById {
   '/recommendations': typeof RecommendationsRouteWithChildren
   '/scheduler': typeof SchedulerRouteWithChildren
   '/search': typeof SearchRoute
+  '/seo-runs': typeof SeoRunsRouteWithChildren
   '/workflows': typeof WorkflowsRouteWithChildren
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -378,6 +402,7 @@ export interface FileRoutesById {
   '/changes/$id': typeof ChangesIdRoute
   '/changes/new': typeof ChangesNewRoute
   '/knowledge/$id': typeof KnowledgeIdRoute
+  '/knowledge/manual': typeof KnowledgeManualRoute
   '/recommendations/$id': typeof RecommendationsIdRoute
   '/scheduler/$id': typeof SchedulerIdRoute
   '/workflows/$id': typeof WorkflowsIdRoute
@@ -387,6 +412,7 @@ export interface FileRoutesById {
   '/knowledge/': typeof KnowledgeIndexRoute
   '/recommendations/': typeof RecommendationsIndexRoute
   '/scheduler/': typeof SchedulerIndexRoute
+  '/seo-runs/': typeof SeoRunsIndexRoute
   '/workflows/': typeof WorkflowsIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -413,6 +439,7 @@ export interface FileRouteTypes {
     | '/recommendations'
     | '/scheduler'
     | '/search'
+    | '/seo-runs'
     | '/workflows'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
@@ -424,6 +451,7 @@ export interface FileRouteTypes {
     | '/changes/$id'
     | '/changes/new'
     | '/knowledge/$id'
+    | '/knowledge/manual'
     | '/recommendations/$id'
     | '/scheduler/$id'
     | '/workflows/$id'
@@ -433,6 +461,7 @@ export interface FileRouteTypes {
     | '/knowledge/'
     | '/recommendations/'
     | '/scheduler/'
+    | '/seo-runs/'
     | '/workflows/'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
@@ -461,6 +490,7 @@ export interface FileRouteTypes {
     | '/changes/$id'
     | '/changes/new'
     | '/knowledge/$id'
+    | '/knowledge/manual'
     | '/recommendations/$id'
     | '/scheduler/$id'
     | '/workflows/$id'
@@ -470,6 +500,7 @@ export interface FileRouteTypes {
     | '/knowledge'
     | '/recommendations'
     | '/scheduler'
+    | '/seo-runs'
     | '/workflows'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
@@ -494,6 +525,7 @@ export interface FileRouteTypes {
     | '/recommendations'
     | '/scheduler'
     | '/search'
+    | '/seo-runs'
     | '/workflows'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
@@ -505,6 +537,7 @@ export interface FileRouteTypes {
     | '/changes/$id'
     | '/changes/new'
     | '/knowledge/$id'
+    | '/knowledge/manual'
     | '/recommendations/$id'
     | '/scheduler/$id'
     | '/workflows/$id'
@@ -514,6 +547,7 @@ export interface FileRouteTypes {
     | '/knowledge/'
     | '/recommendations/'
     | '/scheduler/'
+    | '/seo-runs/'
     | '/workflows/'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
@@ -539,6 +573,7 @@ export interface RootRouteChildren {
   RecommendationsRoute: typeof RecommendationsRouteWithChildren
   SchedulerRoute: typeof SchedulerRouteWithChildren
   SearchRoute: typeof SearchRoute
+  SeoRunsRoute: typeof SeoRunsRouteWithChildren
   WorkflowsRoute: typeof WorkflowsRouteWithChildren
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -658,6 +693,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SearchRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/seo-runs': {
+      id: '/seo-runs'
+      path: '/seo-runs'
+      fullPath: '/seo-runs'
+      preLoaderRoute: typeof SeoRunsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/workflows': {
       id: '/workflows'
       path: '/workflows'
@@ -763,6 +805,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof KnowledgeIdRouteImport
       parentRoute: typeof KnowledgeRoute
     }
+    '/knowledge/manual': {
+      id: '/knowledge/manual'
+      path: '/manual'
+      fullPath: '/knowledge/manual'
+      preLoaderRoute: typeof KnowledgeManualRouteImport
+      parentRoute: typeof KnowledgeRoute
+    }
     '/recommendations/': {
       id: '/recommendations/'
       path: '/'
@@ -790,6 +839,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/scheduler/$id'
       preLoaderRoute: typeof SchedulerIdRouteImport
       parentRoute: typeof SchedulerRoute
+    }
+    '/seo-runs/': {
+      id: '/seo-runs/'
+      path: '/'
+      fullPath: '/seo-runs/'
+      preLoaderRoute: typeof SeoRunsIndexRouteImport
+      parentRoute: typeof SeoRunsRoute
     }
     '/workflows/': {
       id: '/workflows/'
@@ -906,11 +962,13 @@ const CapabilitiesRouteWithChildren = CapabilitiesRoute._addFileChildren(
 
 interface KnowledgeRouteChildren {
   KnowledgeIdRoute: typeof KnowledgeIdRoute
+  KnowledgeManualRoute: typeof KnowledgeManualRoute
   KnowledgeIndexRoute: typeof KnowledgeIndexRoute
 }
 
 const KnowledgeRouteChildren: KnowledgeRouteChildren = {
   KnowledgeIdRoute: KnowledgeIdRoute,
+  KnowledgeManualRoute: KnowledgeManualRoute,
   KnowledgeIndexRoute: KnowledgeIndexRoute,
 }
 
@@ -946,6 +1004,17 @@ const SchedulerRouteWithChildren = SchedulerRoute._addFileChildren(
   SchedulerRouteChildren,
 )
 
+interface SeoRunsRouteChildren {
+  SeoRunsIndexRoute: typeof SeoRunsIndexRoute
+}
+
+const SeoRunsRouteChildren: SeoRunsRouteChildren = {
+  SeoRunsIndexRoute: SeoRunsIndexRoute,
+}
+
+const SeoRunsRouteWithChildren =
+  SeoRunsRoute._addFileChildren(SeoRunsRouteChildren)
+
 interface WorkflowsRouteChildren {
   WorkflowsIdRoute: typeof WorkflowsIdRoute
   WorkflowsIndexRoute: typeof WorkflowsIndexRoute
@@ -976,6 +1045,7 @@ const rootRouteChildren: RootRouteChildren = {
   RecommendationsRoute: RecommendationsRouteWithChildren,
   SchedulerRoute: SchedulerRouteWithChildren,
   SearchRoute: SearchRoute,
+  SeoRunsRoute: SeoRunsRouteWithChildren,
   WorkflowsRoute: WorkflowsRouteWithChildren,
   Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
   Char91DotwellKnownChar93OauthProtectedResourceRoute:

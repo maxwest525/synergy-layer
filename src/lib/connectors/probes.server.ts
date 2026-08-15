@@ -1,11 +1,7 @@
 import { Buffer } from "node:buffer";
 
 import { GOVERNED_REPO } from "../execution/allowlist";
-import {
-  CONNECTOR_CATALOG,
-  describeConnectorReadiness,
-  type ConnectorKey,
-} from "./catalog";
+import { CONNECTOR_CATALOG, describeConnectorReadiness, type ConnectorKey } from "./catalog";
 
 export type ConnectorProbeResult = {
   key: ConnectorKey;
@@ -41,7 +37,12 @@ const noSafeProbe = new Set<ConnectorKey>([
   "google_analytics_4",
   "pagespeed_insights",
   "perplexity",
+  "selfhosted_firecrawl",
 ]);
+
+function basic(username: string | undefined, password: string | undefined): string {
+  return `Basic ${Buffer.from(`${username}:${password}`).toString("base64")}`;
+}
 
 function configuredRequest(
   key: ConnectorKey,
@@ -95,7 +96,7 @@ function configuredRequest(
       };
     case "google_ads":
       return {
-        url: "https://googleads.googleapis.com/v21/customers:listAccessibleCustomers",
+        url: "https://googleads.googleapis.com/v25/customers:listAccessibleCustomers",
         headers: {
           Authorization: `Bearer ${env["GOOGLE_ADS_ACCESS_TOKEN"]}`,
           "developer-token": env["GOOGLE_ADS_DEVELOPER_TOKEN"]!,
@@ -110,6 +111,21 @@ function configuredRequest(
       return {
         url: `${env["VPS_SCRAPER_BASE_URL"]!.replace(/\/+$/, "")}/health`,
         headers: { Authorization: `Bearer ${env["VPS_SCRAPER_API_KEY"]}` },
+      };
+    case "searxng":
+      return {
+        url: `${env["SEARXNG_BASE_URL"]!.replace(/\/+$/, "")}/healthz`,
+        headers: { Authorization: basic(env["SEARXNG_USERNAME"], env["SEARXNG_PASSWORD"]) },
+      };
+    case "openseo":
+      return {
+        url: `${env["OPENSEO_BASE_URL"]!.replace(/\/+$/, "")}/api/health`,
+        headers: { Authorization: basic(env["OPENSEO_USERNAME"], env["OPENSEO_PASSWORD"]) },
+      };
+    case "umami":
+      return {
+        url: `${env["UMAMI_BASE_URL"]!.replace(/\/+$/, "")}/api/heartbeat`,
+        headers: { Authorization: `Bearer ${env["UMAMI_API_TOKEN"]}` },
       };
     default:
       return null;
@@ -150,7 +166,50 @@ export async function probeConnector(
     };
   }
 
-  const descriptor = configuredRequest(key, env);
+  let requestEnv = env;
+  if (key === "google_ads" && !env["GOOGLE_ADS_ACCESS_TOKEN"]?.trim()) {
+    try {
+      const tokenResponse = await (options.fetcher ?? fetch)(
+        "https://www.googleapis.com/oauth2/v3/token",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: new URLSearchParams({
+            grant_type: "refresh_token",
+            client_id: env["GOOGLE_ADS_OAUTH_CLIENT_ID"]!,
+            client_secret: env["GOOGLE_ADS_OAUTH_CLIENT_SECRET"]!,
+            refresh_token: env["GOOGLE_ADS_OAUTH_REFRESH_TOKEN"]!,
+          }),
+        },
+      );
+      const payload = (await tokenResponse.json()) as { access_token?: unknown };
+      if (!tokenResponse.ok || typeof payload.access_token !== "string") {
+        return {
+          key,
+          health: "failing",
+          outcome: "http_error",
+          checkedAt,
+          missing: [],
+          proof: {
+            statusCode: tokenResponse.status,
+            endpoint: "https://www.googleapis.com/oauth2/v3/token",
+          },
+        };
+      }
+      requestEnv = { ...env, GOOGLE_ADS_ACCESS_TOKEN: payload.access_token };
+    } catch {
+      return {
+        key,
+        health: "failing",
+        outcome: "network_error",
+        checkedAt,
+        missing: [],
+        proof: { endpoint: "https://www.googleapis.com/oauth2/v3/token" },
+      };
+    }
+  }
+
+  const descriptor = configuredRequest(key, requestEnv);
   if (!descriptor) {
     return {
       key,
@@ -199,4 +258,3 @@ export async function probeConnector(
 export function connectorCatalogItem(key: ConnectorKey) {
   return CONNECTOR_CATALOG.find((item) => item.key === key)!;
 }
-

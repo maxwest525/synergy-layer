@@ -761,6 +761,145 @@ export type Database = {
           },
         ];
       };
+      authority_findings: {
+        Row: {
+          confidence: string;
+          created_at: string;
+          detected_at: string;
+          fingerprint: string;
+          id: string;
+          knowledge_chunk_ids: string[];
+          missing_evidence: string[];
+          observed: Json;
+          query_class: string;
+          rule_key: string;
+          severity: string;
+          target_url: string;
+          tenant_id: string;
+        };
+        Insert: {
+          confidence: string;
+          created_at?: string;
+          detected_at?: string;
+          fingerprint: string;
+          id?: string;
+          knowledge_chunk_ids?: string[];
+          missing_evidence?: string[];
+          observed?: Json;
+          query_class: string;
+          rule_key: string;
+          severity: string;
+          target_url: string;
+          tenant_id: string;
+        };
+        Update: Record<string, never>;
+        Relationships: [
+          {
+            foreignKeyName: "authority_findings_tenant_id_fkey";
+            columns: ["tenant_id"];
+            isOneToOne: false;
+            referencedRelation: "tenants";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      authority_finding_evidence: {
+        Row: {
+          content_sha256: string;
+          created_at: string;
+          finding_id: string;
+          id: string;
+          observed_at: string;
+          payload: Json;
+          source_kind: string;
+          source_ref: string;
+          tenant_id: string;
+        };
+        Insert: {
+          content_sha256: string;
+          created_at?: string;
+          finding_id: string;
+          id?: string;
+          observed_at: string;
+          payload: Json;
+          source_kind: string;
+          source_ref: string;
+          tenant_id: string;
+        };
+        Update: Record<string, never>;
+        Relationships: [
+          {
+            foreignKeyName: "authority_finding_evidence_finding_id_fkey";
+            columns: ["finding_id"];
+            isOneToOne: false;
+            referencedRelation: "authority_findings";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "authority_finding_evidence_tenant_id_fkey";
+            columns: ["tenant_id"];
+            isOneToOne: false;
+            referencedRelation: "tenants";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      authority_actions: {
+        Row: {
+          action_key: string;
+          change_request_id: string | null;
+          created_at: string;
+          finding_id: string;
+          id: string;
+          label: string;
+          rationale: string;
+          requires_exact_change: boolean;
+          state: string;
+          tenant_id: string;
+          updated_at: string;
+        };
+        Insert: {
+          action_key: string;
+          change_request_id?: string | null;
+          created_at?: string;
+          finding_id: string;
+          id?: string;
+          label: string;
+          rationale: string;
+          requires_exact_change: boolean;
+          state?: string;
+          tenant_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          change_request_id?: string | null;
+          state?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "authority_actions_change_request_id_fkey";
+            columns: ["change_request_id"];
+            isOneToOne: false;
+            referencedRelation: "change_requests";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "authority_actions_finding_id_fkey";
+            columns: ["finding_id"];
+            isOneToOne: false;
+            referencedRelation: "authority_findings";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "authority_actions_tenant_id_fkey";
+            columns: ["tenant_id"];
+            isOneToOne: false;
+            referencedRelation: "tenants";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       authorized_operators: {
         Row: {
           created_at: string;
@@ -2116,6 +2255,169 @@ export type Database = {
           },
         ];
       };
+      knowledge_sources: {
+        Row: {
+          created_at: string;
+          description: string | null;
+          id: string;
+          metadata: Json;
+          source_ref: string;
+          source_type: string;
+          stable_key: string;
+          status: Database["public"]["Enums"]["entity_status"];
+          tenant_id: string;
+          title: string;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          description?: string | null;
+          id?: string;
+          metadata?: Json;
+          source_ref: string;
+          source_type: string;
+          stable_key: string;
+          status?: Database["public"]["Enums"]["entity_status"];
+          tenant_id: string;
+          title: string;
+          updated_at?: string;
+        };
+        Update: {
+          description?: string | null;
+          metadata?: Json;
+          source_ref?: string;
+          source_type?: string;
+          stable_key?: string;
+          status?: Database["public"]["Enums"]["entity_status"];
+          title?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "knowledge_sources_tenant_id_fkey";
+            columns: ["tenant_id"];
+            isOneToOne: false;
+            referencedRelation: "tenants";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      knowledge_source_versions: {
+        Row: {
+          activated_at: string | null;
+          content_sha256: string;
+          content_text: string;
+          created_at: string;
+          deactivated_at: string | null;
+          embedding_dimensions: number;
+          embedding_model: string;
+          id: string;
+          metadata: Json;
+          parser_version: string;
+          source_id: string;
+          source_size_bytes: number;
+          status: string;
+          tenant_id: string;
+          updated_at: string;
+          version_label: string;
+        };
+        Insert: {
+          activated_at?: string | null;
+          content_sha256: string;
+          content_text: string;
+          created_at?: string;
+          deactivated_at?: string | null;
+          embedding_dimensions?: number;
+          embedding_model?: string;
+          id?: string;
+          metadata?: Json;
+          parser_version: string;
+          source_id: string;
+          source_size_bytes: number;
+          status?: string;
+          tenant_id: string;
+          updated_at?: string;
+          version_label: string;
+        };
+        Update: {
+          activated_at?: string | null;
+          deactivated_at?: string | null;
+          status?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "knowledge_source_versions_source_id_fkey";
+            columns: ["source_id"];
+            isOneToOne: false;
+            referencedRelation: "knowledge_sources";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "knowledge_source_versions_tenant_id_fkey";
+            columns: ["tenant_id"];
+            isOneToOne: false;
+            referencedRelation: "tenants";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      knowledge_chunks: {
+        Row: {
+          body: string;
+          content_sha256: string;
+          created_at: string;
+          embedding: string;
+          heading_path: string[];
+          id: string;
+          metadata: Json;
+          ordinal: number;
+          source_version_id: string;
+          tenant_id: string;
+          title: string;
+          token_estimate: number;
+        };
+        Insert: {
+          body: string;
+          content_sha256: string;
+          created_at?: string;
+          embedding: string;
+          heading_path?: string[];
+          id?: string;
+          metadata?: Json;
+          ordinal: number;
+          source_version_id: string;
+          tenant_id: string;
+          title: string;
+          token_estimate: number;
+        };
+        Update: {
+          body?: string;
+          content_sha256?: string;
+          embedding?: string;
+          heading_path?: string[];
+          metadata?: Json;
+          ordinal?: number;
+          title?: string;
+          token_estimate?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "knowledge_chunks_source_version_id_fkey";
+            columns: ["source_version_id"];
+            isOneToOne: false;
+            referencedRelation: "knowledge_source_versions";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "knowledge_chunks_tenant_id_fkey";
+            columns: ["tenant_id"];
+            isOneToOne: false;
+            referencedRelation: "tenants";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       measurement_runs: {
         Row: {
           actor_id: string | null;
@@ -2896,6 +3198,119 @@ export type Database = {
           },
         ];
       };
+      seo_runs: {
+        Row: {
+          authority_finding_ids: string[];
+          change_request_id: string | null;
+          change_type: string;
+          completed_at: string | null;
+          connector_snapshot: Json;
+          created_at: string;
+          created_by: string | null;
+          evidence_snapshot: Json;
+          failure_reason: string | null;
+          id: string;
+          idempotency_key: string;
+          knowledge_chunk_ids: string[];
+          query_class: string;
+          started_at: string | null;
+          state: string;
+          target_url: string;
+          tenant_id: string;
+          updated_at: string;
+        };
+        Insert: {
+          authority_finding_ids?: string[];
+          change_request_id?: string | null;
+          change_type?: string;
+          completed_at?: string | null;
+          connector_snapshot?: Json;
+          created_at?: string;
+          created_by?: string | null;
+          evidence_snapshot?: Json;
+          failure_reason?: string | null;
+          id?: string;
+          idempotency_key: string;
+          knowledge_chunk_ids?: string[];
+          query_class: string;
+          started_at?: string | null;
+          state?: string;
+          target_url: string;
+          tenant_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          authority_finding_ids?: string[];
+          change_request_id?: string | null;
+          completed_at?: string | null;
+          connector_snapshot?: Json;
+          evidence_snapshot?: Json;
+          failure_reason?: string | null;
+          knowledge_chunk_ids?: string[];
+          started_at?: string | null;
+          state?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "seo_runs_change_request_id_fkey";
+            columns: ["change_request_id"];
+            isOneToOne: false;
+            referencedRelation: "change_requests";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "seo_runs_tenant_id_fkey";
+            columns: ["tenant_id"];
+            isOneToOne: false;
+            referencedRelation: "tenants";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      seo_run_events: {
+        Row: {
+          actor_id: string | null;
+          created_at: string;
+          event_key: string;
+          id: string;
+          occurred_at: string;
+          payload: Json;
+          run_id: string;
+          state: string;
+          summary: string;
+          tenant_id: string;
+        };
+        Insert: {
+          actor_id?: string | null;
+          created_at?: string;
+          event_key: string;
+          id?: string;
+          occurred_at?: string;
+          payload?: Json;
+          run_id: string;
+          state: string;
+          summary: string;
+          tenant_id: string;
+        };
+        Update: Record<string, never>;
+        Relationships: [
+          {
+            foreignKeyName: "seo_run_events_run_id_fkey";
+            columns: ["run_id"];
+            isOneToOne: false;
+            referencedRelation: "seo_runs";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "seo_run_events_tenant_id_fkey";
+            columns: ["tenant_id"];
+            isOneToOne: false;
+            referencedRelation: "tenants";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       serpapi_requests: {
         Row: {
           account_searches_left_after: number | null;
@@ -3611,6 +4026,34 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      activate_knowledge_version: {
+        Args: { _tenant_id: string; _version_id: string };
+        Returns: Database["public"]["Tables"]["knowledge_source_versions"]["Row"];
+      };
+      match_knowledge_chunks: {
+        Args: {
+          _limit?: number;
+          _query_embedding: string;
+          _query_text: string;
+          _tenant_id: string;
+        };
+        Returns: {
+          body: string;
+          content_sha256: string;
+          heading_path: string[];
+          id: string;
+          lexical_score: number;
+          score: number;
+          semantic_score: number;
+          source_id: string;
+          source_key: string;
+          source_ref: string;
+          source_title: string;
+          source_version_id: string;
+          title: string;
+          version_label: string;
+        }[];
+      };
       append_change_measurement_observation: {
         Args: {
           _cycle_id: string;

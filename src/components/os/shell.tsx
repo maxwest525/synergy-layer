@@ -11,6 +11,7 @@ import {
   ListChecks,
   Plug,
   Search,
+  Route as RouteIcon,
   Workflow,
 } from "lucide-react";
 import type { ReactNode } from "react";
@@ -24,6 +25,7 @@ const workspaces = [
   { to: "/command-center", label: "Command Center", icon: LayoutDashboard, hint: "System state" },
   { to: "/assets", label: "Assets", icon: Boxes, hint: "Everything we own" },
   { to: "/search", label: "Search", icon: Search, hint: "What Google observed" },
+  { to: "/seo-runs", label: "SEO Runs", icon: RouteIcon, hint: "Governed page changes" },
   { to: "/measurement", label: "Measurement", icon: Gauge, hint: "Page speed and analytics" },
   {
     to: "/essentials",

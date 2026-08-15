@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database } from "@/integrations/supabase/types";
 import { requireTenantId } from "./tenant.server";
+import { retrieveGovernedKnowledge } from "./knowledge/runtime.server";
 
 type Client = SupabaseClient<Database>;
 
@@ -91,6 +92,31 @@ export async function retrieveKnowledgeGuidance(
   options: { collectionKeys?: string[]; limit?: number } = {},
 ): Promise<RetrievedKnowledgeEntry[]> {
   const tenantId = await requireTenantId(client);
+  const { data: governedVersions, error: governedVersionError } = await client
+    .from("knowledge_source_versions")
+    .select("id")
+    .eq("tenant_id", tenantId)
+    .eq("status", "active")
+    .limit(1);
+  if (!governedVersionError && governedVersions?.length) {
+    const governed = await retrieveGovernedKnowledge(client, query, { limit: options.limit ?? 8 });
+    return governed.map((chunk) => ({
+      id: chunk.id,
+      collectionKey: "kb.playbooks",
+      title: `${chunk.sourceTitle} — ${chunk.title}`,
+      body: chunk.body,
+      sourceRef: `${chunk.sourceRef}#${chunk.contentSha256.slice(0, 12)}`,
+      tags: [chunk.sourceKey, ...chunk.headingPath],
+      excerpt: chunk.body.trim().slice(0, 1200),
+      score: chunk.score,
+    }));
+  }
+  if (
+    governedVersionError &&
+    !/knowledge_source_versions|schema cache|does not exist/i.test(governedVersionError.message)
+  ) {
+    throw new Error(governedVersionError.message);
+  }
   const collectionKeys = options.collectionKeys ?? [...PROPOSAL_GUIDANCE_COLLECTIONS];
 
   const { data: collections, error: collectionError } = await client
