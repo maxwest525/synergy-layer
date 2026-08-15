@@ -36,14 +36,17 @@ export async function recordSeoRunExecutionStarted(
     .eq("id", run.id);
   if (updateError) throw new Error(updateError.message);
 
-  const { error: eventError } = await admin.from("seo_run_events").insert({
-    tenant_id: tenantId,
-    run_id: run.id,
-    event_key: `execution_started:${crypto.randomUUID()}`,
-    state: "executing",
-    summary: "An operator started the approved source execution. No live-page proof exists yet.",
-    actor_id: actorId,
-  });
+  const { error: eventError } = await admin.from("seo_run_events").upsert(
+    {
+      tenant_id: tenantId,
+      run_id: run.id,
+      event_key: `execution_started:${changeRequestId}`,
+      state: "executing",
+      summary: "An operator started the approved source execution. No live-page proof exists yet.",
+      actor_id: actorId,
+    },
+    { onConflict: "tenant_id,run_id,event_key", ignoreDuplicates: true },
+  );
   if (eventError) throw new Error(eventError.message);
 }
 
@@ -72,14 +75,17 @@ export async function recordSeoRunSourceExecutionResult(
     .eq("id", run.id);
   if (updateError) throw new Error(updateError.message);
 
-  const { error: eventError } = await admin.from("seo_run_events").insert({
-    tenant_id: tenantId,
-    run_id: run.id,
-    event_key: `source_execution:${crypto.randomUUID()}`,
-    state,
-    summary,
-    payload: { status, change_request_id: changeRequestId },
-    actor_id: actorId,
-  });
+  const { error: eventError } = await admin.from("seo_run_events").upsert(
+    {
+      tenant_id: tenantId,
+      run_id: run.id,
+      event_key: `source_execution:${changeRequestId}:${state}`,
+      state,
+      summary,
+      payload: { status, change_request_id: changeRequestId },
+      actor_id: actorId,
+    },
+    { onConflict: "tenant_id,run_id,event_key", ignoreDuplicates: true },
+  );
   if (eventError) throw new Error(eventError.message);
 }
