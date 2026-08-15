@@ -7,6 +7,13 @@ type CreatedSeoRun = {
   target_url: string;
 };
 
+export type SeoBatchProgress = {
+  completed: number;
+  total: number;
+  advanced: number;
+  stopped: number;
+};
+
 export function getSeoRunProviderBudget(pages: number) {
   if (!Number.isInteger(pages) || pages < 1 || pages > maxSeoRunBatchSize) {
     throw new Error(`A batch must contain between 1 and ${maxSeoRunBatchSize} pages.`);
@@ -24,20 +31,43 @@ export function getSeoRunProviderBudget(pages: number) {
 export async function runCreatedSeoBatch(
   runs: CreatedSeoRun[],
   evaluate: (id: string) => Promise<unknown>,
+  options: {
+    concurrency?: number;
+    onProgress?: (progress: SeoBatchProgress) => void;
+  } = {},
 ) {
   let advanced = 0;
-  const stopped: string[] = [];
+  let nextIndex = 0;
+  const stopped = new Set<number>();
+  const workerCount = Math.min(runs.length, options.concurrency ?? 4);
 
-  for (const run of runs) {
-    try {
-      await evaluate(run.id);
-      advanced += 1;
-    } catch {
-      stopped.push(run.target_url);
-    }
-  }
+  await Promise.all(
+    Array.from({ length: workerCount }, async () => {
+      while (nextIndex < runs.length) {
+        const index = nextIndex;
+        nextIndex += 1;
+        const run = runs[index];
+        if (!run) break;
+        try {
+          await evaluate(run.id);
+          advanced += 1;
+        } catch {
+          stopped.add(index);
+        }
+        options.onProgress?.({
+          completed: advanced + stopped.size,
+          total: runs.length,
+          advanced,
+          stopped: stopped.size,
+        });
+      }
+    }),
+  );
 
-  return { advanced, stopped };
+  return {
+    advanced,
+    stopped: runs.flatMap((run, index) => (stopped.has(index) ? [run.target_url] : [])),
+  };
 }
 
 export function canonicalSeoRunTarget(value: string) {

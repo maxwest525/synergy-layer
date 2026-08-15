@@ -21,6 +21,7 @@ import {
   getSeoRunProviderBudget,
   parseSeoRunTargets,
   runCreatedSeoBatch,
+  type SeoBatchProgress,
 } from "@/lib/seo-runs/batch";
 import { isSeoRunEligibleForPreparation } from "@/lib/seo-runs/eligibility";
 import { createSeoRuns, evaluateSeoRun, getSeoRuns } from "@/lib/seo-runs/functions";
@@ -53,6 +54,7 @@ function SeoRunsPage() {
   const [confirmationOpen, setConfirmationOpen] = useState(false);
   const [inputError, setInputError] = useState<string | null>(null);
   const [batchResult, setBatchResult] = useState<string | null>(null);
+  const [batchProgress, setBatchProgress] = useState<SeoBatchProgress | null>(null);
   const startBatch = useMutation({
     mutationFn: async () => {
       const created = await createRuns({
@@ -64,7 +66,10 @@ function SeoRunsPage() {
           })),
         },
       });
-      return runCreatedSeoBatch(created, (id) => evaluateRun({ data: { id } }));
+      setBatchProgress({ completed: 0, total: created.length, advanced: 0, stopped: 0 });
+      return runCreatedSeoBatch(created, (id) => evaluateRun({ data: { id } }), {
+        onProgress: setBatchProgress,
+      });
     },
     onSuccess: async ({ advanced, stopped }) => {
       setBatchResult(
@@ -86,7 +91,15 @@ function SeoRunsPage() {
   const actionableRuns = runs.filter(isSeoRunEligibleForPreparation).slice(0, 10);
   const batchEvaluation = useMutation({
     mutationFn: async () => {
-      return runCreatedSeoBatch(actionableRuns, (id) => evaluateRun({ data: { id } }));
+      setBatchProgress({
+        completed: 0,
+        total: actionableRuns.length,
+        advanced: 0,
+        stopped: 0,
+      });
+      return runCreatedSeoBatch(actionableRuns, (id) => evaluateRun({ data: { id } }), {
+        onProgress: setBatchProgress,
+      });
     },
     onSuccess: async ({ advanced, stopped }) => {
       setBatchResult(
@@ -136,6 +149,8 @@ function SeoRunsPage() {
               const parsed = parseSeoRunTargets(targets);
               setPendingTargets(parsed);
               setInputError(null);
+              setBatchProgress(null);
+              setBatchResult(null);
               setConfirmationOpen(true);
             } catch (error) {
               setInputError(error instanceof Error ? error.message : "Enter valid page URLs.");
@@ -151,7 +166,9 @@ function SeoRunsPage() {
             aria-label="Target page URLs"
           />
           <Button type="submit" variant="outline" disabled={startBatch.isPending}>
-            {startBatch.isPending ? "Starting batch…" : "Review and start SEO batch"}
+            {startBatch.isPending
+              ? `Starting ${batchProgress?.completed ?? 0}/${batchProgress?.total ?? pendingTargets.length}…`
+              : "Review and start SEO batch"}
           </Button>
         </form>
         {inputError ? (
@@ -188,6 +205,13 @@ function SeoRunsPage() {
           </AlertDialogContent>
         </AlertDialog>
       </GlassCard>
+      {batchProgress ? (
+        <p className="text-sm text-muted-foreground" role="status" aria-live="polite">
+          {batchProgress.completed} of {batchProgress.total} pages completed ·{" "}
+          {batchProgress.advanced} advanced · {batchProgress.stopped} stopped with a recorded
+          reason.
+        </p>
+      ) : null}
       {actionableRuns.length ? (
         <GlassCard className="p-5">
           <div className="flex flex-wrap items-start justify-between gap-4">
@@ -202,7 +226,7 @@ function SeoRunsPage() {
               <AlertDialogTrigger asChild>
                 <Button variant="outline" disabled={batchEvaluation.isPending}>
                   {batchEvaluation.isPending
-                    ? "Preparing batch…"
+                    ? `Preparing ${batchProgress?.completed ?? 0}/${batchProgress?.total ?? actionableRuns.length}…`
                     : `Prepare ${actionableRuns.length} run${actionableRuns.length === 1 ? "" : "s"}`}
                 </Button>
               </AlertDialogTrigger>

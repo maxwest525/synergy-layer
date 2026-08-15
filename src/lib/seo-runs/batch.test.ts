@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { getSeoRunProviderBudget, parseSeoRunTargets, runCreatedSeoBatch } from "./batch";
 
@@ -60,5 +60,62 @@ describe("SEO run batch execution", () => {
       advanced: 2,
       stopped: ["https://trumoveinc.com/two"],
     });
+  });
+
+  it("advances pages concurrently without exceeding the configured worker limit", async () => {
+    let active = 0;
+    let peak = 0;
+    let release: (() => void) | undefined;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const runs = Array.from({ length: 5 }, (_, index) => ({
+      id: `run-${index + 1}`,
+      target_url: `https://trumoveinc.com/page-${index + 1}`,
+    }));
+
+    const batch = runCreatedSeoBatch(
+      runs,
+      async () => {
+        active += 1;
+        peak = Math.max(peak, active);
+        await gate;
+        active -= 1;
+      },
+      { concurrency: 2 },
+    );
+
+    await vi.waitFor(() => expect(peak).toBe(2));
+    release?.();
+    await batch;
+
+    expect(peak).toBe(2);
+  });
+
+  it("reports completed, advanced, and stopped counts after every page", async () => {
+    const progress: Array<{
+      completed: number;
+      total: number;
+      advanced: number;
+      stopped: number;
+    }> = [];
+
+    await runCreatedSeoBatch(
+      [
+        { id: "run-1", target_url: "https://trumoveinc.com/one" },
+        { id: "run-2", target_url: "https://trumoveinc.com/two" },
+        { id: "run-3", target_url: "https://trumoveinc.com/three" },
+      ],
+      async (id) => {
+        if (id === "run-2") throw new Error("blocked");
+      },
+      { concurrency: 1, onProgress: (value) => progress.push(value) },
+    );
+
+    expect(progress).toEqual([
+      { completed: 1, total: 3, advanced: 1, stopped: 0 },
+      { completed: 2, total: 3, advanced: 1, stopped: 1 },
+      { completed: 3, total: 3, advanced: 2, stopped: 1 },
+    ]);
   });
 });
