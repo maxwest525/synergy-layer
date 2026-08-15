@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { isChangeState } from "./change-request-state";
 import { parseChangeTransitionInput, parseUuidInput } from "./server-input";
 
 export const getChangeRequest = createServerFn({ method: "GET" })
@@ -38,13 +39,26 @@ async function runTransition(
   const { assertOperator } = await import("./os-admin.server");
   await assertOperator(supabase, userId);
   const { transitionChangeRequest } = await import("./change-requests.server");
-  return transitionChangeRequest(supabase, {
+  const result = await transitionChangeRequest(supabase, {
     id: data.id,
     action,
     userId,
     notes: data.notes ?? null,
     revision: data.revision ?? null,
   });
+  const state = result.changeRequest.state;
+  if (isChangeState(state) && state !== "proposed") {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { recordSeoRunChangeTransition } = await import("./seo-runs/execution.server");
+    await recordSeoRunChangeTransition(
+      supabaseAdmin,
+      result.changeRequest.tenant_id,
+      result.changeRequest.id,
+      userId,
+      state,
+    );
+  }
+  return result;
 }
 
 export const approveChangeRequest = createServerFn({ method: "POST" })

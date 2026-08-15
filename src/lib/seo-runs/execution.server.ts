@@ -1,9 +1,41 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database } from "@/integrations/supabase/types";
+import type { ChangeState } from "../change-request-state";
 import { deriveSeoRunSourceExecutionState, type SourceExecutionStatus } from "./types";
 
 type AdminClient = SupabaseClient<Database>;
+type TransitionState = Exclude<ChangeState, "proposed">;
+
+const transitionEvent: Record<
+  TransitionState,
+  {
+    state: "approved" | "executed" | "verified" | "rejected" | "rolled_back";
+    summary: string;
+  }
+> = {
+  approved: {
+    state: "approved",
+    summary: "An operator approved the exact proposal. No source execution has started.",
+  },
+  applied: {
+    state: "executed",
+    summary:
+      "The approved change is marked applied. Rendered proof and verification remain separate.",
+  },
+  verified: {
+    state: "verified",
+    summary: "An operator verified the change using the required post-change evidence.",
+  },
+  rejected: {
+    state: "rejected",
+    summary: "An operator rejected the proposal. No execution was authorized.",
+  },
+  rolled_back: {
+    state: "rolled_back",
+    summary: "An operator recorded the applied change as rolled back.",
+  },
+};
 
 async function linkedRun(
   admin: AdminClient,
@@ -18,6 +50,58 @@ async function linkedRun(
     .maybeSingle();
   if (error) throw new Error(error.message);
   return data;
+}
+
+export async function recordSeoRunChangeTransition(
+  admin: AdminClient,
+  tenantId: string,
+  changeRequestId: string,
+  actorId: string,
+  changeState: TransitionState,
+): Promise<void> {
+  const run = await linkedRun(admin, tenantId, changeRequestId);
+  if (!run) return;
+
+  const event = transitionEvent[changeState];
+  const { error } = await admin.from("seo_run_events").upsert(
+    {
+      tenant_id: tenantId,
+      run_id: run.id,
+      event_key: `change_state:${changeRequestId}:${changeState}`,
+      state: event.state,
+      summary: event.summary,
+      payload: { change_request_id: changeRequestId, change_request_state: changeState },
+      actor_id: actorId,
+    },
+    { onConflict: "tenant_id,run_id,event_key", ignoreDuplicates: true },
+  );
+  if (error) throw new Error(error.message);
+}
+
+export async function recordSeoRunRenderedProof(
+  admin: AdminClient,
+  tenantId: string,
+  changeRequestId: string,
+  actorId: string,
+  finalUrl: string,
+): Promise<void> {
+  const run = await linkedRun(admin, tenantId, changeRequestId);
+  if (!run) return;
+
+  const { error } = await admin.from("seo_run_events").upsert(
+    {
+      tenant_id: tenantId,
+      run_id: run.id,
+      event_key: `rendered_proof:${changeRequestId}`,
+      state: "executed",
+      summary:
+        "The rendered public page serves the approved title and H1. Outcome verification remains separate.",
+      payload: { change_request_id: changeRequestId, final_url: finalUrl },
+      actor_id: actorId,
+    },
+    { onConflict: "tenant_id,run_id,event_key", ignoreDuplicates: true },
+  );
+  if (error) throw new Error(error.message);
 }
 
 export async function recordSeoRunExecutionStarted(

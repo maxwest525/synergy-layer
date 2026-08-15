@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  recordSeoRunChangeTransition,
   recordSeoRunExecutionStarted,
+  recordSeoRunRenderedProof,
   recordSeoRunSourceExecutionResult,
 } from "./execution.server";
 
@@ -9,10 +11,10 @@ type Event = {
   tenant_id: string;
   run_id: string;
   event_key: string;
-  state: "executing" | "failed";
+  state: "approved" | "executing" | "executed" | "verified" | "rejected" | "failed" | "rolled_back";
   summary: string;
   actor_id: string;
-  payload?: { status: string; change_request_id: string };
+  payload?: Record<string, string>;
 };
 
 type EventUpsertOptions = {
@@ -128,7 +130,7 @@ describe("SEO execution timeline delivery", () => {
       "source_execution:request-456:failed",
       "source_execution:request-456:executing",
     ]);
-    expect(events.map((event) => event.payload?.status)).toEqual(["failed", "committed"]);
+    expect(events.map((event) => event.payload?.["status"])).toEqual(["failed", "committed"]);
   });
 
   it("uses immutable-event conflict options for every execution event", async () => {
@@ -141,5 +143,79 @@ describe("SEO execution timeline delivery", () => {
       { onConflict: "tenant_id,run_id,event_key", ignoreDuplicates: true },
       { onConflict: "tenant_id,run_id,event_key", ignoreDuplicates: true },
     ]);
+  });
+});
+
+describe("SEO change-request transition timeline", () => {
+  it("maps every operator transition to a durable SEO run state event", async () => {
+    const { admin, events } = createAdminClient();
+
+    for (const state of ["approved", "applied", "verified", "rejected", "rolled_back"] as const) {
+      await recordSeoRunChangeTransition(admin, tenantId, changeRequestId, actorId, state);
+    }
+
+    expect(events.map((event) => [event.event_key, event.state])).toEqual([
+      ["change_state:request-456:approved", "approved"],
+      ["change_state:request-456:applied", "executed"],
+      ["change_state:request-456:verified", "verified"],
+      ["change_state:request-456:rejected", "rejected"],
+      ["change_state:request-456:rolled_back", "rolled_back"],
+    ]);
+  });
+
+  it("reconciles a retried transition without duplicating its immutable event", async () => {
+    const { admin, events } = createAdminClient();
+
+    await recordSeoRunChangeTransition(admin, tenantId, changeRequestId, actorId, "approved");
+    await recordSeoRunChangeTransition(admin, tenantId, changeRequestId, actorId, "approved");
+
+    expect(events.filter((event) => event.event_key.includes(":approved"))).toHaveLength(1);
+  });
+});
+
+describe("SEO rendered proof timeline", () => {
+  it("records rendered proof as executed without claiming outcome verification", async () => {
+    const { admin, events } = createAdminClient();
+
+    await recordSeoRunRenderedProof(
+      admin,
+      tenantId,
+      changeRequestId,
+      actorId,
+      "https://trumoveinc.com/services",
+    );
+
+    expect(events.at(-1)).toMatchObject({
+      event_key: "rendered_proof:request-456",
+      state: "executed",
+      payload: {
+        change_request_id: changeRequestId,
+        final_url: "https://trumoveinc.com/services",
+      },
+    });
+    expect(events.at(-1)?.summary).toContain("Outcome verification remains separate");
+  });
+
+  it("deduplicates repeated rendered proof delivery", async () => {
+    const { admin, events } = createAdminClient();
+
+    await recordSeoRunRenderedProof(
+      admin,
+      tenantId,
+      changeRequestId,
+      actorId,
+      "https://trumoveinc.com/services",
+    );
+    await recordSeoRunRenderedProof(
+      admin,
+      tenantId,
+      changeRequestId,
+      actorId,
+      "https://trumoveinc.com/services",
+    );
+
+    expect(events.filter((event) => event.event_key === "rendered_proof:request-456")).toHaveLength(
+      1,
+    );
   });
 });

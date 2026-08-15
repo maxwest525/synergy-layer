@@ -359,14 +359,27 @@ export const checkChangeRequestPublished = createServerFn({ method: "POST" })
   .inputValidator(parseUuidInput)
   .handler(async ({ data, context }) => {
     const { assertOperator } = await import("../os-admin.server");
+    const { requireTenantId } = await import("../tenant.server");
     await assertOperator(context.supabase, context.userId);
+    const tenantId = await requireTenantId(context.supabase);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { createExecutionStore, createRenderedVerifier } = await import("./execute.server");
     const { checkPublishedPage } = await import("./execute");
-    return checkPublishedPage({
+    const result = await checkPublishedPage({
       store: createExecutionStore(supabaseAdmin, context.supabase, context.userId),
       renderer: createRenderedVerifier(),
       requestId: data.id,
       actorId: context.userId,
     });
+    if (result.status === "verified" && result.proof?.finalUrl) {
+      const { recordSeoRunRenderedProof } = await import("../seo-runs/execution.server");
+      await recordSeoRunRenderedProof(
+        supabaseAdmin,
+        tenantId,
+        data.id,
+        context.userId,
+        result.proof.finalUrl,
+      );
+    }
+    return result;
   });
