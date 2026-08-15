@@ -81,11 +81,12 @@ export async function embedDocuments(input: DocumentEmbeddingInput): Promise<num
         requests: batch.map((document) => ({
           model: `models/${model}`,
           content: { parts: [{ text: document.text }] },
-          embedContentConfig: {
-            taskType: "RETRIEVAL_DOCUMENT",
-            title: document.title,
-            outputDimensionality: KNOWLEDGE_EMBEDDING_DIMENSIONS,
-          },
+          // The live Gemini REST batch endpoint currently ignores the newer
+          // nested config object. Its supported compatibility fields enforce
+          // the 768-dimensional pgvector contract correctly.
+          taskType: "RETRIEVAL_DOCUMENT",
+          title: document.title,
+          outputDimensionality: KNOWLEDGE_EMBEDDING_DIMENSIONS,
         })),
       },
       fetcher,
@@ -109,10 +110,8 @@ export async function embedQuery(input: QueryEmbeddingInput): Promise<number[]> 
     {
       model: `models/${model}`,
       content: { parts: [{ text: query }] },
-      embedContentConfig: {
-        taskType: "RETRIEVAL_QUERY",
-        outputDimensionality: KNOWLEDGE_EMBEDDING_DIMENSIONS,
-      },
+      taskType: "RETRIEVAL_QUERY",
+      outputDimensionality: KNOWLEDGE_EMBEDDING_DIMENSIONS,
     },
     input.fetcher ?? fetch,
     input.timeoutMs ?? 30_000,
