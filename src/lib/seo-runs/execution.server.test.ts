@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   recordSeoRunChangeTransition,
   recordSeoRunExecutionStarted,
+  recordSeoRunOutcomeEvidenceReady,
   recordSeoRunRenderedProof,
   recordSeoRunSourceExecutionResult,
 } from "./execution.server";
@@ -14,7 +15,7 @@ type Event = {
   state: "approved" | "executing" | "executed" | "verified" | "rejected" | "failed" | "rolled_back";
   summary: string;
   actor_id: string;
-  payload?: Record<string, string>;
+  payload?: Record<string, string | number>;
 };
 
 type EventUpsertOptions = {
@@ -217,5 +218,42 @@ describe("SEO rendered proof timeline", () => {
     expect(events.filter((event) => event.event_key === "rendered_proof:request-456")).toHaveLength(
       1,
     );
+  });
+});
+
+describe("SEO outcome-evidence timeline", () => {
+  it("records finalized evidence availability without claiming success", async () => {
+    const { admin, events } = createAdminClient();
+
+    await recordSeoRunOutcomeEvidenceReady(admin, tenantId, changeRequestId, {
+      rowCount: 7,
+      firstDate: "2026-08-15",
+      latestDate: "2026-08-21",
+    });
+
+    expect(events.at(-1)).toMatchObject({
+      event_key: "outcome_evidence_ready:request-456",
+      state: "executed",
+      actor_id: null,
+      payload: {
+        change_request_id: changeRequestId,
+        row_count: 7,
+        first_date: "2026-08-15",
+        latest_date: "2026-08-21",
+      },
+    });
+    expect(events.at(-1)?.summary).toContain("does not prove success");
+  });
+
+  it("deduplicates repeated evidence-ready reconciliation", async () => {
+    const { admin, events } = createAdminClient();
+    const evidence = { rowCount: 7, firstDate: "2026-08-15", latestDate: "2026-08-21" };
+
+    await recordSeoRunOutcomeEvidenceReady(admin, tenantId, changeRequestId, evidence);
+    await recordSeoRunOutcomeEvidenceReady(admin, tenantId, changeRequestId, evidence);
+
+    expect(
+      events.filter((event) => event.event_key === "outcome_evidence_ready:request-456"),
+    ).toHaveLength(1);
   });
 });

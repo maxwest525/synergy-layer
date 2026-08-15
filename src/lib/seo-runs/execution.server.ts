@@ -104,6 +104,36 @@ export async function recordSeoRunRenderedProof(
   if (error) throw new Error(error.message);
 }
 
+export async function recordSeoRunOutcomeEvidenceReady(
+  admin: AdminClient,
+  tenantId: string,
+  changeRequestId: string,
+  evidence: { rowCount: number; firstDate: string; latestDate: string },
+): Promise<void> {
+  const run = await linkedRun(admin, tenantId, changeRequestId);
+  if (!run) return;
+
+  const { error } = await admin.from("seo_run_events").upsert(
+    {
+      tenant_id: tenantId,
+      run_id: run.id,
+      event_key: `outcome_evidence_ready:${changeRequestId}`,
+      state: "executed",
+      summary:
+        "Finalized post-change Search Console evidence is ready for operator review. Availability alone does not prove success.",
+      payload: {
+        change_request_id: changeRequestId,
+        row_count: evidence.rowCount,
+        first_date: evidence.firstDate,
+        latest_date: evidence.latestDate,
+      },
+      actor_id: null,
+    },
+    { onConflict: "tenant_id,run_id,event_key", ignoreDuplicates: true },
+  );
+  if (error) throw new Error(error.message);
+}
+
 export async function recordSeoRunExecutionStarted(
   admin: AdminClient,
   tenantId: string,
