@@ -6,7 +6,11 @@ describe("connector probes", () => {
   it("probes n8n health without triggering a workflow", async () => {
     const fetcher = vi.fn(async () => new Response('{"status":"ok"}', { status: 200 }));
     const result = await probeConnector("n8n", {
-      env: { N8N_BASE_URL: "https://n8n.example.com/", N8N_API_KEY: "secret" },
+      env: {
+        N8N_BASE_URL: "https://n8n.example.com/",
+        N8N_WEBHOOK_SECRET: "webhook-secret",
+        N8N_SEO_WORKFLOW_WEBHOOK_URL: "https://n8n.example.com/webhook/governed",
+      },
       fetcher,
     });
 
@@ -38,7 +42,7 @@ describe("connector probes", () => {
   it("refuses to probe a connector with incomplete configuration", async () => {
     const fetcher = vi.fn();
     const result = await probeConnector("n8n", {
-      env: { N8N_API_KEY: "secret" },
+      env: { N8N_WEBHOOK_SECRET: "secret" },
       fetcher,
     });
 
@@ -50,7 +54,11 @@ describe("connector probes", () => {
   it("records HTTP failure without leaking the response body", async () => {
     const fetcher = vi.fn(async () => new Response("upstream secret detail", { status: 503 }));
     const result = await probeConnector("n8n", {
-      env: { N8N_BASE_URL: "https://n8n.example.com", N8N_API_KEY: "secret" },
+      env: {
+        N8N_BASE_URL: "https://n8n.example.com",
+        N8N_WEBHOOK_SECRET: "webhook-secret",
+        N8N_SEO_WORKFLOW_WEBHOOK_URL: "https://n8n.example.com/webhook/governed",
+      },
       fetcher,
     });
 
@@ -68,7 +76,11 @@ describe("connector probes", () => {
         }),
     );
     const result = await probeConnector("n8n", {
-      env: { N8N_BASE_URL: "https://n8n.example.com", N8N_API_KEY: "secret" },
+      env: {
+        N8N_BASE_URL: "https://n8n.example.com",
+        N8N_WEBHOOK_SECRET: "webhook-secret",
+        N8N_SEO_WORKFLOW_WEBHOOK_URL: "https://n8n.example.com/webhook/governed",
+      },
       fetcher,
       timeoutMs: 2,
     });

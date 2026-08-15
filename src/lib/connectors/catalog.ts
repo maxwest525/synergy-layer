@@ -135,8 +135,8 @@ export const CONNECTOR_CATALOG = [
     key: "n8n",
     label: "n8n",
     provider: "Self-hosted",
-    credentialStrategies: [["N8N_API_KEY"]],
-    configRequirements: ["N8N_BASE_URL"],
+    credentialStrategies: [["N8N_WEBHOOK_SECRET"]],
+    configRequirements: ["N8N_BASE_URL", "N8N_SEO_WORKFLOW_WEBHOOK_URL"],
     safeConfig: { baseUrl: "N8N_BASE_URL" },
   }),
   item({

@@ -31,7 +31,8 @@ describe("connector catalog", () => {
       DATAFORSEO_LOGIN: "max@example.com",
       DATAFORSEO_PASSWORD: "super-secret",
       N8N_BASE_URL: "https://automation.example.com/",
-      N8N_API_KEY: "n8n-secret",
+      N8N_WEBHOOK_SECRET: "webhook-secret",
+      N8N_SEO_WORKFLOW_WEBHOOK_URL: "https://automation.example.com/webhook/governed-seo",
     };
 
     const states = describeConnectorReadiness(env);
@@ -41,7 +42,7 @@ describe("connector catalog", () => {
     expect(dataforseo.state).toBe("configured");
     expect(dataforseo.secretNames).toEqual(["DATAFORSEO_LOGIN", "DATAFORSEO_PASSWORD"]);
     expect(JSON.stringify(states)).not.toContain("super-secret");
-    expect(JSON.stringify(states)).not.toContain("n8n-secret");
+    expect(JSON.stringify(states)).not.toContain("webhook-secret");
     expect(n8n.safeConfig).toEqual({ baseUrl: "https://automation.example.com" });
   });
 
@@ -66,7 +67,7 @@ describe("connector catalog", () => {
   });
 
   it("reports missing requirements without claiming health", () => {
-    const n8n = describeConnectorReadiness({ N8N_API_KEY: "key" }).find(
+    const n8n = describeConnectorReadiness({ N8N_WEBHOOK_SECRET: "secret" }).find(
       (item) => item.key === "n8n",
     )!;
 
