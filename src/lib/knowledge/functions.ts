@@ -38,7 +38,7 @@ export const ingestAndActivateGovernedKnowledge = createServerFn({ method: "POST
     const apiKey = process.env["GEMINI_API_KEY"]?.trim() ?? "";
     if (!apiKey) throw new Error("GEMINI_API_KEY is not configured.");
 
-    const sources = loadGovernedKnowledgeSources();
+    const sources = loadGovernedKnowledgeSources({ bundled: true });
     if (sources.length !== 18) {
       throw new Error(`Expected exactly 18 governed sources; found ${sources.length}.`);
     }

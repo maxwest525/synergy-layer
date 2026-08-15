@@ -22,14 +22,22 @@ function approvedRequestCount(args: string[]): number | null {
 async function main() {
   const live = process.argv.includes("--live");
   const sources = loadGovernedKnowledgeSources();
-  const inventory = sources.map((source) => ({
-    stableKey: source.stableKey,
-    versionLabel: source.versionLabel,
-    contentSha256: source.contentSha256,
-    sourceSizeBytes: source.sourceSizeBytes,
-    chunkCount: chunkKnowledgeSource({ sourceTitle: source.title, content: source.content }).length,
-  }));
+  const inventory = sources.map((source) => {
+    const chunks = chunkKnowledgeSource({ sourceTitle: source.title, content: source.content });
+    return {
+      stableKey: source.stableKey,
+      versionLabel: source.versionLabel,
+      contentSha256: source.contentSha256,
+      sourceSizeBytes: source.sourceSizeBytes,
+      chunkCount: chunks.length,
+      estimatedInputTokens: chunks.reduce((total, chunk) => total + chunk.tokenEstimate, 0),
+    };
+  });
   const chunkCount = inventory.reduce((total, source) => total + source.chunkCount, 0);
+  const estimatedInputTokens = inventory.reduce(
+    (total, source) => total + source.estimatedInputTokens,
+    0,
+  );
   const modelRequestCount = inventory.reduce(
     (total, source) => total + Math.ceil(source.chunkCount / 50),
     0,
@@ -38,6 +46,7 @@ async function main() {
     mode: live ? "live" : "dry-run",
     sourceCount: sources.length,
     chunkCount,
+    estimatedInputTokens,
     modelRequestCount,
     embeddingModel: "gemini-embedding-001",
     dimensions: 768,

@@ -22,6 +22,15 @@ describe("governed production source manifest", () => {
     );
   });
 
+  it("loads the same source inventory from the production bundle", () => {
+    const filesystemSources = loadGovernedKnowledgeSources();
+    const bundledSources = loadGovernedKnowledgeSources({ bundled: true });
+
+    expect(bundledSources.map((source) => source.contentSha256)).toEqual(
+      filesystemSources.map((source) => source.contentSha256),
+    );
+  });
+
   it("proves the Authority Science source and immutable source checksums", () => {
     const sources = loadGovernedKnowledgeSources();
     const authority = sources.find((source) => source.stableKey === "playbook.seo-aeo-laws")!;
