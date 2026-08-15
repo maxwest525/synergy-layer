@@ -13,7 +13,7 @@ describe("signal integrity", () => {
     const migration = readFileSync(
       new URL("../../supabase/migrations/20260814070000_signal_integrity_recovery.sql", import.meta.url),
       "utf8",
-    );
+    ).replaceAll("\r\n", "\n");
     expect(migration.split("$sync_action$")).toHaveLength(3);
     expect(migration).toContain(`AS $sync_action$
 DECLARE`);
