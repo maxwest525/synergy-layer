@@ -1,7 +1,12 @@
 import { Buffer } from "node:buffer";
 
 import { GOVERNED_REPO } from "../execution/allowlist";
-import { CONNECTOR_CATALOG, describeConnectorReadiness, type ConnectorKey } from "./catalog";
+import {
+  CONNECTOR_CATALOG,
+  describeConnectorReadiness,
+  withConnectorDefaults,
+  type ConnectorKey,
+} from "./catalog";
 
 export type ConnectorProbeResult = {
   key: ConnectorKey;
@@ -11,6 +16,7 @@ export type ConnectorProbeResult = {
     | "configured_no_safe_probe"
     | "success"
     | "http_error"
+    | "schema_error"
     | "timeout"
     | "network_error";
   checkedAt: string;
@@ -94,18 +100,10 @@ function configuredRequest(
         url: `https://serpapi.com/account.json?api_key=${encodeURIComponent(env["SERPAPI_API_KEY"]!)}`,
         headers: {},
       };
-    case "google_ads":
-      return {
-        url: "https://googleads.googleapis.com/v25/customers:listAccessibleCustomers",
-        headers: {
-          Authorization: `Bearer ${env["GOOGLE_ADS_ACCESS_TOKEN"]}`,
-          "developer-token": env["GOOGLE_ADS_DEVELOPER_TOKEN"]!,
-        },
-      };
     case "n8n":
       return {
         url: `${env["N8N_BASE_URL"]!.replace(/\/+$/, "")}/healthz`,
-        headers: { "X-N8N-API-KEY": env["N8N_API_KEY"]! },
+        headers: {},
       };
     case "vps_scraper":
       return {
@@ -141,7 +139,11 @@ export async function probeConnector(
   key: ConnectorKey,
   options: ProbeOptions = {},
 ): Promise<ConnectorProbeResult> {
-  const env = options.env ?? process.env;
+  if (key === "google_ads") {
+    const { probeGoogleAds } = await import("./google-ads.server");
+    return probeGoogleAds(options);
+  }
+  const env = withConnectorDefaults(options.env ?? process.env);
   const checkedAt = new Date().toISOString();
   const readiness = describeConnectorReadiness(env).find((item) => item.key === key)!;
   if (readiness.state === "missing") {
@@ -166,50 +168,7 @@ export async function probeConnector(
     };
   }
 
-  let requestEnv = env;
-  if (key === "google_ads" && !env["GOOGLE_ADS_ACCESS_TOKEN"]?.trim()) {
-    try {
-      const tokenResponse = await (options.fetcher ?? fetch)(
-        "https://www.googleapis.com/oauth2/v3/token",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: new URLSearchParams({
-            grant_type: "refresh_token",
-            client_id: env["GOOGLE_ADS_OAUTH_CLIENT_ID"]!,
-            client_secret: env["GOOGLE_ADS_OAUTH_CLIENT_SECRET"]!,
-            refresh_token: env["GOOGLE_ADS_OAUTH_REFRESH_TOKEN"]!,
-          }),
-        },
-      );
-      const payload = (await tokenResponse.json()) as { access_token?: unknown };
-      if (!tokenResponse.ok || typeof payload.access_token !== "string") {
-        return {
-          key,
-          health: "failing",
-          outcome: "http_error",
-          checkedAt,
-          missing: [],
-          proof: {
-            statusCode: tokenResponse.status,
-            endpoint: "https://www.googleapis.com/oauth2/v3/token",
-          },
-        };
-      }
-      requestEnv = { ...env, GOOGLE_ADS_ACCESS_TOKEN: payload.access_token };
-    } catch {
-      return {
-        key,
-        health: "failing",
-        outcome: "network_error",
-        checkedAt,
-        missing: [],
-        proof: { endpoint: "https://www.googleapis.com/oauth2/v3/token" },
-      };
-    }
-  }
-
-  const descriptor = configuredRequest(key, requestEnv);
+  const descriptor = configuredRequest(key, env);
   if (!descriptor) {
     return {
       key,

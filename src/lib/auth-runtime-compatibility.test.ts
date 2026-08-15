@@ -14,4 +14,14 @@ describe("Lovable preview auth runtime compatibility", () => {
       expect(source).not.toMatch(/\bgetRequest\s*\(/);
     },
   );
+
+  it("uses one shared shell session instead of competing getSession requests", () => {
+    const hook = readFileSync(`${sourceRoot}/hooks/use-operator-session.ts`, "utf8");
+    const shell = readFileSync(`${sourceRoot}/components/os/shell.tsx`, "utf8");
+    const switcher = readFileSync(`${sourceRoot}/components/os/tenant-switcher.tsx`, "utf8");
+
+    expect(hook).not.toContain("auth.getSession(");
+    expect(shell).toContain("<TenantSwitcher session={session}");
+    expect(switcher).not.toContain("useOperatorSession");
+  });
 });

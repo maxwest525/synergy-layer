@@ -39,16 +39,18 @@ describe("connector probes", () => {
     );
   });
 
-  it("refuses to probe a connector with incomplete configuration", async () => {
-    const fetcher = vi.fn();
+  it("probes the verified n8n health endpoint when only the webhook secret is configured", async () => {
+    const fetcher = vi.fn(async () => new Response('{"status":"ok"}', { status: 200 }));
     const result = await probeConnector("n8n", {
       env: { N8N_WEBHOOK_SECRET: "secret" },
       fetcher,
     });
 
-    expect(result).toMatchObject({ health: "unknown", outcome: "missing_configuration" });
-    expect(result.missing).toContain("N8N_BASE_URL");
-    expect(fetcher).not.toHaveBeenCalled();
+    expect(result).toMatchObject({ health: "healthy", outcome: "success" });
+    expect(fetcher).toHaveBeenCalledWith(
+      "https://n8n.marky.systems/healthz",
+      expect.objectContaining({ method: "GET" }),
+    );
   });
 
   it("records HTTP failure without leaking the response body", async () => {

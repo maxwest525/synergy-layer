@@ -22,4 +22,18 @@ describe("AOOS operator surface", () => {
     expect(classes).toContain("text-primary");
     expect(classes.split(" ")).not.toContain("bg-primary");
   });
+
+  it("keeps root error and not-found actions out of the solid green style", () => {
+    const rootRoute = readFileSync(`${routesDirectory}/__root.tsx`, "utf8");
+
+    expect(rootRoute).not.toContain("bg-primary");
+  });
+
+  it("links a governed proposal back to the SEO run that created it", () => {
+    const changeDetail = readFileSync(`${routesDirectory}/changes.$id.tsx`, "utf8");
+
+    expect(changeDetail).toContain("originSeoRun");
+    expect(changeDetail).toContain('to="/seo-runs/$id"');
+    expect(changeDetail).toContain("Back to originating SEO run");
+  });
 });

@@ -66,13 +66,28 @@ describe("connector catalog", () => {
     ).toBe("configured");
   });
 
-  it("reports missing requirements without claiming health", () => {
+  it("uses the verified AOOS VPS endpoints without treating them as secrets", () => {
     const n8n = describeConnectorReadiness({ N8N_WEBHOOK_SECRET: "secret" }).find(
       (item) => item.key === "n8n",
     )!;
+    const vps = describeConnectorReadiness({ VPS_SCRAPER_API_KEY: "secret" }).find(
+      (item) => item.key === "vps_scraper",
+    )!;
 
-    expect(n8n.state).toBe("missing");
-    expect(n8n.missing).toContain("N8N_BASE_URL");
+    expect(n8n.state).toBe("configured");
+    expect(n8n.missing).toEqual([]);
+    expect(n8n.safeConfig).toEqual({ baseUrl: "https://n8n.marky.systems" });
+    expect(vps.state).toBe("configured");
+    expect(vps.safeConfig).toEqual({ baseUrl: "https://crawl.marky.systems" });
     expect(n8n.health).toBe("unknown");
+  });
+
+  it("uses the stable Gemini generation model when the key is configured", () => {
+    const gemini = describeConnectorReadiness({ GEMINI_API_KEY: "secret" }).find(
+      (item) => item.key === "gemini_generation",
+    )!;
+
+    expect(gemini.state).toBe("configured");
+    expect(gemini.safeConfig).toEqual({ model: "gemini-3.6-flash" });
   });
 });

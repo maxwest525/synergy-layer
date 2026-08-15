@@ -1,0 +1,93 @@
+[
+  {
+    "id": "aoosGovernedSeo01",
+    "name": "AOOS Governed SEO Preflight",
+    "active": true,
+    "nodes": [
+      {
+        "id": "webhook",
+        "webhookId": "466ac935-4ab6-4767-bf8e-82d98fa7cd0b",
+        "name": "AOOS SEO Run",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [0, 0],
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "aoos-governed-seo",
+          "authentication": "headerAuth",
+          "responseMode": "responseNode",
+          "options": {}
+        },
+        "credentials": {
+          "httpHeaderAuth": {
+            "id": "aoosWebhookAuth01",
+            "name": "AOOS Governed Webhook Auth"
+          }
+        }
+      },
+      {
+        "id": "crawl",
+        "name": "Capture Rendered Page",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [260, 0],
+        "parameters": {
+          "method": "POST",
+          "url": "https://crawl.marky.systems/crawl",
+          "sendBody": true,
+          "contentType": "raw",
+          "rawContentType": "application/json",
+          "body": "={{ JSON.stringify({ urls: [$json.body.targetUrl] }) }}",
+          "options": {}
+        },
+        "credentials": {
+          "httpHeaderAuth": {
+            "id": "aoosCrawlAuth01",
+            "name": "AOOS Crawl4AI Auth"
+          }
+        }
+      },
+      {
+        "id": "respond",
+        "name": "Return Evidence",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.4,
+        "position": [520, 0],
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ JSON.stringify({ accepted: true, provider: \"crawl4ai\", evidence: $json }) }}",
+          "options": {
+            "responseCode": 200
+          }
+        }
+      }
+    ],
+    "connections": {
+      "AOOS SEO Run": {
+        "main": [
+          [
+            {
+              "node": "Capture Rendered Page",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Capture Rendered Page": {
+        "main": [
+          [
+            {
+              "node": "Return Evidence",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "settings": {
+      "executionOrder": "v1"
+    }
+  }
+]

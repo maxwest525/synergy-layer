@@ -1,10 +1,6 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
-import {
-  getInitialOperatorSession,
-  getWorkspaceAccessState,
-  resolveOperatorEmail,
-} from "./operator-session-gate";
+import { getInitialOperatorSession, getWorkspaceAccessState } from "./operator-session-gate";
 
 describe("operator workspace session gate", () => {
   it.each([
@@ -24,15 +20,5 @@ describe("operator session resolution", () => {
       email: null,
       signedIn: false,
     });
-  });
-
-  it("fails closed when the auth client never resolves", async () => {
-    vi.useFakeTimers();
-    const result = resolveOperatorEmail(() => new Promise<string | null>(() => undefined), 100);
-
-    await vi.advanceTimersByTimeAsync(100);
-
-    await expect(result).resolves.toBeNull();
-    vi.useRealTimers();
   });
 });

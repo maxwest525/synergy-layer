@@ -40,6 +40,21 @@ export type ConnectorReadiness = {
 
 const item = (value: ConnectorCatalogItem): ConnectorCatalogItem => value;
 
+export const AOOS_CONNECTOR_DEFAULTS = {
+  GEMINI_MODEL: "gemini-3.6-flash",
+  GEMINI_EMBEDDING_MODEL: "gemini-embedding-001",
+  N8N_BASE_URL: "https://n8n.marky.systems",
+  N8N_SEO_WORKFLOW_WEBHOOK_URL: "https://n8n.marky.systems/webhook/aoos-governed-seo",
+  VPS_SCRAPER_BASE_URL: "https://crawl.marky.systems",
+} as const;
+
+export function withConnectorDefaults(env: Record<string, string | undefined>) {
+  const configured = Object.fromEntries(
+    Object.entries(env).filter((entry): entry is [string, string] => Boolean(entry[1]?.trim())),
+  );
+  return { ...AOOS_CONNECTOR_DEFAULTS, ...configured };
+}
+
 export const CONNECTOR_CATALOG = [
   item({
     key: "supabase",
@@ -195,10 +210,11 @@ function safeValue(name: string, raw: string): string {
 export function describeConnectorReadiness(
   env: Record<string, string | undefined>,
 ): ConnectorReadiness[] {
+  const resolvedEnv = withConnectorDefaults(env);
   return CONNECTOR_CATALOG.map((connector) => {
     const strategies = connector.credentialStrategies.map((strategy) => ({
       names: [...strategy],
-      missing: strategy.filter((name) => !present(env, name)),
+      missing: strategy.filter((name) => !present(resolvedEnv, name)),
     }));
     const selected =
       strategies.find((strategy) => strategy.missing.length === 0) ??
@@ -207,11 +223,11 @@ export function describeConnectorReadiness(
           left.missing.length - right.missing.length || left.names.length - right.names.length,
       )[0]!;
     const missingConfig = (connector.configRequirements ?? []).filter(
-      (name) => !present(env, name),
+      (name) => !present(resolvedEnv, name),
     );
     const safeConfig = Object.fromEntries(
       Object.entries(connector.safeConfig ?? {}).flatMap(([key, name]) => {
-        const value = env[name];
+        const value = resolvedEnv[name];
         return value?.trim() ? [[key, safeValue(name, value)]] : [];
       }),
     );
@@ -226,7 +242,7 @@ export function describeConnectorReadiness(
       provider: connector.provider,
       state: missing.length === 0 ? "configured" : "missing",
       health: "unknown",
-      secretNames: selected.names.filter((name) => present(env, name)),
+      secretNames: selected.names.filter((name) => present(resolvedEnv, name)),
       missing,
       safeConfig,
     };

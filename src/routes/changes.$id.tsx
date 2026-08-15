@@ -404,6 +404,16 @@ function ChangeRequestPage() {
         }
       />
 
+      {data.originSeoRun ? (
+        <div>
+          <Button asChild variant="outline" size="sm">
+            <Link to="/seo-runs/$id" params={{ id: data.originSeoRun.id }}>
+              Back to originating SEO run
+            </Link>
+          </Button>
+        </div>
+      ) : null}
+
       <GlassCard className="p-5">
         <h2 className="text-sm font-semibold text-foreground">What you are approving</h2>
         <p className="mt-2 text-sm text-muted-foreground">

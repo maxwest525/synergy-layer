@@ -45,6 +45,7 @@ import { Route as RecommendationsIdRouteImport } from './routes/recommendations.
 import { Route as SchedulerIndexRouteImport } from './routes/scheduler.index'
 import { Route as SchedulerIdRouteImport } from './routes/scheduler.$id'
 import { Route as SeoRunsIndexRouteImport } from './routes/seo-runs.index'
+import { Route as SeoRunsIdRouteImport } from './routes/seo-runs.$id'
 import { Route as WorkflowsIndexRouteImport } from './routes/workflows.index'
 import { Route as WorkflowsIdRouteImport } from './routes/workflows.$id'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
@@ -236,6 +237,11 @@ const SeoRunsIndexRoute = SeoRunsIndexRouteImport.update({
   path: '/',
   getParentRoute: () => SeoRunsRoute,
 } as any)
+const SeoRunsIdRoute = SeoRunsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => SeoRunsRoute,
+} as any)
 const WorkflowsIndexRoute = WorkflowsIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -311,6 +317,7 @@ export interface FileRoutesByFullPath {
   '/knowledge/manual': typeof KnowledgeManualRoute
   '/recommendations/$id': typeof RecommendationsIdRoute
   '/scheduler/$id': typeof SchedulerIdRoute
+  '/seo-runs/$id': typeof SeoRunsIdRoute
   '/workflows/$id': typeof WorkflowsIdRoute
   '/agents/': typeof AgentsIndexRoute
   '/assets/': typeof AssetsIndexRoute
@@ -349,6 +356,7 @@ export interface FileRoutesByTo {
   '/knowledge/manual': typeof KnowledgeManualRoute
   '/recommendations/$id': typeof RecommendationsIdRoute
   '/scheduler/$id': typeof SchedulerIdRoute
+  '/seo-runs/$id': typeof SeoRunsIdRoute
   '/workflows/$id': typeof WorkflowsIdRoute
   '/agents': typeof AgentsIndexRoute
   '/assets': typeof AssetsIndexRoute
@@ -396,6 +404,7 @@ export interface FileRoutesById {
   '/knowledge/manual': typeof KnowledgeManualRoute
   '/recommendations/$id': typeof RecommendationsIdRoute
   '/scheduler/$id': typeof SchedulerIdRoute
+  '/seo-runs/$id': typeof SeoRunsIdRoute
   '/workflows/$id': typeof WorkflowsIdRoute
   '/agents/': typeof AgentsIndexRoute
   '/assets/': typeof AssetsIndexRoute
@@ -444,6 +453,7 @@ export interface FileRouteTypes {
     | '/knowledge/manual'
     | '/recommendations/$id'
     | '/scheduler/$id'
+    | '/seo-runs/$id'
     | '/workflows/$id'
     | '/agents/'
     | '/assets/'
@@ -482,6 +492,7 @@ export interface FileRouteTypes {
     | '/knowledge/manual'
     | '/recommendations/$id'
     | '/scheduler/$id'
+    | '/seo-runs/$id'
     | '/workflows/$id'
     | '/agents'
     | '/assets'
@@ -528,6 +539,7 @@ export interface FileRouteTypes {
     | '/knowledge/manual'
     | '/recommendations/$id'
     | '/scheduler/$id'
+    | '/seo-runs/$id'
     | '/workflows/$id'
     | '/agents/'
     | '/assets/'
@@ -827,6 +839,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SeoRunsIndexRouteImport
       parentRoute: typeof SeoRunsRoute
     }
+    '/seo-runs/$id': {
+      id: '/seo-runs/$id'
+      path: '/$id'
+      fullPath: '/seo-runs/$id'
+      preLoaderRoute: typeof SeoRunsIdRouteImport
+      parentRoute: typeof SeoRunsRoute
+    }
     '/workflows/': {
       id: '/workflows/'
       path: '/'
@@ -985,10 +1004,12 @@ const SchedulerRouteWithChildren = SchedulerRoute._addFileChildren(
 )
 
 interface SeoRunsRouteChildren {
+  SeoRunsIdRoute: typeof SeoRunsIdRoute
   SeoRunsIndexRoute: typeof SeoRunsIndexRoute
 }
 
 const SeoRunsRouteChildren: SeoRunsRouteChildren = {
+  SeoRunsIdRoute: SeoRunsIdRoute,
   SeoRunsIndexRoute: SeoRunsIndexRoute,
 }
 

@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { GEMINI_API_ORIGIN, generateTitleH1Wording } from "./gemini.server";
+import {
+  DEFAULT_GEMINI_GENERATION_MODEL,
+  GEMINI_API_ORIGIN,
+  generateTitleH1Wording,
+} from "./gemini.server";
 
 describe("direct Gemini structured output", () => {
   it("calls Google directly with a strict wording-only JSON schema", async () => {
@@ -69,5 +73,38 @@ describe("direct Gemini structured output", () => {
         fetcher,
       }),
     ).rejects.toThrow(/structured JSON/i);
+  });
+
+  it("uses the current stable production model when no model override is configured", async () => {
+    const fetcher = vi.fn(async () =>
+      Response.json({
+        candidates: [
+          {
+            content: {
+              parts: [
+                {
+                  text: JSON.stringify({
+                    seoTitle: "Long Distance Movers | TruMove",
+                    h1: "Long Distance Moving Services",
+                    rationale: "Matches the service intent.",
+                  }),
+                },
+              ],
+            },
+          },
+        ],
+      }),
+    );
+
+    await generateTitleH1Wording({
+      apiKey: "test-key",
+      model: "",
+      prompt: "draft",
+      fetcher,
+    });
+
+    expect(fetcher.mock.calls[0]?.[0]).toBe(
+      `${GEMINI_API_ORIGIN}/v1beta/models/${DEFAULT_GEMINI_GENERATION_MODEL}:generateContent`,
+    );
   });
 });

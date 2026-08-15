@@ -39,6 +39,13 @@ export type SeoPreflight = {
 };
 
 export type ExecutionState = "queued" | "running" | "succeeded" | "failed" | null;
+export type SourceExecutionStatus = "committed" | "reconciled" | "replayed" | "refused" | "failed";
+
+export function deriveSeoRunSourceExecutionState(
+  status: SourceExecutionStatus,
+): "executing" | "failed" {
+  return status === "refused" || status === "failed" ? "failed" : "executing";
+}
 
 export function deriveSeoRunState(
   changeState: ChangeState | null,
