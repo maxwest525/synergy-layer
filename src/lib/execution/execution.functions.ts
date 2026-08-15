@@ -317,16 +317,41 @@ export const executeChangeRequest = createServerFn({ method: "POST" })
   .inputValidator(parseUuidInput)
   .handler(async ({ data, context }) => {
     const { assertOperator } = await import("../os-admin.server");
+    const { requireTenantId } = await import("../tenant.server");
     await assertOperator(context.supabase, context.userId);
+    const tenantId = await requireTenantId(context.supabase);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { createExecutionStore, createGithubApi } = await import("./execute.server");
     const { executeSourceChange } = await import("./execute");
-    return executeSourceChange({
-      store: createExecutionStore(supabaseAdmin, context.supabase, context.userId),
-      github: createGithubApi(),
-      requestId: data.id,
-      actorId: context.userId,
-    });
+    const { recordSeoRunExecutionStarted, recordSeoRunSourceExecutionResult } =
+      await import("../seo-runs/execution.server");
+    await recordSeoRunExecutionStarted(supabaseAdmin, tenantId, data.id, context.userId);
+    let result;
+    try {
+      result = await executeSourceChange({
+        store: createExecutionStore(supabaseAdmin, context.supabase, context.userId),
+        github: createGithubApi(),
+        requestId: data.id,
+        actorId: context.userId,
+      });
+    } catch (error) {
+      await recordSeoRunSourceExecutionResult(
+        supabaseAdmin,
+        tenantId,
+        data.id,
+        context.userId,
+        "failed",
+      );
+      throw error;
+    }
+    await recordSeoRunSourceExecutionResult(
+      supabaseAdmin,
+      tenantId,
+      data.id,
+      context.userId,
+      result.status,
+    );
+    return result;
   });
 
 export const checkChangeRequestPublished = createServerFn({ method: "POST" })

@@ -9,13 +9,23 @@ export const definition: ModuleDefinition = {
       name: "Google Ads",
       kind: "connector",
       category: "Paid media",
-      description: "Campaign, budget, and performance access for paid search.",
-      integrationState: "pending",
+      description:
+        "Read-only Google Ads account-access probe. AOOS can list accessible customer resource names to prove OAuth and developer-token access; campaign reads and all writes remain unimplemented.",
+      integrationState: "real",
       authKind: "oauth",
       operations: [
-        { name: "campaigns.list", description: "Read campaign structure." },
-        { name: "budgets.update", description: "Change a campaign budget.", mutates: true },
+        {
+          name: "customers.list_accessible",
+          description:
+            "List accessible customer resource names without reading campaigns or spend.",
+          mutates: false,
+        },
       ],
+      config: {
+        mutating: false,
+        provider: "google_ads_v25",
+        prohibited: ["campaign_reads", "budget_writes", "bid_writes", "ad_writes"],
+      },
     },
     {
       key: "growth.opportunity_scanner",

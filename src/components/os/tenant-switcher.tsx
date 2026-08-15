@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { Building2, Check, ChevronsUpDown } from "lucide-react";
 import { useState } from "react";
 
-import { useOperatorSession } from "@/hooks/use-operator-session";
+import type { OperatorSession } from "@/hooks/use-operator-session";
 import { getTenantContext, switchTenant } from "@/lib/tenant.functions";
 import { cn } from "@/lib/utils";
 
@@ -13,12 +13,10 @@ import { cn } from "@/lib/utils";
  * profile server-side, so every read and every run is scoped to the same
  * client no matter which surface starts the work.
  */
-export function TenantSwitcher() {
+export function TenantSwitcher({ session }: { session: OperatorSession }) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
-  const session = useOperatorSession();
-
   const loadContext = useServerFn(getTenantContext);
   const switchFn = useServerFn(switchTenant);
 

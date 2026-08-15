@@ -5,6 +5,13 @@ const sql = readFileSync(
   new URL("../../../supabase/migrations/20260814170000_seo_runs.sql", import.meta.url),
   "utf8",
 );
+const lifecycleSql = readFileSync(
+  new URL(
+    "../../../supabase/migrations/20260815070000_seo_run_lifecycle_events.sql",
+    import.meta.url,
+  ),
+  "utf8",
+);
 
 describe("visible SEO run persistence contract", () => {
   it("stores the full visible workflow and links the concrete proposal", () => {
@@ -43,5 +50,16 @@ describe("visible SEO run persistence contract", () => {
     expect(sql).toMatch(/WHEN 'approved' THEN 'approved'/i);
     expect(sql).toMatch(/WHEN 'applied' THEN 'executed'/i);
     expect(sql).toMatch(/AFTER UPDATE OF state ON public\.change_requests/i);
+  });
+
+  it("appends each proposal lifecycle stage to the originating run timeline", () => {
+    expect(lifecycleSql).toMatch(/INSERT INTO public\.seo_run_events/i);
+    expect(lifecycleSql).toMatch(/change_state:/i);
+    expect(lifecycleSql).toMatch(/ON CONFLICT \(tenant_id, run_id, event_key\) DO NOTHING/i);
+    expect(lifecycleSql).toContain("'approved'");
+    expect(lifecycleSql).toContain("'executed'");
+    expect(lifecycleSql).toContain("'verified'");
+    expect(lifecycleSql).toContain("'rejected'");
+    expect(lifecycleSql).toContain("'rolled_back'");
   });
 });

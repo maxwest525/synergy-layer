@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import { assessSeoPreflight } from "./orchestrator.server";
-import { deriveSeoRunState, SEO_REQUIRED_CONNECTORS } from "./types";
+import {
+  deriveSeoRunSourceExecutionState,
+  deriveSeoRunState,
+  SEO_REQUIRED_CONNECTORS,
+} from "./types";
 
 describe("SEO run preflight", () => {
   it("blocks when a required real connector or real evidence is missing", () => {
@@ -41,5 +45,13 @@ describe("SEO run state projection", () => {
     expect(deriveSeoRunState("verified")).toBe("verified");
     expect(deriveSeoRunState("rejected")).toBe("rejected");
     expect(deriveSeoRunState("rolled_back")).toBe("rolled_back");
+  });
+
+  it("keeps a committed source change executing until rendered proof exists", () => {
+    expect(deriveSeoRunSourceExecutionState("committed")).toBe("executing");
+    expect(deriveSeoRunSourceExecutionState("reconciled")).toBe("executing");
+    expect(deriveSeoRunSourceExecutionState("replayed")).toBe("executing");
+    expect(deriveSeoRunSourceExecutionState("refused")).toBe("failed");
+    expect(deriveSeoRunSourceExecutionState("failed")).toBe("failed");
   });
 });

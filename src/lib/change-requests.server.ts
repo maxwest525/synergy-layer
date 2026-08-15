@@ -59,23 +59,42 @@ export async function fetchChangeRequest(client: Client, tenantId: string, id: s
   if (!data) {
     return {
       changeRequest: null,
+      originSeoRun: null,
       postChangeRows: [] as PostChangeRow[],
       versions: [] as ChangeVersionRow[],
       measurement: { cycle: null, windows: [], observations: [], revisions: [] },
     };
   }
-  const [{ data: versions, error: versionError }, postChangeRows, measurement] = await Promise.all([
+  const [
+    { data: versions, error: versionError },
+    { data: originSeoRun, error: originSeoRunError },
+    postChangeRows,
+    measurement,
+  ] = await Promise.all([
     client
       .from("change_request_versions")
       .select("*")
       .eq("tenant_id", tenantId)
       .eq("change_request_id", id)
       .order("version_number", { ascending: false }),
+    client
+      .from("seo_runs")
+      .select("id, state, target_url")
+      .eq("tenant_id", tenantId)
+      .eq("change_request_id", id)
+      .maybeSingle(),
     fetchPostChangeRows(client, tenantId, data.target_url, data.applied_at),
     fetchChangeMeasurementHistory(client, tenantId, id),
   ]);
   if (versionError) throw new Error(versionError.message);
-  return { changeRequest: data, postChangeRows, versions: versions ?? [], measurement };
+  if (originSeoRunError) throw new Error(originSeoRunError.message);
+  return {
+    changeRequest: data,
+    originSeoRun,
+    postChangeRows,
+    versions: versions ?? [],
+    measurement,
+  };
 }
 
 /**

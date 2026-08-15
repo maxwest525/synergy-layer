@@ -1,12 +1,28 @@
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { Link, createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 
 import { GlassCard, PageHeader, StatePill, formatWhen } from "@/components/os/primitives";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { createSeoRun, evaluateSeoRun, getSeoRuns } from "@/lib/seo-runs/functions";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  getSeoRunProviderBudget,
+  parseSeoRunTargets,
+  runCreatedSeoBatch,
+} from "@/lib/seo-runs/batch";
+import { createSeoRuns, evaluateSeoRun, getSeoRuns } from "@/lib/seo-runs/functions";
 
 export const Route = createFileRoute("/seo-runs/")({
   ssr: false,
@@ -27,25 +43,67 @@ const stages = [
 
 function SeoRunsPage() {
   const loadRuns = useServerFn(getSeoRuns);
-  const createRun = useServerFn(createSeoRun);
+  const createRuns = useServerFn(createSeoRuns);
   const evaluateRun = useServerFn(evaluateSeoRun);
   const queryClient = useQueryClient();
   const { data: runs } = useSuspenseQuery({ queryKey: ["seo-runs"], queryFn: () => loadRuns() });
-  const [targetUrl, setTargetUrl] = useState("");
-  const mutation = useMutation({
-    mutationFn: () =>
-      createRun({
-        data: { targetUrl, queryClass: "local_service", idempotencyKey: crypto.randomUUID() },
-      }),
-    onSuccess: async () => {
-      setTargetUrl("");
+  const [targets, setTargets] = useState("");
+  const [pendingTargets, setPendingTargets] = useState<string[]>([]);
+  const [confirmationOpen, setConfirmationOpen] = useState(false);
+  const [inputError, setInputError] = useState<string | null>(null);
+  const [batchResult, setBatchResult] = useState<string | null>(null);
+  const startBatch = useMutation({
+    mutationFn: async () => {
+      const created = await createRuns({
+        data: {
+          queryClass: "local_service",
+          targets: pendingTargets.map((targetUrl) => ({
+            targetUrl,
+            idempotencyKey: crypto.randomUUID(),
+          })),
+        },
+      });
+      return runCreatedSeoBatch(created, (id) => evaluateRun({ data: { id } }));
+    },
+    onSuccess: async ({ advanced, stopped }) => {
+      setBatchResult(
+        stopped.length
+          ? `${advanced} run${advanced === 1 ? "" : "s"} advanced; ${stopped.length} stopped with a recorded reason.`
+          : `${advanced} run${advanced === 1 ? "" : "s"} advanced to the furthest truthful state.`,
+      );
+      setTargets("");
+      setPendingTargets([]);
+      setConfirmationOpen(false);
       await queryClient.invalidateQueries({ queryKey: ["seo-runs"] });
     },
+    onError: (error) => setInputError(error.message),
   });
   const evaluation = useMutation({
     mutationFn: (id: string) => evaluateRun({ data: { id } }),
     onSuccess: async () => queryClient.invalidateQueries({ queryKey: ["seo-runs"] }),
   });
+  const actionableRuns = runs
+    .filter((run) => ["draft", "preflight_blocked", "failed"].includes(run.state))
+    .slice(0, 10);
+  const batchEvaluation = useMutation({
+    mutationFn: async () => {
+      return runCreatedSeoBatch(actionableRuns, (id) => evaluateRun({ data: { id } }));
+    },
+    onSuccess: async ({ advanced, stopped }) => {
+      setBatchResult(
+        stopped.length
+          ? `${advanced} run${advanced === 1 ? "" : "s"} advanced; ${stopped.length} stopped with a recorded reason.`
+          : `${advanced} run${advanced === 1 ? "" : "s"} advanced to the furthest truthful state.`,
+      );
+      await queryClient.invalidateQueries({ queryKey: ["seo-runs"] });
+    },
+  });
+  const pendingBudget = pendingTargets.length
+    ? getSeoRunProviderBudget(pendingTargets.length)
+    : null;
+  const resumeBudget = actionableRuns.length
+    ? getSeoRunProviderBudget(actionableRuns.length)
+    : null;
 
   return (
     <div className="space-y-8">
@@ -65,40 +123,130 @@ function SeoRunsPage() {
         </div>
       </GlassCard>
       <GlassCard className="p-5">
-        <h2 className="text-sm font-semibold text-foreground">Start a real page run</h2>
+        <h2 className="text-sm font-semibold text-foreground">Start real page runs</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          This creates only a draft record. It does not call a provider, create a proposal, approve,
-          or publish anything.
+          Enter one TruMove page URL per line, up to 100. One confirmation creates every run and
+          advances the full batch through evidence and proposal preparation. It never approves,
+          executes, or publishes a proposal.
         </p>
         <form
-          className="mt-4 flex flex-col gap-3 sm:flex-row"
+          className="mt-4 space-y-3"
           onSubmit={(event) => {
             event.preventDefault();
-            mutation.mutate();
+            try {
+              const parsed = parseSeoRunTargets(targets);
+              setPendingTargets(parsed);
+              setInputError(null);
+              setConfirmationOpen(true);
+            } catch (error) {
+              setInputError(error instanceof Error ? error.message : "Enter valid page URLs.");
+            }
           }}
         >
-          <Input
-            type="url"
+          <Textarea
             required
-            value={targetUrl}
-            onChange={(event) => setTargetUrl(event.target.value)}
-            placeholder="https://example.com/service-page"
-            aria-label="Target page URL"
+            rows={5}
+            value={targets}
+            onChange={(event) => setTargets(event.target.value)}
+            placeholder={"https://trumoveinc.com/service-page\nhttps://trumoveinc.com/another-page"}
+            aria-label="Target page URLs"
           />
-          <Button type="submit" disabled={mutation.isPending}>
-            Create draft run
+          <Button type="submit" variant="outline" disabled={startBatch.isPending}>
+            {startBatch.isPending ? "Starting batch…" : "Review and start SEO batch"}
           </Button>
         </form>
-        {mutation.error ? (
-          <p className="mt-3 text-sm text-destructive">{mutation.error.message}</p>
+        {inputError ? (
+          <p className="mt-3 text-sm text-destructive" role="alert">
+            {inputError}
+          </p>
         ) : null}
+        <AlertDialog open={confirmationOpen} onOpenChange={setConfirmationOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                Start {pendingBudget?.pages ?? 0} governed SEO run
+                {pendingBudget?.pages === 1 ? "" : "s"}?
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                This single action creates and advances the entire batch. Maximum external work:{" "}
+                {pendingBudget?.geminiEmbeddingRequests ?? 0} Gemini embedding requests,{" "}
+                {pendingBudget?.geminiGenerationRequests ?? 0} Gemini generation requests,{" "}
+                {pendingBudget?.firecrawlRenders ?? 0} Firecrawl renders, and{" "}
+                {pendingBudget?.githubReads ?? 0} GitHub reads. It makes zero new DataForSEO
+                requests and never approves, executes, or publishes a proposal.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={startBatch.isPending}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                className={buttonVariants({ variant: "outline" })}
+                disabled={startBatch.isPending || !pendingBudget}
+                onClick={() => startBatch.mutate()}
+              >
+                {startBatch.isPending ? "Starting…" : "Confirm and start full batch"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </GlassCard>
+      {actionableRuns.length ? (
+        <GlassCard className="p-5">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <h2 className="text-sm font-semibold text-foreground">Prepare a bounded batch</h2>
+              <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
+                Advances up to 10 draft, blocked, or failed runs. It never approves, executes, or
+                publishes a proposal.
+              </p>
+            </div>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="outline" disabled={batchEvaluation.isPending}>
+                  {batchEvaluation.isPending
+                    ? "Preparing batch…"
+                    : `Prepare ${actionableRuns.length} run${actionableRuns.length === 1 ? "" : "s"}`}
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Confirm bounded provider work</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    For {actionableRuns.length} page{actionableRuns.length === 1 ? "" : "s"}, this
+                    can make up to {resumeBudget?.geminiEmbeddingRequests ?? 0} Gemini embedding
+                    requests, {resumeBudget?.geminiGenerationRequests ?? 0} Gemini generation
+                    requests, {resumeBudget?.firecrawlRenders ?? 0} Firecrawl renders, and{" "}
+                    {resumeBudget?.githubReads ?? 0} GitHub reads. It makes zero new DataForSEO
+                    requests and stops each page honestly if required evidence or a connector is
+                    unavailable.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    className={buttonVariants({ variant: "outline" })}
+                    onClick={() => batchEvaluation.mutate()}
+                  >
+                    Confirm and prepare
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+          {batchResult ? <p className="mt-3 text-sm text-muted-foreground">{batchResult}</p> : null}
+        </GlassCard>
+      ) : null}
       <div className="space-y-3">
         {runs.map((run) => (
           <GlassCard key={run.id} className="p-5">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <p className="font-medium text-foreground">{run.target_url}</p>
+                <Link
+                  to="/seo-runs/$id"
+                  params={{ id: run.id }}
+                  className="font-medium text-foreground hover:text-primary"
+                >
+                  {run.target_url}
+                </Link>
                 <p className="mt-1 text-xs text-muted-foreground">
                   {run.query_class} · created {formatWhen(run.created_at)}
                 </p>
@@ -113,7 +261,9 @@ function SeoRunsPage() {
                 ? `Concrete proposal linked: ${run.change_request_id}`
                 : "No concrete change proposal has been generated."}
             </p>
-            {run.state === "draft" || run.state === "preflight_blocked" ? (
+            {run.state === "draft" ||
+            run.state === "preflight_blocked" ||
+            run.state === "failed" ? (
               <div className="mt-4 flex flex-wrap items-center gap-3">
                 <Button
                   size="sm"
@@ -122,6 +272,11 @@ function SeoRunsPage() {
                   onClick={() => evaluation.mutate(run.id)}
                 >
                   Check evidence and prepare proposal
+                </Button>
+                <Button asChild size="sm" variant="outline">
+                  <Link to="/seo-runs/$id" params={{ id: run.id }}>
+                    Open run
+                  </Link>
                 </Button>
                 <span className="text-xs text-muted-foreground">
                   Runs read-only provider checks and Gemini generation only after preflight passes.

@@ -12,6 +12,7 @@ export const getChangeRequest = createServerFn({ method: "GET" })
     if (!authenticated)
       return {
         changeRequest: null,
+        originSeoRun: null,
         postChangeRows: [],
         versions: [],
         measurement: { cycle: null, windows: [], observations: [], revisions: [] },
@@ -20,6 +21,7 @@ export const getChangeRequest = createServerFn({ method: "GET" })
     if (!tenantId)
       return {
         changeRequest: null,
+        originSeoRun: null,
         postChangeRows: [],
         versions: [],
         measurement: { cycle: null, windows: [], observations: [], revisions: [] },

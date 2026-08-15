@@ -1,6 +1,7 @@
 import { validateTitleH1Wording, type TitleH1Wording } from "./title-h1-proposals";
 
 export const GEMINI_API_ORIGIN = "https://generativelanguage.googleapis.com";
+export const DEFAULT_GEMINI_GENERATION_MODEL = "gemini-3.6-flash";
 const REQUEST_TIMEOUT_MS = 20_000;
 
 type Fetcher = (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
@@ -32,10 +33,10 @@ export async function generateTitleH1Wording(input: {
   fetcher?: Fetcher;
 }): Promise<TitleH1Wording> {
   if (!input.apiKey.trim()) throw new Error("GEMINI_API_KEY is not configured.");
-  if (!input.model.trim()) throw new Error("GEMINI_MODEL is not configured.");
+  const model = input.model.trim() || DEFAULT_GEMINI_GENERATION_MODEL;
 
   const fetcher = input.fetcher ?? fetch;
-  const url = `${GEMINI_API_ORIGIN}/v1beta/models/${encodeURIComponent(input.model)}:generateContent`;
+  const url = `${GEMINI_API_ORIGIN}/v1beta/models/${encodeURIComponent(model)}:generateContent`;
   let response: Response;
   try {
     response = await fetcher(url, {
