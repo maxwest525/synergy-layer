@@ -72,7 +72,7 @@ export function Shell({ children }: { children: ReactNode }) {
             <span className="text-xs text-muted-foreground">Marketing OS</span>
           </Link>
 
-          <TenantSwitcher />
+          <TenantSwitcher session={session} />
 
           <ul className="flex flex-1 flex-col gap-0.5">
             {workspaces.map((workspace) => {
