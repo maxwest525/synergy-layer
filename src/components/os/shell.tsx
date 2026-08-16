@@ -1,4 +1,4 @@
-import { Link, useRouterState } from "@tanstack/react-router";
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import {
   Activity,
   Boxes,
@@ -165,6 +165,7 @@ function BrandMark() {
 export function Shell({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const session = useOperatorSession();
+  const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const onAuthRoute = pathname.startsWith("/auth");
   const accessState = getWorkspaceAccessState({
