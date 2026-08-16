@@ -5,10 +5,11 @@ import { toast } from "sonner";
 
 import {
   DetailRow,
+  EmptyNote,
+  formatWhen,
   GlassCard,
   PageHeader,
   StatePill,
-  formatWhen,
   toneForState,
 } from "@/components/os/primitives";
 import { Button } from "@/components/ui/button";
@@ -134,7 +135,7 @@ function AgentDetailPage() {
           <GlassCard className="p-5">
             <h2 className="text-sm font-semibold text-foreground">Granted capabilities</h2>
             {data.capabilities.length === 0 ? (
-              <p className="mt-2 text-sm text-muted-foreground">No capabilities granted.</p>
+              <EmptyNote className="mt-2">No capabilities granted.</EmptyNote>
             ) : (
               <ul className="mt-3 space-y-2">
                 {data.capabilities.map((grant) =>
@@ -164,9 +165,9 @@ function AgentDetailPage() {
           <GlassCard className="p-5">
             <h2 className="text-sm font-semibold text-foreground">Knowledge access</h2>
             {data.knowledge.length === 0 ? (
-              <p className="mt-2 text-sm text-muted-foreground">
+              <EmptyNote className="mt-2">
                 No knowledge collections attached.
-              </p>
+              </EmptyNote>
             ) : (
               <ul className="mt-3 flex flex-wrap gap-2">
                 {data.knowledge.map((grant) =>
@@ -191,7 +192,7 @@ function AgentDetailPage() {
       <GlassCard className="p-5">
         <h2 className="text-sm font-semibold text-foreground">Run history</h2>
         {data.activity.length === 0 ? (
-          <p className="mt-2 text-sm text-muted-foreground">No recorded runs yet.</p>
+          <EmptyNote className="mt-2">No recorded runs yet.</EmptyNote>
         ) : (
           <ul className="mt-3 space-y-3">
             {data.activity.map((event) => (

@@ -1,6 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 
-import { GlassCard, StatePill, formatWhen, toneForState } from "@/components/os/primitives";
+import {
+  EmptyNote,
+  GlassCard,
+  ListSkeleton,
+  StatePill,
+  formatWhen,
+  toneForState,
+} from "@/components/os/primitives";
 import { getMcpStatus } from "@/lib/mcp-status.functions";
 
 /** MCP health and active OAuth grants for the agent integrations capability. */
@@ -12,9 +19,14 @@ export function McpPanel() {
 
   if (isPending) {
     return (
-      <GlassCard className="p-5">
-        <p className="text-sm text-muted-foreground">Reading MCP health.</p>
-      </GlassCard>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <GlassCard className="p-5">
+          <ListSkeleton rows={4} label="Loading MCP health" />
+        </GlassCard>
+        <GlassCard className="p-5">
+          <ListSkeleton rows={4} label="Loading MCP grants" />
+        </GlassCard>
+      </div>
     );
   }
 
@@ -52,7 +64,7 @@ export function McpPanel() {
         <ul className="mt-4 flex flex-wrap gap-2">
           {data.tools.map((tool) => (
             <li key={tool.name}>
-              <StatePill label={tool.name} tone={tool.readOnly ? "success" : "warning"} />
+              <StatePill label={tool.name} tone={tool.readOnly ? "positive" : "warning"} />
             </li>
           ))}
         </ul>
@@ -61,10 +73,10 @@ export function McpPanel() {
       <GlassCard className="p-5">
         <h2 className="text-sm font-semibold text-foreground">Active OAuth grants</h2>
         {data.grants.length === 0 ? (
-          <p className="mt-3 text-sm text-muted-foreground">
+          <EmptyNote className="mt-3">
             No client has called AOOS over MCP yet. Grants appear here after the first authorised
             tool call.
-          </p>
+          </EmptyNote>
         ) : (
           <ul className="mt-3 space-y-3">
             {data.grants.map((grant) => (
@@ -93,7 +105,7 @@ export function McpPanel() {
       <GlassCard className="p-5 lg:col-span-2">
         <h2 className="text-sm font-semibold text-foreground">Recent tool calls</h2>
         {data.recentCalls.length === 0 ? (
-          <p className="mt-3 text-sm text-muted-foreground">No MCP tool calls recorded yet.</p>
+          <EmptyNote className="mt-3">No MCP tool calls recorded yet.</EmptyNote>
         ) : (
           <ul className="mt-3 space-y-2 text-sm">
             {data.recentCalls.map((call, index) => (

@@ -3,13 +3,14 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 
 import {
+  EmptyNote,
   EmptyState,
+  formatWhen,
   GlassCard,
   MetricTile,
   PageHeader,
   Section,
   StatePill,
-  formatWhen,
   toneForState,
 } from "@/components/os/primitives";
 import { OperatorRouteError } from "@/components/os/route-error";
@@ -285,7 +286,7 @@ function CommandCenterPage() {
           <GlassCard className="p-5">
             <h2 className="text-sm font-semibold text-foreground">Recent runs</h2>
             {data.runs.length === 0 ? (
-              <p className="mt-3 text-sm text-muted-foreground">No workflow runs recorded yet.</p>
+              <EmptyNote className="mt-3">No workflow runs recorded yet.</EmptyNote>
             ) : (
               <ul className="mt-3 space-y-2">
                 {data.runs.slice(0, 8).map((run) => {

@@ -1,8 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 
 import {
+  CardGridSkeleton,
+  EmptyNote,
   EmptyState,
   GlassCard,
+  ListSkeleton,
   MetricTile,
   StatePill,
   formatWhen,
@@ -27,9 +30,12 @@ export function DataForSeoPanel() {
 
   if (isPending) {
     return (
-      <GlassCard className="p-5">
-        <p className="text-sm text-muted-foreground">Loading DataForSEO spend and evidence…</p>
-      </GlassCard>
+      <div className="space-y-4">
+        <CardGridSkeleton columns={4} count={4} label="Loading DataForSEO spend" />
+        <GlassCard className="p-5">
+          <ListSkeleton rows={4} label="Loading provider request ledger" />
+        </GlassCard>
+      </div>
     );
   }
 
@@ -56,7 +62,7 @@ export function DataForSeoPanel() {
           </h2>
           <StatePill
             label={data.budget.hardStop ? "hard stop armed" : "hard stop off"}
-            tone={data.budget.hardStop ? "success" : "warning"}
+            tone={data.budget.hardStop ? "positive" : "warning"}
           />
         </div>
         <div className="mt-4 grid gap-4 sm:grid-cols-4">
@@ -76,7 +82,7 @@ export function DataForSeoPanel() {
       <GlassCard className="p-5">
         <h2 className="text-sm font-semibold text-foreground">Request ledger</h2>
         {data.requests.length === 0 ? (
-          <p className="mt-2 text-sm text-muted-foreground">No provider requests recorded yet.</p>
+          <EmptyNote className="mt-2">No provider requests recorded yet.</EmptyNote>
         ) : (
           <ul className="mt-3 space-y-2">
             {data.requests.map((request) => (
@@ -100,7 +106,7 @@ export function DataForSeoPanel() {
       <GlassCard className="p-5">
         <h2 className="text-sm font-semibold text-foreground">Immutable snapshots</h2>
         {data.snapshots.length === 0 ? (
-          <p className="mt-2 text-sm text-muted-foreground">No snapshots stored yet.</p>
+          <EmptyNote className="mt-2">No snapshots stored yet.</EmptyNote>
         ) : (
           <ul className="mt-3 space-y-2">
             {data.snapshots.map((snapshot) => (

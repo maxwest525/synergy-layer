@@ -248,15 +248,169 @@ export function toneForState(state: string | null | undefined): Tone {
   }
 }
 
-export function EmptyState({ title, description }: { title: string; description: string }) {
+export function EmptyState({
+  title,
+  description,
+  action,
+  className,
+}: {
+  title: string;
+  description: string;
+  action?: ReactNode;
+  className?: string;
+}) {
   return (
     <div
       role="status"
-      className="rounded-2xl border border-dashed border-border/70 px-6 py-12 text-center"
+      className={cn(
+        "rounded-2xl border border-dashed border-border/70 px-6 py-12 text-center",
+        className,
+      )}
     >
       <h3 className="text-sm font-medium text-foreground">{title}</h3>
       <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">{description}</p>
+      {action ? <div className="mt-4 flex justify-center">{action}</div> : null}
     </div>
+  );
+}
+
+/**
+ * Empty messaging for a block that already sits inside a card, where a second
+ * dashed box would read as a nested panel.
+ */
+export function EmptyNote({ children, className }: { children: ReactNode; className?: string }) {
+  return (
+    <p role="status" className={cn("text-sm text-muted-foreground", className)}>
+      {children}
+    </p>
+  );
+}
+
+/** One skeleton bar. Every placeholder in the OS is built from these. */
+export function SkeletonLine({ className }: { className?: string }) {
+  return <div aria-hidden className={cn("animate-pulse rounded-md bg-muted/60", className)} />;
+}
+
+function LoadingFrame({
+  label,
+  className,
+  children,
+}: {
+  label: string;
+  className?: string;
+  children: ReactNode;
+}) {
+  return (
+    <div role="status" aria-busy="true" aria-label={label} className={className}>
+      {children}
+    </div>
+  );
+}
+
+/**
+ * Placeholder for a card grid. It reserves the same columns, gutter, and card
+ * height as the loaded grid so the page does not jump when data arrives.
+ */
+export function CardGridSkeleton({
+  columns = 3,
+  count = 3,
+  label = "Loading cards",
+}: {
+  columns?: 2 | 3 | 4;
+  count?: number;
+  label?: string;
+}) {
+  return (
+    <LoadingFrame label={label}>
+      <CardGrid columns={columns}>
+        {Array.from({ length: count }).map((_, index) => (
+          <div
+            key={index}
+            className="rounded-2xl border border-border/70 bg-card/40 p-5"
+          >
+            <SkeletonLine className="h-3 w-24" />
+            <SkeletonLine className="mt-3 h-6 w-32" />
+            <SkeletonLine className="mt-3 h-3 w-full" />
+            <SkeletonLine className="mt-2 h-3 w-2/3" />
+          </div>
+        ))}
+      </CardGrid>
+    </LoadingFrame>
+  );
+}
+
+/** Placeholder rows that keep the table chrome and column rhythm on screen. */
+export function TableSkeleton({
+  columns = 4,
+  rows = 5,
+  label = "Loading table",
+}: {
+  columns?: number;
+  rows?: number;
+  label?: string;
+}) {
+  return (
+    <LoadingFrame label={label}>
+      <TableShell>
+        <tbody>
+          {Array.from({ length: rows }).map((_, rowIndex) => (
+            <tr key={rowIndex} className="border-b border-border/50 last:border-b-0">
+              {Array.from({ length: columns }).map((_, columnIndex) => (
+                <td key={columnIndex} className="px-4 py-3">
+                  <SkeletonLine className={columnIndex === 0 ? "h-3 w-40" : "h-3 w-20"} />
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </TableShell>
+    </LoadingFrame>
+  );
+}
+
+/** Placeholder for a run/step history: same rail, same row height. */
+export function TimelineSkeleton({
+  items = 4,
+  label = "Loading history",
+}: {
+  items?: number;
+  label?: string;
+}) {
+  return (
+    <LoadingFrame label={label}>
+      <ol className="relative ml-2 border-l border-border/60 pl-5">
+        {Array.from({ length: items }).map((_, index) => (
+          <li key={index} className="relative py-3 first:pt-0 last:pb-0">
+            <span
+              aria-hidden
+              className="absolute -left-[1.6rem] top-4 size-2 animate-pulse rounded-full bg-muted/60 first:top-1"
+            />
+            <SkeletonLine className="h-3 w-48" />
+            <SkeletonLine className="mt-2 h-3 w-32" />
+          </li>
+        ))}
+      </ol>
+    </LoadingFrame>
+  );
+}
+
+/** Placeholder for a simple stacked list of rows inside a card. */
+export function ListSkeleton({
+  rows = 3,
+  label = "Loading list",
+}: {
+  rows?: number;
+  label?: string;
+}) {
+  return (
+    <LoadingFrame label={label} className={layout.stack}>
+      {Array.from({ length: rows }).map((_, index) => (
+        <div key={index} className="flex items-center justify-between gap-4">
+          <SkeletonLine className="h-3 w-1/2" />
+          <SkeletonLine className="h-3 w-20 shrink-0" />
+        </div>
+      ))}
+    </LoadingFrame>
   );
 }
 

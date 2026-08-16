@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { ExecutionCard } from "@/components/os/execution-card";
 import {
   DetailRow,
+  EmptyNote,
   EmptyState,
   GlassCard,
   PageHeader,
@@ -261,9 +262,9 @@ function MeasurementHistory({ measurement }: { measurement: MeasurementView }) {
                   ))}
                 </ul>
               ) : (
-                <p className="mt-3 text-sm text-muted-foreground">
+                <EmptyNote className="mt-3">
                   No provider observations are available yet.
-                </p>
+                </EmptyNote>
               )}
             </div>
           );
@@ -475,7 +476,7 @@ function ChangeRequestPage() {
         <GlassCard className="p-5">
           <h2 className="text-sm font-semibold text-foreground">Evidence on file</h2>
           {evidence.length === 0 ? (
-            <p className="mt-2 text-sm text-muted-foreground">No evidence rows are attached.</p>
+            <EmptyNote className="mt-2">No evidence rows are attached.</EmptyNote>
           ) : (
             <div className="mt-3 space-y-4">
               {evidence.map((group, index) => {

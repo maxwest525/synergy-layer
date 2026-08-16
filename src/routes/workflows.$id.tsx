@@ -5,10 +5,11 @@ import { toast } from "sonner";
 
 import {
   DetailRow,
+  EmptyNote,
+  formatWhen,
   GlassCard,
   PageHeader,
   StatePill,
-  formatWhen,
   toneForState,
 } from "@/components/os/primitives";
 import { Button } from "@/components/ui/button";
@@ -127,7 +128,7 @@ function WorkflowDetailPage() {
         <GlassCard className="p-5">
           <h2 className="text-sm font-semibold text-foreground">Run history</h2>
           {data.runs.length === 0 ? (
-            <p className="mt-2 text-sm text-muted-foreground">No runs recorded yet.</p>
+            <EmptyNote className="mt-2">No runs recorded yet.</EmptyNote>
           ) : (
             <ul className="mt-3 space-y-4">
               {data.runs.map((run) => (

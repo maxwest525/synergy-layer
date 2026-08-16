@@ -2,7 +2,15 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 
-import { GlassCard, StatePill, formatWhen, toneForState } from "@/components/os/primitives";
+import {
+  CardGridSkeleton,
+  EmptyNote,
+  GlassCard,
+  ListSkeleton,
+  StatePill,
+  formatWhen,
+  toneForState,
+} from "@/components/os/primitives";
 import { Button } from "@/components/ui/button";
 import {
   getSearchConsoleState,
@@ -73,6 +81,17 @@ export function SearchConsolePanel() {
   const connection = state.data?.connection ?? null;
   const selected = properties.find((property) => property.selected);
 
+  if (state.isPending) {
+    return (
+      <div className="space-y-4">
+        <CardGridSkeleton columns={3} count={3} label="Loading Search Console connection" />
+        <GlassCard className="p-5">
+          <ListSkeleton rows={4} label="Loading Search Console properties" />
+        </GlassCard>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <GlassCard className="p-5">
@@ -108,7 +127,7 @@ export function SearchConsolePanel() {
           <div className="rounded-xl border border-border/60 p-3">
             <StatePill
               label={connection?.configured ? "Configured" : "Not configured"}
-              tone={connection?.configured ? "success" : "warning"}
+              tone={connection?.configured ? "positive" : "warning"}
             />
             <p className="mt-2 text-xs text-muted-foreground">
               {connection?.configured
@@ -119,7 +138,7 @@ export function SearchConsolePanel() {
           <div className="rounded-xl border border-border/60 p-3">
             <StatePill
               label={connection?.authenticated ? "Google access proven" : "Access not proven"}
-              tone={connection?.authenticated ? "success" : "warning"}
+              tone={connection?.authenticated ? "positive" : "warning"}
             />
             <p className="mt-2 text-xs text-muted-foreground">
               Last property check:{" "}
@@ -129,7 +148,7 @@ export function SearchConsolePanel() {
           <div className="rounded-xl border border-border/60 p-3">
             <StatePill
               label={connection?.readSucceeded ? "Read succeeded" : "No successful read"}
-              tone={connection?.readSucceeded ? "success" : "warning"}
+              tone={connection?.readSucceeded ? "positive" : "warning"}
             />
             <p className="mt-2 text-xs text-muted-foreground">
               Last stored Search Analytics read:{" "}
@@ -181,10 +200,10 @@ export function SearchConsolePanel() {
             Search Console state could not be loaded. {state.error.message}
           </p>
         ) : properties.length === 0 ? (
-          <p className="mt-2 text-sm text-muted-foreground">
+          <EmptyNote className="mt-2">
             No properties recorded yet. Run a check to list what the connected Google account can
             reach.
-          </p>
+          </EmptyNote>
         ) : (
           <ul className="mt-3 space-y-3">
             {properties.map((property) => (
@@ -221,7 +240,7 @@ export function SearchConsolePanel() {
       <GlassCard className="p-5">
         <h2 className="text-sm font-semibold text-foreground">Recent snapshots</h2>
         {snapshots.length === 0 ? (
-          <p className="mt-2 text-sm text-muted-foreground">No snapshots stored yet.</p>
+          <EmptyNote className="mt-2">No snapshots stored yet.</EmptyNote>
         ) : (
           <ul className="mt-3 space-y-2">
             {snapshots.map((snapshot) => (

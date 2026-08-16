@@ -3,10 +3,11 @@ import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 
 import {
   DetailRow,
+  EmptyNote,
+  formatWhen,
   GlassCard,
   PageHeader,
   StatePill,
-  formatWhen,
   toneForState,
 } from "@/components/os/primitives";
 import { DataForSeoPanel } from "@/components/os/dataforseo-panel";
@@ -90,7 +91,7 @@ function CapabilityDetailPage() {
         <GlassCard className="p-5">
           <h2 className="text-sm font-semibold text-foreground">Operations</h2>
           {operations.length === 0 ? (
-            <p className="mt-3 text-sm text-muted-foreground">No operations declared.</p>
+            <EmptyNote className="mt-3">No operations declared.</EmptyNote>
           ) : (
             <ul className="mt-3 space-y-3">
               {operations.map((operation) => (
@@ -119,7 +120,7 @@ function CapabilityDetailPage() {
       <GlassCard className="p-5">
         <h2 className="text-sm font-semibold text-foreground">Granted to agents</h2>
         {data.agents.length === 0 ? (
-          <p className="mt-2 text-sm text-muted-foreground">No agent holds this capability yet.</p>
+          <EmptyNote className="mt-2">No agent holds this capability yet.</EmptyNote>
         ) : (
           <ul className="mt-3 flex flex-wrap gap-2">
             {data.agents.map((grant) =>
