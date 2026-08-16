@@ -191,6 +191,24 @@ export function Shell({ children }: { children: ReactNode }) {
 
   const accountLabel = session.signedIn ? (session.email ?? "Operator") : "Operator sign in";
 
+  // Signing in is its own page: no sidebar, no workspace header, no drawer.
+  if (onAuthRoute) {
+    return (
+      <div className="relative min-h-screen w-full bg-background">
+        <div
+          aria-hidden
+          className="pointer-events-none fixed inset-0 opacity-70 [background:radial-gradient(60rem_40rem_at_15%_-10%,color-mix(in_oklab,var(--color-primary)_10%,transparent),transparent_70%)]"
+        />
+        <div className="relative mx-auto flex min-h-screen w-full max-w-md flex-col justify-center px-5 py-10 sm:px-6">
+          <div className="mb-6">
+            <BrandMark />
+          </div>
+          {children}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="relative min-h-screen w-full bg-background">
       <div
