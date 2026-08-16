@@ -59,7 +59,7 @@ function CapabilityDetailPage() {
   const operations = (capability.operations ?? []) as Operation[];
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       <PageHeader
         eyebrow={capability.kind.replace(/_/g, " ")}
         title={capability.name}

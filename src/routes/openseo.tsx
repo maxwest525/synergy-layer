@@ -85,7 +85,7 @@ function OpenSeoPage() {
   });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-10">
       <PageHeader
         eyebrow="Self-hosted SEO runtime"
         title="OpenSEO"

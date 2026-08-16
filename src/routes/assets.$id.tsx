@@ -51,7 +51,7 @@ function AssetDetailPage() {
   const asset = data.asset!;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       <PageHeader
         eyebrow={asset.kind.replace(/_/g, " ")}
         title={asset.name}

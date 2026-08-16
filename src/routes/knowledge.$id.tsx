@@ -50,7 +50,7 @@ function KnowledgeCollectionPage() {
   const collection = data.collection!;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       <PageHeader
         eyebrow={collection.kind.replace(/_/g, " ")}
         title={collection.name}

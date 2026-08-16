@@ -550,7 +550,7 @@ function InboxPage() {
   }, [data]);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       <PageHeader
         eyebrow="Operational center"
         title="Action Center"

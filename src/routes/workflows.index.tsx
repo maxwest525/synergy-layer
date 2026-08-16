@@ -43,7 +43,7 @@ function WorkflowsPage() {
   const failedRuns = data.runs.filter((run) => run.state === "failed");
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       <PageHeader
         eyebrow="How work runs"
         title="Workflow Registry"

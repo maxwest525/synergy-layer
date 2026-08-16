@@ -105,7 +105,7 @@ function CommandCenterPage() {
 
   if (!data.ready) {
     return (
-      <div className="space-y-8">
+      <div className="space-y-10">
         <PageHeader
           eyebrow="System state"
           title="Command Center"
@@ -120,7 +120,7 @@ function CommandCenterPage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       <PageHeader
         eyebrow="System state"
         title="Command Center"

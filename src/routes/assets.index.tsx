@@ -43,7 +43,7 @@ function AssetsPage() {
   const groups = Array.from(new Set(data.map((asset) => asset.kind)));
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       <PageHeader
         eyebrow="Ownership"
         title="Assets"

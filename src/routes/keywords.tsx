@@ -105,7 +105,7 @@ function KeywordReviewPage() {
     );
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       <PageHeader
         eyebrow="Human approval gate"
         title="Keyword approval"

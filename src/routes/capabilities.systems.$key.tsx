@@ -106,7 +106,7 @@ function SystemDetailPage() {
   const requiresDryRun = Boolean(safety?.["require_dry_run"]);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       <PageHeader
         eyebrow={KIND_LABELS[system.kind] ?? system.kind}
         title={system.name}

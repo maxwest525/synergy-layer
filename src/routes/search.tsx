@@ -272,7 +272,7 @@ function SearchWorkspacePage() {
     collectionMutation.isPending || inspectionMutation.isPending || sitemapMutation.isPending;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-10">
       <PageHeader
         eyebrow="Search"
         title="What Search Console observed"

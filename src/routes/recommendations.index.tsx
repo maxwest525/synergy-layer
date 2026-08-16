@@ -45,7 +45,7 @@ function RecommendationsPage() {
   const { data } = useSuspenseQuery(recommendationsQuery);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       <PageHeader
         eyebrow="What to do next"
         title="Recommendation Queue"

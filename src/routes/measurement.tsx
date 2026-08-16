@@ -272,7 +272,7 @@ function MeasurementPage() {
   const latestGa4Rows = ga4Rows(latestGa4Metrics);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       <PageHeader
         eyebrow="Measurement"
         title="Page speed and analytics"

@@ -45,7 +45,7 @@ function AgentsPage() {
   const { data } = useSuspenseQuery(agentsQuery);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       <PageHeader
         eyebrow="Who does the work"
         title="Agent Registry"

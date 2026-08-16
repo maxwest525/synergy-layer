@@ -270,7 +270,7 @@ function OpenAiAdsPage() {
   const activeCount = data.coverage.filter((row) => row.state === "active").length;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       <PageHeader
         eyebrow="Paid media instrumentation"
         title="OpenAI Ads"

@@ -62,7 +62,7 @@ function CapabilitiesPage() {
   const kinds = Array.from(new Set(data.map((capability) => capability.kind)));
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       <PageHeader
         eyebrow="What the OS can do"
         title="Capability Registry"
