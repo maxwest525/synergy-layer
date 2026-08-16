@@ -2553,6 +2553,7 @@ export type Database = {
       }
       openai_ads_events: {
         Row: {
+          attribution_source: string | null
           created_at: string
           delivery_error: string | null
           delivery_status: string
@@ -2560,6 +2561,7 @@ export type Database = {
           event_name: string
           id: string
           occurred_at: string
+          oppref: string | null
           payload: Json
           pixel_id: string
           received_at: string
@@ -2569,6 +2571,7 @@ export type Database = {
           transport: string
         }
         Insert: {
+          attribution_source?: string | null
           created_at?: string
           delivery_error?: string | null
           delivery_status?: string
@@ -2576,6 +2579,7 @@ export type Database = {
           event_name: string
           id?: string
           occurred_at: string
+          oppref?: string | null
           payload?: Json
           pixel_id: string
           received_at?: string
@@ -2585,6 +2589,7 @@ export type Database = {
           transport: string
         }
         Update: {
+          attribution_source?: string | null
           created_at?: string
           delivery_error?: string | null
           delivery_status?: string
@@ -2592,6 +2597,7 @@ export type Database = {
           event_name?: string
           id?: string
           occurred_at?: string
+          oppref?: string | null
           payload?: Json
           pixel_id?: string
           received_at?: string
