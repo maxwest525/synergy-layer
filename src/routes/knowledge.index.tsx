@@ -132,7 +132,7 @@ function KnowledgePage() {
             </div>
           </div>
         ) : null}
-        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+        <div className="mt-4 grid gap-4 sm:grid-cols-3">
           <div className="rounded-xl border border-border/60 p-3">
             <p className="text-xs text-muted-foreground">Governed sources</p>
             <p className="mt-1 text-2xl font-semibold text-foreground">

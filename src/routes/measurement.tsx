@@ -144,7 +144,7 @@ function SnapshotCard({ snapshot }: { snapshot: PageSpeedSnapshotView }) {
         <StatePill label="Evidence, not a decision" tone="primary" />
       </div>
 
-      <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <MetricTile
           label="Performance score"
           value={score(snapshot.performanceScore)}
@@ -162,7 +162,7 @@ function SnapshotCard({ snapshot }: { snapshot: PageSpeedSnapshotView }) {
           hint="Cumulative layout shift"
         />
       </div>
-      <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <MetricTile label="TBT" value={ms(snapshot.tbtMs)} hint="Total blocking time" />
         <MetricTile label="FCP" value={ms(snapshot.fcpMs)} hint="First contentful paint" />
         <MetricTile

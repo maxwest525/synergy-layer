@@ -185,7 +185,7 @@ function CommandCenterPage() {
             tone={usedShare >= 75 ? "warning" : "success"}
           />
         </div>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <MetricTile
             label="Provider spend"
             value={`$${evidence.spentUsd.toFixed(4)}`}
@@ -207,7 +207,7 @@ function CommandCenterPage() {
             hint={`Last ${formatWhen(evidence.lastSearchConsoleAt)}`}
           />
         </div>
-        <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <MetricTile
             label="Keyword candidates"
             value={evidence.pendingKeywordCandidates}

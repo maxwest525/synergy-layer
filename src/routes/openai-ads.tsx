@@ -173,7 +173,7 @@ function ValidationControl({ available }: { available: boolean }) {
           ? ""
           : " A provider validate-only call is not offered because that contract has not been confirmed from authoritative documentation."}
       </p>
-      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+      <div className="mt-4 grid gap-4 sm:grid-cols-2">
         <label className="text-xs text-muted-foreground">
           Event
           <select

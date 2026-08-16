@@ -222,7 +222,7 @@ function SystemsPage() {
             {check.isPending ? "Checking…" : "Check connections"}
           </Button>
         </div>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {connectorLedger.data.connections.map((connection) => {
             const health = connection.persisted?.health ?? connection.health;
             const outcome =

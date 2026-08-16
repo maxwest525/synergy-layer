@@ -104,7 +104,7 @@ export function SearchConsolePanel() {
           </div>
         </div>
 
-        <div className="mt-4 grid gap-3 md:grid-cols-3">
+        <div className="mt-4 grid gap-4 md:grid-cols-3">
           <div className="rounded-xl border border-border/60 p-3">
             <StatePill
               label={connection?.configured ? "Configured" : "Not configured"}
