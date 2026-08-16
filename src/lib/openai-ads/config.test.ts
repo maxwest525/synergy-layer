@@ -2,12 +2,18 @@ import { describe, expect, it } from "vitest";
 
 import {
   countByEventName,
+  describeAttribution,
   describeBridgeState,
+  describeDeliveryHealth,
+  describeSourceSite,
   describeTransportHealth,
+  describeValidationReadiness,
   summarizeDedup,
   topSourcePaths,
   type OpenAiAdsEventView,
 } from "./config";
+import { describeEventCoverage, unrecognizedEventNames } from "./events";
+import { validateCandidateEvent } from "./validation";
 
 const NOW = Date.parse("2026-08-16T00:00:00.000Z");
 
@@ -22,6 +28,8 @@ const event = (overrides: Partial<OpenAiAdsEventView>): OpenAiAdsEventView => ({
   receivedAt: "2026-08-15T23:00:01.000Z",
   deliveryStatus: "received",
   deliveryError: null,
+  oppref: null,
+  attributionSource: null,
   ...overrides,
 });
 
