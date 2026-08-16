@@ -67,6 +67,8 @@ export async function ingestOpenAiAdsEvents(
     event_id: event.eventId,
     source_path: event.sourcePath ?? null,
     source_project: event.sourceProject ?? null,
+    oppref: event.oppref ?? null,
+    attribution_source: event.attributionSource ?? null,
     occurred_at: event.occurredAt,
     delivery_status: event.deliveryStatus,
     delivery_error: event.deliveryError ?? null,
