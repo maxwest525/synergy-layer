@@ -8,6 +8,7 @@ import {
   Inbox,
   LayoutDashboard,
   Lightbulb,
+  Megaphone,
   ListChecks,
   Plug,
   Search,
