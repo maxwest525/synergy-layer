@@ -1,5 +1,5 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { getRequestHeader } from "@tanstack/react-start/server";
+import { getRequest, getRequestHeader } from "@tanstack/react-start/server";
 
 import type { Database } from "@/integrations/supabase/types";
 
