@@ -120,12 +120,12 @@ function CallbackPage() {
         {denied ? (
           <>
             <p className="text-sm text-muted-foreground">
-              An administrator has to add your address to the operator allowlist before AOOS actions
-              unlock. Read-only workspaces stay available in the meantime.
+              Taking you to the Action Center in read-only mode. An administrator has to add your
+              address to the operator allowlist before actions unlock.
             </p>
             <div className="flex gap-3">
               <Button variant="outline" asChild>
-                <Link to="/">Continue read only</Link>
+                <Link to="/">Continue now</Link>
               </Button>
               <Button
                 variant="outline"
@@ -138,6 +138,7 @@ function CallbackPage() {
             </div>
           </>
         ) : null}
+
 
         {result.data?.canOperate ? (
           <p className="text-sm text-primary">
