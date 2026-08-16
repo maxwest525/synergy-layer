@@ -46,9 +46,9 @@
     "@supabase/supabase-js": "^2.112.0",
     "@tailwindcss/vite": "^4.2.1",
     "@tanstack/react-query": "^5.101.1",
-    "@tanstack/react-router": "^1.170.18",
-    "@tanstack/react-start": "^1.168.32",
-    "@tanstack/router-plugin": "^1.168.23",
+    "@tanstack/react-router": "1.170.29",
+    "@tanstack/react-start": "1.168.46",
+    "@tanstack/router-plugin": "1.168.32",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
@@ -88,7 +88,7 @@
     "tsx": "^4.23.12",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.56.1",
-    "vite": "^8.1.5",
+    "vite": "7.1.12",
     "vitest": "^4.1.10"
   }
 }
