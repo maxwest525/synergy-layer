@@ -179,7 +179,7 @@ function KnowledgePage() {
           description="Create a knowledge collection to give agents context."
         />
       ) : (
-        <div className="grid gap-3 md:grid-cols-2">
+        <div className="grid gap-4 md:grid-cols-2">
           {data.collections.map((collection) => {
             const entries = data.entries.filter((entry) => entry.collection_id === collection.id);
             return (

@@ -82,7 +82,7 @@ function ToolCard({
 
   const classification = tool.classification;
   return (
-    <GlassCard className="p-4">
+    <GlassCard className="p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h3 className="font-mono text-sm font-semibold text-foreground">{tool.name}</h3>
@@ -166,7 +166,7 @@ function ToolCard({
 
 export function OpenSeoToolRunner({ tools, projectId, onInvoke }: Props) {
   return (
-    <section className="space-y-3" aria-label="OpenSEO tools">
+    <section className="space-y-4" aria-label="OpenSEO tools">
       {tools.map((tool) => (
         <ToolCard key={tool.name} tool={tool} projectId={projectId} onInvoke={onInvoke} />
       ))}

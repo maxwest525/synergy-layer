@@ -283,7 +283,7 @@ function SystemsPage() {
         ))}
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <MetricTile
           label={view === "essentials" ? "Essential systems" : "Canonical systems"}
           value={scoped.length}
@@ -337,7 +337,7 @@ function SystemsPage() {
           description="Clear the search or choose a different filter."
         />
       ) : (
-        <div className="grid gap-3 md:grid-cols-2">
+        <div className="grid gap-4 md:grid-cols-2">
           {visible.map((system) => (
             <Link
               key={system.id}
@@ -345,7 +345,7 @@ function SystemsPage() {
               params={{ key: system.stable_key }}
               className="block"
             >
-              <GlassCard className="h-full p-4 transition-colors hover:border-primary/40">
+              <GlassCard className="h-full p-5 transition-colors hover:border-primary/40">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium text-foreground">{system.name}</p>

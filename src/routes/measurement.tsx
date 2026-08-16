@@ -443,7 +443,7 @@ function MeasurementPage() {
 
         {ga4.latest ? (
           <div className="mt-5 space-y-4">
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <MetricTile
                 label="Returned rows"
                 value={ga4Number(latestGa4Metrics, "rowCount")}

@@ -57,16 +57,16 @@ function AssetsPage() {
         />
       ) : (
         groups.map((kind) => (
-          <section key={kind} className="space-y-3">
+          <section key={kind} className="space-y-4">
             <h2 className="text-sm font-semibold capitalize tracking-tight text-foreground">
               {kind.replace(/_/g, " ")}
             </h2>
-            <div className="grid gap-3 md:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-2">
               {data
                 .filter((asset) => asset.kind === kind)
                 .map((asset) => (
                   <Link key={asset.id} to="/assets/$id" params={{ id: asset.id }} className="block">
-                    <GlassCard className="h-full p-4 transition-colors hover:border-primary/40">
+                    <GlassCard className="h-full p-5 transition-colors hover:border-primary/40">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           <p className="truncate text-sm font-medium text-foreground">

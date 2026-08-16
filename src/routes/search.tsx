@@ -332,7 +332,7 @@ function SearchWorkspacePage() {
             title="Overview"
             description={`Property totals for each finalized Pacific date. Latest finalized date: ${fmtDate(data.latestDate)}.`}
           >
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <MetricTile
                 label="Clicks"
                 value={latest ? fmtInt(latest.clicks) : "—"}

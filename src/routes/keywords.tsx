@@ -112,7 +112,7 @@ function KeywordReviewPage() {
         description="DataForSEO Labs proposed these from operator-approved seeds. Nothing reaches SERP observation until you approve it."
       />
 
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-3">
         <MetricTile label="Pending candidates" value={String(data.pendingCount)} />
         <MetricTile label="Selected" value={String(selected.length)} />
         <MetricTile label="Combined monthly volume" value={fmtNumber(totalVolume)} />
@@ -125,7 +125,7 @@ function KeywordReviewPage() {
         />
       ) : (
         <>
-          <GlassCard className="flex flex-wrap items-center gap-2 p-4">
+          <GlassCard className="flex flex-wrap items-center gap-2 p-5">
             <Button
               variant="outline"
               size="sm"
@@ -185,7 +185,7 @@ function KeywordReviewPage() {
               const checked = selected.includes(row.keyword);
               return (
                 <li key={row.id}>
-                  <GlassCard className="flex flex-col gap-3 p-4 md:flex-row md:items-center md:justify-between">
+                  <GlassCard className="flex flex-col gap-3 p-5 md:flex-row md:items-center md:justify-between">
                     <div className="flex min-w-0 items-start gap-3">
                       <Checkbox
                         checked={checked}

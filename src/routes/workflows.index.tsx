@@ -51,7 +51,7 @@ function WorkflowsPage() {
       />
 
       {failedRuns.length > 0 ? (
-        <section id="failed-runs" className="scroll-mt-24 space-y-3">
+        <section id="failed-runs" className="scroll-mt-24 space-y-4">
           <h2 className="text-sm font-semibold tracking-tight text-foreground">
             Failed runs ({failedRuns.length})
           </h2>
@@ -107,7 +107,7 @@ function WorkflowsPage() {
           description="Declare a workflow in a module, then sync the registry."
         />
       ) : (
-        <div className="grid gap-3 md:grid-cols-2">
+        <div className="grid gap-4 md:grid-cols-2">
           {data.workflows.map((workflow) => {
             const runs = data.runs.filter((run) => run.workflow_id === workflow.id);
             const latest = runs[0];

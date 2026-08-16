@@ -65,7 +65,7 @@ function QuickAction({
 }) {
   return (
     <Link to={to} {...(hash ? { hash } : {})} className="block">
-      <GlassCard className="h-full p-4 transition-colors hover:border-primary/40">
+      <GlassCard className="h-full p-5 transition-colors hover:border-primary/40">
         <div className="flex items-baseline justify-between gap-3">
           <span className="text-sm font-medium text-foreground">{label}</span>
           {count === undefined ? null : (
@@ -127,9 +127,9 @@ function CommandCenterPage() {
         description="One read on what exists, what is live, and what is drifting right now."
       />
 
-      <section className="space-y-3">
+      <section className="space-y-4">
         <h2 className="text-sm font-semibold tracking-tight text-foreground">Quick actions</h2>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <QuickAction
             to="/"
             label="Open Action Center"
@@ -169,7 +169,7 @@ function CommandCenterPage() {
         </div>
       </section>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {tiles.map((tile) => (
           <Link key={tile.key} to={tile.to} className="block">
             <MetricTile label={tile.label} value={data.counts[tile.key] ?? 0} />
@@ -273,7 +273,7 @@ function CommandCenterPage() {
         </GlassCard>
 
         <div className="space-y-4">
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-4 sm:grid-cols-2">
             <MetricTile label="Failed runs" value={failedRuns} hint="Last 50 workflow runs" />
             <MetricTile
               label="Failing capabilities"

@@ -149,7 +149,7 @@ function OpenSeoPage() {
         />
       )}
 
-      <section className="space-y-3">
+      <section className="space-y-4">
         <div>
           <h2 className="text-sm font-semibold text-foreground">Invocation history</h2>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -164,7 +164,7 @@ function OpenSeoPage() {
         ) : (
           <div className="space-y-2">
             {workspace.history.map((run) => (
-              <GlassCard key={run.id} className="p-4">
+              <GlassCard key={run.id} className="p-5">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <p className="font-mono text-sm font-medium text-foreground">{run.tool_name}</p>
