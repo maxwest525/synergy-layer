@@ -32,6 +32,8 @@ export type OpenAiAdsEventView = {
   receivedAt: string;
   deliveryStatus: OpenAiAdsDeliveryStatus;
   deliveryError: string | null;
+  oppref: string | null;
+  attributionSource: string | null;
 };
 
 export type OpenAiAdsHealth = "unavailable" | "receiving" | "stale" | "failing";
