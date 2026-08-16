@@ -88,13 +88,14 @@ function CallbackPage() {
     <div className="mx-auto max-w-md space-y-8">
       <PageHeader
         eyebrow="Access"
-        title={denied ? "Access not provisioned" : "Completing sign-in"}
+        title={denied ? "Signing you in read only" : "Completing sign-in"}
         description={
           denied
-            ? "Your identity is verified, but this account is not on the AOOS operator allowlist."
+            ? "Your identity is verified. This account is not on the operator allowlist yet, so actions stay locked."
             : "Validating your session and checking operator access."
         }
       />
+
 
       <GlassCard glow className="space-y-4 p-5">
         {hasSession === false ? (
