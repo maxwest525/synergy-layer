@@ -53,6 +53,7 @@ import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[
 import { Route as CapabilitiesSystemsIndexRouteImport } from './routes/capabilities.systems.index'
 import { Route as CapabilitiesSystemsKeyRouteImport } from './routes/capabilities.systems.$key'
 import { Route as ApiPublicHooksDataforseoPostbackRouteImport } from './routes/api/public/hooks/dataforseo-postback'
+import { Route as ApiPublicHooksOpenaiAdsEventsRouteImport } from './routes/api/public/hooks/openai-ads-events'
 import { Route as ApiPublicHooksSchedulerTickRouteImport } from './routes/api/public/hooks/scheduler-tick'
 
 const IndexRoute = IndexRouteImport.update({
@@ -280,6 +281,12 @@ const ApiPublicHooksDataforseoPostbackRoute =
     path: '/api/public/hooks/dataforseo-postback',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksOpenaiAdsEventsRoute =
+  ApiPublicHooksOpenaiAdsEventsRouteImport.update({
+    id: '/api/public/hooks/openai-ads-events',
+    path: '/api/public/hooks/openai-ads-events',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksSchedulerTickRoute =
   ApiPublicHooksSchedulerTickRouteImport.update({
     id: '/api/public/hooks/scheduler-tick',
@@ -332,6 +339,7 @@ export interface FileRoutesByFullPath {
   '/capabilities/systems/$key': typeof CapabilitiesSystemsKeyRoute
   '/capabilities/systems/': typeof CapabilitiesSystemsIndexRoute
   '/api/public/hooks/dataforseo-postback': typeof ApiPublicHooksDataforseoPostbackRoute
+  '/api/public/hooks/openai-ads-events': typeof ApiPublicHooksOpenaiAdsEventsRoute
   '/api/public/hooks/scheduler-tick': typeof ApiPublicHooksSchedulerTickRoute
 }
 export interface FileRoutesByTo {
@@ -371,6 +379,7 @@ export interface FileRoutesByTo {
   '/capabilities/systems/$key': typeof CapabilitiesSystemsKeyRoute
   '/capabilities/systems': typeof CapabilitiesSystemsIndexRoute
   '/api/public/hooks/dataforseo-postback': typeof ApiPublicHooksDataforseoPostbackRoute
+  '/api/public/hooks/openai-ads-events': typeof ApiPublicHooksOpenaiAdsEventsRoute
   '/api/public/hooks/scheduler-tick': typeof ApiPublicHooksSchedulerTickRoute
 }
 export interface FileRoutesById {
@@ -419,6 +428,7 @@ export interface FileRoutesById {
   '/capabilities/systems/$key': typeof CapabilitiesSystemsKeyRoute
   '/capabilities/systems/': typeof CapabilitiesSystemsIndexRoute
   '/api/public/hooks/dataforseo-postback': typeof ApiPublicHooksDataforseoPostbackRoute
+  '/api/public/hooks/openai-ads-events': typeof ApiPublicHooksOpenaiAdsEventsRoute
   '/api/public/hooks/scheduler-tick': typeof ApiPublicHooksSchedulerTickRoute
 }
 export interface FileRouteTypes {
@@ -468,6 +478,7 @@ export interface FileRouteTypes {
     | '/capabilities/systems/$key'
     | '/capabilities/systems/'
     | '/api/public/hooks/dataforseo-postback'
+    | '/api/public/hooks/openai-ads-events'
     | '/api/public/hooks/scheduler-tick'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -507,6 +518,7 @@ export interface FileRouteTypes {
     | '/capabilities/systems/$key'
     | '/capabilities/systems'
     | '/api/public/hooks/dataforseo-postback'
+    | '/api/public/hooks/openai-ads-events'
     | '/api/public/hooks/scheduler-tick'
   id:
     | '__root__'
@@ -554,6 +566,7 @@ export interface FileRouteTypes {
     | '/capabilities/systems/$key'
     | '/capabilities/systems/'
     | '/api/public/hooks/dataforseo-postback'
+    | '/api/public/hooks/openai-ads-events'
     | '/api/public/hooks/scheduler-tick'
   fileRoutesById: FileRoutesById
 }
@@ -582,6 +595,7 @@ export interface RootRouteChildren {
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
   ApiPublicHooksDataforseoPostbackRoute: typeof ApiPublicHooksDataforseoPostbackRoute
+  ApiPublicHooksOpenaiAdsEventsRoute: typeof ApiPublicHooksOpenaiAdsEventsRoute
   ApiPublicHooksSchedulerTickRoute: typeof ApiPublicHooksSchedulerTickRoute
 }
 
@@ -895,6 +909,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksDataforseoPostbackRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/openai-ads-events': {
+      id: '/api/public/hooks/openai-ads-events'
+      path: '/api/public/hooks/openai-ads-events'
+      fullPath: '/api/public/hooks/openai-ads-events'
+      preLoaderRoute: typeof ApiPublicHooksOpenaiAdsEventsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/scheduler-tick': {
       id: '/api/public/hooks/scheduler-tick'
       path: '/api/public/hooks/scheduler-tick'
@@ -1056,6 +1077,7 @@ const rootRouteChildren: RootRouteChildren = {
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
   ApiPublicHooksDataforseoPostbackRoute: ApiPublicHooksDataforseoPostbackRoute,
+  ApiPublicHooksOpenaiAdsEventsRoute: ApiPublicHooksOpenaiAdsEventsRoute,
   ApiPublicHooksSchedulerTickRoute: ApiPublicHooksSchedulerTickRoute,
 }
 export const routeTree = rootRouteImport
