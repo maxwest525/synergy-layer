@@ -1,5 +1,3 @@
-import { Buffer } from "node:buffer";
-
 import { GOVERNED_REPO } from "../execution/allowlist";
 import {
   CONNECTOR_CATALOG,
@@ -47,7 +45,7 @@ const noSafeProbe = new Set<ConnectorKey>([
 ]);
 
 function basic(username: string | undefined, password: string | undefined): string {
-  return `Basic ${Buffer.from(`${username}:${password}`).toString("base64")}`;
+  return `Basic ${btoa(`${username}:${password}`)}`;
 }
 
 function configuredRequest(
@@ -65,7 +63,7 @@ function configuredRequest(
     case "dataforseo": {
       const token =
         env["DATAFORSEO_BASIC_TOKEN"] ??
-        Buffer.from(`${env["DATAFORSEO_LOGIN"]}:${env["DATAFORSEO_PASSWORD"]}`).toString("base64");
+        btoa(`${env["DATAFORSEO_LOGIN"]}:${env["DATAFORSEO_PASSWORD"]}`);
       return {
         url: "https://api.dataforseo.com/v3/appendix/user_data",
         headers: { Authorization: `Basic ${token}` },

@@ -210,9 +210,15 @@ export type SourceSiteState = {
  */
 export function describeSourceSite(events: readonly OpenAiAdsEventView[]): SourceSiteState {
   const projects = [
-    ...new Set(events.map((event) => event.sourceProject).filter((name): name is string => Boolean(name))),
+    ...new Set(
+      events.map((event) => event.sourceProject).filter((name): name is string => Boolean(name)),
+    ),
   ].sort();
-  const lastEventAt = events.map((event) => event.occurredAt).sort().at(-1) ?? null;
+  const lastEventAt =
+    events
+      .map((event) => event.occurredAt)
+      .sort()
+      .at(-1) ?? null;
   return {
     project: OPENAI_ADS_SOURCE_PROJECT,
     state: events.length > 0 ? "connected" : "not_connected",
@@ -308,7 +314,11 @@ export function describeDeliveryHealth(events: readonly OpenAiAdsEventView[]): D
     received,
     delivered,
     failed: failed.length,
-    lastFailureAt: failed.map((event) => event.occurredAt).sort().at(-1) ?? null,
+    lastFailureAt:
+      failed
+        .map((event) => event.occurredAt)
+        .sort()
+        .at(-1) ?? null,
   };
 }
 
