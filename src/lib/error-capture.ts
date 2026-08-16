@@ -2,7 +2,7 @@
 // when h3 has already swallowed the throw into a generic 500 Response.
 
 type ErrorCaptureState = {
-  lastCapturedError?: { error: unknown; at: number };
+  lastCapturedError: { error: unknown; at: number } | undefined;
   consoleInstalled?: boolean;
   listenersInstalled?: boolean;
   originalConsoleError?: typeof console.error;
@@ -12,7 +12,7 @@ const errorCaptureKey = Symbol.for("aoos.error-capture");
 const errorCaptureGlobal = globalThis as typeof globalThis & {
   [errorCaptureKey]?: ErrorCaptureState;
 };
-const state = (errorCaptureGlobal[errorCaptureKey] ??= {});
+const state = (errorCaptureGlobal[errorCaptureKey] ??= { lastCapturedError: undefined });
 const TTL_MS = 5_000;
 
 function record(error: unknown) {
