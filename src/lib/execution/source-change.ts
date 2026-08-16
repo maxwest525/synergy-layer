@@ -53,7 +53,6 @@ function occurrences(haystack: string, needle: string): number {
 /** Exact literal occurrence count, shared by execution and the read-only preflight. */
 export const countOccurrences = occurrences;
 
-
 /**
  * Apply every approved replacement, or refuse and write nothing. A value that
  * appears zero times or more than once is drift: the file no longer matches
@@ -130,6 +129,7 @@ export type RenderedPage = {
   title: string | null;
   heading: string | null;
   renderedBy: string;
+  contentChecksum?: string;
 };
 
 function decodeEntities(value: string): string {
@@ -222,4 +222,3 @@ export function verifyRenderedPage(page: RenderedPage, changes: FieldChange[]): 
     reason: `The rendered page does not yet serve the approved ${missing}. The commit may exist while the site publish or sync is still pending.`,
   };
 }
-

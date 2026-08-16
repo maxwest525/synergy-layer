@@ -1,10 +1,20 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database } from "@/integrations/supabase/types";
-import type { AttemptRecord, ExecutableRequest, ExecutionStore, GithubApi, RenderedVerifier } from "./execute";
+import type {
+  AttemptRecord,
+  ExecutableRequest,
+  ExecutionStore,
+  GithubApi,
+  RenderedVerifier,
+} from "./execute";
 import { GithubStatusError, readGithubResponseSignals } from "./github-error";
-import { extractDocumentTitle, extractFirstHeading, extractMarkdownHeading, parseFieldChanges } from "./source-change";
-
+import {
+  extractDocumentTitle,
+  extractFirstHeading,
+  extractMarkdownHeading,
+  parseFieldChanges,
+} from "./source-change";
 
 type Client = SupabaseClient<Database>;
 
@@ -27,7 +37,6 @@ async function boundedFetch(
   const text = (await response.text()).slice(0, MAX_RESPONSE_CHARS);
   return { status: response.status, text, headers: response.headers };
 }
-
 
 /**
  * Store backed by the service-role client. The rendered-proof transition is
@@ -60,6 +69,9 @@ export function createExecutionStore(admin: Client, rls: Client, actorId: string
         projectId: text("source_project_id"),
         baseRevision: data.source_revision_before,
         changes: parseFieldChanges(data.changes),
+        proposalKind: text("proposal_kind"),
+        approvedPayload: row["approved_payload"],
+        approvedChecksum: text("approved_checksum"),
         commitSha: text("source_commit_sha"),
         commitUrl: text("source_commit_url"),
         publishedProofAt: text("published_proof_at"),
@@ -114,13 +126,14 @@ export function createExecutionStore(admin: Client, rls: Client, actorId: string
       if (error) throw new Error(error.message);
       const payload = data as { changed?: unknown } | null;
       if (!payload || typeof payload.changed !== "boolean") {
-        throw new Error("The publish-proof routine returned an unreadable result. Nothing was assumed.");
+        throw new Error(
+          "The publish-proof routine returned an unreadable result. Nothing was assumed.",
+        );
       }
       return { changed: payload.changed };
     },
   };
 }
-
 
 const API = "https://api.github.com";
 
@@ -130,7 +143,6 @@ const API = "https://api.github.com";
  * Sending it explicitly makes both environments behave identically.
  */
 export const GITHUB_USER_AGENT = "AOOS-Marketing-OS/1.0";
-
 
 function decodeBase64(value: string): string {
   const binary = atob(value.replace(/\n/g, ""));
@@ -172,7 +184,6 @@ export function createGithubApi(): GithubApi | null {
       );
     }
 
-
     return response.text ? (JSON.parse(response.text) as unknown) : {};
   };
 
@@ -199,7 +210,9 @@ export function createGithubApi(): GithubApi | null {
         `/repos/${repo}/commits?sha=${encodeURIComponent(branch)}&path=${encodeURIComponent(path)}&per_page=30`,
       )) as { sha?: string; html_url?: string; commit?: { message?: string } }[];
       if (!Array.isArray(data)) {
-        throw new Error("GitHub returned an unreadable commit list, so no reconciliation was attempted.");
+        throw new Error(
+          "GitHub returned an unreadable commit list, so no reconciliation was attempted.",
+        );
       }
       const hit = data.find((entry) => (entry.commit?.message ?? "").includes(marker));
       if (!hit?.sha) return null;
@@ -274,20 +287,38 @@ export function createRenderedVerifier(): RenderedVerifier | null {
         throw new Error("Firecrawl returned an unreadable response, so nothing was proven.");
       }
       if (parsed.success === false) {
-        throw new Error(`Firecrawl could not render the page: ${parsed.error ?? "no reason given"}.`);
+        throw new Error(
+          `Firecrawl could not render the page: ${parsed.error ?? "no reason given"}.`,
+        );
       }
       const status = parsed.data?.metadata?.statusCode;
       if (typeof status === "number" && (status < 200 || status >= 300)) {
-        throw new Error(`The public page returned HTTP ${status} when rendered, so nothing was proven.`);
+        throw new Error(
+          `The public page returned HTTP ${status} when rendered, so nothing was proven.`,
+        );
       }
       const html = parsed.data?.rawHtml ?? "";
       const markdown = parsed.data?.markdown ?? "";
       const metaTitle = parsed.data?.metadata?.title?.trim();
+      const finalUrl = parsed.data?.metadata?.sourceURL ?? parsed.data?.metadata?.url ?? url;
+      const title = extractDocumentTitle(html) ?? (metaTitle ? metaTitle : null);
+      const heading = extractFirstHeading(html) ?? extractMarkdownHeading(markdown);
+      const { titleH1ContentChecksum } = await import("../title-h1/evidence.server");
       return {
-        finalUrl: parsed.data?.metadata?.sourceURL ?? parsed.data?.metadata?.url ?? url,
-        title: extractDocumentTitle(html) ?? (metaTitle ? metaTitle : null),
-        heading: extractFirstHeading(html) ?? extractMarkdownHeading(markdown),
+        finalUrl,
+        title,
+        heading,
         renderedBy: "Firecrawl",
+        ...(heading
+          ? {
+              contentChecksum: titleH1ContentChecksum({
+                finalUrl,
+                title,
+                h1s: [heading],
+                mainText: markdown,
+              }),
+            }
+          : {}),
       };
     },
   };

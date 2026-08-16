@@ -1,5 +1,6 @@
 import { rows, unwrap } from "./os.server";
 import { createRequestClient, resolveTenantId } from "./tenant.server";
+import { withoutIneligibleRecommendationApprovals } from "./findings";
 
 export type Overview = {
   counts: Record<string, number>;
@@ -30,9 +31,32 @@ export async function fetchInbox() {
       .limit(200),
   );
 
-  const changeRequestIds = [
+  const recommendationIds = [
     ...new Set(
       inbox.flatMap((item) =>
+        item.lane === "pending_approval" &&
+        item.subject_kind === "recommendation" &&
+        item.subject_id
+          ? [item.subject_id]
+          : [],
+      ),
+    ),
+  ];
+  const recommendations =
+    recommendationIds.length === 0
+      ? []
+      : rows(
+          await db
+            .from("recommendations")
+            .select("id, state, requires_approval, metadata")
+            .eq("tenant_id", tenantId!)
+            .in("id", recommendationIds),
+        );
+  const eligibleInbox = withoutIneligibleRecommendationApprovals(inbox, recommendations);
+
+  const changeRequestIds = [
+    ...new Set(
+      eligibleInbox.flatMap((item) =>
         item.subject_kind === "change_request" && item.subject_id ? [item.subject_id] : [],
       ),
     ),
@@ -52,7 +76,7 @@ export async function fetchInbox() {
         );
   const changeRequestsById = new Map(changeRequests.map((change) => [change.id, change]));
 
-  return inbox.map((item) => ({
+  return eligibleInbox.map((item) => ({
     ...item,
     changeRequest:
       item.subject_kind === "change_request" && item.subject_id

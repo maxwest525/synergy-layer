@@ -69,6 +69,82 @@ export function actionCenterFieldChanges(value: unknown): ActionCenterFieldChang
   });
 }
 
+function record(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
+function text(value: unknown): string | null {
+  return typeof value === "string" && value.trim() ? value : null;
+}
+
+export function titleH1ProposalView(change: {
+  state: string;
+  proposal_kind?: unknown;
+  proposal_payload?: unknown;
+}) {
+  if (change.proposal_kind !== "title_h1") return null;
+  const payload = record(change.proposal_payload);
+  const before = record(payload?.["before"]);
+  const after = record(payload?.["after"]);
+  const draft = record(payload?.["draft"]);
+  const evidence = record(payload?.["evidence"]);
+  const live = record(evidence?.["live"]);
+  const gsc = record(evidence?.["gsc"]);
+  const competitors = Array.isArray(evidence?.["competitors"])
+    ? evidence["competitors"]
+        .map(record)
+        .filter((row): row is Record<string, unknown> => row !== null)
+    : [];
+  const url = text(payload?.["targetUrl"]);
+  const currentTitle = text(before?.["title"]);
+  const currentH1 = text(before?.["h1"]);
+  const proposedTitle = text(after?.["title"]);
+  const proposedH1 = text(after?.["h1"]);
+  if (!url || !currentTitle || !currentH1 || !proposedTitle || !proposedH1) return null;
+
+  const sourceDates = [
+    text(live?.["observedAt"])
+      ? { source: "live" as const, observedAt: text(live?.["observedAt"])! }
+      : null,
+    text(gsc?.["observedAt"])
+      ? { source: "gsc" as const, observedAt: text(gsc?.["observedAt"])! }
+      : null,
+    ...competitors.flatMap((row) => {
+      const observedAt = text(row["observedAt"]);
+      return observedAt ? [{ source: "dataforseo" as const, observedAt }] : [];
+    }),
+  ].filter((row): row is NonNullable<typeof row> => row !== null);
+
+  const limitations: string[] = [];
+  if (!gsc?.["comparisonPeriod"]) limitations.push("No GSC comparison period is stored.");
+  if (!evidence?.["ga4"]) {
+    limitations.push("GA4 is not connected for later outcome measurement.");
+  }
+  if (competitors.some((row) => !text(row["h1"]))) {
+    limitations.push("Some competitor pages have no stored H1.");
+  }
+
+  return {
+    url,
+    version: typeof payload?.["versionNumber"] === "number" ? payload["versionNumber"] : 0,
+    current: { title: currentTitle, h1: currentH1 },
+    proposed: { title: proposedTitle, h1: proposedH1 },
+    reason: text(draft?.["rationale"]) ?? "No rationale was stored.",
+    expectedMetric: text(draft?.["expectedMetric"]) ?? "not specified",
+    confidence: typeof payload?.["confidence"] === "number" ? payload["confidence"] : 0,
+    verification: text(draft?.["verification"]) ?? "No verification plan was stored.",
+    reversal: text(draft?.["reversal"]) ?? "No reversal plan was stored.",
+    sourceDates,
+    limitations,
+    actions:
+      change.state === "proposed"
+        ? (["approve", "edit", "regenerate", "ignore"] as const)
+        : ([] as const),
+  };
+}
+
 function isActionCenterLane(value: string): value is ActionCenterLane {
   return [
     "needs_attention",

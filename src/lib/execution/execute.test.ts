@@ -52,7 +52,6 @@ function makeRequest(overrides: Partial<ExecutableRequest> = {}): ExecutableRequ
   };
 }
 
-
 function makeStore(request: ExecutableRequest | null) {
   const attempts: AttemptRecord[] = [];
   const saved: Record<string, unknown>[] = [];
@@ -89,7 +88,12 @@ function makeGithub(
   return { github, writes };
 }
 
-function makeRenderer(page: { title: string | null; heading: string | null; finalUrl?: string }): RenderedVerifier {
+function makeRenderer(page: {
+  title: string | null;
+  heading: string | null;
+  finalUrl?: string;
+  contentChecksum?: string;
+}): RenderedVerifier {
   return {
     name: "TestRenderer",
     render: async (url) => ({
@@ -97,6 +101,7 @@ function makeRenderer(page: { title: string | null; heading: string | null; fina
       title: page.title,
       heading: page.heading,
       renderedBy: "TestRenderer",
+      ...(page.contentChecksum ? { contentChecksum: page.contentChecksum } : {}),
     }),
   };
 }
@@ -230,6 +235,77 @@ describe("executeSourceChange", () => {
     expect(outcome.status).toBe("replayed");
     expect(writes).toHaveLength(0);
     expect(saved).toHaveLength(0);
+  });
+
+  it("executes the locked title/H1 snapshot instead of mutable request changes", async () => {
+    const request = makeRequest({
+      proposalKind: "title_h1",
+      approvedPayload: {
+        kind: "title_h1",
+        before: {
+          title: "Corporate Relocation | TruMove Inc",
+          h1: "Corporate Relocation",
+        },
+        after: {
+          title: "Locked Approved Title | TruMove",
+          h1: "Locked Approved Heading",
+        },
+        liveContentChecksum: "captured-checksum",
+      },
+      changes: parseFieldChanges([
+        { field: "seo_title", label: "SEO title", before: "x", after: "unapproved title" },
+      ]),
+    });
+    const { store } = makeStore(request);
+    const { github, writes } = makeGithub(file);
+
+    const outcome = await executeSourceChange({
+      store,
+      github,
+      renderer: makeRenderer({
+        title: "Corporate Relocation | TruMove Inc",
+        heading: "Corporate Relocation",
+        contentChecksum: "captured-checksum",
+      }),
+      requestId: "x",
+      actorId: "operator",
+    });
+
+    expect(outcome.status).toBe("committed");
+    expect(JSON.stringify(writes[0])).toContain("Locked Approved Title | TruMove");
+    expect(JSON.stringify(writes[0])).not.toContain("unapproved title");
+  });
+
+  it("refuses with review required and makes zero writes when the live page drifted", async () => {
+    const request = makeRequest({
+      proposalKind: "title_h1",
+      approvedPayload: {
+        kind: "title_h1",
+        before: {
+          title: "Corporate Relocation | TruMove Inc",
+          h1: "Corporate Relocation",
+        },
+        after: {
+          title: "Employee Relocation Movers | TruMove",
+          h1: "Employee Relocation Moving Services",
+        },
+        liveContentChecksum: "captured-checksum",
+      },
+    });
+    const { store } = makeStore(request);
+    const { github, writes } = makeGithub(file);
+
+    const outcome = await executeSourceChange({
+      store,
+      github,
+      renderer: makeRenderer({ title: "Page changed", heading: "Corporate Relocation" }),
+      requestId: "x",
+      actorId: "operator",
+    });
+
+    expect(outcome.status).toBe("refused");
+    expect(outcome.message).toContain("Page changed — review required");
+    expect(writes).toHaveLength(0);
   });
 });
 

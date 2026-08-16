@@ -2,7 +2,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireTenantId } from "./tenant.server";
 
 import type { Database } from "@/integrations/supabase/types";
-import { fileInboxItem, logActivity } from "./os.server";
+import { findingPersistence } from "./findings";
+import { logActivity } from "./os.server";
 import { SearchConsoleFailure, checksum, shiftDate, type QueryRow } from "./search-console.server";
 
 type Client = SupabaseClient<Database>;
@@ -49,7 +50,9 @@ function rowsOf(snapshot: SnapshotRow | undefined): QueryRow[] {
 }
 
 function pick(snapshots: SnapshotRow[], dimension: string): SnapshotRow | undefined {
-  return snapshots.find((snapshot) => snapshot.dimensions.length === 1 && snapshot.dimensions[0] === dimension);
+  return snapshots.find(
+    (snapshot) => snapshot.dimensions.length === 1 && snapshot.dimensions[0] === dimension,
+  );
 }
 
 function evaluate(current: SnapshotRow[], prior: SnapshotRow[]): Observation[] {
@@ -116,7 +119,8 @@ function evaluate(current: SnapshotRow[], prior: SnapshotRow[]): Observation[] {
     if (
       before &&
       before.impressions >= t.visibilityGain.minImpressions &&
-      (row.impressions - before.impressions) / before.impressions >= t.visibilityGain.minImpressionGrowth
+      (row.impressions - before.impressions) / before.impressions >=
+        t.visibilityGain.minImpressionGrowth
     ) {
       observations.push({
         rule: "visibility_gain",
@@ -200,6 +204,8 @@ export async function evaluateSnapshots(
     let recommendationId = openRecommendation?.id ?? null;
 
     if (!recommendationId) {
+      const metadata = { property, rule: observation.rule, observationOnly: true };
+      const persistence = findingPersistence(metadata);
       const { data: inserted, error: insertError } = await client
         .from("recommendations")
         .insert({
@@ -214,28 +220,21 @@ export async function evaluateSnapshots(
           risk: "none",
           confidence: observation.confidence,
           reasoning: `Rule ${observation.rule} over finalized Search Console data for ${reportingDate} (Pacific).`,
-          suggested_action: { kind: "review", rule: observation.rule, target: observation.target } as never,
-          requires_approval: true,
-          state: "proposed",
+          suggested_action: {
+            kind: "review",
+            rule: observation.rule,
+            target: observation.target,
+          } as never,
+          requires_approval: persistence.requiresApproval,
+          state: persistence.state,
           issue_fingerprint: issueFingerprint,
-          metadata: { property, rule: observation.rule, observationOnly: true } as never,
+          metadata: metadata as never,
         })
         .select("id")
         .single();
       if (insertError) throw new SearchConsoleFailure("persistence", insertError.message);
       recommendationId = inserted.id;
       created += 1;
-
-      await fileInboxItem(client, {
-        lane: "pending_approval",
-        sourceModule: "search-console",
-        title: observation.title,
-        summary: observation.description,
-        priority: observation.businessImpact === "high" ? 2 : 3,
-        subjectKind: "recommendation",
-        subjectId: recommendationId,
-        actions: [{ kind: "approve" }, { kind: "open" }],
-      });
     }
 
     const { error: observationError } = await client.from("search_console_observations").upsert(
@@ -257,5 +256,10 @@ export async function evaluateSnapshots(
     if (observationError) throw new SearchConsoleFailure("persistence", observationError.message);
   }
 
-  return { reportingDate, observations: observations.length, recommendations: created, noChange: false };
+  return {
+    reportingDate,
+    observations: observations.length,
+    recommendations: created,
+    noChange: false,
+  };
 }

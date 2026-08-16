@@ -27,6 +27,9 @@ export type ExecutableRequest = {
   projectId: string | null;
   baseRevision: string | null;
   changes: FieldChange[];
+  proposalKind?: string | null;
+  approvedPayload?: unknown;
+  approvedChecksum?: string | null;
   commitSha: string | null;
   commitUrl: string | null;
   publishedProofAt: string | null;
@@ -51,7 +54,6 @@ export type AttemptRecord = {
   error?: string | null;
   detail?: Record<string, unknown>;
 };
-
 
 export type ExecutionStore = {
   load(id: string): Promise<ExecutableRequest | null>;
@@ -106,13 +108,16 @@ export type ExecutionOutcome = {
 export async function executeSourceChange(input: {
   store: ExecutionStore;
   github: GithubApi | null;
+  renderer?: RenderedVerifier | null;
   requestId: string;
   actorId: string;
 }): Promise<ExecutionOutcome> {
   const request = await input.store.load(input.requestId);
   if (!request) throw new Error("That change request is not visible to this account.");
 
-  const record = async (attempt: Omit<AttemptRecord, "tenantId" | "changeRequestId" | "actorId">) => {
+  const record = async (
+    attempt: Omit<AttemptRecord, "tenantId" | "changeRequestId" | "actorId">,
+  ) => {
     await input.store.recordAttempt({
       tenantId: request.tenantId,
       changeRequestId: request.id,
@@ -151,6 +156,70 @@ export async function executeSourceChange(input: {
     return refuse(
       `Refused without writing: only an approved change request can be executed. This one is ${request.state}.`,
     );
+  }
+
+  let executionChanges = request.changes;
+  if (request.proposalKind === "title_h1") {
+    const payload =
+      request.approvedPayload && typeof request.approvedPayload === "object"
+        ? (request.approvedPayload as Record<string, unknown>)
+        : null;
+    const before =
+      payload?.["before"] && typeof payload["before"] === "object"
+        ? (payload["before"] as Record<string, unknown>)
+        : null;
+    const after =
+      payload?.["after"] && typeof payload["after"] === "object"
+        ? (payload["after"] as Record<string, unknown>)
+        : null;
+    const beforeTitle = typeof before?.["title"] === "string" ? before["title"] : null;
+    const beforeH1 = typeof before?.["h1"] === "string" ? before["h1"] : null;
+    const afterTitle = typeof after?.["title"] === "string" ? after["title"] : null;
+    const afterH1 = typeof after?.["h1"] === "string" ? after["h1"] : null;
+    if (!beforeTitle || !beforeH1 || !afterTitle || !afterH1) {
+      return refuse(
+        "Refused without writing: the approved title/H1 snapshot is missing exact before-and-after values.",
+      );
+    }
+    executionChanges = [
+      { field: "seo_title", label: "SEO title", before: beforeTitle, after: afterTitle },
+      { field: "page_heading", label: "Page heading (H1)", before: beforeH1, after: afterH1 },
+    ];
+
+    const target = checkTargetUrl(request.targetUrl);
+    if (!target.ok) return refuse(target.reason);
+    if (!input.renderer) {
+      return refuse(
+        "Page changed — review required. Refused without writing: no rendered-page verifier is connected for the mandatory pre-execution drift check.",
+      );
+    }
+
+    let page: RenderedPage;
+    try {
+      page = await input.renderer.render(target.value);
+    } catch (error) {
+      return fail(error instanceof Error ? error.message : "Pre-execution page rendering failed.");
+    }
+    const finalUrl = checkTargetUrl(page.finalUrl);
+    if (!finalUrl.ok) {
+      return refuse(
+        `Page changed — review required. Refused without writing: the rendered page resolved to ${page.finalUrl}.`,
+      );
+    }
+    const normalize = (value: string | null) => (value ?? "").replace(/\s+/g, " ").trim();
+    const capturedChecksum =
+      typeof payload?.["liveContentChecksum"] === "string" ? payload["liveContentChecksum"] : null;
+    const titleDrift = normalize(page.title) !== normalize(beforeTitle);
+    const h1Drift = normalize(page.heading) !== normalize(beforeH1);
+    const contentDrift =
+      capturedChecksum !== null &&
+      page.contentChecksum !== undefined &&
+      page.contentChecksum !== capturedChecksum;
+    if (titleDrift || h1Drift || contentDrift) {
+      return refuse(
+        "Page changed — review required. Refused without writing: the live title, H1, or captured content checksum drifted from the approved before-state.",
+      );
+    }
   }
 
   const allowed = checkSourceTarget({
@@ -229,7 +298,7 @@ export async function executeSourceChange(input: {
     return fail(error instanceof Error ? error.message : "GitHub read failed.");
   }
 
-  const applied = applyExactReplacements(file.content, request.changes);
+  const applied = applyExactReplacements(file.content, executionChanges);
   if (!applied.ok) return refuse(applied.reason);
   if (applied.value.alreadyApplied) {
     return refuse(
@@ -295,7 +364,9 @@ export async function checkPublishedPage(input: {
   const request = await input.store.load(input.requestId);
   if (!request) throw new Error("That change request is not visible to this account.");
 
-  const record = async (attempt: Omit<AttemptRecord, "tenantId" | "changeRequestId" | "actorId">) => {
+  const record = async (
+    attempt: Omit<AttemptRecord, "tenantId" | "changeRequestId" | "actorId">,
+  ) => {
     await input.store.recordAttempt({
       tenantId: request.tenantId,
       changeRequestId: request.id,

@@ -2,7 +2,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireTenantId } from "./tenant.server";
 
 import type { Database } from "@/integrations/supabase/types";
-import { fileInboxItem, logActivity } from "./os.server";
+import { findingPersistence } from "./findings";
+import { logActivity } from "./os.server";
 import { SearchConsoleFailure, checksum, type QueryRow } from "./search-console.server";
 
 type Client = SupabaseClient<Database>;
@@ -73,7 +74,6 @@ export type CompetitorEvidence = {
     pageEvidence: Record<string, unknown> | null;
   }[];
 };
-
 
 type Metrics = { clicks: number; impressions: number; ctr: number; position: number };
 
@@ -226,7 +226,10 @@ export function evaluateSeoRules(
         description: `${now.impressions} impressions produced ${now.clicks} clicks (${(now.ctr * 100).toFixed(2)}% CTR) at average position ${now.position.toFixed(1)}.`,
         current: now,
         previous: before,
-        change: { ctrAbsolute: before ? now.ctr - before.ctr : null, ctrPercent: before ? ratio(now.ctr, before.ctr) : null },
+        change: {
+          ctrAbsolute: before ? now.ctr - before.ctr : null,
+          ctrPercent: before ? ratio(now.ctr, before.ctr) : null,
+        },
         snapshotId: pageId,
         priorSnapshotId: priorPageId,
         businessImpact: "medium",
@@ -244,7 +247,10 @@ export function evaluateSeoRules(
         description: `${now.impressions} impressions returned no clicks at average position ${now.position.toFixed(1)}.`,
         current: now,
         previous: before,
-        change: { clicksAbsolute: before ? now.clicks - before.clicks : null, clicksPercent: clickChange },
+        change: {
+          clicksAbsolute: before ? now.clicks - before.clicks : null,
+          clicksPercent: clickChange,
+        },
         snapshotId: pageId,
         priorSnapshotId: priorPageId,
         businessImpact: "medium",
@@ -397,7 +403,6 @@ export function evaluateSeoRules(
     }
   }
 
-
   return findings;
 }
 
@@ -410,7 +415,10 @@ async function loadCompetitorEvidence(
   client: Client,
   property: string,
 ): Promise<CompetitorEvidence | null> {
-  const ownDomain = property.replace(/^sc-domain:/, "").replace(/^https?:\/\//, "").replace(/\/$/, "");
+  const ownDomain = property
+    .replace(/^sc-domain:/, "")
+    .replace(/^https?:\/\//, "")
+    .replace(/\/$/, "");
   const { data, error } = await client
     .from("competitor_candidates")
     .select("domain, domain_class, metrics")
@@ -437,8 +445,10 @@ async function loadCompetitorEvidence(
       serpsPresent: Number(pass["serps_present"] ?? 0),
       serpShare: Number(pass["serp_share"] ?? 0),
       medianPosition: Number(pass["median_position"] ?? 0),
-      outranksOwned: (pass["outranks_owned"] ?? []) as CompetitorEvidence["profiles"][number]["outranksOwned"],
-      ownedOutranks: (pass["owned_outranks"] ?? []) as CompetitorEvidence["profiles"][number]["ownedOutranks"],
+      outranksOwned: (pass["outranks_owned"] ??
+        []) as CompetitorEvidence["profiles"][number]["outranksOwned"],
+      ownedOutranks: (pass["owned_outranks"] ??
+        []) as CompetitorEvidence["profiles"][number]["ownedOutranks"],
       confidence: Number(pass["confidence"] ?? 0),
       shortlisted: Boolean(pass["shortlisted"]),
       pageEvidence: (metrics["page_evidence"] as Record<string, unknown>) ?? null,
@@ -448,7 +458,6 @@ async function loadCompetitorEvidence(
   if (profiles.length === 0 || serpsAnalysed === 0) return null;
   return { ownDomain, serpsAnalysed, ownedAbsentSerps, profiles };
 }
-
 
 /**
  * Competitor rules. They only become eligible once real SERP-derived competitor
@@ -512,7 +521,10 @@ export function evaluateCompetitorRules(evidence: CompetitorEvidence | null): Fi
       description: `${evidence.ownDomain} does not appear in the observed top 20 organic results for ${evidence.ownedAbsentSerps.length} of ${evidence.serpsAnalysed} operator-approved keywords (${Math.round(absentShare * 100)}%). This is observed SERP absence, not a Search Console decline: those queries may never have produced impressions.`,
       current: null,
       previous: null,
-      change: { absentQueries: evidence.ownedAbsentSerps.slice(0, 40), absentShare: Number(absentShare.toFixed(3)) },
+      change: {
+        absentQueries: evidence.ownedAbsentSerps.slice(0, 40),
+        absentShare: Number(absentShare.toFixed(3)),
+      },
       snapshotId: null,
       priorSnapshotId: null,
       businessImpact: absentShare >= 0.6 ? "high" : "medium",
@@ -526,7 +538,6 @@ export function evaluateCompetitorRules(evidence: CompetitorEvidence | null): Fi
 
   return findings;
 }
-
 
 export type SeoValidationResult = {
   property: string | null;
@@ -647,7 +658,11 @@ export async function runSeoValidation(
   for (const finding of findings) {
     triggered.add(finding.rule);
     const issueFingerprint = checksum([property, "seo_validation", finding.rule, finding.target]);
-    const observationFingerprint = checksum([issueFingerprint, reportingDate, comparisonDate ?? "none"]);
+    const observationFingerprint = checksum([
+      issueFingerprint,
+      reportingDate,
+      comparisonDate ?? "none",
+    ]);
 
     const evidence = {
       property,
@@ -669,6 +684,8 @@ export async function runSeoValidation(
       rule: finding.rule,
       thresholds: SEO_VALIDATION_THRESHOLDS,
     };
+    const metadata = { ...evidence, observationOnly: true };
+    const persistence = findingPersistence(metadata);
 
     const { data: openRecommendation, error: openError } = await client
       .from("recommendations")
@@ -687,7 +704,9 @@ export async function runSeoValidation(
           description: finding.description,
           confidence: finding.confidence,
           run_id: workflowRunId,
-          metadata: { ...evidence, observationOnly: true } as never,
+          metadata: metadata as never,
+          requires_approval: persistence.requiresApproval,
+          state: persistence.state,
         })
         .eq("id", recommendationId);
       if (updateError) throw new SearchConsoleFailure("persistence", updateError.message);
@@ -708,11 +727,11 @@ export async function runSeoValidation(
           confidence: finding.confidence,
           reasoning: `Rule ${finding.rule} over finalized Search Console snapshots for ${reportingDate} (Pacific), compared against ${comparisonDate ?? "no prior period"}.`,
           suggested_action: finding.suggestedAction as never,
-          requires_approval: true,
-          state: "proposed",
+          requires_approval: persistence.requiresApproval,
+          state: persistence.state,
           issue_fingerprint: issueFingerprint,
           run_id: workflowRunId,
-          metadata: { ...evidence, observationOnly: true } as never,
+          metadata: metadata as never,
         })
         .select("id")
         .single();
@@ -728,17 +747,6 @@ export async function runSeoValidation(
         });
         if (targetError) throw new SearchConsoleFailure("persistence", targetError.message);
       }
-
-      await fileInboxItem(client, {
-        lane: "pending_approval",
-        sourceModule: "seo-validation",
-        title: finding.title,
-        summary: finding.description,
-        priority: finding.businessImpact === "high" ? 2 : 3,
-        subjectKind: "recommendation",
-        subjectId: recommendationId,
-        actions: [{ kind: "approve" }, { kind: "open" }],
-      });
     }
 
     const { error: observationError } = await client.from("search_console_observations").upsert(

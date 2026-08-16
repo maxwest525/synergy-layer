@@ -95,7 +95,8 @@ function buildReadiness(input: {
     ? {
         label: "GitHub write credential",
         state: "blocked",
-        detail: "No GitHub executor token is configured, so AOOS cannot read or commit this change.",
+        detail:
+          "No GitHub executor token is configured, so AOOS cannot read or commit this change.",
       }
     : proved
       ? {
@@ -134,11 +135,7 @@ function buildReadiness(input: {
     },
     {
       label: "Base revision recorded",
-      state: input.baseRevision
-        ? proved
-          ? "proven"
-          : "stored"
-        : "blocked",
+      state: input.baseRevision ? (proved ? "proven" : "stored") : "blocked",
       detail: input.baseRevision
         ? proved
           ? `The live branch head equalled the approved base revision ${input.baseRevision.slice(0, 10)} at the last connection test.`
@@ -187,9 +184,11 @@ type AttemptRow = {
 function latestPreflight(attempts: AttemptRow[]): PreflightView | null {
   const row = attempts.find((attempt) => attempt.kind === "preflight");
   if (!row) return null;
-  const detail = (typeof row.detail === "object" && row.detail !== null
-    ? (row.detail as Record<string, unknown>)
-    : {}) as Record<string, unknown>;
+  const detail = (
+    typeof row.detail === "object" && row.detail !== null
+      ? (row.detail as Record<string, unknown>)
+      : {}
+  ) as Record<string, unknown>;
   const text = (key: string): string | null =>
     typeof detail[key] === "string" ? (detail[key] as string) : null;
   return {
@@ -322,11 +321,13 @@ export const executeChangeRequest = createServerFn({ method: "POST" })
     const { assertOperator } = await import("../os-admin.server");
     await assertOperator(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { createExecutionStore, createGithubApi } = await import("./execute.server");
+    const { createExecutionStore, createGithubApi, createRenderedVerifier } =
+      await import("./execute.server");
     const { executeSourceChange } = await import("./execute");
     return executeSourceChange({
       store: createExecutionStore(supabaseAdmin, context.supabase, context.userId),
       github: createGithubApi(),
+      renderer: createRenderedVerifier(),
       requestId: data.id,
       actorId: context.userId,
     });
