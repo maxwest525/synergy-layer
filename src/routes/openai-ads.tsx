@@ -179,10 +179,10 @@ function ValidationControl({ available }: { available: boolean }) {
           <select
             value={eventName}
             onChange={(changed) => setEventName(changed.target.value)}
-            className="mt-1 w-full rounded-lg border border-border/60 bg-transparent px-3 py-2 text-sm text-foreground"
+            className="mt-1 w-full rounded-lg border border-border/60 bg-background px-3 py-2 text-sm text-foreground [color-scheme:dark]"
           >
             {OPENAI_ADS_EVENT_CATALOG.map((entry) => (
-              <option key={entry.name} value={entry.name}>
+              <option key={entry.name} value={entry.name} className="bg-popover text-foreground">
                 {entry.label}
               </option>
             ))}
@@ -193,11 +193,16 @@ function ValidationControl({ available }: { available: boolean }) {
           <select
             value={transport}
             onChange={(changed) => setTransport(changed.target.value as "browser" | "capi")}
-            className="mt-1 w-full rounded-lg border border-border/60 bg-transparent px-3 py-2 text-sm text-foreground"
+            className="mt-1 w-full rounded-lg border border-border/60 bg-background px-3 py-2 text-sm text-foreground [color-scheme:dark]"
           >
-            <option value="browser">Browser pixel</option>
-            <option value="capi">Server side</option>
+            <option value="browser" className="bg-popover text-foreground">
+              Browser pixel
+            </option>
+            <option value="capi" className="bg-popover text-foreground">
+              Server side
+            </option>
           </select>
+
         </label>
         <label className="text-xs text-muted-foreground">
           Event id
