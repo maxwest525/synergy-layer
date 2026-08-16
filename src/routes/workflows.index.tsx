@@ -96,7 +96,7 @@ function WorkflowsPage() {
               })}
             </ul>
           </GlassCard>
-        </section>
+        </Section>
       ) : null}
 
       {data.workflows.length === 0 ? (
