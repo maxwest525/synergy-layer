@@ -557,21 +557,15 @@ function InboxPage() {
         description={`${open} open actions across every workspace. Each card shows what is being requested and the decisions you can take now.`}
       />
 
-      <div className="space-y-6">
+      <div className="space-y-10">
         {lanes.map((lane) => {
           const items = grouped.get(lane.key) ?? [];
           return (
-            <section key={lane.key} className="space-y-4">
-              <div className="flex items-baseline justify-between gap-4">
-                <h2 className="text-sm font-semibold tracking-tight text-foreground">
-                  {lane.label}
-                  <span className="ml-2 text-xs font-normal text-muted-foreground">
-                    {items.length}
-                  </span>
-                </h2>
-                <p className="text-xs text-muted-foreground">{lane.hint}</p>
-              </div>
-
+            <Section
+              key={lane.key}
+              title={lane.label}
+              hint={`${items.length} · ${lane.hint}`}
+            >
               {items.length === 0 ? (
                 <EmptyState
                   title="Nothing here"
