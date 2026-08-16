@@ -259,22 +259,13 @@ export function Shell({ children }: { children: ReactNode }) {
           </header>
 
           <main className="mx-auto w-full max-w-6xl flex-1 px-5 py-6 md:px-8 md:py-8">
-            {accessState === "loading" ? (
+            {accessState === "loading" || accessState === "signed-out" ? (
               <div className="rounded-2xl border border-border/60 px-4 py-6" role="status">
-                <p className="text-sm text-muted-foreground">Checking operator session…</p>
-              </div>
-            ) : accessState === "signed-out" ? (
-              <div className="rounded-2xl border border-primary/30 bg-primary/5 px-4 py-4">
-                <p className="text-sm font-medium text-foreground">Operator sign-in required</p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Operational state, evidence, and spend remain hidden until an operator signs in.
+                <p className="text-sm text-muted-foreground">
+                  {accessState === "loading"
+                    ? "Checking operator session…"
+                    : "Taking you to sign in…"}
                 </p>
-                <Link
-                  to="/auth"
-                  className="mt-3 inline-flex items-center rounded-lg border border-primary/50 px-3 py-1.5 text-sm font-medium text-primary transition-colors hover:bg-primary/10"
-                >
-                  Sign in as operator
-                </Link>
               </div>
             ) : (
               children
