@@ -83,7 +83,99 @@ describe("OpenAI Ads instrumentation truth", () => {
   it("describes the bridge from secret presence without exposing values", () => {
     expect(describeBridgeState({})).toMatchObject({ configured: false, capiSecretPresent: false });
     expect(
-      describeBridgeState({ OPENAI_ADS_BRIDGE_SECRET: "x", OPENAI_ADS_CAPI_KEY: "y" }),
+      describeBridgeState({ OPENAI_ADS_BRIDGE_SECRET: "x", OPENAI_ADS_CAPI_API_KEY: "y" }),
     ).toMatchObject({ configured: true, capiSecretPresent: true });
+  });
+
+  it("treats a configured secret as configuration, not a proven site connection", () => {
+    expect(describeSourceSite([]).state).toBe("not_connected");
+    expect(describeSourceSite([event({})]).state).toBe("connected");
+  });
+
+  it("reports missing ad click references as unattributed, never as attributed", () => {
+    expect(describeAttribution([]).state).toBe("unavailable");
+    expect(describeAttribution([event({})])).toMatchObject({
+      state: "absent",
+      eventsWithOppref: 0,
+      eventsWithoutOppref: 1,
+    });
+    expect(describeAttribution([event({ oppref: "abc" })])).toMatchObject({
+      state: "observed",
+      distinctOpprefs: 1,
+    });
+  });
+
+  it("derives provider delivery health from reported status only", () => {
+    expect(describeDeliveryHealth([]).state).toBe("unavailable");
+    expect(describeDeliveryHealth([event({}), event({})]).state).toBe("clean");
+    expect(describeDeliveryHealth([event({ deliveryStatus: "failed" })]).state).toBe("failing");
+  });
+});
+
+describe("OpenAI Ads event coverage", () => {
+  it("never marks an event active without stored events", () => {
+    const rows = describeEventCoverage({});
+    expect(rows.find((row) => row.name === "page_viewed")?.state).toBe("available");
+    expect(rows.find((row) => row.name === "checkout_started")?.state).toBe("not_applicable");
+    expect(rows.every((row) => row.state !== "active")).toBe(true);
+  });
+
+  it("keeps the unproven TruMove booking boundaries available rather than wired", () => {
+    const rows = describeEventCoverage({});
+    for (const name of ["appointment_scheduled", "order_created"] as const) {
+      const row = rows.find((entry) => entry.name === name)!;
+      expect(row.state).toBe("available");
+      expect(row.boundaryEvidence.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("marks an event active only from real stored counts", () => {
+    const rows = describeEventCoverage({
+      lead_created: { total: 3, browser: 2, capi: 1, lastAt: "2026-08-15T00:00:00.000Z" },
+    });
+    expect(rows.find((row) => row.name === "lead_created")).toMatchObject({
+      state: "active",
+      total: 3,
+    });
+  });
+
+  it("surfaces event names outside the supported catalog", () => {
+    expect(
+      unrecognizedEventNames({ mystery: { total: 1, browser: 1, capi: 0, lastAt: null } }),
+    ).toEqual(["mystery"]);
+  });
+});
+
+describe("OpenAI Ads validation control", () => {
+  const input = { eventName: "lead_created", eventId: "evt-9", transport: "browser" } as const;
+
+  it("never emits and never contacts the provider", () => {
+    const report = validateCandidateEvent(input, { existingTransports: [], env: {} });
+    expect(report.emitted).toBe(false);
+    expect(report.providerContacted).toBe(false);
+    expect(report.checks.find((check) => check.label === "Provider validate-only call")?.outcome).toBe(
+      "warn",
+    );
+  });
+
+  it("fails a duplicate id on the same path and pairs it across paths", () => {
+    expect(
+      validateCandidateEvent(input, { existingTransports: ["browser"], env: {} }).checks.find(
+        (check) => check.label === "Deduplication",
+      )?.outcome,
+    ).toBe("fail");
+    expect(
+      validateCandidateEvent(input, { existingTransports: ["capi"], env: {} }).checks.find(
+        (check) => check.label === "Deduplication",
+      )?.outcome,
+    ).toBe("pass");
+  });
+
+  it("rejects an event that does not apply to this business", () => {
+    const report = validateCandidateEvent(
+      { ...input, eventName: "trial_started" },
+      { existingTransports: [], env: {} },
+    );
+    expect(report.checks[0]?.outcome).toBe("fail");
   });
 });
