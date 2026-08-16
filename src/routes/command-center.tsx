@@ -128,8 +128,7 @@ function CommandCenterPage() {
         description="One read on what exists, what is live, and what is drifting right now."
       />
 
-      <section className="space-y-4">
-        <h2 className="text-sm font-semibold tracking-tight text-foreground">Quick actions</h2>
+      <Section title="Quick actions" hint="Jump straight into work that is waiting">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <QuickAction
             to="/"
