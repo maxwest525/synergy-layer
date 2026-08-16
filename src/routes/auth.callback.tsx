@@ -91,7 +91,7 @@ function CallbackPage() {
       void navigate({ to: "/" });
     }, 600);
     return () => clearTimeout(timer);
-  }, [result.data, navigate, next]);
+  }, [hasSession, result.data, result.error, result.isPending, navigate, next]);
 
   const denied = result.data && !result.data.canOperate;
 
