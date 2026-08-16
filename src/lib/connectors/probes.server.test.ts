@@ -3,8 +3,112 @@ import { describe, expect, it, vi } from "vitest";
 import { probeConnector } from "./probes.server";
 
 describe("connector probes", () => {
+  const dataForSeoEnv = { DATAFORSEO_BASIC_TOKEN: "dataforseo-token" };
+
+  it("accepts a successful DataForSEO envelope", async () => {
+    const result = await probeConnector("dataforseo", {
+      env: dataForSeoEnv,
+      fetcher: async () =>
+        new Response(
+          JSON.stringify({
+            status_code: 20000,
+            status_message: "Ok.",
+            tasks: [{ status_code: 20100 }],
+          }),
+          { status: 200 },
+        ),
+    });
+
+    expect(result).toMatchObject({
+      health: "healthy",
+      outcome: "success",
+      proof: { statusCode: 200 },
+    });
+  });
+
+  it("degrades a DataForSEO HTTP 200 with malformed JSON", async () => {
+    const result = await probeConnector("dataforseo", {
+      env: dataForSeoEnv,
+      fetcher: async () => new Response("not-json", { status: 200 }),
+    });
+
+    expect(result).toMatchObject({ health: "degraded", outcome: "schema_error" });
+    expect(JSON.stringify(result)).not.toContain("not-json");
+  });
+
+  it("degrades a DataForSEO HTTP 200 with the wrong envelope shape", async () => {
+    const result = await probeConnector("dataforseo", {
+      env: dataForSeoEnv,
+      fetcher: async () => new Response(JSON.stringify({ status_code: 20000 }), { status: 200 }),
+    });
+
+    expect(result).toMatchObject({ health: "degraded", outcome: "schema_error" });
+  });
+
+  it("keeps a DataForSEO HTTP 201 status-only", async () => {
+    const result = await probeConnector("dataforseo", {
+      env: dataForSeoEnv,
+      fetcher: async () => new Response("not-json", { status: 201 }),
+    });
+
+    expect(result).toMatchObject({
+      health: "healthy",
+      outcome: "success",
+      proof: { statusCode: 201 },
+    });
+  });
+
+  it("cancels an oversized streamed DataForSEO body without exposing it", async () => {
+    const cancel = vi.fn();
+    const oversizedBody = `provider-body-${"x".repeat(32 * 1024)}`;
+    const response = new Response(
+      new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(new TextEncoder().encode(oversizedBody));
+        },
+        cancel,
+      }),
+      { status: 200 },
+    );
+    const result = await probeConnector("dataforseo", {
+      env: dataForSeoEnv,
+      fetcher: async () => response,
+    });
+
+    expect(result).toMatchObject({ health: "degraded", outcome: "schema_error" });
+    expect(JSON.stringify(result)).not.toContain("provider-body-");
+    expect(cancel).toHaveBeenCalledTimes(1);
+  });
+
+  it("cancels a DataForSEO body whose declared length exceeds the cap", async () => {
+    const cancel = vi.fn();
+    const response = new Response(new ReadableStream<Uint8Array>({ cancel }), {
+      status: 200,
+      headers: { "content-length": "32769" },
+    });
+    const result = await probeConnector("dataforseo", {
+      env: dataForSeoEnv,
+      fetcher: async () => response,
+    });
+
+    expect(result).toMatchObject({ health: "degraded", outcome: "schema_error" });
+    expect(cancel).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    [{ status_code: 40000, status_message: "Error", tasks: [] }],
+    [{ status_code: 20000, status_message: "Ok.", tasks: [{ status_code: 40000 }] }],
+  ])("degrades a DataForSEO HTTP 200 with a non-success status code", async (body) => {
+    const result = await probeConnector("dataforseo", {
+      env: dataForSeoEnv,
+      fetcher: async () => new Response(JSON.stringify(body), { status: 200 }),
+    });
+
+    expect(result).toMatchObject({ health: "degraded", outcome: "schema_error" });
+  });
+
   it("probes n8n health without triggering a workflow", async () => {
-    const fetcher = vi.fn(async () => new Response('{"status":"ok"}', { status: 200 }));
+    const fetcher = vi.fn(async () => new Response("plain n8n response", { status: 200 }));
     const result = await probeConnector("n8n", {
       env: {
         N8N_BASE_URL: "https://n8n.example.com/",
@@ -14,7 +118,11 @@ describe("connector probes", () => {
       fetcher,
     });
 
-    expect(result).toMatchObject({ health: "healthy", proof: { statusCode: 200 } });
+    expect(result).toMatchObject({
+      health: "healthy",
+      outcome: "success",
+      proof: { statusCode: 200 },
+    });
     expect(fetcher).toHaveBeenCalledWith(
       "https://n8n.example.com/healthz",
       expect.objectContaining({ method: "GET" }),
@@ -23,7 +131,7 @@ describe("connector probes", () => {
   });
 
   it("probes the VPS scraper health endpoint", async () => {
-    const fetcher = vi.fn(async () => new Response('{"ok":true}', { status: 200 }));
+    const fetcher = vi.fn(async () => new Response("plain VPS response", { status: 200 }));
     const result = await probeConnector("vps_scraper", {
       env: {
         VPS_SCRAPER_BASE_URL: "https://scrape.example.com",
@@ -32,7 +140,7 @@ describe("connector probes", () => {
       fetcher,
     });
 
-    expect(result.health).toBe("healthy");
+    expect(result).toMatchObject({ health: "healthy", outcome: "success" });
     expect(fetcher).toHaveBeenCalledWith(
       "https://scrape.example.com/health",
       expect.objectContaining({ method: "GET" }),

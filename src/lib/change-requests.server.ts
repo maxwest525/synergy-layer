@@ -109,6 +109,8 @@ export async function reconcileAppliedChangeEvidence(client: Client): Promise<{
 }> {
   const { requireTenantId } = await import("./tenant.server");
   const { logActivity } = await import("./os.server");
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { recordSeoRunOutcomeEvidenceReady } = await import("./seo-runs/execution.server");
   const tenantId = await requireTenantId(client);
   const { data: changes, error: changeError } = await client
     .from("change_requests")
@@ -143,6 +145,11 @@ export async function reconcileAppliedChangeEvidence(client: Client): Promise<{
     );
     if (!outcome.ready) continue;
     ready += 1;
+    await recordSeoRunOutcomeEvidenceReady(supabaseAdmin, tenantId, change.id, {
+      rowCount: outcome.rowCount,
+      firstDate: outcome.firstDate,
+      latestDate: outcome.latestDate,
+    });
 
     const { data: current, error: itemError } = await client
       .from("inbox_items")

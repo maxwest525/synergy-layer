@@ -1,6 +1,34 @@
+import { projectCurrentConnectorReadiness } from "../connectors/current-readiness";
 import { SEO_REQUIRED_CONNECTORS, type ConnectorProof, type SeoPreflight } from "./types";
 
 const acceptableHealth = new Set(["healthy", "degraded"]);
+
+type PersistedSeoConnector = {
+  capability_key: string;
+  config: unknown;
+  health: string;
+  integration_state: string;
+};
+
+export function buildCurrentSeoConnectorSnapshot(
+  persistedConnections: readonly PersistedSeoConnector[],
+  env: Record<string, string | undefined>,
+): ConnectorProof[] {
+  return projectCurrentConnectorReadiness(persistedConnections, env).map((item) => {
+    const config =
+      item.persisted?.config &&
+      typeof item.persisted.config === "object" &&
+      !Array.isArray(item.persisted.config)
+        ? (item.persisted.config as Record<string, unknown>)
+        : {};
+    return {
+      capabilityKey: item.key,
+      integrationState: item.persisted?.integration_state ?? "pending",
+      health: item.health,
+      probeOutcome: typeof config["probe_outcome"] === "string" ? config["probe_outcome"] : null,
+    };
+  });
+}
 
 export function assessSeoPreflight(
   connections: ConnectorProof[],

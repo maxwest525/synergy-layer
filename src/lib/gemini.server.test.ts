@@ -76,7 +76,7 @@ describe("direct Gemini structured output", () => {
   });
 
   it("uses the current stable production model when no model override is configured", async () => {
-    const fetcher = vi.fn(async () =>
+    const fetcher = vi.fn<typeof fetch>(async () =>
       Response.json({
         candidates: [
           {

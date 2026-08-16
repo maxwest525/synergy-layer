@@ -6,6 +6,13 @@ import type { AuthorityQueryClass } from "../authority/types";
 import { requireProposalTarget } from "../title-h1-proposals";
 import { canonicalSeoRunTarget, maxSeoRunBatchSize } from "./batch";
 import { describeSeoRunFailure } from "./failure";
+import {
+  assessSeoRunProposalEventRepair,
+  reconcileSeoRunProposalEvent,
+  repairFailedSeoRunProposalEvent,
+  SEO_PROPOSAL_EVENT_SUMMARY,
+  type ProposalRepairAdminClient,
+} from "./proposal-event.server";
 
 const createInput = z.object({
   targetUrl: z.string().url().max(500),
@@ -37,7 +44,7 @@ export const getSeoRuns = createServerFn({ method: "GET" })
     const tenantId = await requireTenantId(context.supabase);
     const { data, error } = await context.supabase
       .from("seo_runs")
-      .select("*")
+      .select("id,target_url,query_class,created_at,state,change_request_id")
       .eq("tenant_id", tenantId)
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
@@ -66,7 +73,28 @@ export const getSeoRun = createServerFn({ method: "GET" })
     ]);
     if (runResult.error) throw new Error(runResult.error.message);
     if (eventsResult.error) throw new Error(eventsResult.error.message);
-    return { run: runResult.data, events: eventsResult.data ?? [] };
+    const run = runResult.data;
+    const events = eventsResult.data ?? [];
+    const changeRequestResult = run.change_request_id
+      ? await context.supabase
+          .from("change_requests")
+          .select("state")
+          .eq("tenant_id", tenantId)
+          .eq("id", run.change_request_id)
+          .maybeSingle()
+      : { data: null, error: null };
+    if (changeRequestResult.error) throw new Error(changeRequestResult.error.message);
+    return {
+      run,
+      events,
+      proposalEventRepairAvailable: run.change_request_id
+        ? assessSeoRunProposalEventRepair({
+            run: { ...run, change_request_id: run.change_request_id },
+            eventKeys: events.map((event) => event.event_key),
+            changeRequestState: changeRequestResult.data?.state ?? null,
+          })
+        : false,
+    };
   });
 
 export const createSeoRuns = createServerFn({ method: "POST" })
@@ -185,10 +213,6 @@ export const evaluateSeoRun = createServerFn({ method: "POST" })
     const { assertOperator } = await import("../os-admin.server");
     const { requireTenantId } = await import("../tenant.server");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { assessSeoPreflight } = await import("./orchestrator.server");
-    const { evaluateAuthorityForTarget } = await import("../authority/evaluate.server");
-    const { prepareTitleH1Proposal } = await import("../title-h1-proposals.server");
-    const { serviceRpc } = await import("../title-h1-proposals.functions");
     await assertOperator(context.supabase, context.userId);
     const tenantId = await requireTenantId(context.supabase);
     const { data: run, error: runError } = await supabaseAdmin
@@ -198,7 +222,21 @@ export const evaluateSeoRun = createServerFn({ method: "POST" })
       .eq("id", data.id)
       .single();
     if (runError) throw new Error(runError.message);
-    if (run.change_request_id) return run;
+    if (run.change_request_id) {
+      await reconcileSeoRunProposalEvent({
+        run: { ...run, change_request_id: run.change_request_id },
+        tenantId,
+        actorId: context.userId,
+        admin: supabaseAdmin,
+      });
+      return run;
+    }
+
+    const { assessSeoPreflight, buildCurrentSeoConnectorSnapshot } =
+      await import("./orchestrator.server");
+    const { evaluateAuthorityForTarget } = await import("../authority/evaluate.server");
+    const { prepareTitleH1Proposal } = await import("../title-h1-proposals.server");
+    const { serviceRpc } = await import("../title-h1-proposals.functions");
 
     const [connectionsResult, gscResult, dfsResult] = await Promise.all([
       context.supabase.from("tenant_connections").select("*").eq("tenant_id", tenantId),
@@ -214,18 +252,10 @@ export const evaluateSeoRun = createServerFn({ method: "POST" })
     if (connectionsResult.error) throw new Error(connectionsResult.error.message);
     if (gscResult.error) throw new Error(gscResult.error.message);
     if (dfsResult.error) throw new Error(dfsResult.error.message);
-    const connectorSnapshot = (connectionsResult.data ?? []).map((row) => {
-      const config =
-        row.config && typeof row.config === "object" && !Array.isArray(row.config)
-          ? (row.config as Record<string, unknown>)
-          : {};
-      return {
-        capabilityKey: row.capability_key,
-        integrationState: row.integration_state,
-        health: row.health,
-        probeOutcome: typeof config["probe_outcome"] === "string" ? config["probe_outcome"] : null,
-      };
-    });
+    const connectorSnapshot = buildCurrentSeoConnectorSnapshot(
+      connectionsResult.data ?? [],
+      process.env,
+    );
     const evidenceSnapshot = {
       searchConsoleRows: gscResult.count ?? 0,
       dataForSeoSnapshots: dfsResult.count ?? 0,
@@ -315,8 +345,7 @@ export const evaluateSeoRun = createServerFn({ method: "POST" })
           run_id: run.id,
           event_key: `proposal:${created.changeRequest.id}`,
           state: "awaiting_approval",
-          summary:
-            "Evidence and Authority Science produced a concrete proposal awaiting operator approval.",
+          summary: SEO_PROPOSAL_EVENT_SUMMARY,
           payload: {
             change_request_id: created.changeRequest.id,
             authority_finding_ids: authority.persisted.map((finding) => finding.id),
@@ -352,4 +381,51 @@ export const evaluateSeoRun = createServerFn({ method: "POST" })
       if (eventError) throw new Error(eventError.message);
       throw new Error(failureReason);
     }
+  });
+
+export const repairSeoRunProposalEvent = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((value: unknown) => runInput.parse(value))
+  .handler(async ({ data, context }) => {
+    const { assertOperator } = await import("../os-admin.server");
+    const { requireTenantId } = await import("../tenant.server");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await assertOperator(context.supabase, context.userId);
+    const tenantId = await requireTenantId(context.supabase);
+    const { data: run, error } = await supabaseAdmin
+      .from("seo_runs")
+      .select("*")
+      .eq("tenant_id", tenantId)
+      .eq("id", data.id)
+      .single();
+    if (error) throw new Error(error.message);
+    if (!run.change_request_id) {
+      throw new Error("Only a failed SEO run with a linked proposal can repair its timeline.");
+    }
+    const [eventsResult, changeRequestResult] = await Promise.all([
+      supabaseAdmin
+        .from("seo_run_events")
+        .select("event_key")
+        .eq("tenant_id", tenantId)
+        .eq("run_id", run.id),
+      supabaseAdmin
+        .from("change_requests")
+        .select("state")
+        .eq("tenant_id", tenantId)
+        .eq("id", run.change_request_id)
+        .maybeSingle(),
+    ]);
+    if (eventsResult.error) throw new Error(eventsResult.error.message);
+    if (changeRequestResult.error) throw new Error(changeRequestResult.error.message);
+    const repairStatus = await repairFailedSeoRunProposalEvent({
+      run: { ...run, change_request_id: run.change_request_id },
+      eventKeys: (eventsResult.data ?? []).map((event) => event.event_key),
+      changeRequestState: changeRequestResult.data?.state ?? null,
+      tenantId,
+      actorId: context.userId,
+      admin: supabaseAdmin as unknown as ProposalRepairAdminClient,
+    });
+    return repairStatus === "repaired"
+      ? { ...run, state: "awaiting_approval" as const, failure_reason: null, repairStatus }
+      : { ...run, repairStatus };
   });

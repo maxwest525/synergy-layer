@@ -4,7 +4,8 @@ import { useServerFn } from "@tanstack/react-start";
 
 import { GlassCard, PageHeader, StatePill, formatWhen } from "@/components/os/primitives";
 import { Button } from "@/components/ui/button";
-import { evaluateSeoRun, getSeoRun } from "@/lib/seo-runs/functions";
+import { isSeoRunEligibleForPreparation } from "@/lib/seo-runs/eligibility";
+import { evaluateSeoRun, getSeoRun, repairSeoRunProposalEvent } from "@/lib/seo-runs/functions";
 
 export const Route = createFileRoute("/seo-runs/$id")({
   ssr: false,
@@ -27,14 +28,24 @@ function SeoRunDetailPage() {
   const { id } = Route.useParams();
   const load = useServerFn(getSeoRun);
   const evaluate = useServerFn(evaluateSeoRun);
+  const repairProposalEvent = useServerFn(repairSeoRunProposalEvent);
   const queryClient = useQueryClient();
   const { data } = useSuspenseQuery({
     queryKey: ["seo-run", id],
     queryFn: () => load({ data: { id } }),
   });
-  const { run, events } = data;
+  const { run, events, proposalEventRepairAvailable } = data;
   const evaluation = useMutation({
     mutationFn: () => evaluate({ data: { id } }),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["seo-run", id] }),
+        queryClient.invalidateQueries({ queryKey: ["seo-runs"] }),
+      ]);
+    },
+  });
+  const proposalEventRepair = useMutation({
+    mutationFn: () => repairProposalEvent({ data: { id } }),
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["seo-run", id] }),
@@ -85,7 +96,7 @@ function SeoRunDetailPage() {
         ) : (
           <p className="mt-4 text-sm text-muted-foreground">No concrete proposal is linked yet.</p>
         )}
-        {run.state === "draft" || run.state === "preflight_blocked" || run.state === "failed" ? (
+        {isSeoRunEligibleForPreparation(run) ? (
           <div className="mt-4">
             <Button
               type="button"
@@ -99,6 +110,27 @@ function SeoRunDetailPage() {
             {evaluation.error ? (
               <p className="mt-3 text-sm text-destructive" role="alert">
                 {evaluation.error.message}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+        {proposalEventRepairAvailable ? (
+          <div className="mt-4">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={proposalEventRepair.isPending}
+              onClick={() => proposalEventRepair.mutate()}
+            >
+              {proposalEventRepair.isPending ? "Repairing timeline…" : "Repair proposal timeline"}
+            </Button>
+            <p className="mt-2 text-xs text-muted-foreground">
+              Restores the saved proposal event from durable data. This makes no provider requests.
+            </p>
+            {proposalEventRepair.error ? (
+              <p className="mt-3 text-sm text-destructive" role="alert">
+                {proposalEventRepair.error.message}
               </p>
             ) : null}
           </div>
