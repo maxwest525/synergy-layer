@@ -69,8 +69,20 @@ function CallbackPage() {
 
   // A verified session always continues into the OS. Accounts without an
   // operator role land read only rather than parking on this page.
+  // The verified session is the gate. If the access check itself fails or is
+  // slow, still continue: the OS enforces roles on every action server-side.
   useEffect(() => {
-    if (!result.data) return undefined;
+    if (hasSession !== true) return undefined;
+    if (!result.data && !result.error && result.isPending) {
+      const slow = setTimeout(() => {
+        if (next) {
+          window.location.href = next;
+          return;
+        }
+        void navigate({ to: "/" });
+      }, 4000);
+      return () => clearTimeout(slow);
+    }
     const timer = setTimeout(() => {
       if (next) {
         window.location.href = next;
@@ -79,7 +91,7 @@ function CallbackPage() {
       void navigate({ to: "/" });
     }, 600);
     return () => clearTimeout(timer);
-  }, [result.data, navigate, next]);
+  }, [hasSession, result.data, result.error, result.isPending, navigate, next]);
 
   const denied = result.data && !result.data.canOperate;
 
