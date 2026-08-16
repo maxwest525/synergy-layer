@@ -1,9 +1,11 @@
 import { auth, defineMcp } from "@lovable.dev/mcp-js";
 
 import getRecommendation from "./tools/get-recommendation";
+import callOpenSeoFreeRead from "./tools/call-openseo-free-read";
 import listAssets from "./tools/list-assets";
 import listCapabilities from "./tools/list-capabilities";
 import listInbox from "./tools/list-inbox";
+import listOpenSeoTools from "./tools/list-openseo-tools";
 import listRecommendations from "./tools/list-recommendations";
 import listWorkflowRuns from "./tools/list-workflow-runs";
 
@@ -29,5 +31,7 @@ export default defineMcp({
     listWorkflowRuns,
     listCapabilities,
     listAssets,
+    listOpenSeoTools,
+    callOpenSeoFreeRead,
   ] as never,
 });

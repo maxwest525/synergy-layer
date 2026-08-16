@@ -4,6 +4,38 @@ import { probeConnector } from "./probes.server";
 
 describe("connector probes", () => {
   const dataForSeoEnv = { DATAFORSEO_BASIC_TOKEN: "dataforseo-token" };
+  const openSeoEnv = {
+    OPENSEO_BASE_URL: "https://seo.example.test",
+    OPENSEO_USERNAME: "operator",
+    OPENSEO_PASSWORD: "password",
+  };
+
+  it("accepts the documented OpenSEO health object", async () => {
+    const result = await probeConnector("openseo", {
+      env: openSeoEnv,
+      fetcher: async () =>
+        new Response(
+          JSON.stringify({
+            status: "ok",
+            version: "0.1.4",
+            authMode: "local_noauth",
+            checks: { database: "ok", ai: "configured" },
+          }),
+          { status: 200 },
+        ),
+    });
+
+    expect(result).toMatchObject({ health: "healthy", outcome: "success" });
+  });
+
+  it("degrades an OpenSEO HTTP 200 with an invalid health object", async () => {
+    const result = await probeConnector("openseo", {
+      env: openSeoEnv,
+      fetcher: async () => new Response(JSON.stringify({ status: "ok" }), { status: 200 }),
+    });
+
+    expect(result).toMatchObject({ health: "degraded", outcome: "schema_error" });
+  });
 
   it("accepts a successful DataForSEO envelope", async () => {
     const result = await probeConnector("dataforseo", {

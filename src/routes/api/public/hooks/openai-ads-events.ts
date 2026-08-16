@@ -34,9 +34,8 @@ export const Route = createFileRoute("/api/public/hooks/openai-ads-events")({
           return json({ ok: false, error: "Unauthorized" }, 401);
         }
 
-        const { ingestOpenAiAdsEvents, ingestPayloadSchema } = await import(
-          "@/lib/openai-ads/ingest.server"
-        );
+        const { ingestOpenAiAdsEvents, ingestPayloadSchema } =
+          await import("@/lib/openai-ads/ingest.server");
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
         let parsed;

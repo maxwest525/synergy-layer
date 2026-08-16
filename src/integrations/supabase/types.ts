@@ -2616,6 +2616,80 @@ export type Database = {
           },
         ]
       }
+      openseo_tool_runs: {
+        Row: {
+          arguments: Json
+          classification: string
+          completed_at: string
+          cost_model: string
+          created_at: string
+          credits_charged: number | null
+          credits_remaining: number | null
+          duration_ms: number
+          error_code: string | null
+          id: string
+          mcp_version: string
+          openseo_version: string
+          operator_id: string
+          result: Json
+          source_endpoint: string
+          started_at: string
+          status: string
+          tenant_id: string
+          tool_name: string
+        }
+        Insert: {
+          arguments?: Json
+          classification: string
+          completed_at: string
+          cost_model: string
+          created_at?: string
+          credits_charged?: number | null
+          credits_remaining?: number | null
+          duration_ms: number
+          error_code?: string | null
+          id?: string
+          mcp_version: string
+          openseo_version: string
+          operator_id: string
+          result?: Json
+          source_endpoint: string
+          started_at: string
+          status: string
+          tenant_id: string
+          tool_name: string
+        }
+        Update: {
+          arguments?: Json
+          classification?: string
+          completed_at?: string
+          cost_model?: string
+          created_at?: string
+          credits_charged?: number | null
+          credits_remaining?: number | null
+          duration_ms?: number
+          error_code?: string | null
+          id?: string
+          mcp_version?: string
+          openseo_version?: string
+          operator_id?: string
+          result?: Json
+          source_endpoint?: string
+          started_at?: string
+          status?: string
+          tenant_id?: string
+          tool_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "openseo_tool_runs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pagespeed_snapshots: {
         Row: {
           analysis_timestamp: string | null

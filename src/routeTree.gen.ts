@@ -22,6 +22,7 @@ import { Route as KnowledgeRouteImport } from './routes/knowledge'
 import { Route as McpRouteImport } from './routes/mcp'
 import { Route as MeasurementRouteImport } from './routes/measurement'
 import { Route as OpenaiAdsRouteImport } from './routes/openai-ads'
+import { Route as OpenseoRouteImport } from './routes/openseo'
 import { Route as RecommendationsRouteImport } from './routes/recommendations'
 import { Route as SchedulerRouteImport } from './routes/scheduler'
 import { Route as SearchRouteImport } from './routes/search'
@@ -120,6 +121,11 @@ const MeasurementRoute = MeasurementRouteImport.update({
 const OpenaiAdsRoute = OpenaiAdsRouteImport.update({
   id: '/openai-ads',
   path: '/openai-ads',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OpenseoRoute = OpenseoRouteImport.update({
+  id: '/openseo',
+  path: '/openseo',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RecommendationsRoute = RecommendationsRouteImport.update({
@@ -314,6 +320,7 @@ export interface FileRoutesByFullPath {
   '/mcp': typeof McpRoute
   '/measurement': typeof MeasurementRoute
   '/openai-ads': typeof OpenaiAdsRoute
+  '/openseo': typeof OpenseoRoute
   '/recommendations': typeof RecommendationsRouteWithChildren
   '/scheduler': typeof SchedulerRouteWithChildren
   '/search': typeof SearchRoute
@@ -359,6 +366,7 @@ export interface FileRoutesByTo {
   '/mcp': typeof McpRoute
   '/measurement': typeof MeasurementRoute
   '/openai-ads': typeof OpenaiAdsRoute
+  '/openseo': typeof OpenseoRoute
   '/search': typeof SearchRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -405,6 +413,7 @@ export interface FileRoutesById {
   '/mcp': typeof McpRoute
   '/measurement': typeof MeasurementRoute
   '/openai-ads': typeof OpenaiAdsRoute
+  '/openseo': typeof OpenseoRoute
   '/recommendations': typeof RecommendationsRouteWithChildren
   '/scheduler': typeof SchedulerRouteWithChildren
   '/search': typeof SearchRoute
@@ -456,6 +465,7 @@ export interface FileRouteTypes {
     | '/mcp'
     | '/measurement'
     | '/openai-ads'
+    | '/openseo'
     | '/recommendations'
     | '/scheduler'
     | '/search'
@@ -501,6 +511,7 @@ export interface FileRouteTypes {
     | '/mcp'
     | '/measurement'
     | '/openai-ads'
+    | '/openseo'
     | '/search'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
@@ -546,6 +557,7 @@ export interface FileRouteTypes {
     | '/mcp'
     | '/measurement'
     | '/openai-ads'
+    | '/openseo'
     | '/recommendations'
     | '/scheduler'
     | '/search'
@@ -596,6 +608,7 @@ export interface RootRouteChildren {
   McpRoute: typeof McpRoute
   MeasurementRoute: typeof MeasurementRoute
   OpenaiAdsRoute: typeof OpenaiAdsRoute
+  OpenseoRoute: typeof OpenseoRoute
   RecommendationsRoute: typeof RecommendationsRouteWithChildren
   SchedulerRoute: typeof SchedulerRouteWithChildren
   SearchRoute: typeof SearchRoute
@@ -703,6 +716,13 @@ declare module '@tanstack/react-router' {
       path: '/openai-ads'
       fullPath: '/openai-ads'
       preLoaderRoute: typeof OpenaiAdsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/openseo': {
+      id: '/openseo'
+      path: '/openseo'
+      fullPath: '/openseo'
+      preLoaderRoute: typeof OpenseoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/recommendations': {
@@ -1085,6 +1105,7 @@ const rootRouteChildren: RootRouteChildren = {
   McpRoute: McpRoute,
   MeasurementRoute: MeasurementRoute,
   OpenaiAdsRoute: OpenaiAdsRoute,
+  OpenseoRoute: OpenseoRoute,
   RecommendationsRoute: RecommendationsRouteWithChildren,
   SchedulerRoute: SchedulerRouteWithChildren,
   SearchRoute: SearchRoute,
