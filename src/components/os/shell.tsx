@@ -179,6 +179,16 @@ export function Shell({ children }: { children: ReactNode }) {
     setMenuOpen(false);
   }, [pathname]);
 
+  // Signing in is its own page, not a banner bolted onto every workspace.
+  useEffect(() => {
+    if (accessState !== "signed-out") return;
+    void navigate({
+      to: "/auth",
+      search: pathname === "/" ? {} : { next: pathname },
+      replace: true,
+    });
+  }, [accessState, navigate, pathname]);
+
   const accountLabel = session.signedIn ? (session.email ?? "Operator") : "Operator sign in";
 
   return (
