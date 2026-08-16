@@ -39,7 +39,10 @@ export function createRequestClient(): { db: Client; authenticated: boolean } {
 
   let token: string | null = null;
   try {
-    const header = getRequestHeader("authorization") ?? null;
+    const header =
+      (typeof getRequestHeader === "function"
+        ? getRequestHeader("authorization")
+        : getRequest()?.headers.get("authorization")) ?? null;
     if (header?.startsWith("Bearer ")) {
       const candidate = header.slice(7);
       if (candidate.split(".").length === 3) token = candidate;
