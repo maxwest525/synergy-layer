@@ -67,33 +67,35 @@ function CallbackPage() {
     retry: false,
   });
 
+  // A verified session always continues into the OS. Accounts without an
+  // operator role land read only rather than parking on this page.
   useEffect(() => {
-    if (result.data?.canOperate) {
-      const timer = setTimeout(() => {
-        if (next) {
-          window.location.href = next;
-          return;
-        }
-        void navigate({ to: "/" });
-      }, 600);
-      return () => clearTimeout(timer);
-    }
-    return undefined;
-  }, [result.data?.canOperate, navigate, next]);
+    if (!result.data) return undefined;
+    const timer = setTimeout(() => {
+      if (next) {
+        window.location.href = next;
+        return;
+      }
+      void navigate({ to: "/" });
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [result.data, navigate, next]);
 
   const denied = result.data && !result.data.canOperate;
+
 
   return (
     <div className="mx-auto max-w-md space-y-8">
       <PageHeader
         eyebrow="Access"
-        title={denied ? "Access not provisioned" : "Completing sign-in"}
+        title={denied ? "Signing you in read only" : "Completing sign-in"}
         description={
           denied
-            ? "Your identity is verified, but this account is not on the AOOS operator allowlist."
+            ? "Your identity is verified. This account is not on the operator allowlist yet, so actions stay locked."
             : "Validating your session and checking operator access."
         }
       />
+
 
       <GlassCard glow className="space-y-4 p-5">
         {hasSession === false ? (
@@ -118,12 +120,12 @@ function CallbackPage() {
         {denied ? (
           <>
             <p className="text-sm text-muted-foreground">
-              An administrator has to add your address to the operator allowlist before AOOS actions
-              unlock. Read-only workspaces stay available in the meantime.
+              Taking you to the Action Center in read-only mode. An administrator has to add your
+              address to the operator allowlist before actions unlock.
             </p>
             <div className="flex gap-3">
               <Button variant="outline" asChild>
-                <Link to="/">Continue read only</Link>
+                <Link to="/">Continue now</Link>
               </Button>
               <Button
                 variant="outline"
@@ -136,6 +138,7 @@ function CallbackPage() {
             </div>
           </>
         ) : null}
+
 
         {result.data?.canOperate ? (
           <p className="text-sm text-primary">
