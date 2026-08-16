@@ -1,6 +1,7 @@
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useMutation, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
+import { useState } from "react";
 
 import {
   DetailRow,
@@ -12,8 +13,14 @@ import {
   formatWhen,
 } from "@/components/os/primitives";
 import { OperatorRouteError } from "@/components/os/route-error";
-import { getOpenAiAdsState, type OpenAiAdsState } from "@/lib/openai-ads.functions";
+import {
+  getOpenAiAdsState,
+  validateOpenAiAdsEvent,
+  type OpenAiAdsState,
+} from "@/lib/openai-ads.functions";
 import type { OpenAiAdsEventView, SurfaceHealth } from "@/lib/openai-ads/config";
+import { OPENAI_ADS_EVENT_CATALOG, type EventCoverageRow } from "@/lib/openai-ads/events";
+import type { ValidationReport } from "@/lib/openai-ads/validation";
 
 export const Route = createFileRoute("/openai-ads")({
   // Operator surface: the read needs the operator bearer token.
@@ -24,7 +31,7 @@ export const Route = createFileRoute("/openai-ads")({
       {
         name: "description",
         content:
-          "Monitor the OpenAI Ads pixel and server-side event path for the instrumented TruMove site: real logged events, delivery status, shared event ids, and connection requirements.",
+          "Monitor the OpenAI Ads pixel and server-side event path for the instrumented TruMove site: event coverage, delivery health, deduplication, attribution, and the exact configuration still required.",
       },
       { property: "og:title", content: "OpenAI Ads — AOOS Marketing Operating System" },
       {
@@ -66,6 +73,12 @@ function healthLabel(state: SurfaceHealth["state"]): string {
   }
 }
 
+function coverageTone(state: EventCoverageRow["state"]) {
+  if (state === "active") return "positive" as const;
+  if (state === "available") return "warning" as const;
+  return "neutral" as const;
+}
+
 function SurfaceCard({ title, health }: { title: string; health: SurfaceHealth }) {
   return (
     <GlassCard className="p-5">
@@ -86,13 +99,14 @@ function SurfaceCard({ title, health }: { title: string; health: SurfaceHealth }
 function EventTable({ events }: { events: OpenAiAdsEventView[] }) {
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[46rem] text-left text-sm">
+      <table className="w-full min-w-[52rem] text-left text-sm">
         <thead className="text-xs uppercase tracking-[0.12em] text-muted-foreground">
           <tr>
             <th className="py-2 pr-4 font-medium">Event</th>
             <th className="py-2 pr-4 font-medium">Source</th>
             <th className="py-2 pr-4 font-medium">Path</th>
             <th className="py-2 pr-4 font-medium">Event id</th>
+            <th className="py-2 pr-4 font-medium">Click ref</th>
             <th className="py-2 pr-4 font-medium">Delivery</th>
             <th className="py-2 font-medium">When</th>
           </tr>
@@ -106,6 +120,9 @@ function EventTable({ events }: { events: OpenAiAdsEventView[] }) {
               </td>
               <td className="py-2 pr-4 text-muted-foreground">{event.sourcePath ?? "Not set"}</td>
               <td className="py-2 pr-4 font-mono text-xs text-muted-foreground">{event.eventId}</td>
+              <td className="py-2 pr-4 font-mono text-xs text-muted-foreground">
+                {event.oppref ?? "None"}
+              </td>
               <td className="py-2 pr-4">
                 <StatePill
                   label={event.deliveryStatus}
@@ -127,6 +144,118 @@ function EventTable({ events }: { events: OpenAiAdsEventView[] }) {
   );
 }
 
+function ValidationControl({ available }: { available: boolean }) {
+  const validate = useServerFn(validateOpenAiAdsEvent);
+  const [eventName, setEventName] = useState("lead_created");
+  const [eventId, setEventId] = useState("");
+  const [transport, setTransport] = useState<"browser" | "capi">("browser");
+  const [oppref, setOppref] = useState("");
+
+  const mutation = useMutation<ValidationReport, Error>({
+    mutationFn: () =>
+      validate({
+        data: {
+          eventName,
+          eventId: eventId.trim(),
+          transport,
+          oppref: oppref.trim() || undefined,
+        },
+      }),
+  });
+
+  return (
+    <GlassCard className="p-5">
+      <h2 className="text-sm font-semibold text-foreground">Test an event payload</h2>
+      <p className="mt-1 text-sm text-muted-foreground">
+        This check runs entirely inside this project. It contacts no provider, writes nothing, and
+        cannot create a production conversion.
+        {available
+          ? ""
+          : " A provider validate-only call is not offered because that contract has not been confirmed from authoritative documentation."}
+      </p>
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <label className="text-xs text-muted-foreground">
+          Event
+          <select
+            value={eventName}
+            onChange={(changed) => setEventName(changed.target.value)}
+            className="mt-1 w-full rounded-lg border border-border/60 bg-transparent px-3 py-2 text-sm text-foreground"
+          >
+            {OPENAI_ADS_EVENT_CATALOG.map((entry) => (
+              <option key={entry.name} value={entry.name}>
+                {entry.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="text-xs text-muted-foreground">
+          Path
+          <select
+            value={transport}
+            onChange={(changed) => setTransport(changed.target.value as "browser" | "capi")}
+            className="mt-1 w-full rounded-lg border border-border/60 bg-transparent px-3 py-2 text-sm text-foreground"
+          >
+            <option value="browser">Browser pixel</option>
+            <option value="capi">Server side</option>
+          </select>
+        </label>
+        <label className="text-xs text-muted-foreground">
+          Event id
+          <input
+            value={eventId}
+            onChange={(changed) => setEventId(changed.target.value)}
+            placeholder="Shared id used on both paths"
+            className="mt-1 w-full rounded-lg border border-border/60 bg-transparent px-3 py-2 text-sm text-foreground"
+          />
+        </label>
+        <label className="text-xs text-muted-foreground">
+          Ad click reference
+          <input
+            value={oppref}
+            onChange={(changed) => setOppref(changed.target.value)}
+            placeholder="Optional"
+            className="mt-1 w-full rounded-lg border border-border/60 bg-transparent px-3 py-2 text-sm text-foreground"
+          />
+        </label>
+      </div>
+      <button
+        type="button"
+        disabled={!eventId.trim() || mutation.isPending}
+        onClick={() => mutation.mutate()}
+        className="mt-4 inline-flex items-center rounded-lg border border-primary/50 px-3 py-1.5 text-sm font-medium text-primary transition-colors hover:bg-primary/10 disabled:opacity-50"
+      >
+        {mutation.isPending ? "Checking…" : "Run check"}
+      </button>
+
+      {mutation.isError ? (
+        <p className="mt-3 text-sm text-destructive">{mutation.error.message}</p>
+      ) : null}
+      {mutation.data ? (
+        <div className="mt-4 space-y-2">
+          <p className="text-sm font-medium text-foreground">{mutation.data.summary}</p>
+          <ul className="space-y-2">
+            {mutation.data.checks.map((check) => (
+              <li key={check.label} className="border-t border-border/50 pt-2">
+                <StatePill
+                  label={`${check.label}: ${check.outcome}`}
+                  tone={
+                    check.outcome === "pass"
+                      ? "positive"
+                      : check.outcome === "warn"
+                        ? "warning"
+                        : "danger"
+                  }
+                />
+                <p className="mt-1 text-sm text-muted-foreground">{check.detail}</p>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+    </GlassCard>
+  );
+}
+
 function OpenAiAdsPage() {
   const read = useServerFn(getOpenAiAdsState);
   const { data } = useSuspenseQuery<OpenAiAdsState>({
@@ -134,7 +263,7 @@ function OpenAiAdsPage() {
     queryFn: () => read({ data: undefined }),
   });
 
-  const tracked = ["page_viewed", "lead_created"] as const;
+  const activeCount = data.coverage.filter((row) => row.state === "active").length;
 
   return (
     <div className="space-y-8">
@@ -151,12 +280,12 @@ function OpenAiAdsPage() {
           value={data.totalEvents}
           hint="Counted from logged events only"
         />
-        <MetricTile label="Last event" value={formatWhen(data.lastEventAt)} hint="UTC" />
         <MetricTile
-          label="Shared event ids"
-          value={data.dedup.sharedEventIds}
-          hint="Seen on both the browser and server paths"
+          label="Active events"
+          value={`${activeCount} of ${data.coverage.length}`}
+          hint="Active means real events were stored"
         />
+        <MetricTile label="Last event" value={formatWhen(data.lastEventAt)} hint="UTC" />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
@@ -164,78 +293,142 @@ function OpenAiAdsPage() {
         <SurfaceCard title="Server-side events health" health={data.capi} />
       </div>
 
-      <GlassCard className="p-5">
-        <h2 className="text-sm font-semibold text-foreground">Connection</h2>
-        <dl className="mt-2">
-          <DetailRow
-            label="Cross-project bridge secret"
-            value={
-              <StatePill
-                label={data.bridge.configured ? "configured" : "not configured"}
-                tone={data.bridge.configured ? "positive" : "warning"}
-              />
-            }
-          />
-          <DetailRow
-            label="Server-side conversions key"
-            value={
-              <StatePill
-                label={data.bridge.capiSecretPresent ? "configured" : "not configured"}
-                tone={data.bridge.capiSecretPresent ? "positive" : "warning"}
-              />
-            }
-          />
-          <DetailRow
-            label="Bridge endpoint"
-            value={<span className="font-mono text-xs">{data.bridge.endpointPath}</span>}
-          />
-        </dl>
-        <p className="mt-3 text-sm text-muted-foreground">{data.bridge.requirement}</p>
-        <p className="mt-1 text-xs text-muted-foreground">
-          Secret values stay server side. Neither the bridge secret nor the conversions key is ever
-          sent to the browser.
-        </p>
-      </GlassCard>
-
       <section className="space-y-3">
-        <h2 className="text-sm font-semibold text-foreground">Tracked events</h2>
-        <div className="grid gap-4 sm:grid-cols-2">
-          {tracked.map((name) => {
-            const bucket = data.eventCounts[name];
-            return (
-              <GlassCard key={name} className="p-5">
-                <p className="text-sm font-medium text-foreground">{name}</p>
-                {bucket ? (
-                  <dl className="mt-2">
-                    <DetailRow label="Total logged" value={bucket.total} />
-                    <DetailRow label="Browser pixel" value={bucket.browser} />
-                    <DetailRow label="Server side" value={bucket.capi} />
-                    <DetailRow label="Last seen" value={formatWhen(bucket.lastAt)} />
-                  </dl>
-                ) : (
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    No {name} event has reached this project yet.
-                  </p>
-                )}
-              </GlassCard>
-            );
-          })}
+        <h2 className="text-sm font-semibold text-foreground">Integration and settings</h2>
+        <div className="grid gap-4 lg:grid-cols-2">
+          <GlassCard className="p-5">
+            <h3 className="text-sm font-medium text-foreground">Configuration</h3>
+            <dl className="mt-2">
+              <DetailRow
+                label="Pixel id"
+                value={<span className="font-mono text-xs">{data.pixelId}</span>}
+              />
+              <DetailRow
+                label={data.bridge.bridgeSecretName}
+                value={
+                  <StatePill
+                    label={data.bridge.configured ? "configured" : "not configured"}
+                    tone={data.bridge.configured ? "positive" : "warning"}
+                  />
+                }
+              />
+              <DetailRow
+                label={data.bridge.capiSecretName}
+                value={
+                  <StatePill
+                    label={data.bridge.capiSecretPresent ? "configured" : "not configured"}
+                    tone={data.bridge.capiSecretPresent ? "positive" : "warning"}
+                  />
+                }
+              />
+              <DetailRow
+                label="Bridge endpoint"
+                value={<span className="font-mono text-xs">{data.bridge.endpointPath}</span>}
+              />
+            </dl>
+            <p className="mt-3 text-sm text-muted-foreground">{data.bridge.requirement}</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Secret values stay server side. Neither secret is ever sent to the browser, and no key
+              is ever requested or stored in client-visible code.
+            </p>
+          </GlassCard>
+
+          <GlassCard className="p-5">
+            <h3 className="text-sm font-medium text-foreground">Operational status</h3>
+            <dl className="mt-2">
+              <DetailRow
+                label="Source site connection"
+                value={
+                  <StatePill
+                    label={data.sourceSite.state === "connected" ? "connected" : "not connected"}
+                    tone={data.sourceSite.state === "connected" ? "positive" : "warning"}
+                  />
+                }
+              />
+              <DetailRow
+                label="Attribution reference"
+                value={<StatePill label={data.attribution.state} tone="neutral" />}
+              />
+              <DetailRow
+                label="Dedupe health"
+                value={`${data.dedup.sharedEventIds} matched, ${data.dedup.browserOnly} browser only, ${data.dedup.capiOnly} server only`}
+              />
+              <DetailRow
+                label="Provider delivery"
+                value={
+                  <StatePill
+                    label={data.delivery.state}
+                    tone={
+                      data.delivery.state === "clean"
+                        ? "positive"
+                        : data.delivery.state === "failing"
+                          ? "danger"
+                          : data.delivery.state === "degraded"
+                            ? "warning"
+                            : "neutral"
+                    }
+                  />
+                }
+              />
+            </dl>
+            <ul className="mt-3 space-y-1 text-sm text-muted-foreground">
+              <li>{data.sourceSite.detail}</li>
+              <li>{data.attribution.detail}</li>
+              <li>{data.delivery.detail}</li>
+            </ul>
+          </GlassCard>
         </div>
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-sm font-semibold text-foreground">Deduplication</h2>
+        <h2 className="text-sm font-semibold text-foreground">Event coverage</h2>
+        <p className="text-sm text-muted-foreground">
+          Active means this project has stored real events of that name. Available means the event
+          is recognised and ingestible but no confirmed success boundary is wired. Not applicable
+          means the business has no such boundary.
+        </p>
         <GlassCard className="p-5">
-          <dl>
-            <DetailRow label="Event ids seen on both paths" value={data.dedup.sharedEventIds} />
-            <DetailRow label="Browser only" value={data.dedup.browserOnly} />
-            <DetailRow label="Server side only" value={data.dedup.capiOnly} />
-          </dl>
-          <p className="mt-3 text-sm text-muted-foreground">
-            Deduplication is only provable for event ids observed on both paths. One sided ids are
-            reported as one sided rather than assumed deduplicated.
-          </p>
+          <ul className="space-y-4">
+            {data.coverage.map((row) => (
+              <li key={row.name} className="border-b border-border/50 pb-4 last:border-b-0 last:pb-0">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-sm font-medium text-foreground">
+                    {row.label}{" "}
+                    <span className="font-mono text-xs text-muted-foreground">{row.name}</span>
+                  </p>
+                  <StatePill label={row.state} tone={coverageTone(row.state)} />
+                </div>
+                <p className="mt-1 text-sm text-muted-foreground">{row.description}</p>
+                <p className="mt-1 text-sm text-muted-foreground">{row.stateReason}</p>
+                {row.state === "active" ? (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {row.total} stored · {row.browser} browser · {row.capi} server side · last{" "}
+                    {formatWhen(row.lastAt)}
+                  </p>
+                ) : (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Success boundary required: {row.successBoundary}
+                  </p>
+                )}
+              </li>
+            ))}
+          </ul>
         </GlassCard>
+        {data.unrecognizedEvents.length > 0 ? (
+          <GlassCard className="p-5">
+            <h3 className="text-sm font-medium text-foreground">Unrecognised event names</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              These arrived from the instrumented site but are not in the supported catalog:{" "}
+              {data.unrecognizedEvents.join(", ")}.
+            </p>
+          </GlassCard>
+        ) : null}
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="text-sm font-semibold text-foreground">Validation</h2>
+        <p className="text-sm text-muted-foreground">{data.validation.reason}</p>
+        <ValidationControl available={data.validation.providerValidationAvailable} />
       </section>
 
       <section className="space-y-3">

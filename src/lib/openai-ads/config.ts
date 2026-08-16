@@ -32,6 +32,8 @@ export type OpenAiAdsEventView = {
   receivedAt: string;
   deliveryStatus: OpenAiAdsDeliveryStatus;
   deliveryError: string | null;
+  oppref: string | null;
+  attributionSource: string | null;
 };
 
 export type OpenAiAdsHealth = "unavailable" | "receiving" | "stale" | "failing";
@@ -165,23 +167,172 @@ export function topSourcePaths(
     .slice(0, limit);
 }
 
+export const OPENAI_ADS_BRIDGE_SECRET_NAME = "OPENAI_ADS_BRIDGE_SECRET";
+export const OPENAI_ADS_CAPI_SECRET_NAME = "OPENAI_ADS_CAPI_API_KEY";
+
 export type BridgeState = {
   configured: boolean;
   capiSecretPresent: boolean;
+  capiSecretName: string;
+  bridgeSecretName: string;
   endpointPath: string;
   requirement: string;
 };
 
 /** Secret presence only. The values never leave the server. */
 export function describeBridgeState(env: Record<string, string | undefined>): BridgeState {
-  const configured = Boolean(env["OPENAI_ADS_BRIDGE_SECRET"]?.trim());
-  const capiSecretPresent = Boolean(env["OPENAI_ADS_CAPI_KEY"]?.trim());
+  const configured = Boolean(env[OPENAI_ADS_BRIDGE_SECRET_NAME]?.trim());
+  const capiSecretPresent = Boolean(env[OPENAI_ADS_CAPI_SECRET_NAME]?.trim());
   return {
     configured,
     capiSecretPresent,
+    capiSecretName: OPENAI_ADS_CAPI_SECRET_NAME,
+    bridgeSecretName: OPENAI_ADS_BRIDGE_SECRET_NAME,
     endpointPath: "/api/public/hooks/openai-ads-events",
     requirement: configured
       ? "The bridge secret is set. The instrumented project must post events to the bridge endpoint with that shared secret."
-      : "Add the OPENAI_ADS_BRIDGE_SECRET secret to this project, then configure the instrumented project to post events to the bridge endpoint with the same value.",
+      : `Add the ${OPENAI_ADS_BRIDGE_SECRET_NAME} secret to this project, then configure the instrumented project to post events to the bridge endpoint with the same value.`,
+  };
+}
+
+export type SourceSiteState = {
+  project: string;
+  state: "connected" | "not_connected";
+  detail: string;
+  lastEventAt: string | null;
+  distinctProjects: string[];
+};
+
+/**
+ * The source site counts as connected only when it has actually delivered an
+ * event over the bridge. A configured secret alone is configuration, not a
+ * connection.
+ */
+export function describeSourceSite(events: readonly OpenAiAdsEventView[]): SourceSiteState {
+  const projects = [
+    ...new Set(events.map((event) => event.sourceProject).filter((name): name is string => Boolean(name))),
+  ].sort();
+  const lastEventAt = events.map((event) => event.occurredAt).sort().at(-1) ?? null;
+  return {
+    project: OPENAI_ADS_SOURCE_PROJECT,
+    state: events.length > 0 ? "connected" : "not_connected",
+    detail:
+      events.length > 0
+        ? "The instrumented site has delivered events to this project over the bridge."
+        : "No event has ever arrived from the instrumented site, so the connection is unproven.",
+    lastEventAt,
+    distinctProjects: projects,
+  };
+}
+
+export type AttributionState = {
+  state: "observed" | "absent" | "unavailable";
+  detail: string;
+  eventsWithOppref: number;
+  eventsWithoutOppref: number;
+  distinctOpprefs: number;
+  sources: string[];
+};
+
+/**
+ * Attribution reporting is limited to what the instrumented site actually
+ * reported. A missing ad click reference is reported as missing, never as
+ * organic traffic and never as an attributed conversion.
+ */
+export function describeAttribution(events: readonly OpenAiAdsEventView[]): AttributionState {
+  if (events.length === 0) {
+    return {
+      state: "unavailable",
+      detail: "No events have arrived, so attribution cannot be assessed.",
+      eventsWithOppref: 0,
+      eventsWithoutOppref: 0,
+      distinctOpprefs: 0,
+      sources: [],
+    };
+  }
+  const withRef = events.filter((event) => Boolean(event.oppref?.trim()));
+  const distinct = new Set(withRef.map((event) => event.oppref!.trim()));
+  const sources = [
+    ...new Set(
+      events
+        .map((event) => event.attributionSource)
+        .filter((value): value is string => Boolean(value?.trim())),
+    ),
+  ].sort();
+  return {
+    state: withRef.length > 0 ? "observed" : "absent",
+    detail:
+      withRef.length > 0
+        ? "The instrumented site is reporting an ad click reference on at least some events."
+        : "Events are arriving without an ad click reference, so no event on record can be attributed to an ad click.",
+    eventsWithOppref: withRef.length,
+    eventsWithoutOppref: events.length - withRef.length,
+    distinctOpprefs: distinct.size,
+    sources,
+  };
+}
+
+export type DeliveryHealth = {
+  state: "unavailable" | "clean" | "degraded" | "failing";
+  detail: string;
+  received: number;
+  delivered: number;
+  failed: number;
+  lastFailureAt: string | null;
+};
+
+/** Provider delivery health, counted from reported delivery status only. */
+export function describeDeliveryHealth(events: readonly OpenAiAdsEventView[]): DeliveryHealth {
+  if (events.length === 0) {
+    return {
+      state: "unavailable",
+      detail: "No events on record, so provider delivery health is unknown.",
+      received: 0,
+      delivered: 0,
+      failed: 0,
+      lastFailureAt: null,
+    };
+  }
+  const failed = events.filter((event) => event.deliveryStatus === "failed");
+  const delivered = events.filter((event) => event.deliveryStatus === "delivered").length;
+  const received = events.filter((event) => event.deliveryStatus === "received").length;
+  const failureRate = failed.length / events.length;
+  const state: DeliveryHealth["state"] =
+    failed.length === 0 ? "clean" : failureRate >= 0.25 ? "failing" : "degraded";
+  return {
+    state,
+    detail:
+      failed.length === 0
+        ? "No reported delivery failures on the stored events."
+        : `${failed.length} of ${events.length} stored events were reported as failed delivery.`,
+    received,
+    delivered,
+    failed: failed.length,
+    lastFailureAt: failed.map((event) => event.occurredAt).sort().at(-1) ?? null,
+  };
+}
+
+export type ValidationReadiness = {
+  /** True only when a provider validate-only call could be made truthfully. */
+  providerValidationAvailable: boolean;
+  reason: string;
+};
+
+/**
+ * A provider validate-only call requires two things AOOS does not have: the
+ * server-side credential, and an authoritative OpenAI Ads conversions API
+ * document confirming the exact validate-only contract. Until both exist, the
+ * only test control offered is a local payload check that contacts nobody and
+ * stores nothing.
+ */
+export function describeValidationReadiness(
+  env: Record<string, string | undefined>,
+): ValidationReadiness {
+  const hasKey = Boolean(env[OPENAI_ADS_CAPI_SECRET_NAME]?.trim());
+  return {
+    providerValidationAvailable: false,
+    reason: hasKey
+      ? "The server-side credential is present, but AOOS has not completed authoritative documentation discovery for the OpenAI Ads conversions API validate-only contract. No call is made against the provider until that document is captured, so nothing here can emit a production conversion."
+      : `No provider call is possible: the ${OPENAI_ADS_CAPI_SECRET_NAME} secret is not configured, and the validate-only contract has not been confirmed from authoritative documentation. The test control below runs entirely inside this project and emits nothing.`,
   };
 }

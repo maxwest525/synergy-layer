@@ -1,14 +1,17 @@
 import { z } from "zod";
 
 import { OPENAI_ADS_PIXEL_ID } from "./config";
+import { OPENAI_ADS_SUPPORTED_EVENTS } from "./events";
 
 const eventSchema = z.object({
-  eventName: z.string().min(1).max(120),
+  eventName: z.enum(OPENAI_ADS_SUPPORTED_EVENTS),
   eventId: z.string().min(1).max(200),
   transport: z.enum(["browser", "capi"]),
   occurredAt: z.string().datetime(),
   sourcePath: z.string().max(500).optional().nullable(),
   sourceProject: z.string().max(200).optional().nullable(),
+  oppref: z.string().max(500).optional().nullable(),
+  attributionSource: z.string().max(200).optional().nullable(),
   deliveryStatus: z.enum(["received", "delivered", "failed"]).default("received"),
   deliveryError: z.string().max(1000).optional().nullable(),
 });
@@ -64,6 +67,8 @@ export async function ingestOpenAiAdsEvents(
     event_id: event.eventId,
     source_path: event.sourcePath ?? null,
     source_project: event.sourceProject ?? null,
+    oppref: event.oppref ?? null,
+    attribution_source: event.attributionSource ?? null,
     occurred_at: event.occurredAt,
     delivery_status: event.deliveryStatus,
     delivery_error: event.deliveryError ?? null,
