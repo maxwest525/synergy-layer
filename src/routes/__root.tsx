@@ -107,8 +107,8 @@ function RootShell({ children }: { children: ReactNode }) {
 }
 
 function RootComponent() {
-  const { queryClient } = Route.useRouteContext();
   const router = useRouter();
+  const { queryClient } = Route.useRouteContext();
 
   // Every read is scoped to the signed-in operator, so a change of identity has
   // to drop the caches that were filled under the previous one. Without this,

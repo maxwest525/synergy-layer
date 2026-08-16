@@ -19,7 +19,7 @@ const eventSchema = z.object({
 export const ingestPayloadSchema = z.object({
   tenantSlug: z.string().min(1).max(120),
   pixelId: z.string().min(1).max(120),
-  events: z.array(eventSchema).min(1).max(200),
+  events: z.array(eventSchema).max(200),
 });
 
 export type OpenAiAdsIngestPayload = z.infer<typeof ingestPayloadSchema>;
