@@ -25,8 +25,7 @@ export const ingestPayloadSchema = z.object({
 export type OpenAiAdsIngestPayload = z.infer<typeof ingestPayloadSchema>;
 
 export type IngestOutcome =
-  | { ok: true; stored: number }
-  | { ok: false; status: number; error: string };
+  { ok: true; stored: number } | { ok: false; status: number; error: string };
 
 type AdminClient = {
   from: (table: string) => {
@@ -55,7 +54,11 @@ export async function ingestOpenAiAdsEvents(
     return { ok: false, status: 422, error: "Unmonitored pixel id" };
   }
 
-  const tenant = await admin.from("tenants").select("id").eq("slug", payload.tenantSlug).maybeSingle();
+  const tenant = await admin
+    .from("tenants")
+    .select("id")
+    .eq("slug", payload.tenantSlug)
+    .maybeSingle();
   if (tenant.error) return { ok: false, status: 500, error: "Tenant lookup failed" };
   if (!tenant.data) return { ok: false, status: 404, error: "Unknown tenant" };
 

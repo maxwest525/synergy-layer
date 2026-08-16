@@ -202,7 +202,6 @@ function ValidationControl({ available }: { available: boolean }) {
               Server side
             </option>
           </select>
-
         </label>
         <label className="text-xs text-muted-foreground">
           Event id
@@ -395,7 +394,10 @@ function OpenAiAdsPage() {
         <GlassCard className="p-5">
           <ul className="space-y-4">
             {data.coverage.map((row) => (
-              <li key={row.name} className="border-b border-border/50 pb-4 last:border-b-0 last:pb-0">
+              <li
+                key={row.name}
+                className="border-b border-border/50 pb-4 last:border-b-0 last:pb-0"
+              >
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="text-sm font-medium text-foreground">
                     {row.label}{" "}

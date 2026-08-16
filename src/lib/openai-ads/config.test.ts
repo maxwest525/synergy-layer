@@ -157,9 +157,9 @@ describe("OpenAI Ads validation control", () => {
       describeValidationReadiness({ OPENAI_ADS_CAPI_API_KEY: "k" }).providerValidationAvailable,
     ).toBe(false);
     expect(report.providerContacted).toBe(false);
-    expect(report.checks.find((check) => check.label === "Provider validate-only call")?.outcome).toBe(
-      "warn",
-    );
+    expect(
+      report.checks.find((check) => check.label === "Provider validate-only call")?.outcome,
+    ).toBe("warn");
   });
 
   it("fails a duplicate id on the same path and pairs it across paths", () => {
