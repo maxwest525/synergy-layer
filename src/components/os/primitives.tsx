@@ -2,6 +2,18 @@ import type { ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
 
+/**
+ * One spacing scale for every workspace, so pages stack the same way:
+ * page > section > card > row. Values live here rather than being retyped
+ * per route, which is what made the screens look staggered.
+ */
+export const layout = {
+  page: "space-y-10",
+  sectionGap: "space-y-4",
+  cardGrid: "grid gap-4",
+  stack: "space-y-3",
+} as const;
+
 export function GlassCard({
   children,
   className,
@@ -14,7 +26,7 @@ export function GlassCard({
   return (
     <div
       className={cn(
-        "relative overflow-hidden rounded-2xl border border-border/70 bg-card/60 backdrop-blur-xl",
+        "relative overflow-hidden rounded-2xl border border-border/70 bg-card/60 p-5 backdrop-blur-xl",
         "shadow-[0_1px_0_0_hsl(var(--border))] transition-colors duration-300",
         className,
       )}
