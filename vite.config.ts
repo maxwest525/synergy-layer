@@ -12,13 +12,6 @@ export default defineConfig({
     // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
     // nitro/vite builds from this
     server: { entry: "server" },
-    router: {
-      // The route HMR adapter mutates shared route exports in place. Under the
-      // preview's repeated SSR module reloads that can leave two index routes in
-      // one tree. A full route-module reload is slower only while editing and
-      // keeps every request's tree deterministic.
-      codeSplittingOptions: { addHmr: false },
-    },
   },
   vite: {
     // mcp-js 0.26 compares a POSIX repository path with a Windows-resolved
