@@ -4,10 +4,11 @@ import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { DataForSeoPanel } from "@/components/os/dataforseo-panel";
 import {
   DetailRow,
+  EmptyNote,
+  formatWhen,
   GlassCard,
   PageHeader,
   StatePill,
-  formatWhen,
   toneForState,
 } from "@/components/os/primitives";
 import { SearchConsolePanel } from "@/components/os/search-console-panel";
@@ -76,9 +77,9 @@ function AssetDetailPage() {
         <GlassCard className="p-5">
           <h2 className="text-sm font-semibold text-foreground">History</h2>
           {data.activity.length === 0 ? (
-            <p className="mt-3 text-sm text-muted-foreground">
+            <EmptyNote className="mt-3">
               No recorded activity for this asset yet.
-            </p>
+            </EmptyNote>
           ) : (
             <ul className="mt-3 space-y-3">
               {data.activity.map((event) => (

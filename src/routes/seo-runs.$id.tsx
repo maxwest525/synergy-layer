@@ -2,7 +2,13 @@ import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-q
 import { Link, createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 
-import { GlassCard, PageHeader, StatePill, formatWhen } from "@/components/os/primitives";
+import {
+  EmptyNote,
+  formatWhen,
+  GlassCard,
+  PageHeader,
+  StatePill,
+} from "@/components/os/primitives";
 import { Button } from "@/components/ui/button";
 import { isSeoRunEligibleForPreparation } from "@/lib/seo-runs/eligibility";
 import { evaluateSeoRun, getSeoRun, repairSeoRunProposalEvent } from "@/lib/seo-runs/functions";
@@ -94,7 +100,7 @@ function SeoRunDetailPage() {
             </Link>
           </Button>
         ) : (
-          <p className="mt-4 text-sm text-muted-foreground">No concrete proposal is linked yet.</p>
+          <EmptyNote className="mt-4">No concrete proposal is linked yet.</EmptyNote>
         )}
         {isSeoRunEligibleForPreparation(run) ? (
           <div className="mt-4">
