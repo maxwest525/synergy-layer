@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { memo, useCallback, useMemo } from "react";
@@ -24,6 +24,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { useOperatorSession } from "@/hooks/use-operator-session";
 import {
   ACTION_CENTER_PRESENTATION_LANES,
   actionCenterFieldChanges,
@@ -36,11 +37,6 @@ import { executeChangeRequest } from "@/lib/execution/execution.functions";
 import { resolveInboxItem } from "@/lib/os-admin.functions";
 import { getInbox } from "@/lib/os.functions";
 
-const inboxQuery = {
-  queryKey: ["inbox"],
-  queryFn: () => getInbox(),
-};
-
 const lanes = ACTION_CENTER_PRESENTATION_LANES;
 
 export const Route = createFileRoute("/")({
@@ -48,13 +44,6 @@ export const Route = createFileRoute("/")({
   // server without the operator bearer token produced an empty tree that the
   // client immediately replaced. Render it client side and skip that mismatch.
   ssr: false,
-  // A transient data failure must not turn SSR into a 500 blank screen; the
-  // client-side suspense query retries and surfaces the error in the boundary.
-  loader: ({ context }) => {
-    // Warm the cache without blocking navigation; the suspense boundary
-    // renders the pending surface immediately.
-    void context.queryClient.prefetchQuery(inboxQuery);
-  },
   head: () => ({
     meta: [
       { title: "Action Center — AOOS Marketing Operating System" },
@@ -475,7 +464,13 @@ const InboxCard = memo(function InboxCard({
 });
 
 function InboxPage() {
-  const { data } = useSuspenseQuery(inboxQuery);
+  const session = useOperatorSession();
+  const fetchInbox = useServerFn(getInbox);
+  const { data = [] } = useQuery({
+    queryKey: ["inbox"],
+    queryFn: () => fetchInbox(),
+    enabled: session.signedIn,
+  });
   const queryClient = useQueryClient();
   const resolve = useServerFn(resolveInboxItem);
   const approve = useServerFn(approveChangeRequest);
