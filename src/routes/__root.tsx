@@ -93,19 +93,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 });
 
 function RootShell({ children }: { children: ReactNode }) {
-  // The provider lives in the shell so every render path is covered, including
-  // the root error, not-found, and pending components which render outside the
-  // route component tree.
-  const router = useRouter();
-  const queryClient = (router.options.context as { queryClient: QueryClient }).queryClient;
-
   return (
     <html lang="en">
       <head>
         <HeadContent />
       </head>
       <body>
-        <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+        {children}
         <Scripts />
       </body>
     </html>
@@ -114,8 +108,7 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const router = useRouter();
-  const queryClient = useQueryClient();
-
+  const { queryClient } = Route.useRouteContext();
 
   // Every read is scoped to the signed-in operator, so a change of identity has
   // to drop the caches that were filled under the previous one. Without this,
@@ -131,12 +124,12 @@ function RootComponent() {
   }, [queryClient, router]);
 
   return (
-    <>
+    <QueryClientProvider client={queryClient}>
       <Shell>
         {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
         <Outlet />
       </Shell>
       <Toaster richColors position="top-right" />
-    </>
+    </QueryClientProvider>
   );
 }
