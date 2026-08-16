@@ -52,10 +52,7 @@ function WorkflowsPage() {
       />
 
       {failedRuns.length > 0 ? (
-        <section id="failed-runs" className="scroll-mt-24 space-y-4">
-          <h2 className="text-sm font-semibold tracking-tight text-foreground">
-            Failed runs ({failedRuns.length})
-          </h2>
+        <Section id="failed-runs" title="Failed runs" hint={`${failedRuns.length} to review`}>
           <GlassCard className="p-5">
             <ul className="space-y-3">
               {failedRuns.map((run) => {
