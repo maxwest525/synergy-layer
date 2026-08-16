@@ -203,6 +203,55 @@
           }
         },
         "outputSchema": null
+      },
+      {
+        "name": "list_openseo_tools",
+        "title": "List live OpenSEO tools",
+        "description": "Discover the current self-hosted OpenSEO MCP catalog and show AOOS's server-side free, metered, mutation, or destructive classification.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "call_openseo_free_read",
+        "title": "Call a free OpenSEO read",
+        "description": "Run one live OpenSEO tool only when its current server metadata proves it is a free read. AOOS records immutable tenant evidence for the call.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "tool_name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "arguments": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {}
+            }
+          },
+          "required": [
+            "tool_name",
+            "arguments"
+          ]
+        },
+        "outputSchema": null
       }
     ]
   }
