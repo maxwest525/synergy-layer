@@ -48,7 +48,9 @@ export const AOOS_CONNECTOR_DEFAULTS = {
   VPS_SCRAPER_BASE_URL: "https://crawl.marky.systems",
 } as const;
 
-export function withConnectorDefaults(env: Record<string, string | undefined>) {
+export function withConnectorDefaults(
+  env: Record<string, string | undefined>,
+): Record<string, string | undefined> {
   const configured = Object.fromEntries(
     Object.entries(env).filter((entry): entry is [string, string] => Boolean(entry[1]?.trim())),
   );

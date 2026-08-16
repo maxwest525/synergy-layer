@@ -103,7 +103,7 @@ describe("direct Gemini structured output", () => {
       fetcher,
     });
 
-    expect(fetcher.mock.calls[0]?.[0]).toBe(
+    expect((fetcher.mock.calls as unknown as unknown[][])[0]?.[0]).toBe(
       `${GEMINI_API_ORIGIN}/v1beta/models/${DEFAULT_GEMINI_GENERATION_MODEL}:generateContent`,
     );
   });

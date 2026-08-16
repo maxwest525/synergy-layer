@@ -2551,6 +2551,65 @@ export type Database = {
           },
         ]
       }
+      openai_ads_events: {
+        Row: {
+          created_at: string
+          delivery_error: string | null
+          delivery_status: string
+          event_id: string
+          event_name: string
+          id: string
+          occurred_at: string
+          payload: Json
+          pixel_id: string
+          received_at: string
+          source_path: string | null
+          source_project: string | null
+          tenant_id: string
+          transport: string
+        }
+        Insert: {
+          created_at?: string
+          delivery_error?: string | null
+          delivery_status?: string
+          event_id: string
+          event_name: string
+          id?: string
+          occurred_at: string
+          payload?: Json
+          pixel_id: string
+          received_at?: string
+          source_path?: string | null
+          source_project?: string | null
+          tenant_id: string
+          transport: string
+        }
+        Update: {
+          created_at?: string
+          delivery_error?: string | null
+          delivery_status?: string
+          event_id?: string
+          event_name?: string
+          id?: string
+          occurred_at?: string
+          payload?: Json
+          pixel_id?: string
+          received_at?: string
+          source_path?: string | null
+          source_project?: string | null
+          tenant_id?: string
+          transport?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "openai_ads_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pagespeed_snapshots: {
         Row: {
           analysis_timestamp: string | null

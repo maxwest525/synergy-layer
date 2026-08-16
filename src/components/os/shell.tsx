@@ -8,6 +8,7 @@ import {
   Inbox,
   LayoutDashboard,
   Lightbulb,
+  Megaphone,
   ListChecks,
   Plug,
   Search,
@@ -28,6 +29,7 @@ const workspaces = [
   { to: "/search", label: "Search", icon: Search, hint: "What Google observed" },
   { to: "/seo-runs", label: "SEO Runs", icon: RouteIcon, hint: "Governed page changes" },
   { to: "/measurement", label: "Measurement", icon: Gauge, hint: "Page speed and analytics" },
+  { to: "/openai-ads", label: "OpenAI Ads", icon: Megaphone, hint: "Pixel and event instrumentation" },
   {
     to: "/essentials",
     label: "Essentials",
