@@ -588,7 +588,7 @@ function InboxPage() {
                   ))}
                 </ul>
               )}
-            </section>
+            </Section>
           );
         })}
       </div>
