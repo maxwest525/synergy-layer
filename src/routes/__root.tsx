@@ -1,4 +1,4 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import {
   Outlet,
   Link,
@@ -93,13 +93,19 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 });
 
 function RootShell({ children }: { children: ReactNode }) {
+  // The provider lives in the shell so every render path is covered, including
+  // the root error, not-found, and pending components which render outside the
+  // route component tree.
+  const router = useRouter();
+  const queryClient = (router.options.context as { queryClient: QueryClient }).queryClient;
+
   return (
     <html lang="en">
       <head>
         <HeadContent />
       </head>
       <body>
-        {children}
+        <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
         <Scripts />
       </body>
     </html>
@@ -107,8 +113,9 @@ function RootShell({ children }: { children: ReactNode }) {
 }
 
 function RootComponent() {
-  const { queryClient } = Route.useRouteContext();
   const router = useRouter();
+  const queryClient = useQueryClient();
+
 
   // Every read is scoped to the signed-in operator, so a change of identity has
   // to drop the caches that were filled under the previous one. Without this,
@@ -124,12 +131,12 @@ function RootComponent() {
   }, [queryClient, router]);
 
   return (
-    <QueryClientProvider client={queryClient}>
+    <>
       <Shell>
         {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
         <Outlet />
       </Shell>
       <Toaster richColors position="top-right" />
-    </QueryClientProvider>
+    </>
   );
 }
