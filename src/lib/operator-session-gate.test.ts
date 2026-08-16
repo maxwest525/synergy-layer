@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { getInitialOperatorSession, getWorkspaceAccessState } from "./operator-session-gate";
 
@@ -20,5 +20,21 @@ describe("operator session resolution", () => {
       email: null,
       signedIn: false,
     });
+  });
+
+  it("waits for the auth client when the browser already holds a token", () => {
+    const store = new Map([["sb-test-auth-token", "{}"]]);
+    vi.stubGlobal("window", {
+      localStorage: {
+        length: store.size,
+        key: (index: number) => [...store.keys()][index] ?? null,
+      },
+    });
+    expect(getInitialOperatorSession()).toEqual({
+      ready: false,
+      email: null,
+      signedIn: false,
+    });
+    vi.unstubAllGlobals();
   });
 });
