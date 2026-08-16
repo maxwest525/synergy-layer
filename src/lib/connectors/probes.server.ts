@@ -43,12 +43,19 @@ const noSafeProbe = new Set<ConnectorKey>([
   "perplexity",
   "selfhosted_firecrawl",
 ]);
-const DATAFORSEO_MAX_PROBE_BODY_BYTES = 32 * 1024;
+const MAX_SCHEMA_PROBE_BODY_BYTES = 32 * 1024;
 
 type DataForSeoEnvelope = {
   status_code: number;
   status_message: string;
   tasks: Array<{ status_code: number }>;
+};
+
+type OpenSeoHealth = {
+  status: "ok";
+  version: string;
+  authMode: string;
+  checks: Record<string, unknown>;
 };
 
 function basic(username: string | undefined, password: string | undefined): string {
@@ -143,7 +150,7 @@ function redactedEndpoint(rawUrl: string): string {
 async function readBoundedResponseBody(response: Response): Promise<string | null> {
   const body = response.body;
   const declaredLength = response.headers.get("content-length");
-  if (declaredLength && Number(declaredLength) > DATAFORSEO_MAX_PROBE_BODY_BYTES) {
+  if (declaredLength && Number(declaredLength) > MAX_SCHEMA_PROBE_BODY_BYTES) {
     try {
       await body?.cancel();
     } catch {
@@ -162,7 +169,7 @@ async function readBoundedResponseBody(response: Response): Promise<string | nul
       const { done, value } = await reader.read();
       if (done) break;
       totalBytes += value.byteLength;
-      if (totalBytes > DATAFORSEO_MAX_PROBE_BODY_BYTES) {
+      if (totalBytes > MAX_SCHEMA_PROBE_BODY_BYTES) {
         try {
           await reader.cancel();
         } catch {
@@ -223,6 +230,28 @@ async function hasDataForSeoSuccessEnvelope(response: Response): Promise<boolean
   }
 }
 
+function isOpenSeoHealth(value: unknown): value is OpenSeoHealth {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const health = value as Record<string, unknown>;
+  return (
+    health["status"] === "ok" &&
+    typeof health["version"] === "string" &&
+    typeof health["authMode"] === "string" &&
+    !!health["checks"] &&
+    typeof health["checks"] === "object" &&
+    !Array.isArray(health["checks"])
+  );
+}
+
+async function hasOpenSeoHealth(response: Response): Promise<boolean> {
+  try {
+    const body = await readBoundedResponseBody(response);
+    return body !== null && isOpenSeoHealth(JSON.parse(body));
+  } catch {
+    return false;
+  }
+}
+
 export async function probeConnector(
   key: ConnectorKey,
   options: ProbeOptions = {},
@@ -277,9 +306,12 @@ export async function probeConnector(
       signal: controller.signal,
     });
     const schemaValid =
-      key !== "dataforseo" ||
       response.status !== 200 ||
-      (await hasDataForSeoSuccessEnvelope(response));
+      (key === "dataforseo"
+        ? await hasDataForSeoSuccessEnvelope(response)
+        : key === "openseo"
+          ? await hasOpenSeoHealth(response)
+          : true);
     return {
       key,
       health: response.ok ? (schemaValid ? "healthy" : "degraded") : "failing",
