@@ -103,47 +103,63 @@ function NavList({
   onNavigate?: () => void;
 }) {
   return (
-    <div className="flex flex-col gap-5">
-      {navGroups.map((group) => (
-        <div key={group.title}>
-          <p className="px-3 pb-1.5 text-[0.65rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground/70">
+    <div className="flex flex-col">
+      {navGroups.map((group, groupIndex) => (
+        <section
+          key={group.title}
+          aria-label={group.title}
+          className={cn(
+            "py-4",
+            groupIndex > 0 && "border-t border-border/50",
+            groupIndex === 0 && "pt-0",
+          )}
+        >
+          <p className="px-2 pb-2 text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground/70">
             {group.title}
           </p>
-          <ul className="flex flex-col gap-0.5">
+          {/* A single hairline rail runs behind the group so its items read as
+              one connected path instead of unrelated rows. */}
+          <ul className="relative flex flex-col gap-1 border-l border-border/40 pl-2">
             {group.items.map((workspace) => {
               const active = isActive(pathname, workspace.to);
               return (
-                <li key={workspace.to}>
+                <li key={workspace.to} className="relative">
+                  {active ? (
+                    <span
+                      aria-hidden
+                      className="absolute -left-2 top-1/2 h-6 w-px -translate-y-1/2 bg-primary shadow-[0_0_10px_var(--color-primary)]"
+                    />
+                  ) : null}
                   <Link
                     to={workspace.to}
                     onClick={onNavigate}
                     aria-current={active ? "page" : undefined}
                     className={cn(
-                      "group flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition-colors",
+                      "flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm transition-colors",
                       active
                         ? "bg-sidebar-accent text-foreground"
-                        : "text-muted-foreground hover:bg-sidebar-accent/60 hover:text-foreground",
+                        : "text-muted-foreground hover:bg-sidebar-accent/50 hover:text-foreground",
                     )}
                   >
                     <workspace.icon
                       aria-hidden
-                      className={cn("size-4 shrink-0", active ? "text-primary" : "text-muted-foreground")}
+                      className={cn(
+                        "size-4 shrink-0",
+                        active ? "text-primary" : "text-muted-foreground/80",
+                      )}
                     />
-                    <span className="min-w-0 flex-1">
+                    <span className="min-w-0 flex-1 leading-tight">
                       <span className="block truncate font-medium">{workspace.label}</span>
-                      <span className="block truncate text-xs text-muted-foreground/80">
+                      <span className="block truncate text-xs text-muted-foreground/70">
                         {workspace.hint}
                       </span>
                     </span>
-                    {active ? (
-                      <span aria-hidden className="size-1.5 shrink-0 rounded-full bg-primary" />
-                    ) : null}
                   </Link>
                 </li>
               );
             })}
           </ul>
-        </div>
+        </section>
       ))}
     </div>
   );
@@ -218,21 +234,23 @@ export function Shell({ children }: { children: ReactNode }) {
       <div className="relative flex min-h-screen w-full">
         <nav
           aria-label="Workspaces"
-          className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col overflow-y-auto border-r border-border/60 bg-sidebar/70 px-3 py-5 backdrop-blur-xl lg:flex"
+          className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col overflow-y-auto border-r border-border/60 bg-sidebar/70 px-4 py-5 backdrop-blur-xl lg:flex"
         >
-          <Link to="/" className="mb-6 px-3">
+          <Link to="/" className="mb-5 block px-2.5">
             <BrandMark />
           </Link>
 
-          <TenantSwitcher session={session} />
+          <div className="pb-4">
+            <TenantSwitcher session={session} />
+          </div>
 
-          <div className="flex-1">
+          <div className="flex-1 border-t border-border/50 pt-4">
             <NavList pathname={pathname} />
           </div>
 
           <Link
             to="/auth"
-            className="mt-6 truncate rounded-xl px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-sidebar-accent/60 hover:text-foreground"
+            className="mt-4 block truncate border-t border-border/50 px-2.5 pt-4 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
           >
             {accountLabel}
           </Link>
@@ -249,17 +267,21 @@ export function Shell({ children }: { children: ReactNode }) {
               </SheetTrigger>
               <SheetContent
                 side="left"
-                className="w-[19rem] overflow-y-auto border-border/60 bg-sidebar px-4 py-6"
+                className="flex w-[19rem] flex-col overflow-y-auto border-border/60 bg-sidebar px-4 py-6"
               >
-                <div className="mb-5">
+                <div className="mb-5 px-2.5">
                   <BrandMark />
                 </div>
-                <TenantSwitcher session={session} />
-                <NavList pathname={pathname} onNavigate={() => setMenuOpen(false)} />
+                <div className="pb-4">
+                  <TenantSwitcher session={session} />
+                </div>
+                <div className="flex-1 border-t border-border/50 pt-4">
+                  <NavList pathname={pathname} onNavigate={() => setMenuOpen(false)} />
+                </div>
                 <Link
                   to="/auth"
                   onClick={() => setMenuOpen(false)}
-                  className="mt-6 block truncate rounded-xl border border-border/70 px-3 py-2 text-sm font-medium text-muted-foreground hover:border-primary/50 hover:text-foreground"
+                  className="mt-4 block truncate border-t border-border/50 px-2.5 pt-4 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
                 >
                   {accountLabel}
                 </Link>
