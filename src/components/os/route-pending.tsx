@@ -12,7 +12,7 @@ export function RoutePending() {
         <Bar className="h-7 w-64" />
         <Bar className="h-3 w-full max-w-xl" />
       </div>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {[0, 1, 2, 3].map((key) => (
           <div key={key} className="rounded-2xl border border-border/70 bg-card/40 p-5">
             <Bar className="h-3 w-20" />

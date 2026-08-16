@@ -173,7 +173,7 @@ function ValidationControl({ available }: { available: boolean }) {
           ? ""
           : " A provider validate-only call is not offered because that contract has not been confirmed from authoritative documentation."}
       </p>
-      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+      <div className="mt-4 grid gap-4 sm:grid-cols-2">
         <label className="text-xs text-muted-foreground">
           Event
           <select
@@ -270,7 +270,7 @@ function OpenAiAdsPage() {
   const activeCount = data.coverage.filter((row) => row.state === "active").length;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       <PageHeader
         eyebrow="Paid media instrumentation"
         title="OpenAI Ads"
@@ -297,7 +297,7 @@ function OpenAiAdsPage() {
         <SurfaceCard title="Server-side events health" health={data.capi} />
       </div>
 
-      <section className="space-y-3">
+      <section className="space-y-4">
         <h2 className="text-sm font-semibold text-foreground">Integration and settings</h2>
         <div className="grid gap-4 lg:grid-cols-2">
           <GlassCard className="p-5">
@@ -384,7 +384,7 @@ function OpenAiAdsPage() {
         </div>
       </section>
 
-      <section className="space-y-3">
+      <section className="space-y-4">
         <h2 className="text-sm font-semibold text-foreground">Event coverage</h2>
         <p className="text-sm text-muted-foreground">
           Active means this project has stored real events of that name. Available means the event
@@ -432,13 +432,13 @@ function OpenAiAdsPage() {
         ) : null}
       </section>
 
-      <section className="space-y-3">
+      <section className="space-y-4">
         <h2 className="text-sm font-semibold text-foreground">Validation</h2>
         <p className="text-sm text-muted-foreground">{data.validation.reason}</p>
         <ValidationControl available={data.validation.providerValidationAvailable} />
       </section>
 
-      <section className="space-y-3">
+      <section className="space-y-4">
         <h2 className="text-sm font-semibold text-foreground">Source paths</h2>
         {data.sourcePaths.length === 0 ? (
           <EmptyState
@@ -456,7 +456,7 @@ function OpenAiAdsPage() {
         )}
       </section>
 
-      <section className="space-y-3">
+      <section className="space-y-4">
         <h2 className="text-sm font-semibold text-foreground">Delivery errors</h2>
         {data.failedEvents.length === 0 ? (
           <EmptyState
@@ -482,7 +482,7 @@ function OpenAiAdsPage() {
         )}
       </section>
 
-      <section className="space-y-3">
+      <section className="space-y-4">
         <h2 className="text-sm font-semibold text-foreground">Recent events</h2>
         {data.recentEvents.length === 0 ? (
           <EmptyState

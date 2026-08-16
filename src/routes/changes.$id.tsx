@@ -128,7 +128,7 @@ function ProposalRevisionPanel({
             Editing saves a new immutable revision. Regenerate calls Gemini once using fresh
             required evidence and optional knowledge writing guidance.
           </p>
-          <div className="mt-4 grid gap-3">
+          <div className="mt-4 grid gap-4">
             <label className="grid gap-1 text-sm">
               <span className="text-muted-foreground">SEO title</span>
               <Input value={seoTitle} onChange={(event) => setSeoTitle(event.target.value)} />
@@ -225,7 +225,7 @@ function MeasurementHistory({ measurement }: { measurement: MeasurementView }) {
         The approval baseline is frozen separately from the rendered live anchor. Providers keep
         their own roles; this history does not calculate success or verify the change automatically.
       </p>
-      <div className="mt-4 grid gap-3 lg:grid-cols-2">
+      <div className="mt-4 grid gap-4 lg:grid-cols-2">
         {measurement.windows.map((window) => {
           const observations = measurement.observations.filter(
             (row) => row["window_id"] === window["id"],
@@ -391,7 +391,7 @@ function ChangeRequestPage() {
   ].join("\n");
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       <PageHeader
         eyebrow="Proposed page change"
         title={change.title}

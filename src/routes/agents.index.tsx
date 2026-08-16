@@ -45,7 +45,7 @@ function AgentsPage() {
   const { data } = useSuspenseQuery(agentsQuery);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       <PageHeader
         eyebrow="Who does the work"
         title="Agent Registry"
@@ -58,7 +58,7 @@ function AgentsPage() {
           description="Declare an agent in a module, then sync the registry."
         />
       ) : (
-        <div className="grid gap-3 md:grid-cols-2">
+        <div className="grid gap-4 md:grid-cols-2">
           {data.map((agent) => (
             <Link key={agent.id} to="/agents/$id" params={{ id: agent.id }} className="block">
               <GlassCard className="h-full p-5 transition-colors hover:border-primary/40">

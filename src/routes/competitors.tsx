@@ -125,14 +125,14 @@ function CompetitorReviewPage() {
     );
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       <PageHeader
         eyebrow="Human approval gate"
         title="Competitor review"
         description="Derived from the stored SERP evidence for approved keywords. Ranking alone is not proof of business competition, so every row carries its own confidence and reasoning. Nothing is tracked until you approve it."
       />
 
-      <div className="grid gap-3 sm:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-4">
         <MetricTile label="SERPs analysed" value={String(data.serpsAnalysed)} />
         <MetricTile label="Shortlisted" value={String(data.shortlist.length)} />
         <MetricTile label="Other observed domains" value={String(data.observed.length)} />
@@ -146,7 +146,7 @@ function CompetitorReviewPage() {
         />
       ) : (
         <>
-          <GlassCard className="flex flex-wrap items-center gap-2 p-4">
+          <GlassCard className="flex flex-wrap items-center gap-2 p-5">
             <Button
               variant="outline"
               size="sm"
@@ -246,7 +246,7 @@ function CompetitorRow({
   const classification = (row.companyClassification ?? "unclassified") as CompanyClassification;
   return (
     <li>
-      <GlassCard className="space-y-3 p-4">
+      <GlassCard className="space-y-3 p-5">
         <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
           <div className="flex min-w-0 items-start gap-3">
             <Checkbox

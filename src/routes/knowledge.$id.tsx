@@ -50,7 +50,7 @@ function KnowledgeCollectionPage() {
   const collection = data.collection!;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       <PageHeader
         eyebrow={collection.kind.replace(/_/g, " ")}
         title={collection.name}
@@ -64,7 +64,7 @@ function KnowledgeCollectionPage() {
         <ul className="space-y-3">
           {data.entries.map((entry) => (
             <li key={entry.id}>
-              <GlassCard className="p-4">
+              <GlassCard className="p-5">
                 <div className="flex items-start justify-between gap-3">
                   <p className="text-sm font-medium text-foreground">{entry.title}</p>
                   <span className="shrink-0 text-xs text-muted-foreground">

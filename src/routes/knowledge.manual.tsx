@@ -30,7 +30,7 @@ function ExecutionManualPage() {
   });
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       <PageHeader
         eyebrow="Governed operating manual"
         title="Execution Handbook"

@@ -7,6 +7,7 @@ import {
   GlassCard,
   MetricTile,
   PageHeader,
+  Section,
   StatePill,
   formatWhen,
   toneForState,
@@ -65,7 +66,7 @@ function QuickAction({
 }) {
   return (
     <Link to={to} {...(hash ? { hash } : {})} className="block">
-      <GlassCard className="h-full p-4 transition-colors hover:border-primary/40">
+      <GlassCard className="h-full p-5 transition-colors hover:border-primary/40">
         <div className="flex items-baseline justify-between gap-3">
           <span className="text-sm font-medium text-foreground">{label}</span>
           {count === undefined ? null : (
@@ -105,7 +106,7 @@ function CommandCenterPage() {
 
   if (!data.ready) {
     return (
-      <div className="space-y-8">
+      <div className="space-y-10">
         <PageHeader
           eyebrow="System state"
           title="Command Center"
@@ -120,16 +121,15 @@ function CommandCenterPage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       <PageHeader
         eyebrow="System state"
         title="Command Center"
         description="One read on what exists, what is live, and what is drifting right now."
       />
 
-      <section className="space-y-3">
-        <h2 className="text-sm font-semibold tracking-tight text-foreground">Quick actions</h2>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <Section title="Quick actions" hint="Jump straight into work that is waiting">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <QuickAction
             to="/"
             label="Open Action Center"
@@ -167,9 +167,9 @@ function CommandCenterPage() {
             outcome="Read the stored error on each failure before deciding to rerun anything."
           />
         </div>
-      </section>
+      </Section>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {tiles.map((tile) => (
           <Link key={tile.key} to={tile.to} className="block">
             <MetricTile label={tile.label} value={data.counts[tile.key] ?? 0} />
@@ -185,7 +185,7 @@ function CommandCenterPage() {
             tone={usedShare >= 75 ? "warning" : "success"}
           />
         </div>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <MetricTile
             label="Provider spend"
             value={`$${evidence.spentUsd.toFixed(4)}`}
@@ -207,7 +207,7 @@ function CommandCenterPage() {
             hint={`Last ${formatWhen(evidence.lastSearchConsoleAt)}`}
           />
         </div>
-        <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <MetricTile
             label="Keyword candidates"
             value={evidence.pendingKeywordCandidates}
@@ -273,7 +273,7 @@ function CommandCenterPage() {
         </GlassCard>
 
         <div className="space-y-4">
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-4 sm:grid-cols-2">
             <MetricTile label="Failed runs" value={failedRuns} hint="Last 50 workflow runs" />
             <MetricTile
               label="Failing capabilities"

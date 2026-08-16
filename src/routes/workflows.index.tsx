@@ -5,6 +5,7 @@ import {
   EmptyState,
   GlassCard,
   PageHeader,
+  Section,
   StatePill,
   formatWhen,
   toneForState,
@@ -43,7 +44,7 @@ function WorkflowsPage() {
   const failedRuns = data.runs.filter((run) => run.state === "failed");
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       <PageHeader
         eyebrow="How work runs"
         title="Workflow Registry"
@@ -51,10 +52,7 @@ function WorkflowsPage() {
       />
 
       {failedRuns.length > 0 ? (
-        <section id="failed-runs" className="scroll-mt-24 space-y-3">
-          <h2 className="text-sm font-semibold tracking-tight text-foreground">
-            Failed runs ({failedRuns.length})
-          </h2>
+        <Section id="failed-runs" title="Failed runs" hint={`${failedRuns.length} to review`}>
           <GlassCard className="p-5">
             <ul className="space-y-3">
               {failedRuns.map((run) => {
@@ -98,7 +96,7 @@ function WorkflowsPage() {
               })}
             </ul>
           </GlassCard>
-        </section>
+        </Section>
       ) : null}
 
       {data.workflows.length === 0 ? (
@@ -107,7 +105,7 @@ function WorkflowsPage() {
           description="Declare a workflow in a module, then sync the registry."
         />
       ) : (
-        <div className="grid gap-3 md:grid-cols-2">
+        <div className="grid gap-4 md:grid-cols-2">
           {data.workflows.map((workflow) => {
             const runs = data.runs.filter((run) => run.workflow_id === workflow.id);
             const latest = runs[0];

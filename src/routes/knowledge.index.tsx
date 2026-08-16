@@ -83,7 +83,7 @@ function KnowledgePage() {
   });
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       <PageHeader
         eyebrow="What the OS knows"
         title="Knowledge"
@@ -132,7 +132,7 @@ function KnowledgePage() {
             </div>
           </div>
         ) : null}
-        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+        <div className="mt-4 grid gap-4 sm:grid-cols-3">
           <div className="rounded-xl border border-border/60 p-3">
             <p className="text-xs text-muted-foreground">Governed sources</p>
             <p className="mt-1 text-2xl font-semibold text-foreground">
@@ -179,7 +179,7 @@ function KnowledgePage() {
           description="Create a knowledge collection to give agents context."
         />
       ) : (
-        <div className="grid gap-3 md:grid-cols-2">
+        <div className="grid gap-4 md:grid-cols-2">
           {data.collections.map((collection) => {
             const entries = data.entries.filter((entry) => entry.collection_id === collection.id);
             return (

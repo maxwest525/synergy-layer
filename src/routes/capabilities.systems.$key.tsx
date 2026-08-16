@@ -106,7 +106,7 @@ function SystemDetailPage() {
   const requiresDryRun = Boolean(safety?.["require_dry_run"]);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       <PageHeader
         eyebrow={KIND_LABELS[system.kind] ?? system.kind}
         title={system.name}
@@ -182,7 +182,7 @@ function SystemDetailPage() {
       ) : null}
 
       {data.aliases.length > 0 ? (
-        <section className="space-y-3">
+        <section className="space-y-4">
           <h2 className="text-sm font-semibold text-foreground">
             Aliases &amp; registrations ({data.aliases.length})
           </h2>
@@ -195,7 +195,7 @@ function SystemDetailPage() {
               const kind = (alias as { alias_kind?: string }).alias_kind ?? "other";
               const kindLabel = ALIAS_KIND_LABELS[kind] ?? "Other registration";
               return (
-                <GlassCard key={alias.id} className="p-3">
+                <GlassCard key={alias.id} className="p-5">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <p className="text-sm font-medium text-foreground">
                       {kindLabel}: {alias.alias_label}
@@ -215,7 +215,7 @@ function SystemDetailPage() {
         </section>
       ) : null}
 
-      <section className="space-y-3">
+      <section className="space-y-4">
         <h2 className="text-sm font-semibold text-foreground">Operations ({operations.length})</h2>
         {operations.length === 0 ? (
           <EmptyState
@@ -233,7 +233,7 @@ function SystemDetailPage() {
             />
             <div className="space-y-2">
               {visible.map((operation) => (
-                <GlassCard key={operation.id} className="p-3">
+                <GlassCard key={operation.id} className="p-5">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <p className="text-sm font-medium text-foreground">{operation.display_name}</p>
                     <div className="flex flex-wrap items-center gap-3">

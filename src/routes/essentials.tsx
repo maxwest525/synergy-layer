@@ -125,9 +125,9 @@ function ConcernCard({ concern }: { concern: Concern }) {
 
 function Group({ title, concerns }: { title: string; concerns: Concern[] }) {
   return (
-    <section className="space-y-3">
+    <section className="space-y-4">
       <h2 className="text-sm font-semibold tracking-tight text-foreground">{title}</h2>
-      <div className="grid gap-3 lg:grid-cols-2">
+      <div className="grid gap-4 lg:grid-cols-2">
         {concerns.map((concern) => (
           <ConcernCard key={concern.id} concern={concern} />
         ))}
@@ -383,7 +383,7 @@ function EssentialsPage() {
   ];
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       <PageHeader
         eyebrow="Marketing essentials"
         title="Essentials"

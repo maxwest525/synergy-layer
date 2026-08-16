@@ -95,7 +95,7 @@ function AuthPage() {
         description="Browsing the registries is open. Approving, running, and syncing require an operator or admin role."
       />
 
-      <GlassCard glow className="p-6">
+      <GlassCard glow className="p-5">
         <form
           className="space-y-4"
           onSubmit={(event) => {

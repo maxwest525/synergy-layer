@@ -113,7 +113,7 @@ function ConsentPage() {
         description="Approving lets this agent client read AOOS as you. Your role and access rules still apply."
       />
 
-      <GlassCard glow className="space-y-4 p-6">
+      <GlassCard glow className="space-y-4 p-5">
         <p className="text-sm text-muted-foreground">
           {clientName} is requesting read access to your inbox, recommendations, workflow runs,
           capabilities, and assets. It cannot approve work or run anything on your behalf.

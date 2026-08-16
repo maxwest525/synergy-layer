@@ -59,7 +59,7 @@ export function DataForSeoPanel() {
             tone={data.budget.hardStop ? "success" : "warning"}
           />
         </div>
-        <div className="mt-4 grid gap-3 sm:grid-cols-4">
+        <div className="mt-4 grid gap-4 sm:grid-cols-4">
           <MetricTile label="Ceiling" value={`$${data.budget.ceilingUsd.toFixed(2)}`} />
           <MetricTile label="Spent" value={`$${data.budget.spentUsd.toFixed(4)}`} />
           <MetricTile label="Remaining" value={`$${remaining.toFixed(2)}`} />

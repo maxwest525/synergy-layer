@@ -95,7 +95,7 @@ function CallbackPage() {
         }
       />
 
-      <GlassCard glow className="space-y-4 p-6">
+      <GlassCard glow className="space-y-4 p-5">
         {hasSession === false ? (
           <>
             <p className="text-sm text-muted-foreground">
