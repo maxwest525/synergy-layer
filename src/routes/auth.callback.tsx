@@ -67,21 +67,22 @@ function CallbackPage() {
     retry: false,
   });
 
+  // A verified session always continues into the OS. Accounts without an
+  // operator role land read only rather than parking on this page.
   useEffect(() => {
-    if (result.data?.canOperate) {
-      const timer = setTimeout(() => {
-        if (next) {
-          window.location.href = next;
-          return;
-        }
-        void navigate({ to: "/" });
-      }, 600);
-      return () => clearTimeout(timer);
-    }
-    return undefined;
-  }, [result.data?.canOperate, navigate, next]);
+    if (!result.data) return undefined;
+    const timer = setTimeout(() => {
+      if (next) {
+        window.location.href = next;
+        return;
+      }
+      void navigate({ to: "/" });
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [result.data, navigate, next]);
 
   const denied = result.data && !result.data.canOperate;
+
 
   return (
     <div className="mx-auto max-w-md space-y-8">
