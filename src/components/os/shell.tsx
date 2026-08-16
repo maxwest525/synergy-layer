@@ -234,21 +234,23 @@ export function Shell({ children }: { children: ReactNode }) {
       <div className="relative flex min-h-screen w-full">
         <nav
           aria-label="Workspaces"
-          className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col overflow-y-auto border-r border-border/60 bg-sidebar/70 px-3 py-5 backdrop-blur-xl lg:flex"
+          className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col overflow-y-auto border-r border-border/60 bg-sidebar/70 px-4 py-5 backdrop-blur-xl lg:flex"
         >
-          <Link to="/" className="mb-6 px-3">
+          <Link to="/" className="mb-5 block px-2.5">
             <BrandMark />
           </Link>
 
-          <TenantSwitcher session={session} />
+          <div className="pb-4">
+            <TenantSwitcher session={session} />
+          </div>
 
-          <div className="flex-1">
+          <div className="flex-1 border-t border-border/50 pt-4">
             <NavList pathname={pathname} />
           </div>
 
           <Link
             to="/auth"
-            className="mt-6 truncate rounded-xl px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-sidebar-accent/60 hover:text-foreground"
+            className="mt-4 block truncate border-t border-border/50 px-2.5 pt-4 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
           >
             {accountLabel}
           </Link>
@@ -265,17 +267,21 @@ export function Shell({ children }: { children: ReactNode }) {
               </SheetTrigger>
               <SheetContent
                 side="left"
-                className="w-[19rem] overflow-y-auto border-border/60 bg-sidebar px-4 py-6"
+                className="flex w-[19rem] flex-col overflow-y-auto border-border/60 bg-sidebar px-4 py-6"
               >
-                <div className="mb-5">
+                <div className="mb-5 px-2.5">
                   <BrandMark />
                 </div>
-                <TenantSwitcher session={session} />
-                <NavList pathname={pathname} onNavigate={() => setMenuOpen(false)} />
+                <div className="pb-4">
+                  <TenantSwitcher session={session} />
+                </div>
+                <div className="flex-1 border-t border-border/50 pt-4">
+                  <NavList pathname={pathname} onNavigate={() => setMenuOpen(false)} />
+                </div>
                 <Link
                   to="/auth"
                   onClick={() => setMenuOpen(false)}
-                  className="mt-6 block truncate rounded-xl border border-border/70 px-3 py-2 text-sm font-medium text-muted-foreground hover:border-primary/50 hover:text-foreground"
+                  className="mt-4 block truncate border-t border-border/50 px-2.5 pt-4 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
                 >
                   {accountLabel}
                 </Link>
