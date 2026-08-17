@@ -15,6 +15,8 @@ import {
   toneForState,
 } from "@/components/os/primitives";
 import { OperatorRouteError } from "@/components/os/route-error";
+import { UmamiPanel } from "@/components/os/umami-panel";
+
 import { describeMissingSnapshot } from "@/lib/measurement/pagespeed";
 import { Button } from "@/components/ui/button";
 import {
@@ -278,6 +280,10 @@ function MeasurementPage() {
         title="Site health"
         description="Speed, indexing, and traffic evidence for pages you own. Every number here came back from a real provider response, and analytics stays honest about whether it is connected."
       />
+
+      <UmamiPanel />
+
+
 
       <GlassCard className="p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
