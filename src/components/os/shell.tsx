@@ -121,7 +121,10 @@ function NavList({
           )}
         >
           {collapsed ? null : (
-            <p className="px-2 pb-2 text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-foreground/75">
+            <p
+              title={group.definition}
+              className="px-2 pb-2 text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-foreground/75"
+            >
               {group.title}
             </p>
           )}
