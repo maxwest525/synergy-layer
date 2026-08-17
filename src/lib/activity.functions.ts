@@ -279,7 +279,9 @@ export const listActivityFeed = createServerFn({ method: "GET" }).handler(
           at: cycle.live_at ?? cycle.baseline_frozen_at,
           title: "Measurement cycle open",
           detail: next
-            ? `First ${next.days} day window reads on ${next.availableAfter}`
+            ? next.days > 0
+              ? `First ${next.days} day window reads on ${next.availableAfter}`
+              : `Baseline window reads on ${next.availableAfter}`
             : "Baseline frozen, no window scheduled yet",
           state: "measuring",
           linkTo: null,
