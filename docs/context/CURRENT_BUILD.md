@@ -8,7 +8,7 @@ It is not authoritative documentation. Provider digests under
 `docs/integrations/<provider>/DIGEST.md` and their PLAN files remain the source of
 truth for provider behaviour and must never be overwritten by this file.
 
-Last updated: 2026-08-17 (request-abort runtime stabilization).
+Last updated: 2026-08-17 (cold-load session restoration repaired).
 
 ## 1. What AOOS is
 
