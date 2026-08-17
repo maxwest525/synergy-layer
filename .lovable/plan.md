@@ -1,6 +1,9 @@
 # Workflow engine: manual-first stepping
 
-You want a platform where each step is run by you, with separated tools. That changes the engine from "one long automatic call" into "a run that sits still until you advance it." Everything below follows from that.
+Recommendation: manual for anything that changes the website, automatic for anything that only reads. Fully auto page edits are not worth it here. The evidence sources are still uneven (GA4 unproven, PageSpeed quota-blocked), and a wrong title or H1 pushed straight to the live site costs more to undo than a single click costs you. Reading is cheap and reversible, so let that run on its own.
+
+You want each step run by you, with separated tools. That changes the engine from "one long automatic call" into "a run that sits still until you advance it." Everything below follows from that.
+
 
 ## Where the engine is today
 
