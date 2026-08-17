@@ -53,5 +53,14 @@ export default defineConfig({
     // where the plugin remains enabled; local Windows checks skip only it.
     plugins: process.platform === "win32" ? [] : [mcpPlugin()],
     customLogger: quietDisconnectLogger,
+    ssr: {
+      // A stale SSR prebundle of the framework server helpers resolves
+      // `getRequestHeader` to undefined and crashes every authenticated server
+      // function. Loading them from source keeps the exports live.
+      optimizeDeps: {
+        exclude: ["@tanstack/react-start", "@tanstack/react-start/server"],
+      },
+    },
   },
+
 });
