@@ -106,6 +106,10 @@ second visits served from the query cache. Applied fixes:
   skeletons for several seconds. Server-function middleware also attaches the
   already-persisted access token directly instead of acquiring that lock.
   Authorization and token validation remain server-side.
+- Active tenant resolution now reads its RLS-scoped profile, membership, and
+  single-tenant fallbacks concurrently. The tenant switcher also loads the
+  visible tenant list and active selection concurrently, removing avoidable
+  serial backend round trips from every cold workspace load.
 - Node's exact `abortIncoming` / `socketOnClose` error is classified as a browser
   request cancellation at both server boundaries and returns 499 without fatal
   logging, including when the framework logs before wrapping the response.
