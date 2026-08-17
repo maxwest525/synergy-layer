@@ -1,65 +1,94 @@
-# Finish the approved plan: dynamic Marketing essentials plus the agent
+# AOOS front to back: an agent that does the work, on six screens
 
-You are right. The approved plan had four sequenced steps and only the first two shipped.
+You picked all four. They are one problem: AOOS was built as 23 hand-made screens over a governance model, so the machinery grew faster than the work. This plan changes the operating model, not the paint.
 
-## Where the approved plan actually stands
+## What is actually true today (checked against the live database)
 
-| Step | Status |
+| Fact | Number |
 | --- | --- |
-| 1 Taxonomy pass (nav, page headers, Keywords and Competitors filters, SEO tools rename) | Done |
-| 2 Studio: blank agent surface with streaming | Done |
-| 3 Dynamic concern tables seeded from the framework, derived statuses | Not started |
-| 4 Essentials agent panel with read tools then proposal tools | Not started |
+| Routes / route files | 23 workspaces, 54 route files, ~10k lines |
+| Change requests | 2, of which 1 reached applied or verified |
+| Execution receipts | 11 |
+| Measurement cycles opened | 1 |
+| Search Console snapshots | 103, healthy daily |
+| GA4 / PageSpeed / ad creatives / trust gaps | 0, 0, 0, 0 |
+| Workflow runs | 29 succeeded, 13 failed |
+| Provider connections | 18 recorded: healthy DataForSEO, Firecrawl, SerpAPI, GitHub, Supabase. Degraded Search Console. Pending GA4, PageSpeed, Gemini |
 
-Steps 3 and 4 are the substance. This plan does both in one pass, plus the two taxonomy leftovers.
+So the loop has completed roughly once, on one page, and never produced a measured outcome. Everything else is surface.
 
-## Step 3: Marketing essentials becomes a live concern set
+## The four fixes, in one operating model
 
-Today Essentials derives 18 hardcoded concerns in application code. That is replaced by data.
+### 1 The agent is the product, not a page
 
-**Two new tenant-scoped tables** (one migration, GRANTs plus RLS plus policies in the same migration):
+Today the agent is a panel you can visit. It becomes the way you use AOOS.
 
-- `essential_concerns` — phase, task, plain-language description, evidence source, current status, priority, last evaluated at, origin (`framework_seed`, `agent_proposed`, `operator_added`), retired at. Rows are added, retired, and reprioritised at runtime.
-- `essential_concern_evaluations` — immutable history. Every status change stores the evidence rows it was derived from, the run that produced it, the limitation, and the timestamp. Insert-only, mutation refused by trigger, matching the existing evidence tables.
+- Every screen has one composer. You type what you want in plain words. The agent reads stored evidence with tools, reasons out loud, and comes back with either an answer or a proposal.
+- The agent runs on a high-reasoning model through the AI gateway, with a tool catalog over the data that already exists: Search Console snapshots, keywords, competitors, backlinks, change requests, executions, measurement cycles, tool estate readiness, spend.
+- Read tools run freely. Every write is proposal-only and lands in Decisions for your yes or no. The agent can never edit the site, set a status, or spend money without approval.
+- Each claim cites the stored row it came from. Uncited statements are labelled reasoning, not fact.
 
-**Seed** — the 55 tasks across 14 phases from the uploaded framework CSV, written as literal INSERT statements in the migration so the screen has real rows the moment it loads. Each row carries its evidence source and whether any current capability can measure it.
+### 2 Prove the loop end to end, once, on purpose
 
-**Status is derived, never typed.** An evaluator server function reads stored snapshots and writes one evaluation row per concern:
+Before anything new gets built, one change goes the whole distance and the system reports the result in plain words:
 
-- Proven — a real stored snapshot supports it.
-- Failing — stored evidence contradicts it.
-- Not measured — the evidence source exists but has no snapshot yet.
-- No way to check this yet — no capability can measure it, naming the capability that would. That is the honest state for server architecture, generative engine optimization, omni-channel, and localized search today.
+evidence to proposal to your approval to GitHub execution to publish verification to a measurement window to a stated outcome.
 
-**The screen** — Essentials lists concerns grouped by phase with status counts, a filter for each status, and per-concern evidence and history. A failing concern with a supported change type gets a "propose a fix" action that raises a change request into Decisions and rides the existing approval and GitHub execution path. Nothing mutates the site without approval.
+That means picking a page with real Search Console loss, letting the agent draft the change, approving it, executing it, opening the measurement cycle, and holding it open until the window closes. The Action Center then shows one sentence: what changed, when, and whether impressions and clicks moved. If they did not move, it says that too.
 
-## Step 4: the reasoning agent on Essentials
+### 3 Six screens, not twenty-three
 
-A side-by-side panel reusing the Studio chat components, on the same high-reasoning model through the Lovable AI Gateway.
+The 23 workspaces collapse into six, in the loop order that already exists. Nothing is deleted; the retired surfaces become sections or agent tools underneath these six.
 
-- **Read tools** — read concerns and their evaluation history, Search Console snapshots, keywords, competitors, PageSpeed, backlinks, change requests, tool estate readiness. Every tool is tenant-scoped and runs as the operator.
-- **Proposal-only write tools**, each requiring your approval before it lands: propose a new concern, retire a concern, reprioritise, or draft a change request. The agent can never set a status or execute anything.
-- Every claim cites the stored row it came from. Anything uncited is labelled reasoning, not fact.
-- Selecting a concern scopes the conversation to it with its evidence and history preloaded.
+```text
+1 Today        what needs your yes or no, plus what changed since yesterday
+2 Ask          the agent surface, full width, with the whole tool catalog
+3 Evidence     one browser over every stored fact, filtered by source
+4 Work         runs, schedules, executions, receipts
+5 Coverage     the marketing framework as live concerns with derived status
+6 Setup        connections, costs, access. Only when something breaks
+```
 
-Tool calls render as collapsed accordions in the transcript so you can see exactly what it read.
+Old routes redirect. Keywords, Competitors and Observations become lanes inside Today. Search results, Site health, Competitor ads, Trust gaps, Assets and Knowledge become filtered views of Evidence. Workflows, Schedule, SEO runs, SEO tools, OpenAI Ads and Agents become sections of Work. Capabilities, Tool estate, Data costs and People become Setup.
 
-## Taxonomy leftovers folded in
+### 4 Real, unproven, and impossible are labelled everywhere
 
-1. **Honest empty states** on every page whose table is genuinely at zero (Trust gaps, GA4, PageSpeed, competitor ads, SEO tools runs): say why it is empty and what run would fill it, instead of looking broken.
-2. **Action center lane wording** aligned to the taxonomy words, decision lanes first and the failure strip labelled System health beneath them.
+One shared status vocabulary, derived from stored evidence, never typed:
+
+- **Working** — a real authenticated read stored a snapshot recently.
+- **Set up, never proven** — credentials exist, no successful read yet. GA4 and PageSpeed today.
+- **Broken** — a real failure with the reason and the last attempt. Search Console is degraded and says why.
+- **Cannot measure yet** — no capability exists, naming what would be needed. Generative search, omni-channel, localized search today.
+
+Empty screens stop looking broken: each says which of the four it is and what run would fill it. Anything in the second or fourth state is visibly quarantined rather than mixed in with real numbers.
+
+## Coverage: the framework becomes live, not a checklist
+
+The 55 tasks from your framework CSV seed two tenant-scoped tables: `essential_concerns` (phase, task, plain description, evidence source, priority, origin, retired at) and `essential_concern_evaluations` (insert-only history, each row storing the evidence it was derived from and its limitation).
+
+Status derives from the same four-word vocabulary above. A failing concern with a supported change type lets the agent draft a proposal into Decisions. Concerns can be added, retired, and reprioritised at runtime through agent proposals plus your approval, so the set grows with the business instead of being frozen in code.
+
+## Order of work
+
+1. **Prove the loop.** One real change, executed, verified, measured, reported. No new screens.
+2. **Agent core.** Shared chat components extracted from Studio, tool catalog over existing evidence, citations, proposal-only writes, tool calls shown as collapsed accordions.
+3. **Six screens.** Consolidate routes with redirects, one status vocabulary, honest empty states.
+4. **Coverage.** Concern tables, framework seed, derived evaluations, agent proposals against them.
+5. **Fix or retire the unproven.** GA4 and PageSpeed either get proven with a real stored snapshot or are marked cannot-measure with the reason, rather than sitting silently at zero.
+
+Each step ends with something you can look at. Step 1 is the one that answers "it has never done the work."
 
 ## Technical notes
 
-- Migration creates both tables with `GRANT SELECT, INSERT, UPDATE, DELETE ... TO authenticated`, `GRANT ALL ... TO service_role`, RLS on, tenant-member policies, an insert-only trigger on the evaluations table, and the 55 seed rows.
-- `src/lib/essentials.functions.ts` gains list, evaluate, and proposal server functions under `requireSupabaseAuth`; derivation logic moves into `src/lib/essentials/evaluate.server.ts` so the functions file stays a thin wrapper.
-- The evaluator is registered as a workflow step so it re-runs on schedule, not only on page load.
-- Agent tools live in `src/lib/ai/essentials-tools.server.ts`; the streaming route is `src/routes/api/essentials-chat.ts`, mirroring the Studio route including bearer verification.
-- Studio's transcript, composer, and streaming pieces are extracted into `src/components/os/agent-chat.tsx` and shared by both surfaces.
-- Unit tests cover status derivation for each of the four states and the proposal-only guard on every write tool.
+- Agent tools live in `src/lib/ai/tools/*.server.ts`, one file per domain, each tenant-scoped and executed as the operator through the existing auth middleware. Streaming routes under `src/routes/api/` mirror the Studio route including bearer verification.
+- Tool results are compact and serializable and always carry the row ids they came from so the transcript can cite them.
+- Route consolidation keeps every existing server function; only the presentation layer merges. Old paths get permanent redirects so nothing published breaks.
+- One migration for the concern tables: GRANTs, RLS, tenant-member policies, insert-only trigger on evaluations, and literal seed rows for the 55 framework tasks.
+- `src/lib/os-status.ts` becomes the single source of the four-state vocabulary, used by Setup, Coverage, Evidence and the Action Center alike.
+- Tests: status derivation for all four states, proposal-only guard on every write tool, and a route map test asserting every retired path redirects.
 
 ## Not in this pass
 
-- No new provider integrations, so concerns that need one stay honestly unmeasurable.
-- No conversation persistence in Studio yet.
-- No revenue or funnel scoring, per your standing decision.
+- No new provider integrations, so anything that needs one stays honestly unmeasurable.
+- No revenue, conversion, or funnel scoring, per your standing decision.
+- No autonomous execution. Every mutation still waits on your approval.
