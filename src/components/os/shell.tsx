@@ -39,86 +39,52 @@ type Workspace = {
   label: string;
   icon: ComponentType<{ className?: string }>;
   hint: string;
+  group: TaxonomyGroupKey;
 };
 
-type WorkspaceGroup = { title: string; items: readonly Workspace[] };
+type WorkspaceGroup = { title: string; definition: string; items: readonly Workspace[] };
 
 /**
- * The sidebar used to be a flat list of fifteen destinations, which read as a
- * pile rather than as a path. Grouping states the order of work: decide, then
- * look at evidence, then run something, then inspect the system itself.
+ * Destinations declare their taxonomy group; the sidebar order comes from
+ * `TAXONOMY_GROUPS`, so navigation and page headers can never disagree.
  */
-const navGroups: readonly WorkspaceGroup[] = [
-  {
-    title: "Decide",
-    items: [
-      { to: "/", label: "Action center", icon: Inbox, hint: "Decisions waiting on you" },
-      {
-        to: "/changes",
-        label: "Page changes",
-        icon: FileDiff,
-        hint: "Edits proposed to the site",
-      },
-      { to: "/keywords", label: "Keywords", icon: Tags, hint: "Terms worth winning" },
-      { to: "/competitors", label: "Competitors", icon: Swords, hint: "Who we rank against" },
-      {
-        to: "/recommendations",
-        label: "Observations",
-        icon: Lightbulb,
-        hint: "Things the system noticed",
-      },
-    ],
-  },
-  {
-    title: "Evidence",
-    items: [
-      {
-        to: "/command-center",
-        label: "Overview",
-        icon: LayoutDashboard,
-        hint: "How everything stands",
-      },
-      { to: "/search", label: "Search results", icon: Search, hint: "What Google reports" },
-      { to: "/measurement", label: "Site health", icon: Gauge, hint: "Speed and traffic" },
-      {
-        to: "/ads",
-        label: "Competitor ads",
-        icon: KeyRound,
-        hint: "Ads they are running now",
-      },
-      { to: "/authority", label: "Trust gaps", icon: ShieldCheck, hint: "Missing proof on pages" },
-      {
-        to: "/essentials",
-        label: "Marketing essentials",
-        icon: ListChecks,
-        hint: "Covered and missing",
-      },
-      { to: "/assets", label: "Assets", icon: Boxes, hint: "Everything we own" },
-    ],
-  },
-  {
-    title: "Run work",
-    items: [
-      { to: "/workflows", label: "Workflows", icon: Workflow, hint: "How work runs" },
-      { to: "/scheduler", label: "Schedule", icon: CalendarClock, hint: "When work runs" },
-      { to: "/seo-runs", label: "SEO runs", icon: RouteIcon, hint: "Governed page changes" },
-      { to: "/openseo", label: "OpenSEO", icon: Radar, hint: "Live SEO tools" },
-      { to: "/openai-ads", label: "OpenAI Ads", icon: Megaphone, hint: "Pixel instrumentation" },
-    ],
-  },
-  {
-    title: "System",
-    items: [
-      { to: "/capabilities", label: "Capabilities", icon: Plug, hint: "What the OS can do" },
-      { to: "/knowledge", label: "Knowledge", icon: BrainCircuit, hint: "What the OS knows" },
-      { to: "/agents", label: "Agents", icon: Activity, hint: "Who does the work" },
-      { to: "/spend", label: "Data costs", icon: DollarSign, hint: "What data sources cost" },
-      { to: "/operators", label: "People", icon: Users, hint: "Who has access" },
-    ],
-  },
+const workspaces: readonly Workspace[] = [
+  { to: "/", label: "Action center", icon: Inbox, hint: "Decisions waiting on you", group: "decisions" },
+  { to: "/studio", label: "Studio", icon: Sparkles, hint: "Think out loud with the agent", group: "decisions" },
+  { to: "/changes", label: "Page changes", icon: FileDiff, hint: "Edits proposed to the site", group: "decisions" },
+  { to: "/keywords", label: "Keywords", icon: Tags, hint: "Terms worth winning", group: "decisions" },
+  { to: "/competitors", label: "Competitors", icon: Swords, hint: "Who we rank against", group: "decisions" },
+  { to: "/recommendations", label: "Observations", icon: Lightbulb, hint: "Things the system noticed", group: "decisions" },
+
+  { to: "/command-center", label: "Overview", icon: LayoutDashboard, hint: "How everything stands", group: "evidence" },
+  { to: "/search", label: "Search results", icon: Search, hint: "What Google reports", group: "evidence" },
+  { to: "/measurement", label: "Site health", icon: Gauge, hint: "Speed and traffic", group: "evidence" },
+  { to: "/ads", label: "Competitor ads", icon: KeyRound, hint: "Ads they are running now", group: "evidence" },
+  { to: "/authority", label: "Trust gaps", icon: ShieldCheck, hint: "Missing proof on pages", group: "evidence" },
+  { to: "/essentials", label: "Marketing essentials", icon: ListChecks, hint: "Covered and missing", group: "evidence" },
+  { to: "/assets", label: "Assets", icon: Boxes, hint: "Everything we own", group: "evidence" },
+  { to: "/knowledge", label: "Knowledge", icon: BrainCircuit, hint: "What the OS knows", group: "evidence" },
+
+  { to: "/workflows", label: "Workflows", icon: Workflow, hint: "How work runs", group: "run_work" },
+  { to: "/scheduler", label: "Schedule", icon: CalendarClock, hint: "When work runs", group: "run_work" },
+  { to: "/seo-runs", label: "SEO runs", icon: RouteIcon, hint: "Governed page changes", group: "run_work" },
+  { to: "/openseo", label: "SEO tools", icon: Radar, hint: "Manual, one-off tool calls", group: "run_work" },
+  { to: "/openai-ads", label: "OpenAI Ads", icon: Megaphone, hint: "Pixel instrumentation", group: "run_work" },
+  { to: "/agents", label: "Agents", icon: Activity, hint: "Who does the work", group: "run_work" },
+
+  { to: "/capabilities", label: "Capabilities", icon: Plug, hint: "What the OS can do", group: "system_health" },
+  { to: "/spend", label: "Data costs", icon: DollarSign, hint: "What data sources cost", group: "system_health" },
+  { to: "/operators", label: "People", icon: Users, hint: "Who has access", group: "system_health" },
 ] as const;
 
-const allWorkspaces = navGroups.flatMap((group) => group.items);
+const navGroups: readonly WorkspaceGroup[] = TAXONOMY_GROUPS.map((group) => ({
+  title: group.label,
+  definition: group.definition,
+  items: workspaces.filter((workspace) => workspace.group === group.key),
+}));
+
+const allWorkspaces = workspaces;
+
 
 function isActive(pathname: string, to: string): boolean {
   return to === "/" ? pathname === "/" : pathname.startsWith(to);
