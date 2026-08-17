@@ -4,11 +4,14 @@ import { renderErrorPage } from "./lib/error-page";
 import { cancelledRequestResponse, isIncomingRequestAbort } from "./lib/http-request-errors";
 import { attachSupabaseAuth } from "@/integrations/supabase/auth-attacher";
 
-const errorMiddleware = createMiddleware().server(async ({ next }) => {
+const errorMiddleware = createMiddleware().server(async ({ next, request }) => {
   try {
     return await next();
   } catch (error) {
-    if (isIncomingRequestAbort(error)) return cancelledRequestResponse();
+    // A closed socket is a transport cancellation, not an app failure.
+    if (isIncomingRequestAbort(error) || request?.signal.aborted) {
+      return cancelledRequestResponse();
+    }
     if (error != null && typeof error === "object" && "statusCode" in error) {
       throw error;
     }
@@ -19,6 +22,7 @@ const errorMiddleware = createMiddleware().server(async ({ next }) => {
     });
   }
 });
+
 
 // Start installs this automatically when src/start.ts is absent; defining the
 // file opts out, so re-add it explicitly to keep server functions protected
