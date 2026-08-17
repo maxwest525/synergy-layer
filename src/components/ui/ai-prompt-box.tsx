@@ -1,5 +1,5 @@
-import { AnimatePresence, motion } from "framer-motion";
 import { ArrowUp, BrainCog, Globe, Paperclip, Square, X } from "lucide-react";
+
 import React from "react";
 
 import { Button } from "@/components/ui/button";
