@@ -49,6 +49,7 @@ function ChangeRequestsPage() {
   return (
     <PageStack>
       <PageHeader
+        eyebrow="Decide"
         title="Change requests"
         description="Concrete proposed page changes and the exact state of each one. Nothing here changes a live page until an operator approves it."
       />
