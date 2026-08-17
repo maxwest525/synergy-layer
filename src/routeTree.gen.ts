@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ActivityRouteImport } from './routes/activity'
 import { Route as AgentsRouteImport } from './routes/agents'
 import { Route as ApprovalsRouteImport } from './routes/approvals'
 import { Route as AskRouteImport } from './routes/ask'
@@ -74,6 +75,11 @@ import { Route as ApiPublicHooksSchedulerTickRouteImport } from './routes/api/pu
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ActivityRoute = ActivityRouteImport.update({
+  id: '/activity',
+  path: '/activity',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AgentsRoute = AgentsRouteImport.update({
@@ -387,6 +393,7 @@ const ApiPublicHooksSchedulerTickRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/activity': typeof ActivityRoute
   '/agents': typeof AgentsRouteWithChildren
   '/approvals': typeof ApprovalsRoute
   '/ask': typeof AskRoute
@@ -450,6 +457,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/activity': typeof ActivityRoute
   '/approvals': typeof ApprovalsRoute
   '/ask': typeof AskRoute
   '/auth': typeof AuthRouteWithChildren
@@ -505,6 +513,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/activity': typeof ActivityRoute
   '/agents': typeof AgentsRouteWithChildren
   '/approvals': typeof ApprovalsRoute
   '/ask': typeof AskRoute
@@ -570,6 +579,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/activity'
     | '/agents'
     | '/approvals'
     | '/ask'
@@ -633,6 +643,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/activity'
     | '/approvals'
     | '/ask'
     | '/auth'
@@ -687,6 +698,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/activity'
     | '/agents'
     | '/approvals'
     | '/ask'
@@ -751,6 +763,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ActivityRoute: typeof ActivityRoute
   AgentsRoute: typeof AgentsRouteWithChildren
   ApprovalsRoute: typeof ApprovalsRoute
   AskRoute: typeof AskRoute
@@ -799,6 +812,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/activity': {
+      id: '/activity'
+      path: '/activity'
+      fullPath: '/activity'
+      preLoaderRoute: typeof ActivityRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/agents': {
@@ -1362,6 +1382,7 @@ const WorkflowsRouteWithChildren = WorkflowsRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ActivityRoute: ActivityRoute,
   AgentsRoute: AgentsRouteWithChildren,
   ApprovalsRoute: ApprovalsRoute,
   AskRoute: AskRoute,

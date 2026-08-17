@@ -75,6 +75,7 @@ const workspaces: readonly Workspace[] = [
   { to: "/knowledge", label: "Knowledge", icon: Radar, hint: "What the OS knows", group: "evidence" },
 
   { to: "/workflows", label: "Work", icon: Workflow, hint: "Runs, schedules, executions", group: "run_work" },
+  { to: "/activity", label: "Activity", icon: Activity, hint: "Suggestion to deployment, end to end", group: "run_work" },
   { to: "/scheduler", label: "Schedule", icon: CalendarClock, hint: "When work runs", group: "run_work" },
   { to: "/seo-runs", label: "SEO runs", icon: RouteIcon, hint: "Governed page changes", group: "run_work" },
   { to: "/openseo", label: "SEO tools", icon: Radar, hint: "Manual, one-off tool calls", group: "run_work" },
@@ -128,7 +129,7 @@ const navSections: readonly NavSection[] = [
   },
   {
     primary: workspaceAt("/workflows"),
-    children: workspacesAt(["/scheduler", "/seo-runs", "/openseo", "/openai-ads", "/agents"]),
+    children: workspacesAt(["/activity", "/scheduler", "/seo-runs", "/openseo", "/openai-ads", "/agents"]),
   },
   {
     primary: workspaceAt("/capabilities"),
