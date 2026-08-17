@@ -111,14 +111,48 @@ Phase                                   Lands in            AOOS coverage today
 14 Monetization & funnel alignment      Decisions           blocked (no revenue access, by operator decision)
 ```
 
-### How it gets optimized, concretely
+### How it gets optimized: a living concern set, not a checklist
 
-Each framework task becomes a row in the existing **Marketing essentials** concern model, not a new page. A concern already carries a status derived from real evidence, so the framework slots straight in:
+The framework becomes the seed of a **dynamic** Marketing essentials, not a hardcoded list of 51 rows.
 
-- Add a `phase` and `task` field to the essentials concern definitions and seed all 51 framework tasks as concerns.
-- Every concern declares which evidence source proves it (GSC, PageSpeed, DataForSEO, Firecrawl crawl, manual attestation) and stays **Not measured** until that source stores a real snapshot. No task shows green because it was typed in.
-- Concerns whose evidence source does not exist yet display **No way to check this yet** with the capability that would enable it. That is the honest answer for phases 2, 10, 11, 12.
-- When a measured concern fails and a supported change type exists (title/H1, schema block, internal link), it raises a proposal into Decisions and rides the existing approval and GitHub execution path.
-- Marketing essentials becomes the coverage map for the whole framework: 51 tasks, each either proven, failing, or explicitly unmeasurable.
+Data model (new tables, tenant scoped, RLS plus GRANTs in the same migration):
 
-This is scoped as a follow-up slice after the taxonomy pass, not bundled into it.
+- `essential_concerns`: phase, task, description, evidence source, current status, last evaluated at, origin (`framework_seed`, `agent_proposed`, `operator_added`). Rows can be added, retired, or reprioritised at runtime.
+- `essential_concern_evaluations`: immutable history. Every status change stores the evidence it was derived from, the run that produced it, and any limitation. Status is never typed in by hand.
+
+Status is always derived, never authored:
+
+- **Proven** only after a real stored snapshot supports it.
+- **Failing** when stored evidence contradicts it.
+- **Not measured** when the evidence source exists but has no snapshot yet.
+- **No way to check this yet** when no capability can measure it, naming the capability that would. That is the honest state for phases 2, 10, 11, 12 today.
+
+A failing concern with a supported change type raises a proposal into Decisions and rides the existing approval plus GitHub execution path. Nothing mutates the site without approval.
+
+### The reasoning agent on Marketing essentials
+
+Essentials gets a side-by-side agent panel, not a static table alone.
+
+- Server-side agent using the AI SDK through the Lovable AI Gateway, on a high-reasoning model. Streaming responses.
+- Read tools only in v1: read concerns and their evaluation history, read GSC snapshots, keywords, competitors, PageSpeed, backlinks, change requests, tool estate readiness.
+- Write tools are proposal-only and each requires approval: propose a new concern, retire a concern, reprioritise, or draft a change request. The agent can never set a status or execute a change.
+- Every agent claim cites the stored evidence row it came from. Uncited claims are labelled as reasoning, not fact.
+- The panel is contextual: selecting a concern scopes the conversation to it, with its evidence and history preloaded.
+
+This is the slice that makes essentials dynamic: the concern set grows and shrinks through agent proposals plus your approvals, and the framework CSV is just the starting seed.
+
+### Your exploration page
+
+A new top-level route, **Studio** (working name), placed under Decisions in the sidebar.
+
+- v1 is deliberately blank: an empty conversation surface with the composer, streaming, markdown, and collapsed tool-call accordions.
+- No tools wired yet, no persistence yet. It exists so the shell, streaming transport, and agent identity are proven before the essentials agent leans on the same components.
+- Private to you: scoped to your operator identity, not shared tenant-wide.
+
+## Sequencing
+
+1. Taxonomy pass (the earlier sections of this plan). Nothing else depends on the agent work.
+2. Studio: blank agent page with streaming transport. Establishes the shared chat components.
+3. Dynamic concern tables plus migration, seeded from the framework CSV, with derived statuses.
+4. Essentials agent panel reusing the Studio components, read tools first, proposal tools second.
+
