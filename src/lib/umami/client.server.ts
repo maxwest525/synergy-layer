@@ -58,13 +58,16 @@ type AuthHeaders = Record<string, string>;
  * request in a worker and could be reused across tenants, so it is not cached.
  */
 export async function umamiAuthHeaders(): Promise<AuthHeaders> {
+  const bearer = process.env["UMAMI_BEARER_TOKEN"];
+  if (bearer) return { Authorization: `Bearer ${bearer}` };
+
   const apiKey = process.env["UMAMI_API_KEY"];
   if (apiKey) return { "x-umami-api-key": apiKey };
 
   const username = process.env["UMAMI_USERNAME"];
   const password = process.env["UMAMI_PASSWORD"];
   if (!username || !password) {
-    throw new UmamiFailure("not_configured", "No Umami API key or username and password are set.");
+    throw new UmamiFailure("not_configured", "No Umami token, API key, or username and password are set.");
   }
 
   let response: Response;
