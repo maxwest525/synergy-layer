@@ -148,6 +148,65 @@ function currentWorkspaceLabel(pathname: string): string {
   return match?.label ?? "AOOS";
 }
 
+function NavRow({
+  workspace,
+  pathname,
+  onNavigate,
+  collapsed,
+  nested = false,
+}: {
+  workspace: Workspace;
+  pathname: string;
+  onNavigate?: () => void;
+  collapsed: boolean;
+  nested?: boolean;
+}) {
+  const active = isActive(pathname, workspace.to);
+  return (
+    <li className="relative">
+      {active && !collapsed ? (
+        <span
+          aria-hidden
+          className="absolute -left-2 top-1/2 h-6 w-px -translate-y-1/2 bg-primary shadow-[0_0_10px_var(--color-primary)]"
+        />
+      ) : null}
+      <Link
+        to={workspace.to}
+        onClick={onNavigate}
+        title={collapsed ? workspace.label : undefined}
+        aria-label={collapsed ? workspace.label : undefined}
+        aria-current={active ? "page" : undefined}
+        className={cn(
+          "flex items-center rounded-lg text-sm transition-colors",
+          collapsed ? "size-10 justify-center" : "gap-3 px-2.5 py-2",
+          active
+            ? "bg-sidebar-accent text-foreground"
+            : "text-foreground hover:bg-sidebar-accent/50 hover:text-foreground",
+        )}
+      >
+        <workspace.icon
+          aria-hidden
+          className={cn(
+            "shrink-0",
+            nested ? "size-3.5" : "size-4",
+            active ? "text-primary" : "text-foreground/90",
+          )}
+        />
+        {collapsed ? null : (
+          <span className="min-w-0 flex-1 leading-tight">
+            <span className={cn("block truncate", nested ? "text-[0.8rem]" : "font-medium")}>
+              {workspace.label}
+            </span>
+            {nested ? null : (
+              <span className="block truncate text-xs text-foreground/70">{workspace.hint}</span>
+            )}
+          </span>
+        )}
+      </Link>
+    </li>
+  );
+}
+
 function NavList({
   pathname,
   onNavigate,
@@ -159,81 +218,50 @@ function NavList({
 }) {
   return (
     <div className="flex flex-col">
-      {navGroups.map((group, groupIndex) => (
-        <section
-          key={group.title}
-          aria-label={group.title}
-          className={cn(
-            "py-4",
-            groupIndex > 0 && "border-t border-border/50",
-            groupIndex === 0 && "pt-0",
-          )}
-        >
-          {collapsed ? null : (
-            <p
-              title={group.definition}
-              className="px-2 pb-2 text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-foreground/75"
-            >
-              {group.title}
-            </p>
-          )}
-          {/* A single hairline rail runs behind the group so its items read as
-              one connected path instead of unrelated rows. */}
-          <ul
-            className={cn(
-              "relative flex flex-col gap-1",
-              collapsed ? "items-center" : "border-l border-border/40 pl-2",
-            )}
+      {navSections.map((section, index) => {
+        const sectionActive =
+          isActive(pathname, section.primary.to) ||
+          section.children.some((child) => isActive(pathname, child.to));
+        return (
+          <section
+            key={section.primary.to}
+            aria-label={section.primary.label}
+            className={cn("py-3", index > 0 && "border-t border-border/50", index === 0 && "pt-0")}
           >
-            {group.items.map((workspace) => {
-              const active = isActive(pathname, workspace.to);
-              return (
-                <li key={workspace.to} className="relative">
-                  {active && !collapsed ? (
-                    <span
-                      aria-hidden
-                      className="absolute -left-2 top-1/2 h-6 w-px -translate-y-1/2 bg-primary shadow-[0_0_10px_var(--color-primary)]"
+            <ul
+              className={cn(
+                "relative flex flex-col gap-1",
+                collapsed ? "items-center" : "border-l border-border/40 pl-2",
+              )}
+            >
+              <NavRow
+                workspace={section.primary}
+                pathname={pathname}
+                onNavigate={onNavigate}
+                collapsed={collapsed}
+              />
+              {/* Sub-destinations only unfold once you are working in the
+                  section, so the rail stays six choices wide by default. */}
+              {collapsed || !sectionActive || section.children.length === 0
+                ? null
+                : section.children.map((child) => (
+                    <NavRow
+                      key={child.to}
+                      workspace={child}
+                      pathname={pathname}
+                      onNavigate={onNavigate}
+                      collapsed={collapsed}
+                      nested
                     />
-                  ) : null}
-                  <Link
-                    to={workspace.to}
-                    onClick={onNavigate}
-                    title={collapsed ? workspace.label : undefined}
-                    aria-label={collapsed ? workspace.label : undefined}
-                    aria-current={active ? "page" : undefined}
-                    className={cn(
-                      "flex items-center rounded-lg text-sm transition-colors",
-                      collapsed ? "size-10 justify-center" : "gap-3 px-2.5 py-2",
-                      active
-                        ? "bg-sidebar-accent text-foreground"
-                        : "text-foreground hover:bg-sidebar-accent/50 hover:text-foreground",
-                    )}
-                  >
-                    <workspace.icon
-                      aria-hidden
-                      className={cn(
-                        "size-4 shrink-0",
-                        active ? "text-primary" : "text-foreground/90",
-                      )}
-                    />
-                    {collapsed ? null : (
-                      <span className="min-w-0 flex-1 leading-tight">
-                        <span className="block truncate font-medium">{workspace.label}</span>
-                        <span className="block truncate text-xs text-foreground/70">
-                          {workspace.hint}
-                        </span>
-                      </span>
-                    )}
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-      ))}
+                  ))}
+            </ul>
+          </section>
+        );
+      })}
     </div>
   );
 }
+
 
 function BrandMark() {
   return (
