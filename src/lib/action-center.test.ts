@@ -42,11 +42,10 @@ describe("Action Center change request lifecycle", () => {
     ).toBe(true);
   });
 
-  it("keeps applied work visible for outcome tracking", () => {
-    expect(actionCenterLane("needs_attention", { ...change, state: "applied" })).toBe(
-      "in_progress",
-    );
+  it("moves applied work out of the action lanes and into measurement", () => {
+    expect(actionCenterLane("needs_attention", { ...change, state: "applied" })).toBe("fyi");
   });
+
 
   it("distinguishes a committed approval from one that still needs execution", () => {
     expect(actionCenterStage({ ...change, source_commit_sha: "abc123" })).toBe(
