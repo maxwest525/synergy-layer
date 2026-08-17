@@ -178,8 +178,9 @@ export function PromptInputBox({
           className="scrollbar-none min-h-11 w-full resize-none border-none bg-transparent px-3 py-2.5 text-base leading-relaxed text-foreground placeholder:text-muted-foreground focus-visible:outline-none"
         />
 
-        <div className="flex items-center justify-between gap-2 pt-2">
-          <div className="flex items-center gap-1">
+        <div className="mt-1 flex items-center justify-between gap-3 px-1">
+          <div className="flex items-center gap-3">
+
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
