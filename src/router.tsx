@@ -43,6 +43,18 @@ export const getRouter = () => {
     },
   });
 
+  if (typeof window === "undefined") {
+    const seen = new Map<string, number>();
+    const walk = (r: any, depth: number) => {
+      const key = `${r.id}`;
+      seen.set(key, (seen.get(key) ?? 0) + 1);
+      for (const c of (r.children ?? [])) walk(c, depth + 1);
+    };
+    walk(routeTree as any, 0);
+    const dupes = [...seen.entries()].filter(([, n]) => n > 1);
+    if (dupes.length) console.error("ROUTE_DUPES", JSON.stringify(dupes));
+  }
+
   let router;
   try {
     router = createRouter({
