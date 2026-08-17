@@ -4,6 +4,7 @@ import { requireTenantId } from "./tenant.server";
 import type { Database } from "@/integrations/supabase/types";
 import { fileInboxItem, logActivity } from "./os.server";
 import { mayExecuteCapability } from "./serpapi/provider-gate";
+import { allCapabilities } from "@/registry";
 
 type Client = SupabaseClient<Database>;
 
@@ -76,7 +77,7 @@ export type RunMode = "manual" | "auto";
 function mutatingCapabilityKeys(): Set<string> {
   const keys = new Set<string>();
   for (const capability of allCapabilities()) {
-    if ((capability.operations ?? []).some((operation) => operation.mutates === true)) {
+    if ((capability.operations ?? []).some((operation: { mutates?: boolean }) => operation.mutates === true)) {
       keys.add(capability.key);
     }
   }
@@ -181,7 +182,7 @@ export async function advanceRun(
 ): Promise<RunResult & { stepKey: string | null; stepState: string | null }> {
   const { data: claim, error: claimError } = await client.rpc("claim_workflow_run_step", {
     p_run_id: runId,
-    p_actor: actorId,
+    p_actor: actorId as string,
   });
   if (claimError) throw new Error(claimError.message);
   const claimed = Array.isArray(claim) ? claim[0] : claim;
@@ -220,11 +221,9 @@ export async function advanceRun(
 
   const outcome: NodeOutcome =
     node.kind === "approval"
-      ? {
-          ok: actorId !== null,
-          output: { decision: "approved", decidedBy: actorId },
-          error: actorId === null ? "An approval step needs a person to decide it." : undefined,
-        }
+      ? actorId === null
+        ? { ok: false, error: "An approval step needs a person to decide it." }
+        : { ok: true, output: { decision: "approved", decidedBy: actorId } }
       : await executeNode(client, node, runId);
 
   await client
