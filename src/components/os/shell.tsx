@@ -10,6 +10,9 @@ import {
   Lightbulb,
   Megaphone,
   Menu,
+  PanelLeftClose,
+  PanelLeftOpen,
+
   Radar,
   ListChecks,
   Plug,
