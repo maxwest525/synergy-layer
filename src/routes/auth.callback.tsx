@@ -75,20 +75,12 @@ function CallbackPage() {
     if (hasSession !== true) return undefined;
     if (!result.data && !result.error && result.isPending) {
       const slow = setTimeout(() => {
-        if (next) {
-          window.location.href = next;
-          return;
-        }
-        void navigate({ to: "/" });
+        window.location.replace(next ?? "/");
       }, 4000);
       return () => clearTimeout(slow);
     }
     const timer = setTimeout(() => {
-      if (next) {
-        window.location.href = next;
-        return;
-      }
-      void navigate({ to: "/" });
+      window.location.replace(next ?? "/");
     }, 600);
     return () => clearTimeout(timer);
   }, [hasSession, result.data, result.error, result.isPending, navigate, next]);
