@@ -27,3 +27,19 @@ export const provisionSession = createServerFn({ method: "POST" })
 
     return { status: outcome.status, roles, canOperate };
   });
+
+/**
+ * Read-only view of the caller's AOOS access. No provisioning, no audit write:
+ * the UI uses it only to tell the operator the truth about what they may do.
+ */
+export const getOperatorAccess = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { currentRoles } = await import("./auth-provisioning.server");
+    const roles = await currentRoles(context.supabase, context.userId);
+    return {
+      roles,
+      canOperate: roles.some((role) => role === "admin" || role === "operator"),
+      isAdmin: roles.includes("admin"),
+    };
+  });
