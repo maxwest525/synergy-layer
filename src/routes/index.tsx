@@ -536,13 +536,14 @@ function InboxPage() {
 
   // One pass over the rows instead of a full-array filter per lane plus a route
   // resolve per card on every render.
-  const { open, grouped, failures } = useMemo(() => {
+  const { open, grouped, failures, measuring } = useMemo(() => {
     const buckets = new Map<
       string,
       { item: InboxItem; reviewRoute: InboxRoute | null; lane: ActionCenterLane }[]
     >();
     for (const lane of lanes) buckets.set(lane.key, []);
     const failed: InboxItem[] = [];
+    const inMeasurement: { item: InboxItem; reviewRoute: InboxRoute | null }[] = [];
     let openCount = 0;
     for (const item of data) {
       if (isSystemFailure(item)) {
@@ -550,13 +551,18 @@ function InboxPage() {
         continue;
       }
       const lane = actionCenterLane(item.lane, item.changeRequest);
+      if (lane === ACTION_CENTER_MEASUREMENT_LANE.key) {
+        inMeasurement.push({ item, reviewRoute: reviewRouteFor(item) });
+        continue;
+      }
       const bucket = buckets.get(lane);
       if (!bucket) continue;
       openCount += 1;
       bucket.push({ item, reviewRoute: reviewRouteFor(item), lane });
     }
-    return { open: openCount, grouped: buckets, failures: failed };
+    return { open: openCount, grouped: buckets, failures: failed, measuring: inMeasurement };
   }, [data]);
+
 
   return (
     <div className="space-y-10">
