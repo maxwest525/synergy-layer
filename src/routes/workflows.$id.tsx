@@ -205,16 +205,17 @@ function WorkflowDetailPage() {
                     </span>
                   </div>
                   {run.error ? <p className="mt-1 text-sm text-destructive">{run.error}</p> : null}
-                  <ul className="mt-2 space-y-1">
+                  <ul className="mt-2 space-y-1 rounded-xl border border-border/50 bg-background/25 p-2">
                     {[...run.workflow_steps]
                       .sort((a, b) => a.sequence - b.sequence)
                       .map((step) => (
                         <li
                           key={step.id}
-                          className="flex items-center justify-between gap-3 text-sm"
+                          className="flex items-center justify-between gap-3 rounded-lg px-2 py-1 text-sm"
                         >
                           <span className="truncate text-muted-foreground">
-                            {step.sequence + 1}. {step.node_key}
+                            <span className="mr-2 text-xs text-primary/70">{step.sequence + 1}</span>
+                            {humanize(step.node_key)}
                           </span>
                           <span className="flex shrink-0 items-center gap-2">
                             <span className="text-xs text-muted-foreground">
@@ -225,6 +226,7 @@ function WorkflowDetailPage() {
                         </li>
                       ))}
                   </ul>
+
                 </li>
               ))}
             </ul>
