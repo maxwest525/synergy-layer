@@ -207,6 +207,13 @@ function NavRow({
   );
 }
 
+const COLLAPSED_SECTIONS_KEY = "aoos.nav.collapsed-sections";
+
+/**
+ * Every sub-destination is always listed. Nothing hides itself just because
+ * you are standing somewhere else, so the whole system stays observable from
+ * any screen. A section can be folded away by hand, and that choice persists.
+ */
 function NavList({
   pathname,
   onNavigate,
@@ -216,12 +223,36 @@ function NavList({
   onNavigate?: () => void;
   collapsed?: boolean;
 }) {
+  const [foldedSections, setFoldedSections] = useState<readonly string[]>([]);
+
+  useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem(COLLAPSED_SECTIONS_KEY);
+      if (stored) setFoldedSections(JSON.parse(stored) as string[]);
+    } catch {
+      setFoldedSections([]);
+    }
+  }, []);
+
+  const toggleSection = (key: string) => {
+    setFoldedSections((current) => {
+      const next = current.includes(key)
+        ? current.filter((entry) => entry !== key)
+        : [...current, key];
+      try {
+        window.localStorage.setItem(COLLAPSED_SECTIONS_KEY, JSON.stringify(next));
+      } catch {
+        // A browser that refuses storage still gets working navigation.
+      }
+      return next;
+    });
+  };
+
   return (
     <div className="flex flex-col">
       {navSections.map((section, index) => {
-        const sectionActive =
-          isActive(pathname, section.primary.to) ||
-          section.children.some((child) => isActive(pathname, child.to));
+        const folded = foldedSections.includes(section.primary.to);
+        const showChildren = !collapsed && !folded && section.children.length > 0;
         return (
           <section
             key={section.primary.to}
@@ -234,17 +265,39 @@ function NavList({
                 collapsed ? "items-center" : "border-l border-border/40 pl-2",
               )}
             >
-              <NavRow
-                workspace={section.primary}
-                pathname={pathname}
-                onNavigate={onNavigate}
-                collapsed={collapsed}
-              />
-              {/* Sub-destinations only unfold once you are working in the
-                  section, so the rail stays six choices wide by default. */}
-              {collapsed || !sectionActive || section.children.length === 0
-                ? null
-                : section.children.map((child) => (
+              <li className="relative flex items-center">
+                <span className="min-w-0 flex-1">
+                  <ul>
+                    <NavRow
+                      workspace={section.primary}
+                      pathname={pathname}
+                      onNavigate={onNavigate}
+                      collapsed={collapsed}
+                    />
+                  </ul>
+                </span>
+                {collapsed || section.children.length === 0 ? null : (
+                  <button
+                    type="button"
+                    onClick={() => toggleSection(section.primary.to)}
+                    aria-expanded={!folded}
+                    aria-label={
+                      folded
+                        ? `Show the ${section.children.length} pages inside ${section.primary.label}`
+                        : `Hide the pages inside ${section.primary.label}`
+                    }
+                    className="ml-1 flex shrink-0 items-center gap-1 rounded-md px-1.5 py-1 text-xs text-foreground/60 transition-colors hover:bg-sidebar-accent/50 hover:text-foreground"
+                  >
+                    <span>{section.children.length}</span>
+                    <ChevronDown
+                      aria-hidden
+                      className={cn("size-3.5 transition-transform", folded && "-rotate-90")}
+                    />
+                  </button>
+                )}
+              </li>
+              {showChildren
+                ? section.children.map((child) => (
                     <NavRow
                       key={child.to}
                       workspace={child}
@@ -253,7 +306,8 @@ function NavList({
                       collapsed={collapsed}
                       nested
                     />
-                  ))}
+                  ))
+                : null}
             </ul>
           </section>
         );
@@ -261,6 +315,7 @@ function NavList({
     </div>
   );
 }
+
 
 
 function BrandMark() {
