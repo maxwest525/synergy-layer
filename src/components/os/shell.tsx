@@ -118,9 +118,6 @@ const navGroups: readonly WorkspaceGroup[] = [
   },
 ] as const;
 
-
-] as const;
-
 const allWorkspaces = navGroups.flatMap((group) => group.items);
 
 function isActive(pathname: string, to: string): boolean {
