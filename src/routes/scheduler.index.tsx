@@ -3,6 +3,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 
+import { OperatorRouteError } from "@/components/os/route-error";
 import {
   EmptyState,
   GlassCard,
