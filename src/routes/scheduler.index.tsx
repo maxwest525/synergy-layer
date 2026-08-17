@@ -40,6 +40,7 @@ export const Route = createFileRoute("/scheduler/")({
       { property: "og:description", content: "When work runs, and what it waits on." },
     ],
   }),
+  errorComponent: OperatorRouteError,
   component: SchedulerPage,
 });
 
