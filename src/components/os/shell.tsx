@@ -251,7 +251,7 @@ export function Shell({ children }: { children: ReactNode }) {
 
           <Link
             to="/auth"
-            className="mt-4 block truncate border-t border-border/50 px-2.5 pt-4 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+            className="mt-4 block truncate border-t border-border/50 px-2.5 pt-4 text-sm font-medium text-foreground/80 transition-colors hover:text-foreground"
           >
             {accountLabel}
           </Link>
