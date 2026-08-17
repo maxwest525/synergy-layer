@@ -28,6 +28,7 @@ import { Route as RecommendationsRouteImport } from './routes/recommendations'
 import { Route as SchedulerRouteImport } from './routes/scheduler'
 import { Route as SearchRouteImport } from './routes/search'
 import { Route as SeoRunsRouteImport } from './routes/seo-runs'
+import { Route as SpendRouteImport } from './routes/spend'
 import { Route as WorkflowsRouteImport } from './routes/workflows'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
@@ -155,6 +156,11 @@ const SearchRoute = SearchRouteImport.update({
 const SeoRunsRoute = SeoRunsRouteImport.update({
   id: '/seo-runs',
   path: '/seo-runs',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SpendRoute = SpendRouteImport.update({
+  id: '/spend',
+  path: '/spend',
   getParentRoute: () => rootRouteImport,
 } as any)
 const WorkflowsRoute = WorkflowsRouteImport.update({
@@ -351,6 +357,7 @@ export interface FileRoutesByFullPath {
   '/scheduler': typeof SchedulerRouteWithChildren
   '/search': typeof SearchRoute
   '/seo-runs': typeof SeoRunsRouteWithChildren
+  '/spend': typeof SpendRoute
   '/workflows': typeof WorkflowsRouteWithChildren
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -398,6 +405,7 @@ export interface FileRoutesByTo {
   '/openai-ads': typeof OpenaiAdsRoute
   '/openseo': typeof OpenseoRoute
   '/search': typeof SearchRoute
+  '/spend': typeof SpendRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/ads/advertisers': typeof AdsAdvertisersRoute
@@ -451,6 +459,7 @@ export interface FileRoutesById {
   '/scheduler': typeof SchedulerRouteWithChildren
   '/search': typeof SearchRoute
   '/seo-runs': typeof SeoRunsRouteWithChildren
+  '/spend': typeof SpendRoute
   '/workflows': typeof WorkflowsRouteWithChildren
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -507,6 +516,7 @@ export interface FileRouteTypes {
     | '/scheduler'
     | '/search'
     | '/seo-runs'
+    | '/spend'
     | '/workflows'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
@@ -554,6 +564,7 @@ export interface FileRouteTypes {
     | '/openai-ads'
     | '/openseo'
     | '/search'
+    | '/spend'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/ads/advertisers'
@@ -606,6 +617,7 @@ export interface FileRouteTypes {
     | '/scheduler'
     | '/search'
     | '/seo-runs'
+    | '/spend'
     | '/workflows'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
@@ -661,6 +673,7 @@ export interface RootRouteChildren {
   SchedulerRoute: typeof SchedulerRouteWithChildren
   SearchRoute: typeof SearchRoute
   SeoRunsRoute: typeof SeoRunsRouteWithChildren
+  SpendRoute: typeof SpendRoute
   WorkflowsRoute: typeof WorkflowsRouteWithChildren
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -808,6 +821,13 @@ declare module '@tanstack/react-router' {
       path: '/seo-runs'
       fullPath: '/seo-runs'
       preLoaderRoute: typeof SeoRunsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/spend': {
+      id: '/spend'
+      path: '/spend'
+      fullPath: '/spend'
+      preLoaderRoute: typeof SpendRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/workflows': {
@@ -1200,6 +1220,7 @@ const rootRouteChildren: RootRouteChildren = {
   SchedulerRoute: SchedulerRouteWithChildren,
   SearchRoute: SearchRoute,
   SeoRunsRoute: SeoRunsRouteWithChildren,
+  SpendRoute: SpendRoute,
   WorkflowsRoute: WorkflowsRouteWithChildren,
   Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
