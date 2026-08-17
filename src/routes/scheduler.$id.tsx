@@ -1,6 +1,7 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 
+import { OperatorRouteError } from "@/components/os/route-error";
 import {
   DetailRow,
   GlassCard,
