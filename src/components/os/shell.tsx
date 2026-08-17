@@ -114,7 +114,7 @@ function NavList({
             groupIndex === 0 && "pt-0",
           )}
         >
-          <p className="px-2 pb-2 text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground/70">
+          <p className="px-2 pb-2 text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-foreground/60">
             {group.title}
           </p>
           {/* A single hairline rail runs behind the group so its items read as
