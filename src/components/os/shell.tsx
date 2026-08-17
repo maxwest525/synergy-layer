@@ -104,12 +104,13 @@ function workspacesAt(routes: readonly string[]): readonly Workspace[] {
 }
 
 const navSections: readonly NavSection[] = [
-  { primary: workspaceAt("/"), children: [] },
+  // Suggestions and page changes are the propose to approve to execute path.
+  // They sit under Today so the acting half of the system is visible from
+  // every screen instead of being buried inside the SEO coverage map.
+  { primary: workspaceAt("/"), children: workspacesAt(["/recommendations", "/changes"]) },
   { primary: workspaceAt("/ask"), children: workspacesAt(["/studio"]) },
-  {
-    primary: workspaceAt("/essentials"),
-    children: workspacesAt(["/changes", "/recommendations"]),
-  },
+  { primary: workspaceAt("/essentials"), children: [] },
+
   {
     primary: workspaceAt("/command-center"),
     children: workspacesAt([
