@@ -3,6 +3,7 @@ import "./lib/error-capture";
 import { createStartHandler, defaultStreamHandler } from "@tanstack/react-start/server";
 import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
+import { cancelledRequestResponse, isIncomingRequestAbort } from "./lib/http-request-errors";
 
 // Keep the framework handler in this module's Vite graph. Caching a dynamic
 // server-entry import here survives route HMR and can retain an obsolete tree.
@@ -40,6 +41,7 @@ export default {
       const response = await startHandler(request);
       return await normalizeCatastrophicSsrResponse(response);
     } catch (error) {
+      if (isIncomingRequestAbort(error)) return cancelledRequestResponse();
       console.error(error);
       return new Response(renderErrorPage(), {
         status: 500,

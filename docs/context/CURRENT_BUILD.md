@@ -8,7 +8,7 @@ It is not authoritative documentation. Provider digests under
 `docs/integrations/<provider>/DIGEST.md` and their PLAN files remain the source of
 truth for provider behaviour and must never be overwritten by this file.
 
-Last updated: 2026-08-17 (router runtime stabilization).
+Last updated: 2026-08-17 (request-abort runtime stabilization).
 
 ## 1. What AOOS is
 
@@ -102,6 +102,9 @@ second visits served from the query cache. Applied fixes:
 - The operator session hook performs an initial persisted-session read in
   addition to subscribing to changes, so cold loads cannot remain indefinitely
   on the session-checking state.
+- Node's exact `abortIncoming` / `socketOnClose` error is classified as a browser
+  request cancellation at both server boundaries and returns 499 without fatal
+  logging. Generic application errors named `aborted` remain visible.
 
 ## 8. Next build priorities
 
