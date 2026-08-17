@@ -121,22 +121,30 @@ export async function observeSearchConsole(client: Client): Promise<ObserveResul
             error instanceof Error ? error.message : String(error),
           );
 
-    await setHealth(client, "failing");
+    // A transient upstream fault that survived retries is not a broken
+    // connection. It is degraded, and the next scheduled run heals the gap.
+    const transient = failure.reason === "transient" || failure.reason === "transport";
+    await setHealth(client, transient ? "degraded" : "failing");
     await logActivity(client, {
       verb: "capability.connection_status_observed_degraded",
       subjectKind: "capability",
       summary: `Search Console observation failed: ${failure.message}`,
-      payload: { reason: failure.reason },
+      payload: { reason: failure.reason, transient },
     });
     await fileInboxItem(client, {
       lane: "needs_attention",
       sourceModule: "search-console",
-      title: "Search Console observation failed",
-      summary: failure.message,
-      priority: 1,
+      title: transient
+        ? "Search Console was briefly unreachable"
+        : "Search Console observation failed",
+      summary: transient
+        ? `${failure.message} Retries were already attempted. The next scheduled run backfills the missed day, so no action is needed unless this repeats.`
+        : failure.message,
+      priority: transient ? 3 : 1,
       subjectKind: "capability",
       actions: [{ kind: "open" }],
     });
+
 
     return {
       ok: false,

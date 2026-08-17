@@ -50,6 +50,15 @@ function credentials(): { lovableApiKey: string; connectionApiKey: string } {
   return { lovableApiKey, connectionApiKey };
 }
 
+/** Read-only Search Console calls are safe to retry, so a transient upstream
+ * fault (network reset, 429, 5xx) no longer loses a whole day of observation. */
+const TRANSIENT_ATTEMPTS = 4;
+const TRANSIENT_BASE_DELAY_MS = 500;
+
+function isTransientStatus(status: number): boolean {
+  return status === 429 || status >= 500;
+}
+
 async function gateway<T>(path: string, init?: RequestInit): Promise<T> {
   const { lovableApiKey, connectionApiKey } = credentials();
   const headers = new Headers(init?.headers);
@@ -57,36 +66,63 @@ async function gateway<T>(path: string, init?: RequestInit): Promise<T> {
   headers.set("X-Connection-Api-Key", connectionApiKey);
   if (init?.body) headers.set("Content-Type", "application/json");
 
-  let response: Response;
-  try {
-    response = await fetch(`${GATEWAY}${path}`, { ...init, headers });
-  } catch (error) {
-    throw new SearchConsoleFailure("transport", `Search Console request failed: ${String(error)}`);
+  let lastFailure: SearchConsoleFailure | null = null;
+
+  for (let attempt = 1; attempt <= TRANSIENT_ATTEMPTS; attempt += 1) {
+    let response: Response;
+    try {
+      response = await fetch(`${GATEWAY}${path}`, { ...init, headers });
+    } catch (error) {
+      lastFailure = new SearchConsoleFailure(
+        "transport",
+        `Search Console request failed after ${attempt} attempt${attempt === 1 ? "" : "s"}: ${String(error)}`,
+      );
+      if (attempt === TRANSIENT_ATTEMPTS) break;
+      await new Promise((resolve) => setTimeout(resolve, TRANSIENT_BASE_DELAY_MS * 2 ** (attempt - 1)));
+      continue;
+    }
+
+    if (response.status === 401 || response.status === 403) {
+      throw new SearchConsoleFailure(
+        "authorization",
+        `The connected Google account is not authorised for this Search Console request [${response.status}]: ${await response.text()}`,
+      );
+    }
+    if (!response.ok) {
+      const detail = await response.text();
+      const failure = new SearchConsoleFailure(
+        isTransientStatus(response.status) ? "transient" : "api_error",
+        `Search Console request failed [${response.status}] on attempt ${attempt}: ${detail}`,
+      );
+      if (!isTransientStatus(response.status)) throw failure;
+      lastFailure = failure;
+      if (attempt === TRANSIENT_ATTEMPTS) break;
+      const retryAfter = Number(response.headers.get("retry-after"));
+      const delay = Number.isFinite(retryAfter) && retryAfter > 0
+        ? retryAfter * 1000
+        : TRANSIENT_BASE_DELAY_MS * 2 ** (attempt - 1);
+      await new Promise((resolve) => setTimeout(resolve, delay));
+      continue;
+    }
+
+    const body = await response.text();
+    if (body.trim() === "") return undefined as T;
+    try {
+      return JSON.parse(body) as T;
+    } catch {
+      throw new SearchConsoleFailure(
+        "api_error",
+        "Search Console returned a successful response that was not valid JSON.",
+      );
+    }
   }
 
-  if (response.status === 401 || response.status === 403) {
-    throw new SearchConsoleFailure(
-      "authorization",
-      `The connected Google account is not authorised for this Search Console request [${response.status}]: ${await response.text()}`,
-    );
-  }
-  if (!response.ok) {
-    throw new SearchConsoleFailure(
-      "api_error",
-      `Search Console request failed [${response.status}]: ${await response.text()}`,
-    );
-  }
-  const body = await response.text();
-  if (body.trim() === "") return undefined as T;
-  try {
-    return JSON.parse(body) as T;
-  } catch {
-    throw new SearchConsoleFailure(
-      "api_error",
-      "Search Console returned a successful response that was not valid JSON.",
-    );
-  }
+  throw (
+    lastFailure ??
+    new SearchConsoleFailure("transient", "Search Console request failed for an unknown reason.")
+  );
 }
+
 
 export function checksum(value: unknown): string {
   return createHash("sha256").update(JSON.stringify(value)).digest("hex").slice(0, 32);
@@ -554,7 +590,28 @@ export async function collectPageQuery(
   return { snapshotId, rows: rows.length, created: true };
 }
 
+/**
+ * A failed run used to lose that day's page+query detail for good. Every run now
+ * fills any missing day inside a short trailing window, so one bad day heals itself.
+ */
+const PAGE_QUERY_BACKFILL_DAYS = 7;
+
+export async function backfillPageQueryGaps(
+  client: Client,
+  property: string,
+  reportingDate: string,
+): Promise<string[]> {
+  const created: string[] = [];
+  for (let offset = 1; offset <= PAGE_QUERY_BACKFILL_DAYS; offset += 1) {
+    const date = shiftDate(reportingDate, -offset);
+    const result = await collectPageQuery(client, property, date);
+    if (result.created && result.snapshotId) created.push(result.snapshotId);
+  }
+  return created;
+}
+
 const COMPARISON_HISTORY_DAYS = 56;
+
 
 /** One provider query backfills the two complete 28-day comparison windows. */
 async function collectDailyTotalsHistory(
@@ -642,12 +699,14 @@ export async function collectDaily(client: Client, property: string): Promise<Co
     const historyIds = await collectDailyTotalsHistory(client, property, reportingDate);
     // Still ensure the page+query snapshot exists for this finalized date.
     const backfilled = await collectPageQuery(client, property, reportingDate);
+    const gapIds = await backfillPageQueryGaps(client, property, reportingDate);
     return {
       property,
       reportingDate,
       snapshotIds: [
         ...historyIds,
         ...(backfilled.created && backfilled.snapshotId ? [backfilled.snapshotId] : []),
+        ...gapIds,
       ],
       emptyResult: false,
     };
@@ -737,6 +796,7 @@ export async function collectDaily(client: Client, property: string): Promise<Co
   if (sitemapError) throw new SearchConsoleFailure("persistence", sitemapError.message);
 
   snapshotIds.push(...(await collectDailyTotalsHistory(client, property, reportingDate)));
+  snapshotIds.push(...(await backfillPageQueryGaps(client, property, reportingDate)));
 
   const emptyResult = totals.impressions === 0;
 
