@@ -39,6 +39,7 @@ import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as CapabilitiesIndexRouteImport } from './routes/capabilities.index'
 import { Route as CapabilitiesIdRouteImport } from './routes/capabilities.$id'
 import { Route as CapabilitiesSystemsRouteImport } from './routes/capabilities.systems'
+import { Route as ChangesIndexRouteImport } from './routes/changes.index'
 import { Route as ChangesIdRouteImport } from './routes/changes.$id'
 import { Route as KnowledgeIndexRouteImport } from './routes/knowledge.index'
 import { Route as KnowledgeIdRouteImport } from './routes/knowledge.$id'
@@ -212,6 +213,11 @@ const CapabilitiesSystemsRoute = CapabilitiesSystemsRouteImport.update({
   path: '/systems',
   getParentRoute: () => CapabilitiesRoute,
 } as any)
+const ChangesIndexRoute = ChangesIndexRouteImport.update({
+  id: '/changes/',
+  path: '/changes/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ChangesIdRoute = ChangesIdRouteImport.update({
   id: '/changes/$id',
   path: '/changes/$id',
@@ -357,6 +363,7 @@ export interface FileRoutesByFullPath {
   '/agents/': typeof AgentsIndexRoute
   '/assets/': typeof AssetsIndexRoute
   '/capabilities/': typeof CapabilitiesIndexRoute
+  '/changes/': typeof ChangesIndexRoute
   '/knowledge/': typeof KnowledgeIndexRoute
   '/recommendations/': typeof RecommendationsIndexRoute
   '/scheduler/': typeof SchedulerIndexRoute
@@ -400,6 +407,7 @@ export interface FileRoutesByTo {
   '/agents': typeof AgentsIndexRoute
   '/assets': typeof AssetsIndexRoute
   '/capabilities': typeof CapabilitiesIndexRoute
+  '/changes': typeof ChangesIndexRoute
   '/knowledge': typeof KnowledgeIndexRoute
   '/recommendations': typeof RecommendationsIndexRoute
   '/scheduler': typeof SchedulerIndexRoute
@@ -453,6 +461,7 @@ export interface FileRoutesById {
   '/agents/': typeof AgentsIndexRoute
   '/assets/': typeof AssetsIndexRoute
   '/capabilities/': typeof CapabilitiesIndexRoute
+  '/changes/': typeof ChangesIndexRoute
   '/knowledge/': typeof KnowledgeIndexRoute
   '/recommendations/': typeof RecommendationsIndexRoute
   '/scheduler/': typeof SchedulerIndexRoute
@@ -507,6 +516,7 @@ export interface FileRouteTypes {
     | '/agents/'
     | '/assets/'
     | '/capabilities/'
+    | '/changes/'
     | '/knowledge/'
     | '/recommendations/'
     | '/scheduler/'
@@ -550,6 +560,7 @@ export interface FileRouteTypes {
     | '/agents'
     | '/assets'
     | '/capabilities'
+    | '/changes'
     | '/knowledge'
     | '/recommendations'
     | '/scheduler'
@@ -602,6 +613,7 @@ export interface FileRouteTypes {
     | '/agents/'
     | '/assets/'
     | '/capabilities/'
+    | '/changes/'
     | '/knowledge/'
     | '/recommendations/'
     | '/scheduler/'
@@ -641,6 +653,7 @@ export interface RootRouteChildren {
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   AdsAdvertisersRoute: typeof AdsAdvertisersRoute
   ChangesIdRoute: typeof ChangesIdRoute
+  ChangesIndexRoute: typeof ChangesIndexRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
   ApiPublicHooksDataforseoPostbackRoute: typeof ApiPublicHooksDataforseoPostbackRoute
@@ -860,6 +873,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/capabilities/systems'
       preLoaderRoute: typeof CapabilitiesSystemsRouteImport
       parentRoute: typeof CapabilitiesRoute
+    }
+    '/changes/': {
+      id: '/changes/'
+      path: '/changes'
+      fullPath: '/changes/'
+      preLoaderRoute: typeof ChangesIndexRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/changes/$id': {
       id: '/changes/$id'
@@ -1165,6 +1185,7 @@ const rootRouteChildren: RootRouteChildren = {
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
   AdsAdvertisersRoute: AdsAdvertisersRoute,
   ChangesIdRoute: ChangesIdRoute,
+  ChangesIndexRoute: ChangesIndexRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
   ApiPublicHooksDataforseoPostbackRoute: ApiPublicHooksDataforseoPostbackRoute,
