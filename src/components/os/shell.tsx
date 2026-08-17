@@ -108,8 +108,6 @@ const navSections: readonly NavSection[] = [
   // They sit under Today so the acting half of the system is visible from
   // every screen instead of being buried inside the SEO coverage map.
   { primary: workspaceAt("/"), children: workspacesAt(["/recommendations", "/changes"]) },
-  { primary: workspaceAt("/ask"), children: workspacesAt(["/studio"]) },
-  { primary: workspaceAt("/essentials"), children: [] },
 
   {
     primary: workspaceAt("/command-center"),
@@ -132,7 +130,13 @@ const navSections: readonly NavSection[] = [
     primary: workspaceAt("/capabilities"),
     children: workspacesAt(["/spend", "/operators"]),
   },
+
+  // Ask and Coverage are side surfaces, not stages of the daily loop, so they
+  // sit below it. Nothing is hidden; they are simply out of the way.
+  { primary: workspaceAt("/ask"), children: workspacesAt(["/studio"]) },
+  { primary: workspaceAt("/essentials"), children: [] },
 ];
+
 
 const allWorkspaces = workspaces;
 

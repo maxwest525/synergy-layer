@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { convertToModelMessages, streamText, type UIMessage } from "ai";
 
-import { REASONING_MODEL, createGateway } from "@/lib/ai/gateway.server";
+import { createGateway } from "@/lib/ai/gateway.server";
+import { modeInstruction, resolveAgentModel } from "@/lib/ai/models";
 import { requireOperatorFromRequest } from "@/lib/ai/require-operator.server";
 
 const SYSTEM_PROMPT = `You are the AOOS studio agent: a thinking partner for the operator of a marketing operating system for a moving company (TruMove).
@@ -24,7 +25,11 @@ export const Route = createFileRoute("/api/studio-chat")({
           throw error;
         }
 
-        const body = (await request.json()) as { messages?: UIMessage[] };
+        const body = (await request.json()) as {
+          messages?: UIMessage[];
+          model?: unknown;
+          mode?: unknown;
+        };
         const messages = Array.isArray(body.messages) ? body.messages : [];
         if (messages.length === 0) {
           return new Response("No messages provided", { status: 400 });
@@ -32,8 +37,8 @@ export const Route = createFileRoute("/api/studio-chat")({
 
         const gateway = createGateway();
         const result = streamText({
-          model: gateway(REASONING_MODEL),
-          system: SYSTEM_PROMPT,
+          model: gateway(resolveAgentModel(body.model)),
+          system: `${SYSTEM_PROMPT}${modeInstruction(body.mode)}`,
           messages: await convertToModelMessages(messages),
           abortSignal: request.signal,
         });
