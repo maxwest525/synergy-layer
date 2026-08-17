@@ -110,73 +110,82 @@ export type SpendBudget = {
   hardStop: boolean;
 };
 
+function num(value: unknown): number {
+  const parsed = Number(value ?? 0);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function group(summary: Record<string, unknown> | null, key: string): Record<string, unknown> {
+  const value = summary?.[key];
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
+}
+
+/**
+ * Totals are computed in the database. The previous version downloaded up to
+ * two thousand raw ledger rows and summed them in the browser, which locked
+ * the tab on a workspace with real request history.
+ */
 export const getProviderSpend = createServerFn({ method: "GET" }).handler(async () => {
+  const empty = {
+    providers: [] as ProviderSpendRow[],
+    budget: null as SpendBudget | null,
+    serpApiCredits: 0,
+  };
+
   const ctx = await context();
-  if (!ctx)
-    return {
-      providers: [] as ProviderSpendRow[],
-      budget: null as SpendBudget | null,
-      serpApiCredits: 0,
-    };
+  if (!ctx) return empty;
 
-  const [dfs, serp, budget] = await Promise.all([
-    ctx.db
-      .from("dataforseo_requests")
-      .select("cost_usd, outcome, created_at")
-      .eq("tenant_id", ctx.tenantId)
-      .order("created_at", { ascending: false })
-      .limit(1000),
-    ctx.db
-      .from("serpapi_requests")
-      .select("charged_credits, state, created_at")
-      .eq("tenant_id", ctx.tenantId)
-      .order("created_at", { ascending: false })
-      .limit(1000),
-    ctx.db
-      .from("dataforseo_budgets")
-      .select("period_month, ceiling_usd, spent_usd, hard_stop")
-      .eq("tenant_id", ctx.tenantId)
-      .order("period_month", { ascending: false })
-      .limit(1)
-      .maybeSingle(),
-  ]);
-  if (dfs.error) throw new Error(dfs.error.message);
-  if (serp.error) throw new Error(serp.error.message);
+  const { data, error } = await ctx.db.rpc("provider_spend_summary", {
+    _tenant_id: ctx.tenantId,
+  });
+  if (error) throw new Error(error.message);
 
-  const dfsRows = dfs.data ?? [];
-  const serpRows = serp.data ?? [];
+  const summary =
+    data && typeof data === "object" && !Array.isArray(data)
+      ? (data as Record<string, unknown>)
+      : null;
+
+  const dfs = group(summary, "dataforseo");
+  const serp = group(summary, "serpapi");
+  const budgetRow = summary?.["budget"];
+  const budget =
+    budgetRow && typeof budgetRow === "object" && !Array.isArray(budgetRow)
+      ? (budgetRow as Record<string, unknown>)
+      : null;
 
   const providers: ProviderSpendRow[] = [
     {
       provider: "DataForSEO",
-      requests: dfsRows.length,
-      failures: dfsRows.filter((row) => row.outcome !== "success").length,
-      costUsd: dfsRows.reduce((sum, row) => sum + Number(row.cost_usd ?? 0), 0),
-      lastRequestAt: dfsRows[0]?.created_at ?? null,
+      requests: num(dfs["requests"]),
+      failures: num(dfs["failures"]),
+      costUsd: num(dfs["costUsd"]),
+      lastRequestAt: typeof dfs["lastRequestAt"] === "string" ? dfs["lastRequestAt"] : null,
     },
     {
       provider: "Google Ads Transparency (SerpAPI)",
-      requests: serpRows.length,
-      failures: serpRows.filter((row) => row.state !== "succeeded").length,
+      requests: num(serp["requests"]),
+      failures: num(serp["failures"]),
       costUsd: 0,
-      lastRequestAt: serpRows[0]?.created_at ?? null,
+      lastRequestAt: typeof serp["lastRequestAt"] === "string" ? serp["lastRequestAt"] : null,
     },
   ];
 
   return {
     providers,
-    budget:
-      budget.error || !budget.data
-        ? null
-        : ({
-            periodMonth: String(budget.data.period_month),
-            ceilingUsd: Number(budget.data.ceiling_usd ?? 0),
-            spentUsd: Number(budget.data.spent_usd ?? 0),
-            hardStop: Boolean(budget.data.hard_stop),
-          } satisfies SpendBudget),
-    serpApiCredits: serpRows.reduce((sum, row) => sum + Number(row.charged_credits ?? 0), 0),
+    budget: budget
+      ? ({
+          periodMonth: String(budget["periodMonth"] ?? ""),
+          ceilingUsd: num(budget["ceilingUsd"]),
+          spentUsd: num(budget["spentUsd"]),
+          hardStop: Boolean(budget["hardStop"]),
+        } satisfies SpendBudget)
+      : null,
+    serpApiCredits: num(serp["credits"]),
   };
 });
+
 
 export const listAuthorizedOperators = createServerFn({ method: "GET" }).handler(async () => {
   const ctx = await context();
