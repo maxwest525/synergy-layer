@@ -4075,43 +4075,67 @@ export type Database = {
       }
       workflow_runs: {
         Row: {
+          cancelled_at: string | null
+          cancelled_by: string | null
           context: Json
           created_at: string
+          cursor: number
           duration_ms: number | null
           error: string | null
           finished_at: string | null
           id: string
+          last_advanced_at: string | null
+          last_advanced_by: string | null
+          mode: string
           started_at: string | null
           state: Database["public"]["Enums"]["run_state"]
+          step_outputs: Json
           tenant_id: string
+          total_steps: number
           trigger_source: string
           updated_at: string
           workflow_id: string
         }
         Insert: {
+          cancelled_at?: string | null
+          cancelled_by?: string | null
           context?: Json
           created_at?: string
+          cursor?: number
           duration_ms?: number | null
           error?: string | null
           finished_at?: string | null
           id?: string
+          last_advanced_at?: string | null
+          last_advanced_by?: string | null
+          mode?: string
           started_at?: string | null
           state?: Database["public"]["Enums"]["run_state"]
+          step_outputs?: Json
           tenant_id: string
+          total_steps?: number
           trigger_source?: string
           updated_at?: string
           workflow_id: string
         }
         Update: {
+          cancelled_at?: string | null
+          cancelled_by?: string | null
           context?: Json
           created_at?: string
+          cursor?: number
           duration_ms?: number | null
           error?: string | null
           finished_at?: string | null
           id?: string
+          last_advanced_at?: string | null
+          last_advanced_by?: string | null
+          mode?: string
           started_at?: string | null
           state?: Database["public"]["Enums"]["run_state"]
+          step_outputs?: Json
           tenant_id?: string
+          total_steps?: number
           trigger_source?: string
           updated_at?: string
           workflow_id?: string
@@ -4319,6 +4343,14 @@ export type Database = {
       assert_admin_remains: {
         Args: { _excluding_user: string }
         Returns: undefined
+      }
+      claim_workflow_run_step: {
+        Args: { p_actor: string; p_run_id: string }
+        Returns: {
+          run_id: string
+          step_cursor: number
+          total_steps: number
+        }[]
       }
       clear_inbox_item: {
         Args: { _item_id: string }

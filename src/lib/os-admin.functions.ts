@@ -29,6 +29,37 @@ export const runWorkflowNow = createServerFn({ method: "POST" })
     return runWorkflow(context.supabase, data.workflowId, "manual", context.userId);
   });
 
+/** Creates a run parked before step 1. Nothing executes until you advance it. */
+export const startWorkflowRun = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => z.object({ workflowId: z.string().uuid() }).parse(data))
+  .handler(async ({ data, context }) => {
+    const { assertOperator } = await import("./os-admin.server");
+    await assertOperator(context.supabase, context.userId);
+    const { startRun } = await import("./workflow-runner.server");
+    return startRun(context.supabase, data.workflowId, "manual", context.userId, "manual");
+  });
+
+export const advanceWorkflowRun = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => z.object({ runId: z.string().uuid() }).parse(data))
+  .handler(async ({ data, context }) => {
+    const { assertOperator } = await import("./os-admin.server");
+    await assertOperator(context.supabase, context.userId);
+    const { advanceRun } = await import("./workflow-runner.server");
+    return advanceRun(context.supabase, data.runId, context.userId);
+  });
+
+export const cancelWorkflowRun = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => z.object({ runId: z.string().uuid() }).parse(data))
+  .handler(async ({ data, context }) => {
+    const { assertOperator } = await import("./os-admin.server");
+    await assertOperator(context.supabase, context.userId);
+    const { cancelRun } = await import("./workflow-runner.server");
+    return cancelRun(context.supabase, data.runId, context.userId);
+  });
+
 export const decideRecommendation = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) =>
