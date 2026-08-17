@@ -6,6 +6,15 @@ import type { ReactNode } from "react";
 import { GlassCard, PageHeader, StatePill, formatWhen } from "@/components/os/primitives";
 import { OperatorRouteError } from "@/components/os/route-error";
 import {
+  COVERAGE_LABELS,
+  COVERAGE_TONE,
+  concernStatus,
+  groupByPhase,
+  summarizeCoverage,
+  type CoverageStatus,
+} from "@/lib/coverage";
+import { getCoverage } from "@/lib/coverage.functions";
+import {
   backlinkAuthority,
   describePageSpeed,
   changeStatus,
@@ -19,6 +28,7 @@ import {
 } from "@/lib/essentials";
 import { getEssentials } from "@/lib/essentials.functions";
 import { getTenantContext } from "@/lib/tenant.functions";
+
 
 export const Route = createFileRoute("/essentials")({
   // Operator-only status screen: without the operator bearer token a server
