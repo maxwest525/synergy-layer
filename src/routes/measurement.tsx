@@ -406,6 +406,41 @@ function MeasurementPage() {
             label="Last successful refresh"
             value={ga4.latest ? formatWhen(ga4.latest.collectedAt) : "never"}
           />
+          <DetailRow label="Data API endpoint" value={ga4.diagnostics.endpoint} />
+          <DetailRow
+            label="Last successful run"
+            value={
+              ga4.diagnostics.lastSuccessAt
+                ? `${formatWhen(ga4.diagnostics.lastSuccessAt)} · ${
+                    ga4.diagnostics.lastSuccessRowCount ?? 0
+                  } row(s) · ${ms(ga4.diagnostics.lastSuccessDurationMs)}`
+                : "no successful run stored"
+            }
+          />
+          <DetailRow
+            label="Last error"
+            value={
+              ga4.diagnostics.lastError
+                ? `${formatWhen(ga4.diagnostics.lastErrorAt ?? "")} · HTTP ${
+                    ga4.diagnostics.lastErrorHttpStatus ?? "none"
+                  } · ${ga4.diagnostics.lastError}`
+                : "none recorded"
+            }
+          />
+          <DetailRow
+            label="Automatic daily run"
+            value={
+              ga4.diagnostics.schedule
+                ? `${ga4.diagnostics.schedule.enabled ? "Enabled" : "Disabled"} · cron ${
+                    ga4.diagnostics.schedule.cron
+                  } · last ${ga4.diagnostics.schedule.lastState ?? "never run"} · next ${
+                    ga4.diagnostics.schedule.nextRunAt
+                      ? formatWhen(ga4.diagnostics.schedule.nextRunAt)
+                      : "unscheduled"
+                  }`
+                : "no schedule registered"
+            }
+          />
         </div>
 
         <p className="mt-4 text-sm text-muted-foreground">{ga4.connection.statement}</p>
@@ -419,6 +454,13 @@ function MeasurementPage() {
         >
           {ga4Mutation.isPending ? "Refreshing GA4" : "Refresh GA4"}
         </Button>
+
+        <Link
+          to="/ga4"
+          className="ml-3 text-sm text-primary underline-offset-4 hover:underline"
+        >
+          Open the GA4 page
+        </Link>
 
         {ga4.connection.configured ? null : (
           <div className="mt-3 rounded-xl border border-primary/30 bg-primary/5 px-3 py-3">
