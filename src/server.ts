@@ -1,6 +1,6 @@
 import "./lib/error-capture";
 
-import { consumeLastCapturedError } from "./lib/error-capture";
+import { consumeLastCapturedError, runWithErrorCapture } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
 import { cancelledRequestResponse, isIncomingRequestAbort } from "./lib/http-request-errors";
 
@@ -63,21 +63,23 @@ function isH3SwallowedErrorBody(body: string): boolean {
 }
 
 export default {
-  async fetch(request: Request, env?: unknown, context?: unknown) {
-    try {
-      const handler = await getServerEntry();
-      const response = await handler.fetch(request, env, context);
-      return await normalizeCatastrophicSsrResponse(request, response);
-    } catch (error) {
-      if (isIncomingRequestAbort(error) || request.signal.aborted) {
-        return cancelledRequestResponse();
+  fetch(request: Request, env?: unknown, context?: unknown) {
+    return runWithErrorCapture(async () => {
+      try {
+        const handler = await getServerEntry();
+        const response = await handler.fetch(request, env, context);
+        return await normalizeCatastrophicSsrResponse(request, response);
+      } catch (error) {
+        if (isIncomingRequestAbort(error) || request.signal.aborted) {
+          return cancelledRequestResponse();
+        }
+        console.error(error);
+        return new Response(renderErrorPage(), {
+          status: 500,
+          headers: { "content-type": "text/html; charset=utf-8" },
+        });
       }
-      console.error(error);
-      return new Response(renderErrorPage(), {
-        status: 500,
-        headers: { "content-type": "text/html; charset=utf-8" },
-      });
-    }
+    });
   },
 };
 
