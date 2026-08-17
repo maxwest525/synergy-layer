@@ -82,32 +82,58 @@ const workspaces: readonly Workspace[] = [
 ] as const;
 
 /**
- * Three destinations carry the day: what needs a decision, the agent, and the
- * coverage map. Everything else stays reachable underneath, grouped by the
- * loop stage it belongs to.
+ * Six destinations carry the whole OS, in the order a day runs: what needs a
+ * decision, the agent, the coverage map, the stored facts, the work that
+ * produces them, and setup when something breaks. Every other workspace still
+ * exists; it lives underneath the destination it belongs to.
  */
-const PRIMARY_ROUTES = ["/", "/ask", "/essentials"] as const;
-
-const primaryGroup: WorkspaceGroup = {
-  title: "Start here",
-  definition: "The three screens a normal day runs on.",
-  items: PRIMARY_ROUTES.map((route) => workspaces.find((workspace) => workspace.to === route)!),
+type NavSection = {
+  primary: Workspace;
+  /** Extra routes that also open this section. */
+  children: readonly Workspace[];
 };
 
-const navGroups: readonly WorkspaceGroup[] = [
-  primaryGroup,
-  ...TAXONOMY_GROUPS.map((group) => ({
-    title: group.label,
-    definition: group.definition,
-    items: workspaces.filter(
-      (workspace) =>
-        workspace.group === group.key &&
-        !PRIMARY_ROUTES.includes(workspace.to as (typeof PRIMARY_ROUTES)[number]),
-    ),
-  })).filter((group) => group.items.length > 0),
+function workspaceAt(route: string): Workspace {
+  return workspaces.find((workspace) => workspace.to === route)!;
+}
+
+function workspacesAt(routes: readonly string[]): readonly Workspace[] {
+  return routes.map(workspaceAt);
+}
+
+const navSections: readonly NavSection[] = [
+  { primary: workspaceAt("/"), children: [] },
+  { primary: workspaceAt("/ask"), children: workspacesAt(["/studio"]) },
+  {
+    primary: workspaceAt("/essentials"),
+    children: workspacesAt(["/changes", "/recommendations"]),
+  },
+  {
+    primary: workspaceAt("/command-center"),
+    children: workspacesAt([
+      "/search",
+      "/keywords",
+      "/competitors",
+      "/measurement",
+      "/ads",
+      "/authority",
+      "/assets",
+      "/knowledge",
+    ]),
+  },
+  {
+    primary: workspaceAt("/workflows"),
+    children: workspacesAt(["/scheduler", "/seo-runs", "/openseo", "/openai-ads", "/agents"]),
+  },
+  {
+    primary: workspaceAt("/capabilities"),
+    children: workspacesAt(["/spend", "/operators"]),
+  },
 ];
 
 const allWorkspaces = workspaces;
+
+
 
 
 
