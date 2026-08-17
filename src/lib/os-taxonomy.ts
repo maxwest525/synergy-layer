@@ -56,6 +56,7 @@ export const TAXONOMY_GROUP_BY_KEY: Record<TaxonomyGroupKey, TaxonomyGroup> = Ob
 export const WORKSPACE_GROUP: Readonly<Record<string, TaxonomyGroupKey>> = {
   "/": "decisions",
   "/studio": "decisions",
+  "/ask": "decisions",
   "/changes": "decisions",
   "/keywords": "decisions",
   "/competitors": "decisions",

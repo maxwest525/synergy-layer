@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AgentsRouteImport } from './routes/agents'
+import { Route as AskRouteImport } from './routes/ask'
 import { Route as AssetsRouteImport } from './routes/assets'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthorityRouteImport } from './routes/authority'
@@ -38,6 +39,7 @@ import { Route as AdsIndexRouteImport } from './routes/ads.index'
 import { Route as AdsAdvertisersRouteImport } from './routes/ads.advertisers'
 import { Route as AgentsIndexRouteImport } from './routes/agents.index'
 import { Route as AgentsIdRouteImport } from './routes/agents.$id'
+import { Route as ApiAgentChatRouteImport } from './routes/api/agent-chat'
 import { Route as ApiStudioChatRouteImport } from './routes/api/studio-chat'
 import { Route as AssetsIndexRouteImport } from './routes/assets.index'
 import { Route as AssetsIdRouteImport } from './routes/assets.$id'
@@ -75,6 +77,11 @@ const IndexRoute = IndexRouteImport.update({
 const AgentsRoute = AgentsRouteImport.update({
   id: '/agents',
   path: '/agents',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AskRoute = AskRouteImport.update({
+  id: '/ask',
+  path: '/ask',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AssetsRoute = AssetsRouteImport.update({
@@ -213,6 +220,11 @@ const AgentsIdRoute = AgentsIdRouteImport.update({
   id: '/$id',
   path: '/$id',
   getParentRoute: () => AgentsRoute,
+} as any)
+const ApiAgentChatRoute = ApiAgentChatRouteImport.update({
+  id: '/api/agent-chat',
+  path: '/api/agent-chat',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ApiStudioChatRoute = ApiStudioChatRouteImport.update({
   id: '/api/studio-chat',
@@ -364,6 +376,7 @@ const ApiPublicHooksSchedulerTickRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/agents': typeof AgentsRouteWithChildren
+  '/ask': typeof AskRoute
   '/assets': typeof AssetsRouteWithChildren
   '/auth': typeof AuthRouteWithChildren
   '/authority': typeof AuthorityRoute
@@ -389,6 +402,7 @@ export interface FileRoutesByFullPath {
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/ads/advertisers': typeof AdsAdvertisersRoute
   '/agents/$id': typeof AgentsIdRoute
+  '/api/agent-chat': typeof ApiAgentChatRoute
   '/api/studio-chat': typeof ApiStudioChatRoute
   '/assets/$id': typeof AssetsIdRoute
   '/auth/callback': typeof AuthCallbackRoute
@@ -422,6 +436,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/ask': typeof AskRoute
   '/auth': typeof AuthRouteWithChildren
   '/authority': typeof AuthorityRoute
   '/command-center': typeof CommandCenterRoute
@@ -440,6 +455,7 @@ export interface FileRoutesByTo {
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/ads/advertisers': typeof AdsAdvertisersRoute
   '/agents/$id': typeof AgentsIdRoute
+  '/api/agent-chat': typeof ApiAgentChatRoute
   '/api/studio-chat': typeof ApiStudioChatRoute
   '/assets/$id': typeof AssetsIdRoute
   '/auth/callback': typeof AuthCallbackRoute
@@ -474,6 +490,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/agents': typeof AgentsRouteWithChildren
+  '/ask': typeof AskRoute
   '/assets': typeof AssetsRouteWithChildren
   '/auth': typeof AuthRouteWithChildren
   '/authority': typeof AuthorityRoute
@@ -499,6 +516,7 @@ export interface FileRoutesById {
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/ads/advertisers': typeof AdsAdvertisersRoute
   '/agents/$id': typeof AgentsIdRoute
+  '/api/agent-chat': typeof ApiAgentChatRoute
   '/api/studio-chat': typeof ApiStudioChatRoute
   '/assets/$id': typeof AssetsIdRoute
   '/auth/callback': typeof AuthCallbackRoute
@@ -535,6 +553,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/agents'
+    | '/ask'
     | '/assets'
     | '/auth'
     | '/authority'
@@ -560,6 +579,7 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-protected-resource'
     | '/ads/advertisers'
     | '/agents/$id'
+    | '/api/agent-chat'
     | '/api/studio-chat'
     | '/assets/$id'
     | '/auth/callback'
@@ -593,6 +613,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/ask'
     | '/auth'
     | '/authority'
     | '/command-center'
@@ -611,6 +632,7 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-protected-resource'
     | '/ads/advertisers'
     | '/agents/$id'
+    | '/api/agent-chat'
     | '/api/studio-chat'
     | '/assets/$id'
     | '/auth/callback'
@@ -644,6 +666,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/agents'
+    | '/ask'
     | '/assets'
     | '/auth'
     | '/authority'
@@ -669,6 +692,7 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-protected-resource'
     | '/ads/advertisers'
     | '/agents/$id'
+    | '/api/agent-chat'
     | '/api/studio-chat'
     | '/assets/$id'
     | '/auth/callback'
@@ -704,6 +728,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AgentsRoute: typeof AgentsRouteWithChildren
+  AskRoute: typeof AskRoute
   AssetsRoute: typeof AssetsRouteWithChildren
   AuthRoute: typeof AuthRouteWithChildren
   AuthorityRoute: typeof AuthorityRoute
@@ -728,6 +753,7 @@ export interface RootRouteChildren {
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   AdsAdvertisersRoute: typeof AdsAdvertisersRoute
+  ApiAgentChatRoute: typeof ApiAgentChatRoute
   ApiStudioChatRoute: typeof ApiStudioChatRoute
   ChangesIdRoute: typeof ChangesIdRoute
   AdsIndexRoute: typeof AdsIndexRoute
@@ -754,6 +780,13 @@ declare module '@tanstack/react-router' {
       path: '/agents'
       fullPath: '/agents'
       preLoaderRoute: typeof AgentsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ask': {
+      id: '/ask'
+      path: '/ask'
+      fullPath: '/ask'
+      preLoaderRoute: typeof AskRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/assets': {
@@ -944,6 +977,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/agents/$id'
       preLoaderRoute: typeof AgentsIdRouteImport
       parentRoute: typeof AgentsRoute
+    }
+    '/api/agent-chat': {
+      id: '/api/agent-chat'
+      path: '/api/agent-chat'
+      fullPath: '/api/agent-chat'
+      preLoaderRoute: typeof ApiAgentChatRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/studio-chat': {
       id: '/api/studio-chat'
@@ -1283,6 +1323,7 @@ const WorkflowsRouteWithChildren = WorkflowsRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AgentsRoute: AgentsRouteWithChildren,
+  AskRoute: AskRoute,
   AssetsRoute: AssetsRouteWithChildren,
   AuthRoute: AuthRouteWithChildren,
   AuthorityRoute: AuthorityRoute,
@@ -1308,6 +1349,7 @@ const rootRouteChildren: RootRouteChildren = {
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
   AdsAdvertisersRoute: AdsAdvertisersRoute,
+  ApiAgentChatRoute: ApiAgentChatRoute,
   ApiStudioChatRoute: ApiStudioChatRoute,
   ChangesIdRoute: ChangesIdRoute,
   AdsIndexRoute: AdsIndexRoute,
