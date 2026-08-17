@@ -68,14 +68,31 @@ export type AdsAdvertiserView = {
   linkedDomains: string[];
 };
 
+/** One observed competitor ad. This data was stored but never shown before. */
+export type AdsCreativeView = {
+  id: string;
+  advertiserFk: string;
+  format: string | null;
+  headline: string | null;
+  snippet: string | null;
+  callToAction: string | null;
+  targetDomain: string | null;
+  link: string | null;
+  firstShown: string | null;
+  lastShown: string | null;
+  observedAt: string | null;
+};
+
 export type AdsOverview = {
   account: AdsAccountView;
   watchlist: AdsWatchlistView[];
   ledger: AdsLedgerView[];
   candidates: AdsCandidateView[];
   advertisers: AdsAdvertiserView[];
+  creatives: AdsCreativeView[];
   pendingCount: number;
 };
+
 
 function asRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
