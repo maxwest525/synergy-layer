@@ -44,19 +44,23 @@ export const getRouter = () => {
   });
 
   if (typeof window === "undefined") {
-    const problems: string[] = [];
-    const walk = (r: any, path: string) => {
-      const kids = (r.children ?? []) as any[];
-      const seen = new Map<string, number>();
-      for (const c of kids) {
-        const k = String(c.options?.id ?? c.options?.path ?? "?");
-        seen.set(k, (seen.get(k) ?? 0) + 1);
+    const ids = new Map<string, string[]>();
+    let i = 0;
+    const walk = (r: any, parentLabel: string) => {
+      try {
+        r.init({ originalIndex: i++ });
+      } catch (e) {
+        console.error("INIT_FAIL", parentLabel, String(e));
+        return;
       }
-      for (const [k, n] of seen) if (n > 1) problems.push(`${path} -> ${k} x${n}`);
-      for (const c of kids) walk(c, `${path}/${String(c.options?.path ?? c.options?.id ?? "?")}`);
+      const list = ids.get(String(r.id)) ?? [];
+      list.push(parentLabel + "|" + String(r.options?.path ?? r.options?.id ?? "?"));
+      ids.set(String(r.id), list);
+      for (const c of (r.children ?? [])) walk(c, String(r.id));
     };
-    walk(routeTree as any, "");
-    console.error("ROUTE_WALK", (routeTree as any).children?.length, JSON.stringify(problems));
+    walk(routeTree as any, "root");
+    const dupes = [...ids.entries()].filter(([, v]) => v.length > 1);
+    if (dupes.length) console.error("ID_DUPES", JSON.stringify(dupes));
   }
 
   let router;
