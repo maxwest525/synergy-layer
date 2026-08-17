@@ -75,22 +75,36 @@ export function PageHeader({
   description: string;
   actions?: ReactNode;
 }) {
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const group = taxonomyGroupForPath(pathname);
   return (
     <header className="grid grid-cols-[minmax(0,1fr)] gap-4 border-b border-border/60 pb-6 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
       <div className="min-w-0 max-w-2xl space-y-2">
-        <p className="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.18em] text-primary">
+        <p className="flex flex-wrap items-center gap-2 text-xs font-medium uppercase tracking-[0.18em] text-primary">
           <span aria-hidden className="size-1.5 shrink-0 rounded-full bg-primary" />
-          {eyebrow}
+          {group ? (
+            <>
+              <span title={group.definition}>{group.label}</span>
+              <span aria-hidden className="text-muted-foreground/60">
+                /
+              </span>
+            </>
+          ) : null}
+          <span className="text-foreground/70">{eyebrow}</span>
         </p>
         <h1 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
           {title}
         </h1>
         <p className="text-sm leading-relaxed text-muted-foreground">{description}</p>
+        {group ? (
+          <p className="text-xs text-muted-foreground/80">{group.nextStage}</p>
+        ) : null}
       </div>
       {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
     </header>
   );
 }
+
 
 /** Outer wrapper for every workspace page: one rhythm between page blocks. */
 export function PageStack({ children, className }: { children: ReactNode; className?: string }) {
