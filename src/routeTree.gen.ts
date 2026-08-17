@@ -38,6 +38,7 @@ import { Route as AssetsIdRouteImport } from './routes/assets.$id'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as CapabilitiesIndexRouteImport } from './routes/capabilities.index'
 import { Route as CapabilitiesIdRouteImport } from './routes/capabilities.$id'
+import { Route as CapabilitiesSystemsRouteImport } from './routes/capabilities.systems'
 import { Route as ChangesIdRouteImport } from './routes/changes.$id'
 import { Route as KnowledgeIndexRouteImport } from './routes/knowledge.index'
 import { Route as KnowledgeIdRouteImport } from './routes/knowledge.$id'
@@ -205,6 +206,11 @@ const CapabilitiesIdRoute = CapabilitiesIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => CapabilitiesRoute,
 } as any)
+const CapabilitiesSystemsRoute = CapabilitiesSystemsRouteImport.update({
+  id: '/systems',
+  path: '/systems',
+  getParentRoute: () => CapabilitiesRoute,
+} as any)
 const ChangesIdRoute = ChangesIdRouteImport.update({
   id: '/changes/$id',
   path: '/changes/$id',
@@ -278,14 +284,14 @@ const Char91DotmcpChar93InvokeToolToolRoute =
   } as any)
 const CapabilitiesSystemsIndexRoute =
   CapabilitiesSystemsIndexRouteImport.update({
-    id: '/systems/',
-    path: '/systems/',
-    getParentRoute: () => CapabilitiesRoute,
+    id: '/',
+    path: '/',
+    getParentRoute: () => CapabilitiesSystemsRoute,
   } as any)
 const CapabilitiesSystemsKeyRoute = CapabilitiesSystemsKeyRouteImport.update({
-  id: '/systems/$key',
-  path: '/systems/$key',
-  getParentRoute: () => CapabilitiesRoute,
+  id: '/$key',
+  path: '/$key',
+  getParentRoute: () => CapabilitiesSystemsRoute,
 } as any)
 const ApiPublicHooksDataforseoPostbackRoute =
   ApiPublicHooksDataforseoPostbackRouteImport.update({
@@ -333,6 +339,7 @@ export interface FileRoutesByFullPath {
   '/assets/$id': typeof AssetsIdRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/capabilities/$id': typeof CapabilitiesIdRoute
+  '/capabilities/systems': typeof CapabilitiesSystemsRouteWithChildren
   '/changes/$id': typeof ChangesIdRoute
   '/knowledge/$id': typeof KnowledgeIdRoute
   '/knowledge/manual': typeof KnowledgeManualRoute
@@ -426,6 +433,7 @@ export interface FileRoutesById {
   '/assets/$id': typeof AssetsIdRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/capabilities/$id': typeof CapabilitiesIdRoute
+  '/capabilities/systems': typeof CapabilitiesSystemsRouteWithChildren
   '/changes/$id': typeof ChangesIdRoute
   '/knowledge/$id': typeof KnowledgeIdRoute
   '/knowledge/manual': typeof KnowledgeManualRoute
@@ -478,6 +486,7 @@ export interface FileRouteTypes {
     | '/assets/$id'
     | '/auth/callback'
     | '/capabilities/$id'
+    | '/capabilities/systems'
     | '/changes/$id'
     | '/knowledge/$id'
     | '/knowledge/manual'
@@ -570,6 +579,7 @@ export interface FileRouteTypes {
     | '/assets/$id'
     | '/auth/callback'
     | '/capabilities/$id'
+    | '/capabilities/systems'
     | '/changes/$id'
     | '/knowledge/$id'
     | '/knowledge/manual'
@@ -830,6 +840,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CapabilitiesIdRouteImport
       parentRoute: typeof CapabilitiesRoute
     }
+    '/capabilities/systems': {
+      id: '/capabilities/systems'
+      path: '/systems'
+      fullPath: '/capabilities/systems'
+      preLoaderRoute: typeof CapabilitiesSystemsRouteImport
+      parentRoute: typeof CapabilitiesRoute
+    }
     '/changes/$id': {
       id: '/changes/$id'
       path: '/changes/$id'
@@ -930,17 +947,17 @@ declare module '@tanstack/react-router' {
     }
     '/capabilities/systems/': {
       id: '/capabilities/systems/'
-      path: '/systems'
+      path: '/'
       fullPath: '/capabilities/systems/'
       preLoaderRoute: typeof CapabilitiesSystemsIndexRouteImport
-      parentRoute: typeof CapabilitiesRoute
+      parentRoute: typeof CapabilitiesSystemsRoute
     }
     '/capabilities/systems/$key': {
       id: '/capabilities/systems/$key'
-      path: '/systems/$key'
+      path: '/$key'
       fullPath: '/capabilities/systems/$key'
       preLoaderRoute: typeof CapabilitiesSystemsKeyRouteImport
-      parentRoute: typeof CapabilitiesRoute
+      parentRoute: typeof CapabilitiesSystemsRoute
     }
     '/api/public/hooks/dataforseo-postback': {
       id: '/api/public/hooks/dataforseo-postback'
@@ -1002,18 +1019,29 @@ const AuthRouteChildren: AuthRouteChildren = {
 
 const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
 
-interface CapabilitiesRouteChildren {
-  CapabilitiesIdRoute: typeof CapabilitiesIdRoute
-  CapabilitiesIndexRoute: typeof CapabilitiesIndexRoute
+interface CapabilitiesSystemsRouteChildren {
   CapabilitiesSystemsKeyRoute: typeof CapabilitiesSystemsKeyRoute
   CapabilitiesSystemsIndexRoute: typeof CapabilitiesSystemsIndexRoute
 }
 
-const CapabilitiesRouteChildren: CapabilitiesRouteChildren = {
-  CapabilitiesIdRoute: CapabilitiesIdRoute,
-  CapabilitiesIndexRoute: CapabilitiesIndexRoute,
+const CapabilitiesSystemsRouteChildren: CapabilitiesSystemsRouteChildren = {
   CapabilitiesSystemsKeyRoute: CapabilitiesSystemsKeyRoute,
   CapabilitiesSystemsIndexRoute: CapabilitiesSystemsIndexRoute,
+}
+
+const CapabilitiesSystemsRouteWithChildren =
+  CapabilitiesSystemsRoute._addFileChildren(CapabilitiesSystemsRouteChildren)
+
+interface CapabilitiesRouteChildren {
+  CapabilitiesIdRoute: typeof CapabilitiesIdRoute
+  CapabilitiesSystemsRoute: typeof CapabilitiesSystemsRouteWithChildren
+  CapabilitiesIndexRoute: typeof CapabilitiesIndexRoute
+}
+
+const CapabilitiesRouteChildren: CapabilitiesRouteChildren = {
+  CapabilitiesIdRoute: CapabilitiesIdRoute,
+  CapabilitiesSystemsRoute: CapabilitiesSystemsRouteWithChildren,
+  CapabilitiesIndexRoute: CapabilitiesIndexRoute,
 }
 
 const CapabilitiesRouteWithChildren = CapabilitiesRoute._addFileChildren(
