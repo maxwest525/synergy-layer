@@ -98,9 +98,11 @@ function currentWorkspaceLabel(pathname: string): string {
 function NavList({
   pathname,
   onNavigate,
+  collapsed = false,
 }: {
   pathname: string;
   onNavigate?: () => void;
+  collapsed?: boolean;
 }) {
   return (
     <div className="flex flex-col">
@@ -114,17 +116,24 @@ function NavList({
             groupIndex === 0 && "pt-0",
           )}
         >
-          <p className="px-2 pb-2 text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-foreground/60">
-            {group.title}
-          </p>
+          {collapsed ? null : (
+            <p className="px-2 pb-2 text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-foreground/75">
+              {group.title}
+            </p>
+          )}
           {/* A single hairline rail runs behind the group so its items read as
               one connected path instead of unrelated rows. */}
-          <ul className="relative flex flex-col gap-1 border-l border-border/40 pl-2">
+          <ul
+            className={cn(
+              "relative flex flex-col gap-1",
+              collapsed ? "items-center" : "border-l border-border/40 pl-2",
+            )}
+          >
             {group.items.map((workspace) => {
               const active = isActive(pathname, workspace.to);
               return (
                 <li key={workspace.to} className="relative">
-                  {active ? (
+                  {active && !collapsed ? (
                     <span
                       aria-hidden
                       className="absolute -left-2 top-1/2 h-6 w-px -translate-y-1/2 bg-primary shadow-[0_0_10px_var(--color-primary)]"
@@ -133,27 +142,32 @@ function NavList({
                   <Link
                     to={workspace.to}
                     onClick={onNavigate}
+                    title={collapsed ? workspace.label : undefined}
+                    aria-label={collapsed ? workspace.label : undefined}
                     aria-current={active ? "page" : undefined}
                     className={cn(
-                      "flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm transition-colors",
+                      "flex items-center rounded-lg text-sm transition-colors",
+                      collapsed ? "size-10 justify-center" : "gap-3 px-2.5 py-2",
                       active
                         ? "bg-sidebar-accent text-foreground"
-                        : "text-foreground/85 hover:bg-sidebar-accent/50 hover:text-foreground",
+                        : "text-foreground hover:bg-sidebar-accent/50 hover:text-foreground",
                     )}
                   >
                     <workspace.icon
                       aria-hidden
                       className={cn(
                         "size-4 shrink-0",
-                        active ? "text-primary" : "text-foreground/70",
+                        active ? "text-primary" : "text-foreground/90",
                       )}
                     />
-                    <span className="min-w-0 flex-1 leading-tight">
-                      <span className="block truncate font-medium">{workspace.label}</span>
-                      <span className="block truncate text-xs text-foreground/55">
-                        {workspace.hint}
+                    {collapsed ? null : (
+                      <span className="min-w-0 flex-1 leading-tight">
+                        <span className="block truncate font-medium">{workspace.label}</span>
+                        <span className="block truncate text-xs text-foreground/70">
+                          {workspace.hint}
+                        </span>
                       </span>
-                    </span>
+                    )}
                   </Link>
                 </li>
               );
@@ -164,6 +178,7 @@ function NavList({
     </div>
   );
 }
+
 
 function BrandMark() {
   return (
