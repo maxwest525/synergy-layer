@@ -91,8 +91,46 @@ function WorkflowDetailPage() {
   const { data } = useSuspenseQuery(workflowQuery(id));
   const queryClient = useQueryClient();
   const runNow = useServerFn(runWorkflowNow);
+  const listCapabilities = useServerFn(getCapabilities);
+  const readAccess = useServerFn(getOperatorAccess);
+  const session = useOperatorSession();
   const workflow = data.workflow!;
   const graph = (workflow.graph ?? {}) as Graph;
+  const runs = data.runs as unknown as Run[];
+
+  const capabilitiesQuery = useQuery({
+    queryKey: ["capabilities"],
+    queryFn: () => listCapabilities(),
+    enabled: session.signedIn,
+  });
+  const accessQuery = useQuery({
+    queryKey: ["operator-access"],
+    queryFn: () => readAccess(),
+    enabled: session.signedIn,
+  });
+
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  const selectedNode = (graph.nodes ?? []).find((node) => node.key === selectedKey) ?? null;
+
+  const latestStepFor = useMemo(() => {
+    const map = new Map<string, RunStep>();
+    // Runs arrive newest first, so the first sighting of a node is its latest run.
+    runs.forEach((run) =>
+      run.workflow_steps.forEach((step) => {
+        if (!map.has(step.node_key)) map.set(step.node_key, step);
+      }),
+    );
+    return map;
+  }, [runs]);
+
+  const [inspectedStep, setInspectedStep] = useState<RunStep | null>(null);
+  const panelStep = inspectedStep ?? (selectedKey ? (latestStepFor.get(selectedKey) ?? null) : null);
+
+  const capability = useMemo(() => {
+    if (!selectedNode?.ref || selectedNode.kind !== "capability") return null;
+    const rows = (capabilitiesQuery.data ?? []) as unknown as CapabilityMeta[];
+    return rows.find((row) => row.key === selectedNode.ref) ?? null;
+  }, [capabilitiesQuery.data, selectedNode]);
 
   const mutation = useMutation({
     mutationFn: () => runNow({ data: { workflowId: id } }),
@@ -102,6 +140,14 @@ function WorkflowDetailPage() {
     },
     onError: (error: Error) => toast.error(error.message),
   });
+
+  const canApprove = accessQuery.data?.canOperate ?? false;
+
+  const openStep = (step: RunStep) => {
+    setSelectedKey(step.node_key);
+    setInspectedStep(step);
+  };
+
 
   return (
     <div className="space-y-10">
