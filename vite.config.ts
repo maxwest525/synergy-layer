@@ -52,5 +52,6 @@ export default defineConfig({
     // routes path and aborts before Vite can build. Lovable builds on Linux,
     // where the plugin remains enabled; local Windows checks skip only it.
     plugins: process.platform === "win32" ? [] : [mcpPlugin()],
+    customLogger: quietDisconnectLogger,
   },
 });
