@@ -63,7 +63,7 @@ export const getRouter = () => {
 
   let router;
   try {
-    repairParentLinks(routeTree as RouteNode);
+    repairParentLinks(routeTree as unknown as RouteNode);
     router = createRouter({
       routeTree,
       context: { queryClient },
