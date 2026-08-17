@@ -2629,7 +2629,7 @@ export type Database = {
         Row: {
           attempt_count: number
           created_at: string
-          custom_event_name: string | null
+          custom_event_name: string
           error_category: string | null
           event_id: string
           event_type: string
@@ -2645,7 +2645,7 @@ export type Database = {
         Insert: {
           attempt_count?: number
           created_at?: string
-          custom_event_name?: string | null
+          custom_event_name?: string
           error_category?: string | null
           event_id: string
           event_type: string
@@ -2661,7 +2661,7 @@ export type Database = {
         Update: {
           attempt_count?: number
           created_at?: string
-          custom_event_name?: string | null
+          custom_event_name?: string
           error_category?: string | null
           event_id?: string
           event_type?: string
@@ -2690,7 +2690,7 @@ export type Database = {
           browser_enabled: boolean
           capi_enabled: boolean
           created_at: string
-          custom_event_name: string | null
+          custom_event_name: string
           enabled: boolean
           event_type: string
           id: string
@@ -2704,7 +2704,7 @@ export type Database = {
           browser_enabled?: boolean
           capi_enabled?: boolean
           created_at?: string
-          custom_event_name?: string | null
+          custom_event_name?: string
           enabled?: boolean
           event_type: string
           id?: string
@@ -2718,7 +2718,7 @@ export type Database = {
           browser_enabled?: boolean
           capi_enabled?: boolean
           created_at?: string
-          custom_event_name?: string | null
+          custom_event_name?: string
           enabled?: boolean
           event_type?: string
           id?: string
