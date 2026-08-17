@@ -1,13 +1,31 @@
 import "./lib/error-capture";
 
-import { createStartHandler, defaultStreamHandler } from "@tanstack/react-start/server";
 import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
 import { cancelledRequestResponse, isIncomingRequestAbort } from "./lib/http-request-errors";
 
-// Keep the framework handler in this module's Vite graph. Caching a dynamic
-// server-entry import here survives route HMR and can retain an obsolete tree.
-const startHandler = createStartHandler(defaultStreamHandler);
+type ServerEntry = {
+  fetch: (request: Request, env?: unknown, context?: unknown) => Promise<Response> | Response;
+};
+
+let serverEntryPromise: Promise<ServerEntry> | undefined;
+
+// Importing the application handler lazily is important: route modules can fail
+// while Vite is evaluating a cold SSR graph. A top-level import fails before our
+// request boundary exists and produces an opaque 500 with no useful stack.
+async function getServerEntry(): Promise<ServerEntry> {
+  if (!serverEntryPromise) {
+    serverEntryPromise = import("@tanstack/react-start/server-entry")
+      .then((module) => (module.default ?? module) as ServerEntry)
+      .catch((error: unknown) => {
+        // Do not retain a rejected module promise. The next request must be able
+        // to retry after an edit or a transient development compilation failure.
+        serverEntryPromise = undefined;
+        throw error;
+      });
+  }
+  return serverEntryPromise;
+}
 
 // h3 swallows in-handler throws into a normal 500 Response with body
 // {"unhandled":true,"message":"HTTPError"} — try/catch alone never fires for those.
@@ -45,9 +63,10 @@ function isH3SwallowedErrorBody(body: string): boolean {
 }
 
 export default {
-  async fetch(request: Request) {
+  async fetch(request: Request, env?: unknown, context?: unknown) {
     try {
-      const response = await startHandler(request);
+      const handler = await getServerEntry();
+      const response = await handler.fetch(request, env, context);
       return await normalizeCatastrophicSsrResponse(request, response);
     } catch (error) {
       if (isIncomingRequestAbort(error) || request.signal.aborted) {
