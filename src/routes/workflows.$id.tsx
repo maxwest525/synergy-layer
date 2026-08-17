@@ -21,10 +21,49 @@ const workflowQuery = (id: string) => ({
   queryFn: () => getWorkflow({ data: { id } }),
 });
 
+type GraphNode = { key: string; kind: string; ref?: string };
+
 type Graph = {
-  nodes?: { key: string; kind: string; ref?: string }[];
+  nodes?: GraphNode[];
   edges?: { from: string; to: string }[];
 };
+
+/** "collect_snapshots" / "dfs.labs" become readable step names. */
+function humanize(value: string) {
+  const words = value.replaceAll(/[._-]+/g, " ").trim();
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
+const kindLabels: Record<string, string> = {
+  capability: "Tool step",
+  agent: "Agent step",
+  approval: "Approval gate",
+  condition: "Condition",
+};
+
+function StepRef({ node }: { node: GraphNode }) {
+  if (!node.ref) return null;
+  const label = humanize(node.ref);
+  const className =
+    "text-xs text-primary underline-offset-4 hover:underline focus-visible:underline";
+
+  if (node.kind === "capability") {
+    return (
+      <Link to="/capabilities/$id" params={{ id: node.ref }} className={className}>
+        {label}
+      </Link>
+    );
+  }
+  if (node.kind === "agent") {
+    return (
+      <Link to="/agents" className={className}>
+        {label}
+      </Link>
+    );
+  }
+  return <span className="text-xs text-muted-foreground">{label}</span>;
+}
+
 
 export const Route = createFileRoute("/workflows/$id")({
   // Operator-only workspace: nothing here is public, and rendering it on the
