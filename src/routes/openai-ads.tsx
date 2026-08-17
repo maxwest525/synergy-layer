@@ -12,6 +12,7 @@ import {
   StatePill,
   formatWhen,
 } from "@/components/os/primitives";
+import { OpenAiAdsCapiSettings } from "@/components/os/openai-ads-capi-settings";
 import { OperatorRouteError } from "@/components/os/route-error";
 import {
   getOpenAiAdsState,
@@ -433,6 +434,16 @@ function OpenAiAdsPage() {
       </section>
 
       <section className="space-y-4">
+        <h2 className="text-sm font-semibold text-foreground">Server-side conversions</h2>
+        <p className="text-sm text-muted-foreground">
+          AOOS is the single sender for server-side conversions. Provider API charge: $0 for AOOS to
+          hold this configuration.
+        </p>
+        <OpenAiAdsCapiSettings />
+      </section>
+
+      <section className="space-y-4">
+
         <h2 className="text-sm font-semibold text-foreground">Validation</h2>
         <p className="text-sm text-muted-foreground">{data.validation.reason}</p>
         <ValidationControl available={data.validation.providerValidationAvailable} />

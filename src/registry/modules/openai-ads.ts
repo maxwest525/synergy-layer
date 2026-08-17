@@ -66,12 +66,12 @@ export const definition: ModuleDefinition = {
     },
     {
       key: "openai.ads.capi",
-      name: "OpenAI Ads server-side events",
+      name: "OpenAI Ads server-side conversions",
       kind: "connector",
       category: "Paid media",
       description:
-        "Server-side conversions API path. AOOS reports its configuration state from server-side secret presence and from server-side events reported over the bridge. It does not hold or expose the conversions API key in the browser, and it does not perform a provider validate-only call because that contract has not been confirmed from authoritative documentation.",
-      integrationState: "pending",
+        "AOOS is the single server-side sender of OpenAI Ads conversions for the instrumented site. The website reports a conversion over the authenticated hook; AOOS applies the tenant configuration, refuses raw identifiers, enforces the origin allowlist and the per event data shape, sends the conversion with the server-held credential, and stores a redacted delivery record keyed by event id so a retry can never become a second conversion. The browser measurement pixel stays on the website and is not sent from here.",
+      integrationState: "real",
       authKind: "api_key",
       operations: [
         {
@@ -79,12 +79,30 @@ export const definition: ModuleDefinition = {
           description: "Report whether the server-side credential is configured and events arrive.",
           mutates: false,
         },
+        {
+          name: "capi.configure",
+          description:
+            "Read and change the tenant sending configuration and per event rules. Workspace admins only.",
+          mutates: true,
+        },
+        {
+          name: "capi.deliver",
+          description:
+            "Validate a reported conversion and send it to the provider once, with bounded retries on the same event id.",
+          mutates: true,
+        },
       ],
       config: {
         secretName: "OPENAI_ADS_CAPI_API_KEY",
+        bridgeSecretName: "OPENAI_ADS_CAPI_BRIDGE_SECRET",
+        conversionsEndpoint: "/api/public/hooks/openai-ads-conversions",
         clientExposed: false,
-        providerValidateOnly: "unconfirmed",
+        contractVersion: 1,
+        deliveryModes: ["disabled", "validate_only", "live"],
+        acceptedIdentifiers: ["email_sha256", "external_id_sha256"],
+        refusedIdentifiers: ["email", "phone", "phone_sha256", "external_id"],
       },
     },
+
   ],
 };

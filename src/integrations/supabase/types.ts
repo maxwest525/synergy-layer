@@ -2551,6 +2551,192 @@ export type Database = {
           },
         ]
       }
+      openai_ads_connections: {
+        Row: {
+          allowed_origins: string[]
+          canonical_origin: string
+          created_at: string
+          delivery_mode: string
+          enabled: boolean
+          id: string
+          match_email_sha256: boolean
+          match_external_id_sha256: boolean
+          match_geo: boolean
+          match_ip_address: boolean
+          match_user_agent: boolean
+          max_delivery_attempts: number
+          pixel_id: string
+          request_timeout_ms: number
+          secret_name: string
+          source_project: string
+          tenant_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          allowed_origins?: string[]
+          canonical_origin: string
+          created_at?: string
+          delivery_mode?: string
+          enabled?: boolean
+          id?: string
+          match_email_sha256?: boolean
+          match_external_id_sha256?: boolean
+          match_geo?: boolean
+          match_ip_address?: boolean
+          match_user_agent?: boolean
+          max_delivery_attempts?: number
+          pixel_id: string
+          request_timeout_ms?: number
+          secret_name?: string
+          source_project: string
+          tenant_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          allowed_origins?: string[]
+          canonical_origin?: string
+          created_at?: string
+          delivery_mode?: string
+          enabled?: boolean
+          id?: string
+          match_email_sha256?: boolean
+          match_external_id_sha256?: boolean
+          match_geo?: boolean
+          match_ip_address?: boolean
+          match_user_agent?: boolean
+          max_delivery_attempts?: number
+          pixel_id?: string
+          request_timeout_ms?: number
+          secret_name?: string
+          source_project?: string
+          tenant_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "openai_ads_connections_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      openai_ads_deliveries: {
+        Row: {
+          attempt_count: number
+          created_at: string
+          custom_event_name: string
+          error_category: string | null
+          event_id: string
+          event_type: string
+          first_attempt_at: string
+          http_status: number | null
+          id: string
+          last_attempt_at: string
+          pixel_id: string
+          status: string
+          tenant_id: string
+          validate_only: boolean
+        }
+        Insert: {
+          attempt_count?: number
+          created_at?: string
+          custom_event_name?: string
+          error_category?: string | null
+          event_id: string
+          event_type: string
+          first_attempt_at?: string
+          http_status?: number | null
+          id?: string
+          last_attempt_at?: string
+          pixel_id: string
+          status: string
+          tenant_id: string
+          validate_only?: boolean
+        }
+        Update: {
+          attempt_count?: number
+          created_at?: string
+          custom_event_name?: string
+          error_category?: string | null
+          event_id?: string
+          event_type?: string
+          first_attempt_at?: string
+          http_status?: number | null
+          id?: string
+          last_attempt_at?: string
+          pixel_id?: string
+          status?: string
+          tenant_id?: string
+          validate_only?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "openai_ads_deliveries_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      openai_ads_event_rules: {
+        Row: {
+          action_source: string
+          browser_enabled: boolean
+          capi_enabled: boolean
+          created_at: string
+          custom_event_name: string
+          enabled: boolean
+          event_type: string
+          id: string
+          success_boundary: string
+          tenant_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          action_source?: string
+          browser_enabled?: boolean
+          capi_enabled?: boolean
+          created_at?: string
+          custom_event_name?: string
+          enabled?: boolean
+          event_type: string
+          id?: string
+          success_boundary?: string
+          tenant_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          action_source?: string
+          browser_enabled?: boolean
+          capi_enabled?: boolean
+          created_at?: string
+          custom_event_name?: string
+          enabled?: boolean
+          event_type?: string
+          id?: string
+          success_boundary?: string
+          tenant_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "openai_ads_event_rules_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       openai_ads_events: {
         Row: {
           attribution_source: string | null
@@ -4416,6 +4602,7 @@ export type Database = {
         Returns: boolean
       }
       is_operator: { Args: never; Returns: boolean }
+      is_tenant_admin: { Args: { _tenant_id: string }; Returns: boolean }
       is_tenant_member: { Args: { _tenant_id: string }; Returns: boolean }
       match_knowledge_chunks: {
         Args: {
