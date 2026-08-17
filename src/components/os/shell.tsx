@@ -61,7 +61,7 @@ const workspaces: readonly Workspace[] = [
   { to: "/recommendations", label: "Observations", icon: Lightbulb, hint: "Things the system noticed", group: "decisions" },
   { to: "/studio", label: "Studio", icon: BrainCircuit, hint: "Think out loud, no tools", group: "decisions" },
 
-  { to: "/command-center", label: "Overview", icon: LayoutDashboard, hint: "How everything stands", group: "evidence" },
+  { to: "/command-center", label: "Evidence", icon: LayoutDashboard, hint: "Every stored fact, by source", group: "evidence" },
   { to: "/search", label: "Search results", icon: Search, hint: "What Google reports", group: "evidence" },
   { to: "/measurement", label: "Site health", icon: Gauge, hint: "Speed and traffic", group: "evidence" },
   { to: "/ads", label: "Competitor ads", icon: KeyRound, hint: "Ads they are running now", group: "evidence" },
@@ -69,45 +69,71 @@ const workspaces: readonly Workspace[] = [
   { to: "/assets", label: "Assets", icon: Boxes, hint: "Everything we own", group: "evidence" },
   { to: "/knowledge", label: "Knowledge", icon: Radar, hint: "What the OS knows", group: "evidence" },
 
-  { to: "/workflows", label: "Workflows", icon: Workflow, hint: "How work runs", group: "run_work" },
+  { to: "/workflows", label: "Work", icon: Workflow, hint: "Runs, schedules, executions", group: "run_work" },
   { to: "/scheduler", label: "Schedule", icon: CalendarClock, hint: "When work runs", group: "run_work" },
   { to: "/seo-runs", label: "SEO runs", icon: RouteIcon, hint: "Governed page changes", group: "run_work" },
   { to: "/openseo", label: "SEO tools", icon: Radar, hint: "Manual, one-off tool calls", group: "run_work" },
   { to: "/openai-ads", label: "OpenAI Ads", icon: Megaphone, hint: "Pixel instrumentation", group: "run_work" },
   { to: "/agents", label: "Agents", icon: Activity, hint: "Who does the work", group: "run_work" },
 
-  { to: "/capabilities", label: "Capabilities", icon: Plug, hint: "What the OS can do", group: "system_health" },
+  { to: "/capabilities", label: "Setup", icon: Plug, hint: "Connections, costs, access", group: "system_health" },
   { to: "/spend", label: "Data costs", icon: DollarSign, hint: "What data sources cost", group: "system_health" },
   { to: "/operators", label: "People", icon: Users, hint: "Who has access", group: "system_health" },
 ] as const;
 
 /**
- * Three destinations carry the day: what needs a decision, the agent, and the
- * coverage map. Everything else stays reachable underneath, grouped by the
- * loop stage it belongs to.
+ * Six destinations carry the whole OS, in the order a day runs: what needs a
+ * decision, the agent, the coverage map, the stored facts, the work that
+ * produces them, and setup when something breaks. Every other workspace still
+ * exists; it lives underneath the destination it belongs to.
  */
-const PRIMARY_ROUTES = ["/", "/ask", "/essentials"] as const;
-
-const primaryGroup: WorkspaceGroup = {
-  title: "Start here",
-  definition: "The three screens a normal day runs on.",
-  items: PRIMARY_ROUTES.map((route) => workspaces.find((workspace) => workspace.to === route)!),
+type NavSection = {
+  primary: Workspace;
+  /** Extra routes that also open this section. */
+  children: readonly Workspace[];
 };
 
-const navGroups: readonly WorkspaceGroup[] = [
-  primaryGroup,
-  ...TAXONOMY_GROUPS.map((group) => ({
-    title: group.label,
-    definition: group.definition,
-    items: workspaces.filter(
-      (workspace) =>
-        workspace.group === group.key &&
-        !PRIMARY_ROUTES.includes(workspace.to as (typeof PRIMARY_ROUTES)[number]),
-    ),
-  })).filter((group) => group.items.length > 0),
+function workspaceAt(route: string): Workspace {
+  return workspaces.find((workspace) => workspace.to === route)!;
+}
+
+function workspacesAt(routes: readonly string[]): readonly Workspace[] {
+  return routes.map(workspaceAt);
+}
+
+const navSections: readonly NavSection[] = [
+  { primary: workspaceAt("/"), children: [] },
+  { primary: workspaceAt("/ask"), children: workspacesAt(["/studio"]) },
+  {
+    primary: workspaceAt("/essentials"),
+    children: workspacesAt(["/changes", "/recommendations"]),
+  },
+  {
+    primary: workspaceAt("/command-center"),
+    children: workspacesAt([
+      "/search",
+      "/keywords",
+      "/competitors",
+      "/measurement",
+      "/ads",
+      "/authority",
+      "/assets",
+      "/knowledge",
+    ]),
+  },
+  {
+    primary: workspaceAt("/workflows"),
+    children: workspacesAt(["/scheduler", "/seo-runs", "/openseo", "/openai-ads", "/agents"]),
+  },
+  {
+    primary: workspaceAt("/capabilities"),
+    children: workspacesAt(["/spend", "/operators"]),
+  },
 ];
 
 const allWorkspaces = workspaces;
+
+
 
 
 
@@ -122,6 +148,65 @@ function currentWorkspaceLabel(pathname: string): string {
   return match?.label ?? "AOOS";
 }
 
+function NavRow({
+  workspace,
+  pathname,
+  onNavigate,
+  collapsed,
+  nested = false,
+}: {
+  workspace: Workspace;
+  pathname: string;
+  onNavigate?: (() => void) | undefined;
+  collapsed: boolean;
+  nested?: boolean;
+}) {
+  const active = isActive(pathname, workspace.to);
+  return (
+    <li className="relative">
+      {active && !collapsed ? (
+        <span
+          aria-hidden
+          className="absolute -left-2 top-1/2 h-6 w-px -translate-y-1/2 bg-primary shadow-[0_0_10px_var(--color-primary)]"
+        />
+      ) : null}
+      <Link
+        to={workspace.to}
+        onClick={onNavigate}
+        title={collapsed ? workspace.label : undefined}
+        aria-label={collapsed ? workspace.label : undefined}
+        aria-current={active ? "page" : undefined}
+        className={cn(
+          "flex items-center rounded-lg text-sm transition-colors",
+          collapsed ? "size-10 justify-center" : "gap-3 px-2.5 py-2",
+          active
+            ? "bg-sidebar-accent text-foreground"
+            : "text-foreground hover:bg-sidebar-accent/50 hover:text-foreground",
+        )}
+      >
+        <workspace.icon
+          aria-hidden
+          className={cn(
+            "shrink-0",
+            nested ? "size-3.5" : "size-4",
+            active ? "text-primary" : "text-foreground/90",
+          )}
+        />
+        {collapsed ? null : (
+          <span className="min-w-0 flex-1 leading-tight">
+            <span className={cn("block truncate", nested ? "text-[0.8rem]" : "font-medium")}>
+              {workspace.label}
+            </span>
+            {nested ? null : (
+              <span className="block truncate text-xs text-foreground/70">{workspace.hint}</span>
+            )}
+          </span>
+        )}
+      </Link>
+    </li>
+  );
+}
+
 function NavList({
   pathname,
   onNavigate,
@@ -133,81 +218,50 @@ function NavList({
 }) {
   return (
     <div className="flex flex-col">
-      {navGroups.map((group, groupIndex) => (
-        <section
-          key={group.title}
-          aria-label={group.title}
-          className={cn(
-            "py-4",
-            groupIndex > 0 && "border-t border-border/50",
-            groupIndex === 0 && "pt-0",
-          )}
-        >
-          {collapsed ? null : (
-            <p
-              title={group.definition}
-              className="px-2 pb-2 text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-foreground/75"
-            >
-              {group.title}
-            </p>
-          )}
-          {/* A single hairline rail runs behind the group so its items read as
-              one connected path instead of unrelated rows. */}
-          <ul
-            className={cn(
-              "relative flex flex-col gap-1",
-              collapsed ? "items-center" : "border-l border-border/40 pl-2",
-            )}
+      {navSections.map((section, index) => {
+        const sectionActive =
+          isActive(pathname, section.primary.to) ||
+          section.children.some((child) => isActive(pathname, child.to));
+        return (
+          <section
+            key={section.primary.to}
+            aria-label={section.primary.label}
+            className={cn("py-3", index > 0 && "border-t border-border/50", index === 0 && "pt-0")}
           >
-            {group.items.map((workspace) => {
-              const active = isActive(pathname, workspace.to);
-              return (
-                <li key={workspace.to} className="relative">
-                  {active && !collapsed ? (
-                    <span
-                      aria-hidden
-                      className="absolute -left-2 top-1/2 h-6 w-px -translate-y-1/2 bg-primary shadow-[0_0_10px_var(--color-primary)]"
+            <ul
+              className={cn(
+                "relative flex flex-col gap-1",
+                collapsed ? "items-center" : "border-l border-border/40 pl-2",
+              )}
+            >
+              <NavRow
+                workspace={section.primary}
+                pathname={pathname}
+                onNavigate={onNavigate}
+                collapsed={collapsed}
+              />
+              {/* Sub-destinations only unfold once you are working in the
+                  section, so the rail stays six choices wide by default. */}
+              {collapsed || !sectionActive || section.children.length === 0
+                ? null
+                : section.children.map((child) => (
+                    <NavRow
+                      key={child.to}
+                      workspace={child}
+                      pathname={pathname}
+                      onNavigate={onNavigate}
+                      collapsed={collapsed}
+                      nested
                     />
-                  ) : null}
-                  <Link
-                    to={workspace.to}
-                    onClick={onNavigate}
-                    title={collapsed ? workspace.label : undefined}
-                    aria-label={collapsed ? workspace.label : undefined}
-                    aria-current={active ? "page" : undefined}
-                    className={cn(
-                      "flex items-center rounded-lg text-sm transition-colors",
-                      collapsed ? "size-10 justify-center" : "gap-3 px-2.5 py-2",
-                      active
-                        ? "bg-sidebar-accent text-foreground"
-                        : "text-foreground hover:bg-sidebar-accent/50 hover:text-foreground",
-                    )}
-                  >
-                    <workspace.icon
-                      aria-hidden
-                      className={cn(
-                        "size-4 shrink-0",
-                        active ? "text-primary" : "text-foreground/90",
-                      )}
-                    />
-                    {collapsed ? null : (
-                      <span className="min-w-0 flex-1 leading-tight">
-                        <span className="block truncate font-medium">{workspace.label}</span>
-                        <span className="block truncate text-xs text-foreground/70">
-                          {workspace.hint}
-                        </span>
-                      </span>
-                    )}
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-      ))}
+                  ))}
+            </ul>
+          </section>
+        );
+      })}
     </div>
   );
 }
+
 
 function BrandMark() {
   return (
