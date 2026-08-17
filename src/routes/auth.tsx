@@ -63,12 +63,11 @@ function AuthPage() {
     },
     onSuccess: () => {
       toast.success(mode === "sign_in" ? "Signed in" : "Account created");
-      if (next) {
-        window.location.href = next;
-        return;
-      }
-      void navigate({ to: "/auth/callback" });
+      // A full document navigation is the reliable move here: it guarantees the
+      // OS boots with the fresh session instead of waiting on client state.
+      window.location.assign(next ?? "/");
     },
+
     onError: (error: Error) => toast.error(error.message),
   });
 
