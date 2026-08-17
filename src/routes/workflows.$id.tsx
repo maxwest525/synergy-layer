@@ -16,6 +16,8 @@ import {
   ApprovalGateCard,
   humanize,
   kindLabels,
+  findActiveRun,
+  RunControlCard,
   RunHistoryTimeline,
   StepDetailPanel,
   type CapabilityMeta,
@@ -27,7 +29,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { useOperatorSession } from "@/hooks/use-operator-session";
 import { getOperatorAccess } from "@/lib/auth.functions";
-import { runWorkflowNow } from "@/lib/os-admin.functions";
+import {
+  advanceWorkflowRun,
+  cancelWorkflowRun,
+  runWorkflowNow,
+  startWorkflowRun,
+} from "@/lib/os-admin.functions";
 import { getCapabilities, getWorkflow } from "@/lib/os.functions";
 
 const workflowQuery = (id: string) => ({
@@ -91,6 +98,9 @@ function WorkflowDetailPage() {
   const { data } = useSuspenseQuery(workflowQuery(id));
   const queryClient = useQueryClient();
   const runNow = useServerFn(runWorkflowNow);
+  const startRunFn = useServerFn(startWorkflowRun);
+  const advanceRunFn = useServerFn(advanceWorkflowRun);
+  const cancelRunFn = useServerFn(cancelWorkflowRun);
   const listCapabilities = useServerFn(getCapabilities);
   const readAccess = useServerFn(getOperatorAccess);
   const session = useOperatorSession();
@@ -142,6 +152,39 @@ function WorkflowDetailPage() {
   });
 
   const canApprove = accessQuery.data?.canOperate ?? false;
+  const activeRun = findActiveRun(runs);
+
+  const invalidate = () => queryClient.invalidateQueries();
+  const startRunMutation = useMutation({
+    mutationFn: () => startRunFn({ data: { workflowId: id } }),
+    onSuccess: () => {
+      toast.success("Run created and parked before step 1");
+      void invalidate();
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+  const advanceMutation = useMutation({
+    mutationFn: (runId: string) => advanceRunFn({ data: { runId } }),
+    onSuccess: (result) => {
+      toast.success(
+        result.stepState === "failed"
+          ? `Step failed: ${humanize(result.stepKey ?? "step")}`
+          : `Step done: ${humanize(result.stepKey ?? "step")}`,
+      );
+      void invalidate();
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+  const cancelMutation = useMutation({
+    mutationFn: (runId: string) => cancelRunFn({ data: { runId } }),
+    onSuccess: () => {
+      toast.success("Run cancelled");
+      void invalidate();
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+  const controlsBusy =
+    startRunMutation.isPending || advanceMutation.isPending || cancelMutation.isPending;
 
   const openStep = (step: RunStep) => {
     setSelectedKey(step.node_key);
@@ -163,10 +206,20 @@ function WorkflowDetailPage() {
               onClick={() => mutation.mutate()}
               disabled={mutation.isPending}
             >
-              {mutation.isPending ? "Running" : "Run now"}
+              {mutation.isPending ? "Running" : "Run reading steps now"}
             </Button>
           </>
         }
+      />
+
+      <RunControlCard
+        run={activeRun}
+        graph={graph}
+        canOperate={canApprove}
+        busy={controlsBusy}
+        onStart={() => startRunMutation.mutate()}
+        onAdvance={() => activeRun && advanceMutation.mutate(activeRun.id)}
+        onCancel={() => activeRun && cancelMutation.mutate(activeRun.id)}
       />
 
       <div className="grid gap-4 lg:grid-cols-2">
