@@ -21,6 +21,7 @@ export class UmamiFailure extends Error {
 
 export type UmamiEnvPresence = {
   baseUrl: boolean;
+  bearerToken: boolean;
   apiKey: boolean;
   username: boolean;
   password: boolean;
@@ -29,6 +30,7 @@ export type UmamiEnvPresence = {
 export function readUmamiEnvPresence(env: Record<string, string | undefined>): UmamiEnvPresence {
   return {
     baseUrl: Boolean(env["UMAMI_BASE_URL"]),
+    bearerToken: Boolean(env["UMAMI_BEARER_TOKEN"]),
     apiKey: Boolean(env["UMAMI_API_KEY"]),
     username: Boolean(env["UMAMI_USERNAME"]),
     password: Boolean(env["UMAMI_PASSWORD"]),
@@ -37,7 +39,10 @@ export function readUmamiEnvPresence(env: Record<string, string | undefined>): U
 
 /** Configured means credentials exist. It never means the instance answered. */
 export function isUmamiConfigured(presence: UmamiEnvPresence): boolean {
-  return presence.baseUrl && (presence.apiKey || (presence.username && presence.password));
+  return (
+    presence.baseUrl &&
+    (presence.bearerToken || presence.apiKey || (presence.username && presence.password))
+  );
 }
 
 function baseUrl(): string {
@@ -53,13 +58,16 @@ type AuthHeaders = Record<string, string>;
  * request in a worker and could be reused across tenants, so it is not cached.
  */
 export async function umamiAuthHeaders(): Promise<AuthHeaders> {
+  const bearer = process.env["UMAMI_BEARER_TOKEN"];
+  if (bearer) return { Authorization: `Bearer ${bearer}` };
+
   const apiKey = process.env["UMAMI_API_KEY"];
   if (apiKey) return { "x-umami-api-key": apiKey };
 
   const username = process.env["UMAMI_USERNAME"];
   const password = process.env["UMAMI_PASSWORD"];
   if (!username || !password) {
-    throw new UmamiFailure("not_configured", "No Umami API key or username and password are set.");
+    throw new UmamiFailure("not_configured", "No Umami token, API key, or username and password are set.");
   }
 
   let response: Response;
