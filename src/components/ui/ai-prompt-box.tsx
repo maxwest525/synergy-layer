@@ -46,32 +46,12 @@ function ModeToggle({
           onClick={onClick}
           aria-pressed={active}
           className={cn(
-            "flex h-8 items-center gap-1 rounded-full border px-2 transition-colors",
-            active
-              ? "border-primary/60 bg-primary/10 text-primary"
-              : "border-transparent text-muted-foreground hover:text-foreground",
+            "flex h-8 items-center gap-1.5 px-1 text-xs transition-colors",
+            active ? "text-primary" : "text-muted-foreground hover:text-foreground",
           )}
         >
-          <motion.span
-            animate={{ rotate: active ? 360 : 0, scale: active ? 1.1 : 1 }}
-            transition={{ type: "spring", stiffness: 260, damping: 25 }}
-            className="flex size-5 items-center justify-center"
-          >
-            <Icon className="size-4" />
-          </motion.span>
-          <AnimatePresence initial={false}>
-            {active ? (
-              <motion.span
-                initial={{ width: 0, opacity: 0 }}
-                animate={{ width: "auto", opacity: 1 }}
-                exit={{ width: 0, opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                className="overflow-hidden whitespace-nowrap text-xs"
-              >
-                {label}
-              </motion.span>
-            ) : null}
-          </AnimatePresence>
+          <Icon className="size-4" />
+          <span>{label}</span>
         </button>
       </TooltipTrigger>
       <TooltipContent side="top">{tooltip}</TooltipContent>
@@ -79,14 +59,6 @@ function ModeToggle({
   );
 }
 
-/** A hairline divider with a soft neon waist, matching the OS chrome. */
-function CustomDivider() {
-  return (
-    <span aria-hidden className="relative mx-1 h-6 w-px">
-      <span className="absolute inset-0 rounded-full bg-gradient-to-t from-transparent via-primary/50 to-transparent" />
-    </span>
-  );
-}
 
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 
