@@ -23,6 +23,7 @@ import {
   Users,
   Plug,
   Search,
+  Sparkles,
   Route as RouteIcon,
   Workflow,
 } from "lucide-react";
@@ -32,6 +33,7 @@ import { TenantSwitcher } from "./tenant-switcher";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useOperatorSession } from "@/hooks/use-operator-session";
 import { getWorkspaceAccessState } from "@/lib/operator-session-gate";
+import { TAXONOMY_GROUPS, type TaxonomyGroupKey } from "@/lib/os-taxonomy";
 import { cn } from "@/lib/utils";
 
 type Workspace = {
