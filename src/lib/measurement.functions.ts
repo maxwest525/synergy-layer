@@ -50,6 +50,30 @@ export type Ga4SnapshotView = {
   collectedAt: string;
 };
 
+export type Ga4ScheduleView = {
+  key: string;
+  name: string;
+  cron: string;
+  enabled: boolean;
+  health: string | null;
+  lastState: string | null;
+  lastRunAt: string | null;
+  lastDurationMs: number | null;
+  nextRunAt: string | null;
+  failureCount: number;
+};
+
+export type Ga4Diagnostics = {
+  endpoint: string;
+  lastSuccessAt: string | null;
+  lastSuccessRowCount: number | null;
+  lastSuccessDurationMs: number | null;
+  lastErrorAt: string | null;
+  lastError: string | null;
+  lastErrorHttpStatus: number | null;
+  schedule: Ga4ScheduleView | null;
+};
+
 export type MeasurementState = {
   isOperator: boolean;
   defaultUrl: string;
@@ -60,7 +84,9 @@ export type MeasurementState = {
     property: string | null;
     connection: Ga4ConnectionState;
     latest: Ga4SnapshotView | null;
+    snapshots: Ga4SnapshotView[];
     runs: MeasurementRunView[];
+    diagnostics: Ga4Diagnostics;
   };
 };
 
@@ -73,7 +99,8 @@ export const getMeasurementState = createServerFn({ method: "POST" })
       await import("./measurement/ga4");
     const tenantId = await requireTenantId(context.supabase);
 
-    const [roles, assets, runs, snapshots, ga4Rows, selectedProperty] = await Promise.all([
+    const [roles, assets, runs, snapshots, ga4Rows, selectedProperty, ga4Schedule] =
+      await Promise.all([
       context.supabase.from("user_roles").select("role").eq("user_id", context.userId),
       context.supabase
         .from("assets")
@@ -106,6 +133,13 @@ export const getMeasurementState = createServerFn({ method: "POST" })
         .eq("tenant_id", tenantId)
         .eq("selected", true)
         .maybeSingle(),
+      context.supabase
+        .from("schedules")
+        .select(
+          "key, name, cron, enabled, health, last_state, last_run_at, last_duration_ms, next_run_at, failure_count",
+        )
+        .eq("key", "ga4-daily-observe")
+        .maybeSingle(),
     ]);
 
     // A failed read must never read as "nothing measured yet".
@@ -116,6 +150,7 @@ export const getMeasurementState = createServerFn({ method: "POST" })
       ["PageSpeed snapshots", snapshots],
       ["GA4 snapshots", ga4Rows],
       ["selected Search Console property", selectedProperty],
+      ["GA4 schedule", ga4Schedule],
     ] as const) {
       if (result.error) throw new Error(`Could not read ${label}: ${result.error.message}`);
     }
@@ -171,6 +206,25 @@ export const getMeasurementState = createServerFn({ method: "POST" })
         row.authenticationSucceeded === true,
     );
 
+    const ga4SnapshotViews: Ga4SnapshotView[] = (ga4Rows.data ?? [])
+      .filter((row) => !ga4Property || row.property === ga4Property)
+      .map((row) => ({
+        id: row.id,
+        property: row.property,
+        startDate: row.start_date,
+        endDate: row.end_date,
+        metrics: (row.metrics ?? {}) as Record<string, Ga4MetricValue>,
+        collectedAt: row.collected_at,
+      }));
+    const ga4Runs = allRuns.filter((row) => row.provider === "ga4");
+    const lastGa4Success = ga4Runs.find((row) => row.status === "succeeded") ?? null;
+    const lastGa4Failure = ga4Runs.find((row) => row.status === "failed") ?? null;
+    const latestMetrics = ga4SnapshotViews[0]?.metrics ?? null;
+    const ga4SuccessRowCount =
+      latestMetrics && typeof latestMetrics["rowCount"] === "number"
+        ? (latestMetrics["rowCount"] as number)
+        : null;
+
     return {
       isOperator: (roles.data ?? []).some((row) => row.role === "admin" || row.role === "operator"),
       defaultUrl: ownedUrls[0] ?? "https://trumoveinc.com",
@@ -195,12 +249,38 @@ export const getMeasurementState = createServerFn({ method: "POST" })
       })),
       ga4: {
         property: ga4Property,
+        diagnostics: {
+          endpoint: ga4Property
+            ? `https://analyticsdata.googleapis.com/v1beta/${ga4Property}:runReport`
+            : "https://analyticsdata.googleapis.com/v1beta/{property}:runReport",
+          lastSuccessAt: ga4Row?.collected_at ?? null,
+          lastSuccessRowCount: ga4SuccessRowCount,
+          lastSuccessDurationMs: lastGa4Success?.durationMs ?? null,
+          lastErrorAt: lastGa4Failure?.startedAt ?? null,
+          lastError: lastGa4Failure?.error ?? null,
+          lastErrorHttpStatus: lastGa4Failure?.httpStatus ?? null,
+          schedule: ga4Schedule.data
+            ? {
+                key: ga4Schedule.data.key,
+                name: ga4Schedule.data.name,
+                cron: ga4Schedule.data.cron,
+                enabled: ga4Schedule.data.enabled,
+                health: ga4Schedule.data.health,
+                lastState: ga4Schedule.data.last_state,
+                lastRunAt: ga4Schedule.data.last_run_at,
+                lastDurationMs: ga4Schedule.data.last_duration_ms,
+                nextRunAt: ga4Schedule.data.next_run_at,
+                failureCount: ga4Schedule.data.failure_count,
+              }
+            : null,
+        },
         connection: describeGa4Connection(
           readGa4EnvPresence(process.env),
           ga4Property,
           Boolean(ga4Row),
           ga4AuthenticationProven,
         ),
+        snapshots: ga4SnapshotViews,
         latest: ga4Row
           ? {
               id: ga4Row.id,
@@ -211,7 +291,7 @@ export const getMeasurementState = createServerFn({ method: "POST" })
               collectedAt: ga4Row.collected_at,
             }
           : null,
-        runs: allRuns.filter((row) => row.provider === "ga4"),
+        runs: ga4Runs,
       },
     };
   });
