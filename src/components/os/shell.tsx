@@ -1,4 +1,4 @@
-import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
+import { Link, useHydrated, useNavigate, useRouterState } from "@tanstack/react-router";
 import {
   Activity,
   Boxes,
@@ -184,6 +184,7 @@ export function Shell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const onAuthRoute = pathname.startsWith("/auth");
+  const hydrated = useHydrated();
   const accessState = getWorkspaceAccessState({
     ready: session.ready,
     signedIn: session.signedIn,
@@ -302,7 +303,9 @@ export function Shell({ children }: { children: ReactNode }) {
             {accessState === "loading" || accessState === "signed-out" ? (
               <div className="rounded-2xl border border-border/60 px-4 py-6" role="status">
                 <p className="text-sm text-muted-foreground">
-                  {accessState === "loading"
+                  {/* Before hydration the browser session is unknown, so the
+                      server and the first client render must say the same thing. */}
+                  {!hydrated || accessState === "loading"
                     ? "Checking operator session…"
                     : "Taking you to sign in…"}
                 </p>
