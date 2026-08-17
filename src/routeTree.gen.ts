@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AgentsRouteImport } from './routes/agents'
+import { Route as ApprovalsRouteImport } from './routes/approvals'
 import { Route as AskRouteImport } from './routes/ask'
 import { Route as AssetsRouteImport } from './routes/assets'
 import { Route as AuthRouteImport } from './routes/auth'
@@ -78,6 +79,11 @@ const IndexRoute = IndexRouteImport.update({
 const AgentsRoute = AgentsRouteImport.update({
   id: '/agents',
   path: '/agents',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApprovalsRoute = ApprovalsRouteImport.update({
+  id: '/approvals',
+  path: '/approvals',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AskRoute = AskRouteImport.update({
@@ -382,6 +388,7 @@ const ApiPublicHooksSchedulerTickRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/agents': typeof AgentsRouteWithChildren
+  '/approvals': typeof ApprovalsRoute
   '/ask': typeof AskRoute
   '/assets': typeof AssetsRouteWithChildren
   '/auth': typeof AuthRouteWithChildren
@@ -443,6 +450,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/approvals': typeof ApprovalsRoute
   '/ask': typeof AskRoute
   '/auth': typeof AuthRouteWithChildren
   '/authority': typeof AuthorityRoute
@@ -498,6 +506,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/agents': typeof AgentsRouteWithChildren
+  '/approvals': typeof ApprovalsRoute
   '/ask': typeof AskRoute
   '/assets': typeof AssetsRouteWithChildren
   '/auth': typeof AuthRouteWithChildren
@@ -562,6 +571,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/agents'
+    | '/approvals'
     | '/ask'
     | '/assets'
     | '/auth'
@@ -623,6 +633,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/approvals'
     | '/ask'
     | '/auth'
     | '/authority'
@@ -677,6 +688,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/agents'
+    | '/approvals'
     | '/ask'
     | '/assets'
     | '/auth'
@@ -740,6 +752,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AgentsRoute: typeof AgentsRouteWithChildren
+  ApprovalsRoute: typeof ApprovalsRoute
   AskRoute: typeof AskRoute
   AssetsRoute: typeof AssetsRouteWithChildren
   AuthRoute: typeof AuthRouteWithChildren
@@ -793,6 +806,13 @@ declare module '@tanstack/react-router' {
       path: '/agents'
       fullPath: '/agents'
       preLoaderRoute: typeof AgentsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/approvals': {
+      id: '/approvals'
+      path: '/approvals'
+      fullPath: '/approvals'
+      preLoaderRoute: typeof ApprovalsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/ask': {
@@ -1343,6 +1363,7 @@ const WorkflowsRouteWithChildren = WorkflowsRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AgentsRoute: AgentsRouteWithChildren,
+  ApprovalsRoute: ApprovalsRoute,
   AskRoute: AskRoute,
   AssetsRoute: AssetsRouteWithChildren,
   AuthRoute: AuthRouteWithChildren,
