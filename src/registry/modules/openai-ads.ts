@@ -103,6 +103,5 @@ export const definition: ModuleDefinition = {
         refusedIdentifiers: ["email", "phone", "phone_sha256", "external_id"],
       },
     },
-
   ],
 };

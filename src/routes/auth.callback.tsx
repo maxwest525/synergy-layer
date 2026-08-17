@@ -87,7 +87,6 @@ function CallbackPage() {
 
   const denied = result.data && !result.data.canOperate;
 
-
   return (
     <div className="mx-auto max-w-md space-y-8">
       <PageHeader
@@ -99,7 +98,6 @@ function CallbackPage() {
             : "Validating your session and checking operator access."
         }
       />
-
 
       <GlassCard glow className="space-y-4 p-5">
         {hasSession === false ? (
@@ -142,7 +140,6 @@ function CallbackPage() {
             </div>
           </>
         ) : null}
-
 
         {result.data?.canOperate ? (
           <p className="text-sm text-primary">

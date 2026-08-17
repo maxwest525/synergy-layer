@@ -12,7 +12,6 @@ import {
   Menu,
   PanelLeftClose,
   PanelLeftOpen,
-
   Radar,
   ListChecks,
   DollarSign,
@@ -54,9 +53,24 @@ const navGroups: readonly WorkspaceGroup[] = [
     title: "Decide",
     items: [
       { to: "/", label: "Action Center", icon: Inbox, hint: "Decide and execute" },
-      { to: "/command-center", label: "Command Center", icon: LayoutDashboard, hint: "System state" },
-      { to: "/recommendations", label: "Recommendations", icon: Lightbulb, hint: "What to do next" },
-      { to: "/changes", label: "Change requests", icon: FileDiff, hint: "Proposed page changes" },
+      {
+        to: "/command-center",
+        label: "Command Center",
+        icon: LayoutDashboard,
+        hint: "System state",
+      },
+      {
+        to: "/recommendations",
+        label: "Recommendations",
+        icon: Lightbulb,
+        hint: "What to do next",
+      },
+      {
+        to: "/changes",
+        label: "Change requests",
+        icon: FileDiff,
+        hint: "Proposed page changes",
+      },
     ],
   },
   {
@@ -201,7 +215,6 @@ function NavList({
   );
 }
 
-
 function BrandMark() {
   return (
     <span className="flex items-center gap-2">
@@ -335,7 +348,6 @@ export function Shell({ children }: { children: ReactNode }) {
             {navCollapsed ? "Account" : accountLabel}
           </Link>
         </nav>
-
 
         <div className="flex min-w-0 flex-1 flex-col">
           <header className="sticky top-0 z-40 flex items-center gap-3 border-b border-border/60 bg-background/90 px-4 py-3 backdrop-blur lg:hidden">

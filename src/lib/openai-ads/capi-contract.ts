@@ -155,8 +155,7 @@ export type NormalizedConversion = {
 };
 
 export type ConversionCheck =
-  | { ok: true; conversion: NormalizedConversion }
-  | { ok: false; rejections: ConversionRejection[] };
+  { ok: true; conversion: NormalizedConversion } | { ok: false; rejections: ConversionRejection[] };
 
 export type ConversionRules = {
   allowedOrigins: readonly string[];
@@ -270,10 +269,7 @@ function checkCustomName(input: ConversionInput): ConversionRejection[] {
  * either the normalized conversion or the exact reasons it was refused.
  */
 export function checkConversion(input: ConversionInput, rules: ConversionRules): ConversionCheck {
-  const rejections: ConversionRejection[] = [
-    ...checkCustomName(input),
-    ...checkDataPairing(input),
-  ];
+  const rejections: ConversionRejection[] = [...checkCustomName(input), ...checkDataPairing(input)];
 
   const timestampProblem = checkTimestamp(input.timestamp_ms, rules.now);
   if (timestampProblem) rejections.push(timestampProblem);

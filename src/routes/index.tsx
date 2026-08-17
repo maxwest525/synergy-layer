@@ -562,11 +562,7 @@ function InboxPage() {
         {lanes.map((lane) => {
           const items = grouped.get(lane.key) ?? [];
           return (
-            <Section
-              key={lane.key}
-              title={lane.label}
-              hint={`${items.length} · ${lane.hint}`}
-            >
+            <Section key={lane.key} title={lane.label} hint={`${items.length} · ${lane.hint}`}>
               {items.length === 0 ? (
                 <EmptyState
                   title="Nothing here"

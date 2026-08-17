@@ -67,7 +67,8 @@ export function retryDelayMs(attempt: number): number {
   return Math.min(2000, 250 * 2 ** Math.max(0, attempt - 1));
 }
 
-const SENSITIVE_KEY = /(email|phone|external_id|oppref|ip_address|user_agent|authorization|key|secret|token)/i;
+const SENSITIVE_KEY =
+  /(email|phone|external_id|oppref|ip_address|user_agent|authorization|key|secret|token)/i;
 
 /**
  * Log-safe view of anything derived from a payload. User identifiers and the ad

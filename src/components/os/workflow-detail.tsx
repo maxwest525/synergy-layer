@@ -10,7 +10,13 @@ import {
 } from "@/components/os/primitives";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 
 export type GraphNode = {
@@ -130,7 +136,11 @@ export function RunControlCard({
               disabled={!canOperate || busy || running || !nextNode}
               onClick={onAdvance}
             >
-              {busy ? "Working" : nextNode?.kind === "approval" ? "Approve and continue" : "Run this step"}
+              {busy
+                ? "Working"
+                : nextNode?.kind === "approval"
+                  ? "Approve and continue"
+                  : "Run this step"}
             </Button>
             <Button variant="outline" disabled={!canOperate || busy} onClick={onCancel}>
               Cancel run
@@ -299,7 +309,9 @@ export function StepDetailPanel({
                     Runs after
                   </p>
                   <p className="mt-1 text-sm text-foreground">
-                    {upstream.length > 0 ? upstream.map(humanize).join(", ") : "Nothing (entry step)"}
+                    {upstream.length > 0
+                      ? upstream.map(humanize).join(", ")
+                      : "Nothing (entry step)"}
                   </p>
                 </div>
                 <div>
@@ -307,7 +319,9 @@ export function StepDetailPanel({
                     Hands off to
                   </p>
                   <p className="mt-1 text-sm text-foreground">
-                    {downstream.length > 0 ? downstream.map(humanize).join(", ") : "Nothing (final step)"}
+                    {downstream.length > 0
+                      ? downstream.map(humanize).join(", ")
+                      : "Nothing (final step)"}
                   </p>
                 </div>
               </div>
@@ -327,9 +341,7 @@ export function StepDetailPanel({
                         started {formatWhen(step.started_at)}
                       </span>
                     </div>
-                    {step.error ? (
-                      <p className="text-sm text-destructive">{step.error}</p>
-                    ) : null}
+                    {step.error ? <p className="text-sm text-destructive">{step.error}</p> : null}
                     {stepInput ? <CodeBlock label="Input" value={stepInput} /> : null}
                     {stepOutput ? <CodeBlock label="Output" value={stepOutput} /> : null}
                     {!stepInput && !stepOutput ? (
@@ -462,7 +474,9 @@ export function RunHistoryTimeline({
         run.state,
         run.trigger_source,
         run.error ?? "",
-        ...run.workflow_steps.map((step) => `${step.node_key} ${step.ref ?? ""} ${step.error ?? ""}`),
+        ...run.workflow_steps.map(
+          (step) => `${step.node_key} ${step.ref ?? ""} ${step.error ?? ""}`,
+        ),
       ]
         .join(" ")
         .toLowerCase();

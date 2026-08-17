@@ -165,9 +165,7 @@ function AgentDetailPage() {
           <GlassCard className="p-5">
             <h2 className="text-sm font-semibold text-foreground">Knowledge access</h2>
             {data.knowledge.length === 0 ? (
-              <EmptyNote className="mt-2">
-                No knowledge collections attached.
-              </EmptyNote>
+              <EmptyNote className="mt-2">No knowledge collections attached.</EmptyNote>
             ) : (
               <ul className="mt-3 flex flex-wrap gap-2">
                 {data.knowledge.map((grant) =>

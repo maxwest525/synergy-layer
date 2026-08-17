@@ -443,7 +443,6 @@ function OpenAiAdsPage() {
       </section>
 
       <section className="space-y-4">
-
         <h2 className="text-sm font-semibold text-foreground">Validation</h2>
         <p className="text-sm text-muted-foreground">{data.validation.reason}</p>
         <ValidationControl available={data.validation.providerValidationAvailable} />

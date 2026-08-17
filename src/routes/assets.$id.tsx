@@ -77,9 +77,7 @@ function AssetDetailPage() {
         <GlassCard className="p-5">
           <h2 className="text-sm font-semibold text-foreground">History</h2>
           {data.activity.length === 0 ? (
-            <EmptyNote className="mt-3">
-              No recorded activity for this asset yet.
-            </EmptyNote>
+            <EmptyNote className="mt-3">No recorded activity for this asset yet.</EmptyNote>
           ) : (
             <ul className="mt-3 space-y-3">
               {data.activity.map((event) => (

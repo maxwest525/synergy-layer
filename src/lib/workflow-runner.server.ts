@@ -28,8 +28,10 @@ export function assertRunnableGraph(graph: WorkflowGraph): void {
   if (graph.nodes.some((node) => node.kind === "agent")) {
     throw new Error("This workflow cannot run because agent runtime is not implemented.");
   }
+  if (graph.nodes.some((node) => node.kind === "approval")) {
+    throw new Error("This workflow cannot run because approval continuation is not implemented.");
+  }
 }
-
 
 /** Topological order of the declarative DAG; cycles are reported, not run. */
 export function orderNodes(graph: WorkflowGraph): WorkflowNode[] {
@@ -77,7 +79,11 @@ export type RunMode = "manual" | "auto";
 function mutatingCapabilityKeys(): Set<string> {
   const keys = new Set<string>();
   for (const capability of allCapabilities()) {
-    if ((capability.operations ?? []).some((operation: { mutates?: boolean }) => operation.mutates === true)) {
+    if (
+      (capability.operations ?? []).some(
+        (operation: { mutates?: boolean }) => operation.mutates === true,
+      )
+    ) {
       keys.add(capability.key);
     }
   }
@@ -258,8 +264,7 @@ export async function advanceRun(
       cursor: outcome.ok ? nextCursor : cursor,
       step_outputs: outputs as never,
       error: outcome.ok ? null : (outcome.error ?? "Step failed"),
-      finished_at:
-        state === "succeeded" || state === "failed" ? finishedAt.toISOString() : null,
+      finished_at: state === "succeeded" || state === "failed" ? finishedAt.toISOString() : null,
       duration_ms: run.started_at
         ? finishedAt.getTime() - new Date(run.started_at).getTime()
         : null,
@@ -383,7 +388,6 @@ export async function runWorkflow(
 
   return { runId: started.runId, state };
 }
-
 
 type NodeOutcome = {
   ok: boolean;

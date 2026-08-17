@@ -151,7 +151,8 @@ export async function deliverConversions(admin: Admin, rawBody: unknown): Promis
     .eq("tenant_id", tenantId)
     .eq("pixel_id", payload.pixel_id)
     .maybeSingle();
-  if (connectionQuery.error) return { ok: false, status: 500, error: "Configuration lookup failed" };
+  if (connectionQuery.error)
+    return { ok: false, status: 500, error: "Configuration lookup failed" };
   if (!connectionQuery.data) {
     return { ok: false, status: 404, error: "No configuration for this pixel" };
   }
@@ -160,7 +161,9 @@ export async function deliverConversions(admin: Admin, rawBody: unknown): Promis
   const apiKey = process.env[connection.secret_name]?.trim();
   const rulesQuery = await admin
     .from("openai_ads_event_rules")
-    .select("event_type, custom_event_name, enabled, browser_enabled, capi_enabled, action_source, success_boundary")
+    .select(
+      "event_type, custom_event_name, enabled, browser_enabled, capi_enabled, action_source, success_boundary",
+    )
     .eq("tenant_id", tenantId);
   if (rulesQuery.error) return { ok: false, status: 500, error: "Event rule lookup failed" };
   const rules = new Map<string, EventRuleRow>();
@@ -194,7 +197,12 @@ export async function deliverConversions(admin: Admin, rawBody: unknown): Promis
       (input.event_type === "custom" ? undefined : rules.get(ruleKey(input.event_type, null)));
     if (!rule || !rule.enabled || !rule.capi_enabled) {
       results.push(
-        result(input, "skipped", "not_configured", "This event is not enabled for server-side sending"),
+        result(
+          input,
+          "skipped",
+          "not_configured",
+          "This event is not enabled for server-side sending",
+        ),
       );
       continue;
     }
@@ -224,7 +232,12 @@ export async function deliverConversions(admin: Admin, rawBody: unknown): Promis
 
     if (!apiKey) {
       results.push(
-        result(input, "skipped", "not_configured", "The provider credential is not present on the server"),
+        result(
+          input,
+          "skipped",
+          "not_configured",
+          "The provider credential is not present on the server",
+        ),
       );
       continue;
     }

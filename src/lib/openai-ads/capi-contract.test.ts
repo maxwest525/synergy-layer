@@ -132,12 +132,14 @@ describe("conversion contract", () => {
   it("rejects raw identifier fields at the schema boundary", () => {
     const raw = { ...lead(), user: { email: "a@b.com" } };
     expect(hasForbiddenUserFields(raw.user)).toContain("email");
-    expect(conversionRequestSchema.safeParse({
-      version: 1,
-      tenant_slug: "trumove",
-      pixel_id: "pixel",
-      conversions: [raw],
-    }).success).toBe(false);
+    expect(
+      conversionRequestSchema.safeParse({
+        version: 1,
+        tenant_slug: "trumove",
+        pixel_id: "pixel",
+        conversions: [raw],
+      }).success,
+    ).toBe(false);
   });
 
   it("rejects a malformed hash", () => {

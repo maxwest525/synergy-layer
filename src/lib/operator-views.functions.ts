@@ -193,7 +193,10 @@ export const listAuthorizedOperators = createServerFn({ method: "GET" }).handler
     ? await ctx.db.from("profiles").select("id, email, display_name").in("id", ids)
     : { data: [], error: null };
   const byId = new Map(
-    (profiles.data ?? []).map((row) => [row.id, row as { email: string | null; display_name: string | null }]),
+    (profiles.data ?? []).map((row) => [
+      row.id,
+      row as { email: string | null; display_name: string | null },
+    ]),
   );
   return {
     operators: members.map((row) => ({

@@ -134,7 +134,8 @@ function WorkflowDetailPage() {
   }, [runs]);
 
   const [inspectedStep, setInspectedStep] = useState<RunStep | null>(null);
-  const panelStep = inspectedStep ?? (selectedKey ? (latestStepFor.get(selectedKey) ?? null) : null);
+  const panelStep =
+    inspectedStep ?? (selectedKey ? (latestStepFor.get(selectedKey) ?? null) : null);
 
   const capability = useMemo(() => {
     if (!selectedNode?.ref || selectedNode.kind !== "capability") return null;
@@ -190,7 +191,6 @@ function WorkflowDetailPage() {
     setSelectedKey(step.node_key);
     setInspectedStep(step);
   };
-
 
   return (
     <div className="space-y-10">
@@ -315,4 +315,3 @@ function WorkflowDetailPage() {
     </div>
   );
 }
-

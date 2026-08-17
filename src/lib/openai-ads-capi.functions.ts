@@ -45,7 +45,9 @@ export const getOpenAiAdsCapiSettings = createServerFn({ method: "POST" })
     ]);
 
     if (connectionQuery.error) {
-      throw new Error(`Could not read the conversions configuration: ${connectionQuery.error.message}`);
+      throw new Error(
+        `Could not read the conversions configuration: ${connectionQuery.error.message}`,
+      );
     }
     if (rulesQuery.error) {
       throw new Error(`Could not read the conversion events: ${rulesQuery.error.message}`);
@@ -79,22 +81,22 @@ export const getOpenAiAdsCapiSettings = createServerFn({ method: "POST" })
         }
       : null;
 
-    const rules: EventRuleView[] = ((rulesQuery.data ?? []) as unknown as Record<string, unknown>[]).map(
-      (entry) => ({
-        id: String(entry["id"]),
-        eventType: String(entry["event_type"]),
-        customEventName: (entry["custom_event_name"] as string | null) || null,
-        enabled: Boolean(entry["enabled"]),
-        browserEnabled: Boolean(entry["browser_enabled"]),
-        capiEnabled: Boolean(entry["capi_enabled"]),
-        actionSource: String(entry["action_source"]),
-        successBoundary: String(entry["success_boundary"] ?? ""),
-        dataShape:
-          OPENAI_ADS_EVENT_DATA_SHAPE[
-            String(entry["event_type"]) as keyof typeof OPENAI_ADS_EVENT_DATA_SHAPE
-          ] ?? "custom",
-      }),
-    );
+    const rules: EventRuleView[] = (
+      (rulesQuery.data ?? []) as unknown as Record<string, unknown>[]
+    ).map((entry) => ({
+      id: String(entry["id"]),
+      eventType: String(entry["event_type"]),
+      customEventName: (entry["custom_event_name"] as string | null) || null,
+      enabled: Boolean(entry["enabled"]),
+      browserEnabled: Boolean(entry["browser_enabled"]),
+      capiEnabled: Boolean(entry["capi_enabled"]),
+      actionSource: String(entry["action_source"]),
+      successBoundary: String(entry["success_boundary"] ?? ""),
+      dataShape:
+        OPENAI_ADS_EVENT_DATA_SHAPE[
+          String(entry["event_type"]) as keyof typeof OPENAI_ADS_EVENT_DATA_SHAPE
+        ] ?? "custom",
+    }));
 
     const deliveries: DeliveryView[] = (
       (deliveriesQuery.data ?? []) as unknown as Record<string, unknown>[]

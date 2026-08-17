@@ -262,9 +262,7 @@ function MeasurementHistory({ measurement }: { measurement: MeasurementView }) {
                   ))}
                 </ul>
               ) : (
-                <EmptyNote className="mt-3">
-                  No provider observations are available yet.
-                </EmptyNote>
+                <EmptyNote className="mt-3">No provider observations are available yet.</EmptyNote>
               )}
             </div>
           );

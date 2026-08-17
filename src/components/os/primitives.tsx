@@ -75,13 +75,7 @@ export function PageHeader({
 }
 
 /** Outer wrapper for every workspace page: one rhythm between page blocks. */
-export function PageStack({
-  children,
-  className,
-}: {
-  children: ReactNode;
-  className?: string;
-}) {
+export function PageStack({ children, className }: { children: ReactNode; className?: string }) {
   return <div className={cn(layout.page, className)}>{children}</div>;
 }
 
@@ -190,7 +184,6 @@ export function TableShell({ className, children }: { className?: string; childr
     </GlassCard>
   );
 }
-
 
 const toneStyles: Record<string, string> = {
   neutral: "text-muted-foreground",
@@ -324,10 +317,7 @@ export function CardGridSkeleton({
     <LoadingFrame label={label}>
       <CardGrid columns={columns}>
         {Array.from({ length: count }).map((_, index) => (
-          <div
-            key={index}
-            className="rounded-2xl border border-border/70 bg-card/40 p-5"
-          >
+          <div key={index} className="rounded-2xl border border-border/70 bg-card/40 p-5">
             <SkeletonLine className="h-3 w-24" />
             <SkeletonLine className="mt-3 h-6 w-32" />
             <SkeletonLine className="mt-3 h-3 w-full" />
