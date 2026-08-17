@@ -138,19 +138,19 @@ function NavList({
                       "flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm transition-colors",
                       active
                         ? "bg-sidebar-accent text-foreground"
-                        : "text-muted-foreground hover:bg-sidebar-accent/50 hover:text-foreground",
+                        : "text-foreground/85 hover:bg-sidebar-accent/50 hover:text-foreground",
                     )}
                   >
                     <workspace.icon
                       aria-hidden
                       className={cn(
                         "size-4 shrink-0",
-                        active ? "text-primary" : "text-muted-foreground/80",
+                        active ? "text-primary" : "text-foreground/70",
                       )}
                     />
                     <span className="min-w-0 flex-1 leading-tight">
                       <span className="block truncate font-medium">{workspace.label}</span>
-                      <span className="block truncate text-xs text-muted-foreground/70">
+                      <span className="block truncate text-xs text-foreground/55">
                         {workspace.hint}
                       </span>
                     </span>
