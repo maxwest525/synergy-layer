@@ -213,7 +213,7 @@ export function PromptInputBox({
               tooltip="Let the agent search the web alongside stored evidence"
               onClick={() => setMode((current) => (current === "search" ? null : "search"))}
             />
-            <CustomDivider />
+            
             <ModeToggle
               active={mode === "think"}
               label="Think"
