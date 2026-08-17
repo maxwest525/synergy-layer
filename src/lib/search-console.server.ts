@@ -796,6 +796,7 @@ export async function collectDaily(client: Client, property: string): Promise<Co
   if (sitemapError) throw new SearchConsoleFailure("persistence", sitemapError.message);
 
   snapshotIds.push(...(await collectDailyTotalsHistory(client, property, reportingDate)));
+  snapshotIds.push(...(await backfillPageQueryGaps(client, property, reportingDate)));
 
   const emptyResult = totals.impressions === 0;
 
