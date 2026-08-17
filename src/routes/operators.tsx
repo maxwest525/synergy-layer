@@ -49,8 +49,8 @@ function OperatorsPage() {
     <PageStack>
       <PageHeader
         eyebrow="System"
-        title="Authorized operators"
-        description="Who holds access to this workspace and what each role is allowed to decide. Approval authority lives here, not in any agent."
+        title="People"
+        description="Who can sign in to this workspace and what each person is allowed to decide. Approval authority lives with people here, never with an agent."
       />
       {rows.length === 0 ? (
         <EmptyState

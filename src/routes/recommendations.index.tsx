@@ -47,9 +47,9 @@ function RecommendationsPage() {
   return (
     <div className="space-y-10">
       <PageHeader
-        eyebrow="What to do next"
-        title="Recommendation Queue"
-        description="Every proposal carries impact, confidence, risk, and reasoning. Nothing is applied without an explicit decision."
+        eyebrow="Decide"
+        title="Observations"
+        description="Things the system noticed while reading your evidence. An observation is not a decision and nothing here touches your site. Anything worth acting on is promoted to the action center."
       />
 
       {data.length === 0 ? (

@@ -5,6 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 
 import {
+  BackLink,
   DetailRow,
   EmptyNote,
   GlassCard,
@@ -194,6 +195,7 @@ function WorkflowDetailPage() {
 
   return (
     <div className="space-y-10">
+      <BackLink to="/workflows">All workflows</BackLink>
       <PageHeader
         eyebrow="Workflow"
         title={workflow.name}

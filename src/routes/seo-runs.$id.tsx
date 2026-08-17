@@ -3,6 +3,7 @@ import { Link, createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 
 import {
+  BackLink,
   EmptyNote,
   formatWhen,
   GlassCard,
@@ -69,6 +70,7 @@ function SeoRunDetailPage() {
 
   return (
     <div className="space-y-10">
+      <BackLink to="/seo-runs">All SEO runs</BackLink>
       <PageHeader
         eyebrow="Governed SEO run"
         title={run.target_url}

@@ -274,9 +274,9 @@ function MeasurementPage() {
   return (
     <div className="space-y-10">
       <PageHeader
-        eyebrow="Measurement"
-        title="Page speed and analytics"
-        description="Run one real PageSpeed check on an owned page and read what the provider actually returned. Analytics stays honest about whether it is connected."
+        eyebrow="Evidence"
+        title="Site health"
+        description="Speed, indexing, and traffic evidence for pages you own. Every number here came back from a real provider response, and analytics stays honest about whether it is connected."
       />
 
       <GlassCard className="p-5">

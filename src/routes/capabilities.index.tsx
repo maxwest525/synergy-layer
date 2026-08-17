@@ -65,7 +65,7 @@ function CapabilitiesPage() {
     <div className="space-y-10">
       <PageHeader
         eyebrow="What the OS can do"
-        title="Capability Registry"
+        title="Capabilities"
         description="MCPs, APIs, connectors, skills, models, repositories, and internal modules. Integration state is never assumed."
         actions={
           <>

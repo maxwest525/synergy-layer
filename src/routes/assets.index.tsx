@@ -47,7 +47,7 @@ function AssetsPage() {
       <PageHeader
         eyebrow="Ownership"
         title="Assets"
-        description="Sites, landing pages, ad accounts, repositories, backends, datasets, and collections — with owner, health, and last touch."
+        description="Everything we own or operate: sites, landing pages, ad accounts, repositories, backends, datasets, and collections, with owner, health, and last touch."
       />
 
       {data.length === 0 ? (

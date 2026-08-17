@@ -61,8 +61,8 @@ function SchedulerPage() {
   return (
     <div className="space-y-10">
       <PageHeader
-        eyebrow="When work runs"
-        title="Scheduler"
+        eyebrow="Run work"
+        title="Schedule"
         description="Recurring work with explicit dependencies, so chained workflows run in order instead of as isolated jobs."
         actions={
           <Button variant="outline" onClick={() => mutation.mutate()} disabled={mutation.isPending}>

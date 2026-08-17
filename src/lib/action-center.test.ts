@@ -18,10 +18,11 @@ const change = {
 describe("Action Center change request lifecycle", () => {
   it("renders only the three truthful action lanes", () => {
     expect(ACTION_CENTER_PRESENTATION_LANES.map((lane) => lane.key)).toEqual([
-      "needs_attention",
       "pending_approval",
       "in_progress",
+      "needs_attention",
     ]);
+
   });
 
   it("keeps a legacy completed approval visible until execution is finished", () => {

@@ -3,6 +3,7 @@ import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 
 import { OperatorRouteError } from "@/components/os/route-error";
 import {
+  BackLink,
   DetailRow,
   GlassCard,
   PageHeader,
@@ -54,6 +55,7 @@ function ScheduleDetailPage() {
 
   return (
     <div className="space-y-10">
+      <BackLink to="/scheduler">Full schedule</BackLink>
       <PageHeader
         eyebrow="Schedule"
         title={schedule.name}

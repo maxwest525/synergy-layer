@@ -31,12 +31,13 @@ import {
   actionCenterFieldChanges,
   actionCenterLane,
   actionCenterStage,
+  isSystemFailure,
   type ActionCenterLane,
 } from "@/lib/action-center";
 import { approveChangeRequest, rejectChangeRequest } from "@/lib/change-requests.functions";
 import { executeChangeRequest } from "@/lib/execution/execution.functions";
 import { resolveInboxItem } from "@/lib/os-admin.functions";
-import { getInbox } from "@/lib/os.functions";
+import { getInbox, getOverview } from "@/lib/os.functions";
 
 const lanes = ACTION_CENTER_PRESENTATION_LANES;
 
@@ -533,30 +534,75 @@ function InboxPage() {
 
   // One pass over the rows instead of a full-array filter per lane plus a route
   // resolve per card on every render.
-  const { open, grouped } = useMemo(() => {
+  const { open, grouped, failures } = useMemo(() => {
     const buckets = new Map<
       string,
       { item: InboxItem; reviewRoute: InboxRoute | null; lane: ActionCenterLane }[]
     >();
     for (const lane of lanes) buckets.set(lane.key, []);
+    const failed: InboxItem[] = [];
     let openCount = 0;
     for (const item of data) {
+      if (isSystemFailure(item)) {
+        failed.push(item);
+        continue;
+      }
       const lane = actionCenterLane(item.lane, item.changeRequest);
       const bucket = buckets.get(lane);
       if (!bucket) continue;
       openCount += 1;
       bucket.push({ item, reviewRoute: reviewRouteFor(item), lane });
     }
-    return { open: openCount, grouped: buckets };
+    return { open: openCount, grouped: buckets, failures: failed };
   }, [data]);
 
   return (
     <div className="space-y-10">
       <PageHeader
         eyebrow="Operational center"
-        title="Action Center"
-        description={`${open} open actions across every workspace. Each card shows what is being requested and the decisions you can take now.`}
+        title="Action center"
+        description={
+          open === 0
+            ? "Decisions waiting on you. Nothing here happens automatically, and right now nothing needs a decision."
+            : `Decisions waiting on you. ${open} open ${open === 1 ? "item" : "items"}. Nothing here happens automatically.`
+        }
       />
+
+      {failures.length > 0 ? (
+        <Section
+          title="System health"
+          hint={`${failures.length} ${failures.length === 1 ? "problem" : "problems"} · something the OS could not finish`}
+        >
+          <GlassCard className="p-5">
+            <ul className="space-y-3">
+              {failures.map((item) => (
+                <li
+                  key={item.id}
+                  className="flex flex-wrap items-start justify-between gap-3 border-b border-border/50 pb-3 last:border-b-0 last:pb-0"
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-foreground">{item.title}</p>
+                    {item.summary ? (
+                      <p className="text-sm text-muted-foreground">{item.summary}</p>
+                    ) : null}
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {item.source_module} · {formatWhen(item.created_at)}
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={busy}
+                    onClick={() => clear(item.id)}
+                  >
+                    Dismiss
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          </GlassCard>
+        </Section>
+      ) : null}
 
       <div className="space-y-10">
         {lanes.map((lane) => {
@@ -564,10 +610,7 @@ function InboxPage() {
           return (
             <Section key={lane.key} title={lane.label} hint={`${items.length} · ${lane.hint}`}>
               {items.length === 0 ? (
-                <EmptyState
-                  title="Nothing here"
-                  description={`No ${lane.label.toLowerCase()} items right now.`}
-                />
+                <EmptyState title="Nothing here right now" description={lane.hint} />
               ) : (
                 <ul className="space-y-2">
                   {items.map(({ item, reviewRoute, lane: itemLane }) => (
@@ -590,13 +633,104 @@ function InboxPage() {
         })}
       </div>
 
+      <WhereThingsStand />
+    </div>
+  );
+}
+
+/**
+ * An empty decision queue is not an empty system. This strip shows what the OS
+ * has actually collected and where to read it, so a quiet Action Center does
+ * not look like a broken one.
+ */
+function WhereThingsStand() {
+  const session = useOperatorSession();
+  const loadOverview = useServerFn(getOverview);
+  const { data } = useQuery({
+    queryKey: ["overview"],
+    queryFn: () => loadOverview(),
+    enabled: session.signedIn,
+  });
+
+  if (!data?.ready) return null;
+  const evidence = data.evidence;
+
+  const tiles = [
+    {
+      to: "/search",
+      label: "Search results",
+      value: evidence.searchConsoleSnapshots,
+      note: "days of Google Search data collected",
+    },
+    {
+      to: "/keywords",
+      label: "Keywords",
+      value: evidence.trackedKeywords,
+      note: `${evidence.pendingKeywordCandidates} candidates awaiting review`,
+    },
+    {
+      to: "/competitors",
+      label: "Competitors",
+      value: evidence.trackedCompetitors,
+      note: `${evidence.competitorCandidates} candidates awaiting review`,
+    },
+    {
+      to: "/recommendations",
+      label: "Observations",
+      value: data.counts["recommendations"] ?? 0,
+      note: "things the system noticed",
+    },
+    {
+      to: "/workflows",
+      label: "Workflows",
+      value: data.counts["workflows"] ?? 0,
+      note: "automations declared",
+    },
+    {
+      to: "/assets",
+      label: "Assets",
+      value: data.counts["assets"] ?? 0,
+      note: "properties we own",
+    },
+    {
+      to: "/knowledge",
+      label: "Knowledge",
+      value: data.counts["knowledge_entries"] ?? 0,
+      note: "documents the OS can cite",
+    },
+    {
+      to: "/agents",
+      label: "Agents",
+      value: data.counts["agents"] ?? 0,
+      note: "workers available",
+    },
+  ] as const;
+
+  return (
+    <Section
+      title="Where things stand"
+      hint="What the OS has collected. Read-only, nothing to decide here."
+    >
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {tiles.map((tile) => (
+          <Link key={tile.to} to={tile.to} className="block">
+            <GlassCard className="h-full p-4 transition-colors hover:border-primary/40">
+              <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">
+                {tile.label}
+              </p>
+              <p className="mt-1 text-2xl font-semibold text-foreground">{tile.value}</p>
+              <p className="mt-1 text-xs text-muted-foreground">{tile.note}</p>
+            </GlassCard>
+          </Link>
+        ))}
+      </div>
       <p className="text-xs text-muted-foreground">
         Looking for system-wide state? Open the{" "}
         <Link to="/command-center" className="text-primary underline-offset-4 hover:underline">
-          Command Center
+          Overview
         </Link>
         .
       </p>
-    </div>
+    </Section>
   );
 }

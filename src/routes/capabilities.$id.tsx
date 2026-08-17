@@ -2,6 +2,7 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 
 import {
+  BackLink,
   DetailRow,
   EmptyNote,
   formatWhen,
@@ -61,6 +62,7 @@ function CapabilityDetailPage() {
 
   return (
     <div className="space-y-10">
+      <BackLink to="/capabilities">All capabilities</BackLink>
       <PageHeader
         eyebrow={capability.kind.replace(/_/g, " ")}
         title={capability.name}

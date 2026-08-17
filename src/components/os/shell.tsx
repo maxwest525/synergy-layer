@@ -54,33 +54,32 @@ const navGroups: readonly WorkspaceGroup[] = [
     items: [
       { to: "/", label: "Action center", icon: Inbox, hint: "Decisions waiting on you" },
       {
-        to: "/command-center",
-        label: "Overview",
-        icon: LayoutDashboard,
-        hint: "How everything stands",
+        to: "/changes",
+        label: "Page changes",
+        icon: FileDiff,
+        hint: "Edits proposed to the site",
       },
+      { to: "/keywords", label: "Keywords", icon: Tags, hint: "Terms worth winning" },
+      { to: "/competitors", label: "Competitors", icon: Swords, hint: "Who we rank against" },
       {
         to: "/recommendations",
         label: "Observations",
         icon: Lightbulb,
         hint: "Things the system noticed",
       },
-      {
-        to: "/changes",
-        label: "Page changes",
-        icon: FileDiff,
-        hint: "Edits proposed to the site",
-      },
     ],
   },
   {
     title: "Evidence",
     items: [
+      {
+        to: "/command-center",
+        label: "Overview",
+        icon: LayoutDashboard,
+        hint: "How everything stands",
+      },
       { to: "/search", label: "Search results", icon: Search, hint: "What Google reports" },
       { to: "/measurement", label: "Site health", icon: Gauge, hint: "Speed and traffic" },
-      { to: "/assets", label: "Assets", icon: Boxes, hint: "Everything we own" },
-      { to: "/keywords", label: "Keywords", icon: Tags, hint: "Terms worth winning" },
-      { to: "/competitors", label: "Competitors", icon: Swords, hint: "Who we rank against" },
       {
         to: "/ads",
         label: "Competitor ads",
@@ -94,16 +93,17 @@ const navGroups: readonly WorkspaceGroup[] = [
         icon: ListChecks,
         hint: "Covered and missing",
       },
+      { to: "/assets", label: "Assets", icon: Boxes, hint: "Everything we own" },
     ],
   },
   {
     title: "Run work",
     items: [
-      { to: "/openseo", label: "OpenSEO", icon: Radar, hint: "Live SEO tools" },
-      { to: "/seo-runs", label: "SEO runs", icon: RouteIcon, hint: "Governed page changes" },
-      { to: "/openai-ads", label: "OpenAI Ads", icon: Megaphone, hint: "Pixel instrumentation" },
       { to: "/workflows", label: "Workflows", icon: Workflow, hint: "How work runs" },
       { to: "/scheduler", label: "Schedule", icon: CalendarClock, hint: "When work runs" },
+      { to: "/seo-runs", label: "SEO runs", icon: RouteIcon, hint: "Governed page changes" },
+      { to: "/openseo", label: "OpenSEO", icon: Radar, hint: "Live SEO tools" },
+      { to: "/openai-ads", label: "OpenAI Ads", icon: Megaphone, hint: "Pixel instrumentation" },
     ],
   },
   {
@@ -116,6 +116,8 @@ const navGroups: readonly WorkspaceGroup[] = [
       { to: "/operators", label: "People", icon: Users, hint: "Who has access" },
     ],
   },
+] as const;
+
 
 ] as const;
 

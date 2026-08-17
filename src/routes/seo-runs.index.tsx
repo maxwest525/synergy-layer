@@ -121,7 +121,7 @@ function SeoRunsPage() {
     <div className="space-y-10">
       <PageHeader
         eyebrow="Governed search operations"
-        title="SEO Runs"
+        title="SEO runs"
         description="One visible lifecycle from connector preflight and evidence through a concrete proposal, human approval, execution, and measured verification. Approval never means execution."
       />
       <GlassCard className="p-5">

@@ -31,11 +31,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   checkAdsProviderGate,
   decideAdvertiserCandidate,
@@ -95,8 +91,7 @@ function CandidateCard({
             {candidate.advertiserName ?? candidate.advertiserId}
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
-            Found while checking {candidate.domain} · advertiser account{" "}
-            {candidate.advertiserId}
+            Found while checking {candidate.domain} · advertiser account {candidate.advertiserId}
           </p>
         </div>
         <StatePill label={candidate.reviewState} tone={toneForState(candidate.reviewState)} />
@@ -259,7 +254,12 @@ function CompetitorAdsPage() {
         description="Ads your competitors are running right now, read from Google's public ad library. The library itself is free. The service that reads it for us charges one lookup per competitor checked."
         actions={
           <>
-            <Button variant="outline" size="sm" disabled={busy} onClick={() => gateMutation.mutate()}>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={busy}
+              onClick={() => gateMutation.mutate()}
+            >
               Check lookups left (free)
             </Button>
             <AlertDialog>
@@ -397,7 +397,10 @@ function CompetitorAdsPage() {
           <GlassCard className="p-5">
             <div className="divide-y divide-border/50">
               {data.watchlist.map((row) => (
-                <div key={row.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
+                <div
+                  key={row.id}
+                  className="flex flex-wrap items-center justify-between gap-3 py-3"
+                >
                   <div className="min-w-0">
                     <p className="truncate text-sm text-foreground">{row.domain}</p>
                     <p className="text-xs text-muted-foreground">
@@ -452,7 +455,9 @@ function CompetitorAdsPage() {
                 value={account.checkedAt ? formatWhen(account.checkedAt) : "never"}
               />
             </div>
-            {account.error ? <p className="mt-3 text-sm text-destructive">{account.error}</p> : null}
+            {account.error ? (
+              <p className="mt-3 text-sm text-destructive">{account.error}</p>
+            ) : null}
             <div className="mt-4">
               <AlertDialog>
                 <AlertDialogTrigger asChild>
