@@ -103,10 +103,21 @@ export const listAuthorityFindings = createServerFn({ method: "GET" }).handler(a
   };
 });
 
+export type SpendBudget = {
+  periodMonth: string;
+  ceilingUsd: number;
+  spentUsd: number;
+  hardStop: boolean;
+};
+
 export const getProviderSpend = createServerFn({ method: "GET" }).handler(async () => {
   const ctx = await context();
   if (!ctx)
-    return { providers: [] as ProviderSpendRow[], budget: null as null | Record<string, unknown> };
+    return {
+      providers: [] as ProviderSpendRow[],
+      budget: null as SpendBudget | null,
+      serpApiCredits: 0,
+    };
 
   const [dfs, serp, budget] = await Promise.all([
     ctx.db
@@ -154,7 +165,15 @@ export const getProviderSpend = createServerFn({ method: "GET" }).handler(async 
 
   return {
     providers,
-    budget: budget.error ? null : ((budget.data ?? null) as null | Record<string, unknown>),
+    budget:
+      budget.error || !budget.data
+        ? null
+        : ({
+            periodMonth: String(budget.data.period_month),
+            ceilingUsd: Number(budget.data.ceiling_usd ?? 0),
+            spentUsd: Number(budget.data.spent_usd ?? 0),
+            hardStop: Boolean(budget.data.hard_stop),
+          } satisfies SpendBudget),
     serpApiCredits: serpRows.reduce((sum, row) => sum + Number(row.charged_credits ?? 0), 0),
   };
 });
