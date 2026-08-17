@@ -90,28 +90,32 @@ export async function resolveTenantId(
   const cached = resolvedCache.get(db);
   if (cached) return cached;
 
-  const { data: profile } = await db
-    .from("profiles")
-    .select("active_tenant_id")
-    .not("active_tenant_id", "is", null)
-    .limit(1)
-    .maybeSingle();
+  // Resolve all RLS-scoped fallbacks in one network wave. In the normal case
+  // the profile wins; parallel fallbacks prevent an older account without an
+  // active selection from paying two additional serial round trips.
+  const [profileResult, membershipResult, tenantsResult] = await Promise.all([
+    db
+      .from("profiles")
+      .select("active_tenant_id")
+      .not("active_tenant_id", "is", null)
+      .limit(1)
+      .maybeSingle(),
+    db.from("tenant_members").select("tenant_id").limit(1).maybeSingle(),
+    db.from("tenants").select("id").limit(2),
+  ]);
+  const profile = profileResult.data;
   if (profile?.active_tenant_id) {
     resolvedCache.set(db, profile.active_tenant_id);
     return profile.active_tenant_id;
   }
 
-  const { data: membership } = await db
-    .from("tenant_members")
-    .select("tenant_id")
-    .limit(1)
-    .maybeSingle();
+  const membership = membershipResult.data;
   if (membership?.tenant_id) {
     resolvedCache.set(db, membership.tenant_id);
     return membership.tenant_id;
   }
 
-  const { data: tenants } = await db.from("tenants").select("id").limit(2);
+  const tenants = tenantsResult.data;
   if (tenants && tenants.length === 1) {
     resolvedCache.set(db, tenants[0]!.id);
     return tenants[0]!.id;

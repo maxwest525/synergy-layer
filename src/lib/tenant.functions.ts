@@ -8,8 +8,10 @@ export const getTenantContext = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { listTenants, resolveTenantId } = await import("./tenant.server");
-    const tenants = await listTenants(context.supabase);
-    const activeTenantId = await resolveTenantId(context.supabase);
+    const [tenants, activeTenantId] = await Promise.all([
+      listTenants(context.supabase),
+      resolveTenantId(context.supabase),
+    ]);
     return { tenants, activeTenantId };
   });
 
