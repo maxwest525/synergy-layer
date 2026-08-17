@@ -1,4 +1,5 @@
-import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -6,40 +7,33 @@ import { toast } from "sonner";
 import {
   DetailRow,
   EmptyNote,
-  formatWhen,
   GlassCard,
   PageHeader,
   StatePill,
   toneForState,
 } from "@/components/os/primitives";
+import {
+  ApprovalGateCard,
+  humanize,
+  kindLabels,
+  RunHistoryTimeline,
+  StepDetailPanel,
+  type CapabilityMeta,
+  type Graph,
+  type GraphNode,
+  type Run,
+  type RunStep,
+} from "@/components/os/workflow-detail";
 import { Button } from "@/components/ui/button";
+import { useOperatorSession } from "@/hooks/use-operator-session";
+import { getOperatorAccess } from "@/lib/auth.functions";
 import { runWorkflowNow } from "@/lib/os-admin.functions";
-import { getWorkflow } from "@/lib/os.functions";
+import { getCapabilities, getWorkflow } from "@/lib/os.functions";
 
 const workflowQuery = (id: string) => ({
   queryKey: ["workflow", id],
   queryFn: () => getWorkflow({ data: { id } }),
 });
-
-type GraphNode = { key: string; kind: string; ref?: string };
-
-type Graph = {
-  nodes?: GraphNode[];
-  edges?: { from: string; to: string }[];
-};
-
-/** "collect_snapshots" / "dfs.labs" become readable step names. */
-function humanize(value: string) {
-  const words = value.replaceAll(/[._-]+/g, " ").trim();
-  return words.charAt(0).toUpperCase() + words.slice(1);
-}
-
-const kindLabels: Record<string, string> = {
-  capability: "Tool step",
-  agent: "Agent step",
-  approval: "Approval gate",
-  condition: "Condition",
-};
 
 function StepRef({ node }: { node: GraphNode }) {
   if (!node.ref) return null;
@@ -63,7 +57,6 @@ function StepRef({ node }: { node: GraphNode }) {
   }
   return <span className="text-xs text-muted-foreground">{label}</span>;
 }
-
 
 export const Route = createFileRoute("/workflows/$id")({
   // Operator-only workspace: nothing here is public, and rendering it on the
@@ -98,8 +91,46 @@ function WorkflowDetailPage() {
   const { data } = useSuspenseQuery(workflowQuery(id));
   const queryClient = useQueryClient();
   const runNow = useServerFn(runWorkflowNow);
+  const listCapabilities = useServerFn(getCapabilities);
+  const readAccess = useServerFn(getOperatorAccess);
+  const session = useOperatorSession();
   const workflow = data.workflow!;
   const graph = (workflow.graph ?? {}) as Graph;
+  const runs = data.runs as unknown as Run[];
+
+  const capabilitiesQuery = useQuery({
+    queryKey: ["capabilities"],
+    queryFn: () => listCapabilities(),
+    enabled: session.signedIn,
+  });
+  const accessQuery = useQuery({
+    queryKey: ["operator-access"],
+    queryFn: () => readAccess(),
+    enabled: session.signedIn,
+  });
+
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  const selectedNode = (graph.nodes ?? []).find((node) => node.key === selectedKey) ?? null;
+
+  const latestStepFor = useMemo(() => {
+    const map = new Map<string, RunStep>();
+    // Runs arrive newest first, so the first sighting of a node is its latest run.
+    runs.forEach((run) =>
+      run.workflow_steps.forEach((step) => {
+        if (!map.has(step.node_key)) map.set(step.node_key, step);
+      }),
+    );
+    return map;
+  }, [runs]);
+
+  const [inspectedStep, setInspectedStep] = useState<RunStep | null>(null);
+  const panelStep = inspectedStep ?? (selectedKey ? (latestStepFor.get(selectedKey) ?? null) : null);
+
+  const capability = useMemo(() => {
+    if (!selectedNode?.ref || selectedNode.kind !== "capability") return null;
+    const rows = (capabilitiesQuery.data ?? []) as unknown as CapabilityMeta[];
+    return rows.find((row) => row.key === selectedNode.ref) ?? null;
+  }, [capabilitiesQuery.data, selectedNode]);
 
   const mutation = useMutation({
     mutationFn: () => runNow({ data: { workflowId: id } }),
@@ -109,6 +140,14 @@ function WorkflowDetailPage() {
     },
     onError: (error: Error) => toast.error(error.message),
   });
+
+  const canApprove = accessQuery.data?.canOperate ?? false;
+
+  const openStep = (step: RunStep) => {
+    setSelectedKey(step.node_key);
+    setInspectedStep(step);
+  };
+
 
   return (
     <div className="space-y-10">
@@ -162,16 +201,28 @@ function WorkflowDetailPage() {
                   >
                     {index + 1}
                   </span>
-                  <div className="rounded-xl border border-border/60 bg-background/30 px-3 py-2.5 transition-colors hover:border-primary/40">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <span className="text-sm text-foreground">{humanize(node.key)}</span>
-                      <StatePill
-                        label={kindLabels[node.kind] ?? humanize(node.kind)}
-                        tone={node.kind === "approval" ? "warning" : "primary"}
-                      />
-                    </div>
+                  <div className="rounded-xl border border-border/60 bg-background/30 transition-colors hover:border-primary/40">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setInspectedStep(null);
+                        setSelectedKey(node.key);
+                      }}
+                      className="w-full px-3 py-2.5 text-left"
+                    >
+                      <span className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="text-sm text-foreground">{humanize(node.key)}</span>
+                        <StatePill
+                          label={kindLabels[node.kind] ?? humanize(node.kind)}
+                          tone={node.kind === "approval" ? "warning" : "primary"}
+                        />
+                      </span>
+                      <span className="mt-1 block text-xs text-muted-foreground">
+                        Open step details
+                      </span>
+                    </button>
                     {node.ref ? (
-                      <p className="mt-1 text-xs text-muted-foreground">
+                      <p className="px-3 pb-2.5 text-xs text-muted-foreground">
                         Runs <StepRef node={node} />
                       </p>
                     ) : null}
@@ -180,59 +231,30 @@ function WorkflowDetailPage() {
               ))}
             </ol>
           )}
-
         </GlassCard>
 
-        <GlassCard className="p-5">
-          <h2 className="text-sm font-semibold text-foreground">Run history</h2>
-          {data.runs.length === 0 ? (
-            <EmptyNote className="mt-2">No runs recorded yet.</EmptyNote>
-          ) : (
-            <ul className="mt-3 space-y-4">
-              {data.runs.map((run) => (
-                <li
-                  key={run.id}
-                  className="border-b border-border/50 pb-4 last:border-b-0 last:pb-0"
-                >
-                  <div className="flex flex-wrap items-center gap-2">
-                    <StatePill label={run.state} tone={toneForState(run.state)} />
-                    <span className="text-xs text-muted-foreground">
-                      {formatWhen(run.created_at)}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      {run.duration_ms ? `${run.duration_ms} ms` : "in progress"} ·{" "}
-                      {run.trigger_source}
-                    </span>
-                  </div>
-                  {run.error ? <p className="mt-1 text-sm text-destructive">{run.error}</p> : null}
-                  <ul className="mt-2 space-y-1 rounded-xl border border-border/50 bg-background/25 p-2">
-                    {[...run.workflow_steps]
-                      .sort((a, b) => a.sequence - b.sequence)
-                      .map((step) => (
-                        <li
-                          key={step.id}
-                          className="flex items-center justify-between gap-3 rounded-lg px-2 py-1 text-sm"
-                        >
-                          <span className="truncate text-muted-foreground">
-                            <span className="mr-2 text-xs text-primary/70">{step.sequence + 1}</span>
-                            {humanize(step.node_key)}
-                          </span>
-                          <span className="flex shrink-0 items-center gap-2">
-                            <span className="text-xs text-muted-foreground">
-                              {step.duration_ms ? `${step.duration_ms} ms` : "—"}
-                            </span>
-                            <StatePill label={step.state} tone={toneForState(step.state)} />
-                          </span>
-                        </li>
-                      ))}
-                  </ul>
-
-                </li>
-              ))}
-            </ul>
-          )}
-        </GlassCard>
+        <RunHistoryTimeline runs={runs} onInspectStep={openStep} />
       </div>
+
+      <ApprovalGateCard
+        graph={graph}
+        runs={runs}
+        operatorEmail={session.email}
+        canApprove={canApprove}
+      />
+
+      <StepDetailPanel
+        node={selectedNode}
+        step={panelStep}
+        capability={capability}
+        graph={graph}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelectedKey(null);
+            setInspectedStep(null);
+          }
+        }}
+      />
 
       <Link to="/workflows" className="text-sm text-primary underline-offset-4 hover:underline">
         Back to workflows
@@ -240,3 +262,4 @@ function WorkflowDetailPage() {
     </div>
   );
 }
+
