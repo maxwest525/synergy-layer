@@ -68,7 +68,9 @@ export type ActionCenterChange = {
 /**
  * Change requests stay actionable until they are rejected, verified, or rolled
  * back. Stored inbox state is only a fallback because older approvals were
- * incorrectly closed as soon as the operator approved them.
+ * incorrectly closed as soon as the operator approved them. An applied change
+ * is already inside its measurement cycle, so it becomes something to watch
+ * rather than an action.
  */
 export function actionCenterLane(
   storedLane: string,
@@ -77,8 +79,10 @@ export function actionCenterLane(
   if (!change) return isActionCenterLane(storedLane) ? storedLane : "needs_attention";
 
   if (change.state === "proposed") return "pending_approval";
-  if (change.state === "approved" || change.state === "applied") return "in_progress";
+  if (change.state === "approved") return "in_progress";
+  if (change.state === "applied") return "fyi";
   if (["rejected", "verified", "rolled_back"].includes(change.state)) return "completed";
+
   return isActionCenterLane(storedLane) ? storedLane : "needs_attention";
 }
 
