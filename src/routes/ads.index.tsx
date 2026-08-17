@@ -5,16 +5,20 @@ import { useState, type ReactNode } from "react";
 import { toast } from "sonner";
 
 import {
+  CardGrid,
   DetailRow,
   EmptyState,
   formatWhen,
   GlassCard,
   MetricTile,
   PageHeader,
+  PageStack,
+  Section,
   StatePill,
   toneForState,
 } from "@/components/os/primitives";
 import { OperatorRouteError } from "@/components/os/route-error";
+import { RoutePending } from "@/components/os/route-pending";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,6 +31,11 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import {
   checkAdsProviderGate,
   decideAdvertiserCandidate,
@@ -41,54 +50,31 @@ export const Route = createFileRoute("/ads/")({
   // bearer token yields an empty tree the client immediately replaces.
   ssr: false,
   errorComponent: OperatorRouteError,
+  pendingComponent: RoutePending,
   head: () => ({
     meta: [
-      { title: "Google advertiser review — AOOS Marketing Operating System" },
+      { title: "Competitor ads — AOOS Marketing Operating System" },
       {
         name: "description",
         content:
-          "Confirm or reject the Google advertiser accounts observed running ads for watched vendor domains, with provider quota, spend ledger, and stored evidence in view.",
+          "See which competitors are running Google ads right now, what those ads say, and confirm which advertiser accounts belong to which competitor.",
       },
-      {
-        property: "og:title",
-        content: "Google advertiser review — AOOS Marketing Operating System",
-      },
+      { property: "og:title", content: "Competitor ads — AOOS Marketing Operating System" },
       {
         property: "og:description",
-        content:
-          "The human gate between observed Google Ads Transparency evidence and a confirmed advertiser.",
+        content: "Competitor ads observed in Google's public ad library, with what they say.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
+      { name: "robots", content: "noindex" },
     ],
   }),
-  component: AdvertiserReviewPage,
+  component: CompetitorAdsPage,
 });
 
-/** GlassCard with the standard titled chrome this workspace uses throughout. */
-function Section({
-  title,
-  description,
-  children,
-}: {
-  title: string;
-  description: string;
-  children: ReactNode;
-}) {
-  return (
-    <GlassCard className="p-5">
-      <div className="mb-4 space-y-1">
-        <h2 className="text-sm font-semibold tracking-tight text-foreground">{title}</h2>
-        <p className="text-xs leading-relaxed text-muted-foreground">{description}</p>
-      </div>
-      {children}
-    </GlassCard>
-  );
-}
-
 function confidenceLabel(value: number | null): string {
-  if (value === null) return "unscored";
-  return `${Math.round(value * 100)}% match confidence`;
+  if (value === null) return "not scored";
+  return `${Math.round(value * 100)}% likely the same company`;
 }
 
 function CandidateCard({
@@ -109,46 +95,63 @@ function CandidateCard({
             {candidate.advertiserName ?? candidate.advertiserId}
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
-            Advertiser ID {candidate.advertiserId} · observed for {candidate.domain}
+            Found while checking {candidate.domain} · advertiser account{" "}
+            {candidate.advertiserId}
           </p>
         </div>
         <StatePill label={candidate.reviewState} tone={toneForState(candidate.reviewState)} />
       </div>
 
       <div className="mt-3 grid gap-1 text-xs text-muted-foreground sm:grid-cols-2">
-        <DetailRow label="Confidence" value={confidenceLabel(candidate.confidence)} />
-        <DetailRow label="Creatives observed" value={String(candidate.creativesObserved)} />
+        <DetailRow label="Match" value={confidenceLabel(candidate.confidence)} />
+        <DetailRow label="Ads found" value={String(candidate.creativesObserved)} />
         <DetailRow
-          label="Serves the queried domain"
-          value={candidate.servesQueriedDomain ? "yes" : "not observed"}
+          label="Sends traffic to that domain"
+          value={candidate.servesQueriedDomain ? "yes" : "not seen"}
         />
-        <DetailRow label="Observed" value={formatWhen(candidate.createdAt)} />
+        <DetailRow label="Checked" value={formatWhen(candidate.createdAt)} />
         <DetailRow
-          label="Target domains"
+          label="Landing domains"
           value={
-            candidate.targetDomains.length > 0
-              ? candidate.targetDomains.join(", ")
-              : "none recorded"
+            candidate.targetDomains.length > 0 ? candidate.targetDomains.join(", ") : "none seen"
           }
         />
-        <DetailRow label="Funded by" value={candidate.adFundedBy ?? "not reported"} />
+        <DetailRow label="Paid for by" value={candidate.adFundedBy ?? "not disclosed"} />
       </div>
 
       {pending ? (
-        <div className="mt-4 flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" disabled={busy} onClick={() => onDecide("confirm")}>
-            Confirm advertiser
-          </Button>
-          <Button variant="outline" size="sm" disabled={busy} onClick={() => onDecide("reject")}>
-            Reject
-          </Button>
-        </div>
+        <>
+          <p className="mt-3 text-xs text-muted-foreground">
+            Confirming links this advertiser account to the competitor. It does not spend anything
+            and does not change your website.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button variant="outline" size="sm" disabled={busy} onClick={() => onDecide("confirm")}>
+              Yes, this is them
+            </Button>
+            <Button variant="outline" size="sm" disabled={busy} onClick={() => onDecide("reject")}>
+              Not them
+            </Button>
+          </div>
+        </>
       ) : null}
     </div>
   );
 }
 
-function AdvertiserReviewPage() {
+/** Detail an operator rarely needs, kept out of the way but never hidden. */
+function Advanced({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <Collapsible>
+      <CollapsibleTrigger className="text-xs font-medium text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline">
+        {title}
+      </CollapsibleTrigger>
+      <CollapsibleContent className="pt-4">{children}</CollapsibleContent>
+    </Collapsible>
+  );
+}
+
+function CompetitorAdsPage() {
   const loadOverview = useServerFn(getAdsOverview);
   const { data } = useSuspenseQuery({
     queryKey: ["ads-overview"],
@@ -173,10 +176,10 @@ function AdvertiserReviewPage() {
     onSuccess: (status) => {
       if (status.valid) {
         toast.success(
-          `SerpApi reachable on ${status.planName ?? "unnamed plan"} with ${status.searchesLeft ?? "unknown"} searches left.`,
+          `Lookup service reachable on ${status.planName ?? "unnamed plan"} with ${status.searchesLeft ?? "unknown"} lookups left.`,
         );
       } else {
-        toast.error(status.error ?? "SerpApi account check failed.");
+        toast.error(status.error ?? "Lookup service check failed.");
       }
       refresh();
     },
@@ -189,8 +192,8 @@ function AdvertiserReviewPage() {
     onSuccess: (result) => {
       toast.success(
         result.pending === 0
-          ? "Decision recorded. No advertiser candidates remain, so the inbox item is cleared."
-          : `Decision recorded. ${result.pending} candidate${result.pending === 1 ? "" : "s"} still awaiting review.`,
+          ? "Saved. Nothing else is waiting on you here."
+          : `Saved. ${result.pending} more still waiting on you.`,
       );
       refresh();
     },
@@ -201,10 +204,10 @@ function AdvertiserReviewPage() {
     mutationFn: () => canary({ data: { domain: canaryDomain } }),
     onSuccess: (result) => {
       if (!result.ran) {
-        toast.error(result.blocked ?? "The canary did not run.");
+        toast.error(result.blocked ?? "The lookup did not run.");
       } else {
         toast.success(
-          `Canary complete: ${result.chargedCredits} credit charged, ${result.candidatesFiled} candidate${result.candidatesFiled === 1 ? "" : "s"} filed for review.`,
+          `Done: ${result.chargedCredits} lookup used, ${result.candidatesFiled} advertiser${result.candidatesFiled === 1 ? "" : "s"} to review.`,
         );
       }
       refresh();
@@ -212,20 +215,16 @@ function AdvertiserReviewPage() {
     onError: (error: Error) => toast.error(error.message),
   });
 
-  const unresolvedDomains = data.watchlist.filter(
-    (row) => row.active && row.resolutionState === "unresolved",
-  ).length;
-
   const sweepMutation = useMutation({
     mutationFn: () => sweep({ data: { limit: 12 } }),
     onSuccess: (result) => {
       if (result.domainsSearched === 0) {
-        toast.error(result.stoppedEarly ?? "No vendor domain was searched.");
+        toast.error(result.stoppedEarly ?? "No competitor was checked.");
       } else {
         toast.success(
-          `Sweep complete: ${result.domainsSearched} domain${result.domainsSearched === 1 ? "" : "s"} searched, ${result.candidatesFiled} candidate${result.candidatesFiled === 1 ? "" : "s"} filed, ${result.chargedCredits} credit${result.chargedCredits === 1 ? "" : "s"} charged.`,
+          `Checked ${result.domainsSearched} competitor${result.domainsSearched === 1 ? "" : "s"}, found ${result.candidatesFiled} to review, used ${result.chargedCredits} lookup${result.chargedCredits === 1 ? "" : "s"}.`,
         );
-        if (result.stoppedEarly) toast.warning(`Sweep stopped early: ${result.stoppedEarly}`);
+        if (result.stoppedEarly) toast.warning(`Stopped early: ${result.stoppedEarly}`);
       }
       refresh();
     },
@@ -242,134 +241,85 @@ function AdvertiserReviewPage() {
   const decidedCandidates = data.candidates.filter((row) => row.reviewState !== "pending");
   const { account } = data;
 
+  const advertiserById = new Map(data.advertisers.map((row) => [row.id, row]));
+  const creativesByAdvertiser = new Map<string, typeof data.creatives>();
+  for (const creative of data.creatives) {
+    const list = creativesByAdvertiser.get(creative.advertiserFk) ?? [];
+    list.push(creative);
+    creativesByAdvertiser.set(creative.advertiserFk, list);
+  }
+
+  const lookupsLeft = account.searchesLeft;
+
   return (
-    <div className="space-y-10">
+    <PageStack>
       <PageHeader
-        eyebrow="Google Ads Transparency"
-        title="Lead vendor advertiser review"
-        description="Every advertiser account observed in the Google Ads Transparency Center stays a candidate until an operator confirms it. A vendor may run several advertiser accounts, so confirming links rather than replaces."
+        eyebrow="Evidence"
+        title="Competitor ads"
+        description="Ads your competitors are running right now, read from Google's public ad library. The library itself is free. The service that reads it for us charges one lookup per competitor checked."
+        actions={
+          <>
+            <Button variant="outline" size="sm" disabled={busy} onClick={() => gateMutation.mutate()}>
+              Check lookups left (free)
+            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="outline" size="sm" disabled={busy}>
+                  Check all watched competitors
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>This uses one lookup per competitor</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Up to twelve watched competitors are checked, using at most one lookup each. It
+                    only runs while the lookup service is reachable and has lookups left. Anything
+                    found is filed for you to review. Nothing is confirmed automatically and your
+                    website is not touched.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={() => sweepMutation.mutate()}>
+                    Check them now
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </>
+        }
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <MetricTile label="Awaiting decision" value={String(pendingCandidates.length)} />
-        <MetricTile label="Confirmed advertisers" value={String(data.advertisers.length)} />
-        <MetricTile label="Watched vendor domains" value={String(data.watchlist.length)} />
+      <CardGrid columns={4}>
         <MetricTile
-          label="Credits charged"
-          value={String(data.ledger.reduce((sum, row) => sum + row.chargedCredits, 0))}
+          label="Waiting on you"
+          value={pendingCandidates.length}
+          hint="Advertiser accounts to confirm"
         />
-      </div>
+        <MetricTile
+          label="Competitors watched"
+          value={data.watchlist.filter((row) => row.active).length}
+          hint={`${data.watchlist.length} on the list`}
+        />
+        <MetricTile label="Ads collected" value={data.creatives.length} hint="Stored ad copy" />
+        <MetricTile
+          label="Lookups left"
+          value={lookupsLeft === null ? "Unknown" : lookupsLeft}
+          hint={
+            account.configured
+              ? account.valid
+                ? `Plan ${account.planName ?? "unnamed"}`
+                : "Lookup service not reachable"
+              : "Never checked"
+          }
+        />
+      </CardGrid>
 
-      <Section
-        title="Provider account"
-        description="Quota facts only. The API key is never read, returned, or stored."
-      >
-        <div className="grid gap-1 text-sm sm:grid-cols-2">
-          <DetailRow
-            label="Status"
-            value={
-              <StatePill
-                label={
-                  account.configured ? (account.valid ? "reachable" : "unusable") : "unchecked"
-                }
-                tone={account.configured ? (account.valid ? "positive" : "danger") : "neutral"}
-              />
-            }
-          />
-          <DetailRow label="Plan" value={account.planName ?? "unknown"} />
-          <DetailRow
-            label="Searches left"
-            value={account.searchesLeft === null ? "unknown" : String(account.searchesLeft)}
-          />
-          <DetailRow
-            label="Hourly limit"
-            value={account.hourlyLimit === null ? "unknown" : String(account.hourlyLimit)}
-          />
-          <DetailRow
-            label="Used this hour"
-            value={account.thisHourSearches === null ? "unknown" : String(account.thisHourSearches)}
-          />
-          <DetailRow
-            label="Last checked"
-            value={account.checkedAt ? formatWhen(account.checkedAt) : "never"}
-          />
-        </div>
-        {account.error ? <p className="mt-3 text-sm text-destructive">{account.error}</p> : null}
-        <div className="mt-4 flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" disabled={busy} onClick={() => gateMutation.mutate()}>
-            Run free account check
-          </Button>
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="outline" size="sm" disabled={busy}>
-                Run one metered canary for {canaryDomain}
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>This may charge one SerpApi search credit</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Running the canary makes at most one Ads Transparency search for {canaryDomain}.
-                  It may charge one SerpApi search credit against this account, and it only runs
-                  when the account is valid and reports at least ten searches remaining. Any
-                  advertiser it finds is filed as a pending candidate; nothing is confirmed
-                  automatically.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={() => canaryMutation.mutate()}>
-                  Spend one credit and run
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="outline" size="sm" disabled={busy || unresolvedDomains === 0}>
-                Sweep {unresolvedDomains} unresolved vendor domain
-                {unresolvedDomains === 1 ? "" : "s"}
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>
-                  This may charge up to {unresolvedDomains} SerpApi search credits
-                </AlertDialogTitle>
-                <AlertDialogDescription>
-                  The sweep runs one Ads Transparency search per unresolved vendor domain, one at a
-                  time, through the same metered path as the canary. It refuses to start a search
-                  when the account is invalid or below the ten search floor, and it stops at the
-                  first refusal. Every advertiser it finds is filed as a pending candidate; nothing
-                  is confirmed automatically.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={() => sweepMutation.mutate()}>
-                  Spend credits and sweep
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </div>
-
-        <p className="mt-2 text-xs text-muted-foreground">
-          The account check costs nothing. The canary buys at most one search, and only when the
-          account is valid and reports at least ten searches remaining.
-        </p>
-      </Section>
-
-      <Section
-        title={`Candidates awaiting decision (${pendingCandidates.length})`}
-        description="Nothing is auto-confirmed. Each attribution of an advertiser account to a vendor is an operator judgement."
-      >
-        {pendingCandidates.length === 0 ? (
-          <EmptyState
-            title="No advertiser candidate is waiting"
-            description="Run the free account check, then the canary, to collect the first Ads Transparency evidence."
-          />
-        ) : (
+      {pendingCandidates.length > 0 ? (
+        <Section
+          title="Waiting on you"
+          hint="Is this advertiser account the competitor we think it is?"
+        >
           <div className="space-y-3">
             {pendingCandidates.map((candidate) => (
               <CandidateCard
@@ -382,117 +332,201 @@ function AdvertiserReviewPage() {
               />
             ))}
           </div>
-        )}
-      </Section>
-
-      <Section
-        title="Vendor watchlist"
-        description="Watched domains and how far advertiser resolution has progressed."
-      >
-        {data.watchlist.length === 0 ? (
-          <EmptyState
-            title="No watched vendor domains"
-            description="Add vendor domains to begin advertiser resolution."
-          />
-        ) : (
-          <div className="divide-y divide-border/50">
-            {data.watchlist.map((row) => (
-              <div key={row.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
-                <div className="min-w-0">
-                  <p className="truncate text-sm text-foreground">{row.domain}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {row.label ?? "no label"} · {row.linkedAdvertisers} linked advertiser
-                    {row.linkedAdvertisers === 1 ? "" : "s"}
-                    {row.active ? "" : " · inactive"}
-                  </p>
-                </div>
-                <StatePill
-                  label={row.resolutionState.replace(/_/g, " ")}
-                  tone={toneForState(row.resolutionState)}
-                />
-              </div>
-            ))}
-          </div>
-        )}
-      </Section>
-
-      <Section
-        title="Confirmed advertisers"
-        description="Operator-confirmed advertiser accounts and the vendor domains they are linked to."
-      >
-        {data.advertisers.length === 0 ? (
-          <EmptyState
-            title="No confirmed advertiser yet"
-            description="Confirm a candidate above to create the first advertiser record."
-          />
-        ) : (
-          <div className="divide-y divide-border/50">
-            {data.advertisers.map((row) => (
-              <div key={row.id} className="py-3">
-                <p className="text-sm text-foreground">{row.advertiserName ?? row.advertiserId}</p>
-                <p className="text-xs text-muted-foreground">
-                  ID {row.advertiserId} · confirmed {formatWhen(row.confirmedAt)} ·{" "}
-                  {row.linkedDomains.length > 0
-                    ? row.linkedDomains.join(", ")
-                    : (row.vendorDomain ?? "unlinked")}
-                </p>
-              </div>
-            ))}
-          </div>
-        )}
-      </Section>
-
-      <Section
-        title="Provider request ledger"
-        description="Append-only record of every SerpApi call: what was reserved, what was actually charged, and what the provider returned."
-      >
-        {data.ledger.length === 0 ? (
-          <EmptyState
-            title="No provider calls recorded"
-            description="No SerpApi search has been made for this workspace."
-          />
-        ) : (
-          <div className="divide-y divide-border/50">
-            {data.ledger.map((row) => (
-              <div key={row.id} className="flex flex-wrap items-start justify-between gap-3 py-3">
-                <div className="min-w-0">
-                  <p className="truncate text-sm text-foreground">
-                    {row.module} · {row.queryText ?? row.engine}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {formatWhen(row.startedAt)} · reserved {row.reservedCredits} · charged{" "}
-                    {row.chargedCredits}
-                    {row.providerSearchId ? ` · provider ${row.providerSearchId}` : ""}
-                    {row.durationMs === null ? "" : ` · ${row.durationMs} ms`}
-                  </p>
-                  {row.failureReason ? (
-                    <p className="mt-1 text-xs text-destructive">{row.failureReason}</p>
-                  ) : null}
-                </div>
-                <StatePill label={row.state} tone={toneForState(row.state)} />
-              </div>
-            ))}
-          </div>
-        )}
-      </Section>
-
-      {decidedCandidates.length > 0 ? (
-        <Section
-          title="Decided candidates"
-          description="The audit trail of past advertiser attribution decisions."
-        >
-          <div className="space-y-3">
-            {decidedCandidates.map((candidate) => (
-              <CandidateCard
-                key={candidate.id}
-                candidate={candidate}
-                busy={busy}
-                onDecide={() => undefined}
-              />
-            ))}
-          </div>
         </Section>
       ) : null}
-    </div>
+
+      <Section title="What they're running" hint="Ad copy collected from the public ad library">
+        {data.creatives.length === 0 ? (
+          <EmptyState
+            title="No competitor ads collected yet"
+            description="Ads appear here after a competitor is checked and their advertiser account is confirmed. Use Check all watched competitors above to start."
+          />
+        ) : (
+          <div className="space-y-4">
+            {[...creativesByAdvertiser.entries()].map(([advertiserFk, list]) => {
+              const advertiser = advertiserById.get(advertiserFk);
+              return (
+                <GlassCard key={advertiserFk} className="p-5">
+                  <div className="mb-3">
+                    <p className="text-sm font-semibold text-foreground">
+                      {advertiser?.advertiserName ?? "Unlinked advertiser"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {advertiser?.linkedDomains.length
+                        ? advertiser.linkedDomains.join(", ")
+                        : (advertiser?.vendorDomain ?? "no competitor linked yet")}{" "}
+                      · {list.length} ad{list.length === 1 ? "" : "s"}
+                    </p>
+                  </div>
+                  <div className="divide-y divide-border/50">
+                    {list.map((creative) => (
+                      <div key={creative.id} className="py-3">
+                        <p className="text-sm text-foreground">
+                          {creative.headline ?? "No headline recorded"}
+                        </p>
+                        {creative.snippet ? (
+                          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                            {creative.snippet}
+                          </p>
+                        ) : null}
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {creative.format ?? "unknown format"}
+                          {creative.callToAction ? ` · button: ${creative.callToAction}` : ""}
+                          {creative.targetDomain ? ` · sends to ${creative.targetDomain}` : ""}
+                          {creative.lastShown
+                            ? ` · last seen ${formatWhen(creative.lastShown)}`
+                            : ""}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </GlassCard>
+              );
+            })}
+          </div>
+        )}
+      </Section>
+
+      <Section title="Who we're watching" hint="Competitor domains checked for ads">
+        {data.watchlist.length === 0 ? (
+          <EmptyState
+            title="No competitors on the watch list"
+            description="Competitor domains are added from the Competitors workspace, then checked for ads here."
+          />
+        ) : (
+          <GlassCard className="p-5">
+            <div className="divide-y divide-border/50">
+              {data.watchlist.map((row) => (
+                <div key={row.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm text-foreground">{row.domain}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {row.label ?? "no label"} · {row.linkedAdvertisers} confirmed advertiser
+                      {row.linkedAdvertisers === 1 ? "" : "s"}
+                      {row.active ? "" : " · not being checked"}
+                    </p>
+                  </div>
+                  <StatePill
+                    label={row.resolutionState.replace(/_/g, " ")}
+                    tone={toneForState(row.resolutionState)}
+                  />
+                </div>
+              ))}
+            </div>
+          </GlassCard>
+        )}
+      </Section>
+
+      <Section title="Behind the scenes" hint="Only needed when something looks wrong">
+        <GlassCard className="space-y-5 p-5">
+          <Advanced title="Lookup service status">
+            <div className="grid gap-1 text-sm sm:grid-cols-2">
+              <DetailRow
+                label="Status"
+                value={
+                  <StatePill
+                    label={
+                      account.configured ? (account.valid ? "reachable" : "unusable") : "unchecked"
+                    }
+                    tone={account.configured ? (account.valid ? "positive" : "danger") : "neutral"}
+                  />
+                }
+              />
+              <DetailRow label="Plan" value={account.planName ?? "unknown"} />
+              <DetailRow
+                label="Lookups left"
+                value={account.searchesLeft === null ? "unknown" : String(account.searchesLeft)}
+              />
+              <DetailRow
+                label="Hourly limit"
+                value={account.hourlyLimit === null ? "unknown" : String(account.hourlyLimit)}
+              />
+              <DetailRow
+                label="Used this hour"
+                value={
+                  account.thisHourSearches === null ? "unknown" : String(account.thisHourSearches)
+                }
+              />
+              <DetailRow
+                label="Last checked"
+                value={account.checkedAt ? formatWhen(account.checkedAt) : "never"}
+              />
+            </div>
+            {account.error ? <p className="mt-3 text-sm text-destructive">{account.error}</p> : null}
+            <div className="mt-4">
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="outline" size="sm" disabled={busy}>
+                    Test one lookup on {canaryDomain}
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>This uses one lookup</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      One ad library search is made for {canaryDomain}. It only runs when the lookup
+                      service is reachable and reports at least ten lookups remaining. Anything
+                      found is filed for you to review.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => canaryMutation.mutate()}>
+                      Run the test
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
+          </Advanced>
+
+          <Advanced title={`Lookup history (${data.ledger.length})`}>
+            {data.ledger.length === 0 ? (
+              <p className="text-xs text-muted-foreground">No lookup has been made yet.</p>
+            ) : (
+              <div className="divide-y divide-border/50">
+                {data.ledger.map((row) => (
+                  <div
+                    key={row.id}
+                    className="flex flex-wrap items-start justify-between gap-3 py-3"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm text-foreground">
+                        {row.queryText ?? row.engine}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {formatWhen(row.startedAt)} · {row.chargedCredits} lookup used
+                        {row.durationMs === null ? "" : ` · ${row.durationMs} ms`}
+                      </p>
+                      {row.failureReason ? (
+                        <p className="mt-1 text-xs text-destructive">{row.failureReason}</p>
+                      ) : null}
+                    </div>
+                    <StatePill label={row.state} tone={toneForState(row.state)} />
+                  </div>
+                ))}
+              </div>
+            )}
+          </Advanced>
+
+          <Advanced title={`Past decisions (${decidedCandidates.length})`}>
+            {decidedCandidates.length === 0 ? (
+              <p className="text-xs text-muted-foreground">Nothing has been decided yet.</p>
+            ) : (
+              <div className="space-y-3">
+                {decidedCandidates.map((candidate) => (
+                  <CandidateCard
+                    key={candidate.id}
+                    candidate={candidate}
+                    busy={busy}
+                    onDecide={() => undefined}
+                  />
+                ))}
+              </div>
+            )}
+          </Advanced>
+        </GlassCard>
+      </Section>
+    </PageStack>
   );
 }
