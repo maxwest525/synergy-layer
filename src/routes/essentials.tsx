@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import type { ReactNode } from "react";
 
 import { GlassCard, PageHeader, StatePill, formatWhen } from "@/components/os/primitives";
+import { NextBestActions } from "@/components/os/next-best-actions";
 import { OperatorRouteError } from "@/components/os/route-error";
 import {
   COVERAGE_LABELS,
@@ -493,6 +494,7 @@ function EssentialsPage() {
         title="Marketing essentials"
         description="What is covered and what is missing. Every status below comes from evidence AOOS already stored. Configuration is never shown as a connection, and this page only navigates: it never runs a workflow or calls a provider."
       />
+      <NextBestActions tenantId={activeTenantId} />
       <Group title="Search Console" concerns={searchConsole} />
       <Group title="Changes and on-page" concerns={changesAndContent} />
       <Group title="Visibility and keywords" concerns={visibility} />
