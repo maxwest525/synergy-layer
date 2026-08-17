@@ -2,9 +2,10 @@
 // when h3 has already swallowed the throw into a generic 500 Response.
 
 import { isIncomingRequestAbort } from "./http-request-errors";
+import { AsyncLocalStorage } from "node:async_hooks";
 
 type ErrorCaptureState = {
-  lastCapturedError: { error: unknown; at: number } | undefined;
+  capturedErrors: Map<symbol, { error: unknown; at: number }>;
   consoleInstalled?: boolean;
   listenersInstalled?: boolean;
   originalConsoleError?: typeof console.error;
@@ -14,11 +15,18 @@ const errorCaptureKey = Symbol.for("aoos.error-capture");
 const errorCaptureGlobal = globalThis as typeof globalThis & {
   [errorCaptureKey]?: ErrorCaptureState;
 };
-const state = (errorCaptureGlobal[errorCaptureKey] ??= { lastCapturedError: undefined });
+const state = (errorCaptureGlobal[errorCaptureKey] ??= { capturedErrors: new Map() });
+state.capturedErrors ??= new Map();
+const requestScope = new AsyncLocalStorage<symbol>();
 const TTL_MS = 5_000;
 
 function record(error: unknown) {
-  state.lastCapturedError = { error, at: Date.now() };
+  const requestId = requestScope.getStore();
+  if (requestId) state.capturedErrors.set(requestId, { error, at: Date.now() });
+}
+
+export function runWithErrorCapture<T>(operation: () => T): T {
+  return requestScope.run(Symbol("request-error-capture"), operation);
 }
 
 // h3's HTTPError serializes to {"status":500,"unhandled":true,"message":"HTTPError"} —
@@ -92,12 +100,12 @@ if (!state.listenersInstalled && typeof globalThis.addEventListener === "functio
 }
 
 export function consumeLastCapturedError(): unknown {
-  if (!state.lastCapturedError) return undefined;
-  if (Date.now() - state.lastCapturedError.at > TTL_MS) {
-    state.lastCapturedError = undefined;
+  const requestId = requestScope.getStore();
+  if (!requestId) return undefined;
+  const captured = state.capturedErrors.get(requestId);
+  state.capturedErrors.delete(requestId);
+  if (!captured || Date.now() - captured.at > TTL_MS) {
     return undefined;
   }
-  const { error } = state.lastCapturedError;
-  state.lastCapturedError = undefined;
-  return error;
+  return captured.error;
 }
