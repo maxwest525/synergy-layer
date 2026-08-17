@@ -143,25 +143,44 @@ function WorkflowDetailPage() {
             />
           </dl>
 
-          <h3 className="mt-5 text-xs uppercase tracking-[0.14em] text-muted-foreground">Steps</h3>
-          <ol className="mt-2 space-y-2">
-            {(graph.nodes ?? []).map((node, index) => (
-              <li
-                key={node.key}
-                className="flex items-center gap-3 rounded-xl border border-border/60 px-3 py-2"
-              >
-                <span className="text-xs text-muted-foreground">{index + 1}</span>
-                <span className="flex-1 text-sm text-foreground">{node.key}</span>
-                <StatePill
-                  label={node.kind}
-                  tone={node.kind === "approval" ? "warning" : "primary"}
-                />
-                {node.ref ? (
-                  <span className="text-xs text-muted-foreground">{node.ref}</span>
-                ) : null}
-              </li>
-            ))}
-          </ol>
+          <h3 className="mt-5 text-xs uppercase tracking-[0.14em] text-muted-foreground">
+            How this workflow runs
+          </h3>
+          {(graph.nodes ?? []).length === 0 ? (
+            <EmptyNote className="mt-2">No steps are declared for this workflow.</EmptyNote>
+          ) : (
+            <ol className="relative mt-3 space-y-3 pl-7">
+              <span
+                aria-hidden
+                className="absolute left-[13px] top-3 bottom-3 w-px bg-gradient-to-b from-primary/40 via-border to-transparent"
+              />
+              {(graph.nodes ?? []).map((node, index) => (
+                <li key={node.key} className="relative">
+                  <span
+                    aria-hidden
+                    className="absolute -left-7 top-3 flex size-[26px] items-center justify-center rounded-full border border-primary/40 bg-background text-[11px] text-primary"
+                  >
+                    {index + 1}
+                  </span>
+                  <div className="rounded-xl border border-border/60 bg-background/30 px-3 py-2.5 transition-colors hover:border-primary/40">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="text-sm text-foreground">{humanize(node.key)}</span>
+                      <StatePill
+                        label={kindLabels[node.kind] ?? humanize(node.kind)}
+                        tone={node.kind === "approval" ? "warning" : "primary"}
+                      />
+                    </div>
+                    {node.ref ? (
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Runs <StepRef node={node} />
+                      </p>
+                    ) : null}
+                  </div>
+                </li>
+              ))}
+            </ol>
+          )}
+
         </GlassCard>
 
         <GlassCard className="p-5">
