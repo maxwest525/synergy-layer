@@ -30,6 +30,7 @@ import { Route as SchedulerRouteImport } from './routes/scheduler'
 import { Route as SearchRouteImport } from './routes/search'
 import { Route as SeoRunsRouteImport } from './routes/seo-runs'
 import { Route as SpendRouteImport } from './routes/spend'
+import { Route as StudioRouteImport } from './routes/studio'
 import { Route as WorkflowsRouteImport } from './routes/workflows'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
@@ -37,6 +38,7 @@ import { Route as AdsIndexRouteImport } from './routes/ads.index'
 import { Route as AdsAdvertisersRouteImport } from './routes/ads.advertisers'
 import { Route as AgentsIndexRouteImport } from './routes/agents.index'
 import { Route as AgentsIdRouteImport } from './routes/agents.$id'
+import { Route as ApiStudioChatRouteImport } from './routes/api/studio-chat'
 import { Route as AssetsIndexRouteImport } from './routes/assets.index'
 import { Route as AssetsIdRouteImport } from './routes/assets.$id'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
@@ -170,6 +172,11 @@ const SpendRoute = SpendRouteImport.update({
   path: '/spend',
   getParentRoute: () => rootRouteImport,
 } as any)
+const StudioRoute = StudioRouteImport.update({
+  id: '/studio',
+  path: '/studio',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const WorkflowsRoute = WorkflowsRouteImport.update({
   id: '/workflows',
   path: '/workflows',
@@ -206,6 +213,11 @@ const AgentsIdRoute = AgentsIdRouteImport.update({
   id: '/$id',
   path: '/$id',
   getParentRoute: () => AgentsRoute,
+} as any)
+const ApiStudioChatRoute = ApiStudioChatRouteImport.update({
+  id: '/api/studio-chat',
+  path: '/api/studio-chat',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AssetsIndexRoute = AssetsIndexRouteImport.update({
   id: '/',
@@ -371,11 +383,13 @@ export interface FileRoutesByFullPath {
   '/search': typeof SearchRoute
   '/seo-runs': typeof SeoRunsRouteWithChildren
   '/spend': typeof SpendRoute
+  '/studio': typeof StudioRoute
   '/workflows': typeof WorkflowsRouteWithChildren
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/ads/advertisers': typeof AdsAdvertisersRoute
   '/agents/$id': typeof AgentsIdRoute
+  '/api/studio-chat': typeof ApiStudioChatRoute
   '/assets/$id': typeof AssetsIdRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/capabilities/$id': typeof CapabilitiesIdRoute
@@ -421,10 +435,12 @@ export interface FileRoutesByTo {
   '/operators': typeof OperatorsRoute
   '/search': typeof SearchRoute
   '/spend': typeof SpendRoute
+  '/studio': typeof StudioRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/ads/advertisers': typeof AdsAdvertisersRoute
   '/agents/$id': typeof AgentsIdRoute
+  '/api/studio-chat': typeof ApiStudioChatRoute
   '/assets/$id': typeof AssetsIdRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/capabilities/$id': typeof CapabilitiesIdRoute
@@ -477,11 +493,13 @@ export interface FileRoutesById {
   '/search': typeof SearchRoute
   '/seo-runs': typeof SeoRunsRouteWithChildren
   '/spend': typeof SpendRoute
+  '/studio': typeof StudioRoute
   '/workflows': typeof WorkflowsRouteWithChildren
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/ads/advertisers': typeof AdsAdvertisersRoute
   '/agents/$id': typeof AgentsIdRoute
+  '/api/studio-chat': typeof ApiStudioChatRoute
   '/assets/$id': typeof AssetsIdRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/capabilities/$id': typeof CapabilitiesIdRoute
@@ -536,11 +554,13 @@ export interface FileRouteTypes {
     | '/search'
     | '/seo-runs'
     | '/spend'
+    | '/studio'
     | '/workflows'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/ads/advertisers'
     | '/agents/$id'
+    | '/api/studio-chat'
     | '/assets/$id'
     | '/auth/callback'
     | '/capabilities/$id'
@@ -586,10 +606,12 @@ export interface FileRouteTypes {
     | '/operators'
     | '/search'
     | '/spend'
+    | '/studio'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/ads/advertisers'
     | '/agents/$id'
+    | '/api/studio-chat'
     | '/assets/$id'
     | '/auth/callback'
     | '/capabilities/$id'
@@ -641,11 +663,13 @@ export interface FileRouteTypes {
     | '/search'
     | '/seo-runs'
     | '/spend'
+    | '/studio'
     | '/workflows'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/ads/advertisers'
     | '/agents/$id'
+    | '/api/studio-chat'
     | '/assets/$id'
     | '/auth/callback'
     | '/capabilities/$id'
@@ -699,10 +723,12 @@ export interface RootRouteChildren {
   SearchRoute: typeof SearchRoute
   SeoRunsRoute: typeof SeoRunsRouteWithChildren
   SpendRoute: typeof SpendRoute
+  StudioRoute: typeof StudioRoute
   WorkflowsRoute: typeof WorkflowsRouteWithChildren
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   AdsAdvertisersRoute: typeof AdsAdvertisersRoute
+  ApiStudioChatRoute: typeof ApiStudioChatRoute
   ChangesIdRoute: typeof ChangesIdRoute
   AdsIndexRoute: typeof AdsIndexRoute
   ChangesIndexRoute: typeof ChangesIndexRoute
@@ -863,6 +889,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SpendRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/studio': {
+      id: '/studio'
+      path: '/studio'
+      fullPath: '/studio'
+      preLoaderRoute: typeof StudioRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/workflows': {
       id: '/workflows'
       path: '/workflows'
@@ -911,6 +944,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/agents/$id'
       preLoaderRoute: typeof AgentsIdRouteImport
       parentRoute: typeof AgentsRoute
+    }
+    '/api/studio-chat': {
+      id: '/api/studio-chat'
+      path: '/api/studio-chat'
+      fullPath: '/api/studio-chat'
+      preLoaderRoute: typeof ApiStudioChatRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/assets/': {
       id: '/assets/'
@@ -1262,11 +1302,13 @@ const rootRouteChildren: RootRouteChildren = {
   SearchRoute: SearchRoute,
   SeoRunsRoute: SeoRunsRouteWithChildren,
   SpendRoute: SpendRoute,
+  StudioRoute: StudioRoute,
   WorkflowsRoute: WorkflowsRouteWithChildren,
   Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
   AdsAdvertisersRoute: AdsAdvertisersRoute,
+  ApiStudioChatRoute: ApiStudioChatRoute,
   ChangesIdRoute: ChangesIdRoute,
   AdsIndexRoute: AdsIndexRoute,
   ChangesIndexRoute: ChangesIndexRoute,

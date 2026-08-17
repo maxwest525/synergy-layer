@@ -75,7 +75,19 @@ function CompetitorReviewPage() {
   const [selected, setSelected] = useState<string[]>([]);
   const [expanded, setExpanded] = useState<string | null>(null);
 
+  const [filter, setFilter] = useState<"pending" | "approved" | "rejected" | "all">(() =>
+    data.shortlist.some((row) => row.reviewState === "pending") ? "pending" : "all",
+  );
+
   const pending = data.shortlist.filter((row) => row.reviewState === "pending");
+  const counts = {
+    pending: pending.length,
+    approved: data.shortlist.filter((row) => row.reviewState === "approved").length,
+    rejected: data.shortlist.filter((row) => row.reviewState === "rejected").length,
+    all: data.shortlist.length,
+  };
+  const visible =
+    filter === "all" ? data.shortlist : data.shortlist.filter((row) => row.reviewState === filter);
   const allSelected = pending.length > 0 && selected.length === pending.length;
 
   const mutation = useMutation({
@@ -173,8 +185,30 @@ function CompetitorReviewPage() {
             </Button>
           </GlassCard>
 
+          <div className="flex flex-wrap items-center gap-2">
+            {(["pending", "approved", "rejected", "all"] as const).map((key) => (
+              <Button
+                key={key}
+                variant="outline"
+                size="sm"
+                aria-pressed={filter === key}
+                className={filter === key ? "border-primary/60 text-primary" : undefined}
+                onClick={() => setFilter(key)}
+              >
+                {key === "all" ? "All" : key[0]!.toUpperCase() + key.slice(1)} ({counts[key]})
+              </Button>
+            ))}
+          </div>
+
+          {visible.length === 0 ? (
+            <EmptyState
+              title={`No ${filter} competitors`}
+              description="Nothing sits in this state right now. Switch filters above to see the rest of the shortlist."
+            />
+          ) : null}
+
           <ul className="space-y-2">
-            {data.shortlist.map((row) => (
+            {visible.map((row) => (
               <CompetitorRow
                 key={row.id}
                 row={row}

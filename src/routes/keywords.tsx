@@ -17,9 +17,18 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { decideKeywordCandidates, listKeywordCandidates } from "@/lib/keywords.functions";
 
 const candidatesQuery = {
-  queryKey: ["keyword-candidates", "pending"],
-  queryFn: () => listKeywordCandidates({ data: { reviewState: "pending" as const } }),
+  queryKey: ["keyword-candidates", "all"],
+  queryFn: () => listKeywordCandidates({ data: { reviewState: "all" as const } }),
 };
+
+type ReviewFilter = "pending" | "approved" | "rejected" | "all";
+
+const REVIEW_FILTERS: ReadonlyArray<{ key: ReviewFilter; label: string }> = [
+  { key: "pending", label: "Pending" },
+  { key: "approved", label: "Approved" },
+  { key: "rejected", label: "Rejected" },
+  { key: "all", label: "All" },
+];
 
 export const Route = createFileRoute("/keywords")({
   // Operator-only workspace: nothing here is public, and rendering it on the
@@ -64,7 +73,33 @@ function KeywordReviewPage() {
   const decide = useServerFn(decideKeywordCandidates);
   const [selected, setSelected] = useState<string[]>([]);
 
-  const candidates = data.candidates;
+  const allCandidates = data.candidates;
+
+  // The page used to ask only for pending candidates, so an operator who had
+  // already approved everything saw an empty screen with forty approved
+  // keywords hidden one filter away.
+  const counts = useMemo(
+    () => ({
+      pending: allCandidates.filter((row) => row.review_state === "pending").length,
+      approved: allCandidates.filter((row) => row.review_state === "approved").length,
+      rejected: allCandidates.filter((row) => row.review_state === "rejected").length,
+      all: allCandidates.length,
+    }),
+    [allCandidates],
+  );
+
+  const [filter, setFilter] = useState<ReviewFilter>(() =>
+    data.pendingCount > 0 ? "pending" : "all",
+  );
+
+  const candidates = useMemo(
+    () =>
+      filter === "all"
+        ? allCandidates
+        : allCandidates.filter((row) => row.review_state === filter),
+    [allCandidates, filter],
+  );
+
   const allSelected = candidates.length > 0 && selected.length === candidates.length;
 
   const totalVolume = useMemo(
@@ -118,10 +153,36 @@ function KeywordReviewPage() {
         <MetricTile label="Combined monthly volume" value={fmtNumber(totalVolume)} />
       </div>
 
+      <div className="flex flex-wrap items-center gap-2">
+        {REVIEW_FILTERS.map((option) => (
+          <Button
+            key={option.key}
+            variant="outline"
+            size="sm"
+            aria-pressed={filter === option.key}
+            className={filter === option.key ? "border-primary/60 text-primary" : undefined}
+            onClick={() => {
+              setFilter(option.key);
+              setSelected([]);
+            }}
+          >
+            {option.label} ({counts[option.key]})
+          </Button>
+        ))}
+      </div>
+
       {candidates.length === 0 ? (
         <EmptyState
-          title="No pending keyword candidates"
-          description="Every proposed keyword has been reviewed. Run keyword discovery again to propose more."
+          title={
+            counts.all === 0
+              ? "No keyword candidates yet"
+              : `No ${filter === "all" ? "" : filter} keyword candidates`
+          }
+          description={
+            counts.all === 0
+              ? "Keyword discovery has never proposed a candidate for this tenant. Run the DataForSEO Labs discovery workflow to fill this list."
+              : "Nothing sits in this state right now. Switch filters above to see the rest."
+          }
         />
       ) : (
         <>

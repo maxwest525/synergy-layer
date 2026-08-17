@@ -87,9 +87,9 @@ function OpenSeoPage() {
   return (
     <div className="space-y-10">
       <PageHeader
-        eyebrow="Self-hosted SEO runtime"
-        title="OpenSEO"
-        description="The live tool catalog comes from your OpenSEO MCP server each time this workspace loads. Free reads run once. Any operation with a cost, a state change, or uncertain metadata requires a second confirmation."
+        eyebrow="Manual, one-off tool calls"
+        title="SEO tools"
+        description="Distinct from SEO runs, which is the governed change pipeline. This is the manual tool bench. The live tool catalog comes from your OpenSEO MCP server each time this workspace loads. Free reads run once. Any operation with a cost, a state change, or uncertain metadata requires a second confirmation."
       />
 
       <GlassCard className="p-5">
