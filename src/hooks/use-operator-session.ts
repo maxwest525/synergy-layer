@@ -28,6 +28,13 @@ export function useOperatorSession(): OperatorSession {
       apply(session?.user.email ?? null);
     });
 
+    // Auth-state subscriptions report changes, not a guaranteed initial value.
+    // Read the persisted session once so a cold page load cannot remain parked
+    // on "Checking operator session" until another auth event happens.
+    void supabase.auth.getSession().then(({ data }) => {
+      apply(data.session?.user.email ?? null);
+    });
+
     return () => {
       active = false;
       subscription.subscription.unsubscribe();
