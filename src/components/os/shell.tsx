@@ -201,6 +201,17 @@ export function Shell({ children }: { children: ReactNode }) {
   const session = useOperatorSession();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [navCollapsed, setNavCollapsed] = useState<boolean>(false);
+
+  // Remember the operator's rail preference across visits.
+  useEffect(() => {
+    setNavCollapsed(window.localStorage.getItem("aoos.nav.collapsed") === "1");
+  }, []);
+
+  useEffect(() => {
+    window.localStorage.setItem("aoos.nav.collapsed", navCollapsed ? "1" : "0");
+  }, [navCollapsed]);
+
   const onAuthRoute = pathname.startsWith("/auth");
   const hydrated = useHydrated();
   const accessState = getWorkspaceAccessState({
