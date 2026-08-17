@@ -46,7 +46,7 @@ export const getRouter = () => {
   if (typeof window === "undefined") {
     const seen = new Map<string, number>();
     const walk = (r: any, depth: number) => {
-      const key = `${r.id}`;
+      const key = `${depth}:${r.options?.id ?? r.options?.path ?? "root"}`;
       seen.set(key, (seen.get(key) ?? 0) + 1);
       for (const c of (r.children ?? [])) walk(c, depth + 1);
     };
