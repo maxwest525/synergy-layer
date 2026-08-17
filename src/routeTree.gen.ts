@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AgentsRouteImport } from './routes/agents'
 import { Route as AssetsRouteImport } from './routes/assets'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AuthorityRouteImport } from './routes/authority'
 import { Route as CapabilitiesRouteImport } from './routes/capabilities'
 import { Route as CommandCenterRouteImport } from './routes/command-center'
 import { Route as CompetitorsRouteImport } from './routes/competitors'
@@ -79,6 +80,11 @@ const AssetsRoute = AssetsRouteImport.update({
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthorityRoute = AuthorityRouteImport.update({
+  id: '/authority',
+  path: '/authority',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CapabilitiesRoute = CapabilitiesRouteImport.update({
@@ -330,6 +336,7 @@ export interface FileRoutesByFullPath {
   '/agents': typeof AgentsRouteWithChildren
   '/assets': typeof AssetsRouteWithChildren
   '/auth': typeof AuthRouteWithChildren
+  '/authority': typeof AuthorityRoute
   '/capabilities': typeof CapabilitiesRouteWithChildren
   '/command-center': typeof CommandCenterRoute
   '/competitors': typeof CompetitorsRoute
@@ -381,6 +388,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRouteWithChildren
+  '/authority': typeof AuthorityRoute
   '/command-center': typeof CommandCenterRoute
   '/competitors': typeof CompetitorsRoute
   '/essentials': typeof EssentialsRoute
@@ -428,6 +436,7 @@ export interface FileRoutesById {
   '/agents': typeof AgentsRouteWithChildren
   '/assets': typeof AssetsRouteWithChildren
   '/auth': typeof AuthRouteWithChildren
+  '/authority': typeof AuthorityRoute
   '/capabilities': typeof CapabilitiesRouteWithChildren
   '/command-center': typeof CommandCenterRoute
   '/competitors': typeof CompetitorsRoute
@@ -483,6 +492,7 @@ export interface FileRouteTypes {
     | '/agents'
     | '/assets'
     | '/auth'
+    | '/authority'
     | '/capabilities'
     | '/command-center'
     | '/competitors'
@@ -534,6 +544,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/authority'
     | '/command-center'
     | '/competitors'
     | '/essentials'
@@ -580,6 +591,7 @@ export interface FileRouteTypes {
     | '/agents'
     | '/assets'
     | '/auth'
+    | '/authority'
     | '/capabilities'
     | '/command-center'
     | '/competitors'
@@ -634,6 +646,7 @@ export interface RootRouteChildren {
   AgentsRoute: typeof AgentsRouteWithChildren
   AssetsRoute: typeof AssetsRouteWithChildren
   AuthRoute: typeof AuthRouteWithChildren
+  AuthorityRoute: typeof AuthorityRoute
   CapabilitiesRoute: typeof CapabilitiesRouteWithChildren
   CommandCenterRoute: typeof CommandCenterRoute
   CompetitorsRoute: typeof CompetitorsRoute
@@ -690,6 +703,13 @@ declare module '@tanstack/react-router' {
       path: '/auth'
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/authority': {
+      id: '/authority'
+      path: '/authority'
+      fullPath: '/authority'
+      preLoaderRoute: typeof AuthorityRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/capabilities': {
@@ -1165,6 +1185,7 @@ const rootRouteChildren: RootRouteChildren = {
   AgentsRoute: AgentsRouteWithChildren,
   AssetsRoute: AssetsRouteWithChildren,
   AuthRoute: AuthRouteWithChildren,
+  AuthorityRoute: AuthorityRoute,
   CapabilitiesRoute: CapabilitiesRouteWithChildren,
   CommandCenterRoute: CommandCenterRoute,
   CompetitorsRoute: CompetitorsRoute,
