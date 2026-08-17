@@ -66,7 +66,16 @@ export default defineConfig({
       // `getRequestHeader` to undefined and crashes every authenticated server
       // function. Loading them from source keeps the exports live.
       optimizeDeps: {
-        exclude: ["@tanstack/react-start", "@tanstack/react-start/server"],
+        exclude: [
+          "@tanstack/react-start",
+          "@tanstack/react-start/server",
+          // `@tanstack/react-start/server` is only a two-hop `export *` chain.
+          // If either hop is prebundled while the other is loaded from source,
+          // the re-exported helpers resolve to undefined and every
+          // authenticated server function dies on `getRequestHeader`.
+          "@tanstack/react-start-server",
+          "@tanstack/start-server-core",
+        ],
       },
     },
   },
