@@ -82,7 +82,7 @@ const navGroups: readonly WorkspaceGroup[] = [
       { to: "/keywords", label: "Keywords", icon: Tags, hint: "Candidates and approvals" },
       { to: "/competitors", label: "Competitors", icon: Swords, hint: "Who we rank against" },
       {
-        to: "/ads/advertisers",
+        to: "/ads",
         label: "Ads Transparency",
         icon: KeyRound,
         hint: "Observed advertisers",

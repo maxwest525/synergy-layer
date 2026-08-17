@@ -7,7 +7,7 @@ import { MAX_SEARCHES_PER_RUN, recordSerpApiSpend, serpApiSearch } from "./trans
 type Client = SupabaseClient<Database>;
 
 export const ADVERTISER_MODULE = "ads.advertiser_resolution";
-export const ADVERTISER_REVIEW_HREF = "/ads/advertisers";
+export const ADVERTISER_REVIEW_HREF = "/ads";
 
 type CreativeRow = {
   advertiser_id?: string;
