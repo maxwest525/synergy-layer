@@ -47,8 +47,110 @@ export type Run = {
   duration_ms: number | null;
   trigger_source: string;
   error: string | null;
+  cursor?: number | null;
+  total_steps?: number | null;
+  mode?: string | null;
   workflow_steps: RunStep[];
 };
+
+const ACTIVE_RUN_STATES = new Set(["queued", "running", "awaiting_approval"]);
+
+export function findActiveRun(runs: Run[]): Run | null {
+  return runs.find((run) => ACTIVE_RUN_STATES.has(run.state)) ?? null;
+}
+
+/**
+ * Manual-first run controls. A run sits still at a position; the operator
+ * moves it one step at a time and sees the result before continuing.
+ */
+export function RunControlCard({
+  run,
+  graph,
+  canOperate,
+  busy,
+  onStart,
+  onAdvance,
+  onCancel,
+}: {
+  run: Run | null;
+  graph: Graph;
+  canOperate: boolean;
+  busy: boolean;
+  onStart: () => void;
+  onAdvance: () => void;
+  onCancel: () => void;
+}) {
+  const nodes = graph.nodes ?? [];
+  const cursor = run?.cursor ?? 0;
+  const total = run?.total_steps ?? nodes.length;
+  const nextNode = run ? (nodes[cursor] ?? null) : null;
+  const running = run?.state === "running";
+
+  return (
+    <GlassCard className="p-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="text-sm font-semibold text-foreground">Run controls</h2>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {run
+              ? `Step ${Math.min(cursor + 1, Math.max(total, 1))} of ${total || nodes.length}. Nothing runs until you press it.`
+              : "No run is open. Starting one parks it before the first step."}
+          </p>
+        </div>
+        {run ? <StatePill label={run.state} tone={toneForState(run.state)} /> : null}
+      </div>
+
+      {run ? (
+        <div className="mt-4 space-y-3">
+          <div className="h-1.5 w-full overflow-hidden rounded-full bg-border/50">
+            <div
+              className="h-full rounded-full bg-primary/70 transition-all"
+              style={{ width: `${total > 0 ? Math.round((cursor / total) * 100) : 0}%` }}
+            />
+          </div>
+          <p className="text-sm text-foreground">
+            {nextNode
+              ? `Next: ${humanize(nextNode.key)}`
+              : "Every step in this run has been completed."}
+          </p>
+          {nextNode?.kind === "approval" ? (
+            <p className="text-xs text-amber-300/90">
+              This is a decision point. Advancing it records your approval and continues the same
+              run.
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+
+      <div className="mt-4 flex flex-wrap gap-2">
+        {run ? (
+          <>
+            <Button
+              variant="outline"
+              disabled={!canOperate || busy || running || !nextNode}
+              onClick={onAdvance}
+            >
+              {busy ? "Working" : nextNode?.kind === "approval" ? "Approve and continue" : "Run this step"}
+            </Button>
+            <Button variant="outline" disabled={!canOperate || busy} onClick={onCancel}>
+              Cancel run
+            </Button>
+          </>
+        ) : (
+          <Button variant="outline" disabled={!canOperate || busy} onClick={onStart}>
+            {busy ? "Starting" : "Start a step-by-step run"}
+          </Button>
+        )}
+      </div>
+
+      {!canOperate ? (
+        <p className="mt-3 text-xs text-muted-foreground">
+          You are signed in read only, so run controls are disabled.
+        </p>
+      ) : null}
+    </GlassCard>
+  );
+}
 
 export type CapabilityMeta = {
   key: string;
