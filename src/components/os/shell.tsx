@@ -61,7 +61,7 @@ const workspaces: readonly Workspace[] = [
   { to: "/recommendations", label: "Observations", icon: Lightbulb, hint: "Things the system noticed", group: "decisions" },
   { to: "/studio", label: "Studio", icon: BrainCircuit, hint: "Think out loud, no tools", group: "decisions" },
 
-  { to: "/command-center", label: "Overview", icon: LayoutDashboard, hint: "How everything stands", group: "evidence" },
+  { to: "/command-center", label: "Evidence", icon: LayoutDashboard, hint: "Every stored fact, by source", group: "evidence" },
   { to: "/search", label: "Search results", icon: Search, hint: "What Google reports", group: "evidence" },
   { to: "/measurement", label: "Site health", icon: Gauge, hint: "Speed and traffic", group: "evidence" },
   { to: "/ads", label: "Competitor ads", icon: KeyRound, hint: "Ads they are running now", group: "evidence" },
@@ -69,14 +69,14 @@ const workspaces: readonly Workspace[] = [
   { to: "/assets", label: "Assets", icon: Boxes, hint: "Everything we own", group: "evidence" },
   { to: "/knowledge", label: "Knowledge", icon: Radar, hint: "What the OS knows", group: "evidence" },
 
-  { to: "/workflows", label: "Workflows", icon: Workflow, hint: "How work runs", group: "run_work" },
+  { to: "/workflows", label: "Work", icon: Workflow, hint: "Runs, schedules, executions", group: "run_work" },
   { to: "/scheduler", label: "Schedule", icon: CalendarClock, hint: "When work runs", group: "run_work" },
   { to: "/seo-runs", label: "SEO runs", icon: RouteIcon, hint: "Governed page changes", group: "run_work" },
   { to: "/openseo", label: "SEO tools", icon: Radar, hint: "Manual, one-off tool calls", group: "run_work" },
   { to: "/openai-ads", label: "OpenAI Ads", icon: Megaphone, hint: "Pixel instrumentation", group: "run_work" },
   { to: "/agents", label: "Agents", icon: Activity, hint: "Who does the work", group: "run_work" },
 
-  { to: "/capabilities", label: "Capabilities", icon: Plug, hint: "What the OS can do", group: "system_health" },
+  { to: "/capabilities", label: "Setup", icon: Plug, hint: "Connections, costs, access", group: "system_health" },
   { to: "/spend", label: "Data costs", icon: DollarSign, hint: "What data sources cost", group: "system_health" },
   { to: "/operators", label: "People", icon: Users, hint: "Who has access", group: "system_health" },
 ] as const;
