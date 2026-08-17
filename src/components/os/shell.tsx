@@ -129,7 +129,7 @@ const navSections: readonly NavSection[] = [
   },
   {
     primary: workspaceAt("/workflows"),
-    children: workspacesAt(["/scheduler", "/seo-runs", "/openseo", "/openai-ads", "/agents"]),
+    children: workspacesAt(["/activity", "/scheduler", "/seo-runs", "/openseo", "/openai-ads", "/agents"]),
   },
   {
     primary: workspaceAt("/capabilities"),
