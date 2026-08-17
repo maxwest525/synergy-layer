@@ -4369,6 +4369,72 @@ export type Database = {
           },
         ]
       }
+      umami_snapshots: {
+        Row: {
+          base_url: string
+          collected_at: string
+          id: string
+          metric: string
+          payload: Json
+          period_end: string
+          period_start: string
+          provenance: Json
+          returned_row_count: number
+          run_id: string | null
+          tenant_id: string
+          totals: Json
+          website_id: string
+          website_name: string | null
+        }
+        Insert: {
+          base_url: string
+          collected_at?: string
+          id?: string
+          metric: string
+          payload?: Json
+          period_end: string
+          period_start: string
+          provenance?: Json
+          returned_row_count?: number
+          run_id?: string | null
+          tenant_id: string
+          totals?: Json
+          website_id: string
+          website_name?: string | null
+        }
+        Update: {
+          base_url?: string
+          collected_at?: string
+          id?: string
+          metric?: string
+          payload?: Json
+          period_end?: string
+          period_start?: string
+          provenance?: Json
+          returned_row_count?: number
+          run_id?: string | null
+          tenant_id?: string
+          totals?: Json
+          website_id?: string
+          website_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "umami_snapshots_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "measurement_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "umami_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
