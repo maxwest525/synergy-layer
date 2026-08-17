@@ -27,10 +27,8 @@ export function assertRunnableGraph(graph: WorkflowGraph): void {
   if (graph.nodes.some((node) => node.kind === "agent")) {
     throw new Error("This workflow cannot run because agent runtime is not implemented.");
   }
-  if (graph.nodes.some((node) => node.kind === "approval")) {
-    throw new Error("This workflow cannot run because approval continuation is not implemented.");
-  }
 }
+
 
 /** Topological order of the declarative DAG; cycles are reported, not run. */
 export function orderNodes(graph: WorkflowGraph): WorkflowNode[] {
