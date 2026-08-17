@@ -235,7 +235,7 @@ export function Shell({ children }: { children: ReactNode }) {
       <div className="relative flex min-h-screen w-full">
         <nav
           aria-label="Workspaces"
-          className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col overflow-y-auto border-r border-border/60 bg-sidebar/70 px-4 py-5 backdrop-blur-xl lg:flex"
+          className="scrollbar-none sticky top-0 hidden h-screen w-80 shrink-0 flex-col overflow-y-auto border-r border-border/60 bg-sidebar/70 px-4 py-5 backdrop-blur-xl lg:flex"
         >
           <Link to="/" className="mb-5 block px-2.5">
             <BrandMark />
