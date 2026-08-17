@@ -65,9 +65,302 @@ type RunResult = {
   state: Database["public"]["Enums"]["run_state"];
 };
 
+export type RunMode = "manual" | "auto";
+
 /**
- * Executes a workflow graph node by node, recording one step row per node.
- * Approval nodes park the run and file a pending-approval Inbox item.
+ * Capability keys that declare at least one mutating operation in the
+ * registry. A run never advances into one of these on its own: an operator
+ * presses the step. Read-only steps are cheap and reversible, mutating steps
+ * are not.
+ */
+function mutatingCapabilityKeys(): Set<string> {
+  const keys = new Set<string>();
+  for (const capability of allCapabilities()) {
+    if ((capability.operations ?? []).some((operation) => operation.mutates === true)) {
+      keys.add(capability.key);
+    }
+  }
+  return keys;
+}
+
+/** True when this step changes something outside AOOS, or needs a decision. */
+export function isManualOnlyNode(node: WorkflowNode, mutating = mutatingCapabilityKeys()): boolean {
+  if (node.kind === "approval") return true;
+  if (node.kind === "capability") return mutating.has(node.ref ?? "");
+  return false;
+}
+
+async function loadWorkflowGraph(client: Client, workflowId: string) {
+  const { data: workflow, error } = await client
+    .from("workflows")
+    .select("*")
+    .eq("id", workflowId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!workflow) throw new Error("Workflow not found");
+  const graph = parseGraph(workflow.graph);
+  assertRunnableGraph(graph);
+  return { workflow, ordered: orderNodes(graph) };
+}
+
+/**
+ * Creates a run parked before its first step. Nothing executes here: a run is
+ * a stored position plus the outputs collected so far, and it only moves when
+ * something advances it.
+ */
+export async function startRun(
+  client: Client,
+  workflowId: string,
+  triggerSource: string,
+  actorId: string | null,
+  mode: RunMode = "manual",
+): Promise<RunResult> {
+  const { workflow, ordered } = await loadWorkflowGraph(client, workflowId);
+  const tenantId = await requireTenantId(client);
+
+  const { data: run, error } = await client
+    .from("workflow_runs")
+    .insert({
+      tenant_id: tenantId,
+      workflow_id: workflowId,
+      state: ordered.length === 0 ? "succeeded" : "queued",
+      trigger_source: triggerSource,
+      mode,
+      cursor: 0,
+      total_steps: ordered.length,
+      step_outputs: {},
+    })
+    .select("id, state")
+    .single();
+  if (error) throw new Error(error.message);
+
+  await logActivity(client, {
+    actorKind: actorId ? "user" : "system",
+    actorId,
+    verb: "run.started",
+    subjectKind: "workflow",
+    subjectId: workflowId,
+    summary: `${workflow.name} run created with ${ordered.length} steps waiting.`,
+    payload: { runId: run.id, triggerSource, mode },
+  });
+
+  if (ordered.length > 0 && ordered[0]!.kind === "approval") {
+    await parkForApproval(client, workflow, run.id, ordered[0]!);
+  }
+
+  return { runId: run.id, state: run.state };
+}
+
+async function parkForApproval(
+  client: Client,
+  workflow: { id: string; name: string },
+  runId: string,
+  node: WorkflowNode,
+) {
+  await client.from("workflow_runs").update({ state: "awaiting_approval" }).eq("id", runId);
+  await fileInboxItem(client, {
+    lane: "pending_approval",
+    sourceModule: "workflows",
+    title: `Approval required: ${workflow.name}`,
+    summary: `The run is parked at "${node.key}". Approving it continues the same run from this point.`,
+    priority: 1,
+    subjectKind: "workflow_run",
+    subjectId: runId,
+    actions: [{ kind: "open", href: `/workflows/${workflow.id}` }],
+  });
+}
+
+/**
+ * Advances a run by exactly one step. The claim is single-flight, so two
+ * presses or a press racing the scheduler cannot execute the same step twice.
+ */
+export async function advanceRun(
+  client: Client,
+  runId: string,
+  actorId: string | null,
+): Promise<RunResult & { stepKey: string | null; stepState: string | null }> {
+  const { data: claim, error: claimError } = await client.rpc("claim_workflow_run_step", {
+    p_run_id: runId,
+    p_actor: actorId,
+  });
+  if (claimError) throw new Error(claimError.message);
+  const claimed = Array.isArray(claim) ? claim[0] : claim;
+  if (!claimed) throw new Error("Run could not be claimed.");
+  const cursor = claimed.step_cursor as number;
+
+  const { data: run, error: runError } = await client
+    .from("workflow_runs")
+    .select("*")
+    .eq("id", runId)
+    .single();
+  if (runError) throw new Error(runError.message);
+
+  const { workflow, ordered } = await loadWorkflowGraph(client, run.workflow_id);
+  const node = ordered[cursor];
+  if (!node) throw new Error("Run position no longer matches the workflow definition.");
+
+  const tenantId = await requireTenantId(client);
+  const stepStart = Date.now();
+  const { data: step, error: stepError } = await client
+    .from("workflow_steps")
+    .insert({
+      tenant_id: tenantId,
+      run_id: runId,
+      node_key: node.key,
+      node_kind: node.kind,
+      ref: node.ref ?? null,
+      sequence: cursor,
+      state: "running",
+      started_at: new Date().toISOString(),
+      input: (node.inputs ?? {}) as never,
+    })
+    .select("id")
+    .single();
+  if (stepError) throw new Error(stepError.message);
+
+  const outcome: NodeOutcome =
+    node.kind === "approval"
+      ? {
+          ok: actorId !== null,
+          output: { decision: "approved", decidedBy: actorId },
+          error: actorId === null ? "An approval step needs a person to decide it." : undefined,
+        }
+      : await executeNode(client, node, runId);
+
+  await client
+    .from("workflow_steps")
+    .update({
+      state: outcome.ok ? "succeeded" : "failed",
+      output: (outcome.output ?? {}) as never,
+      error: outcome.error ?? null,
+      finished_at: new Date().toISOString(),
+      duration_ms: Date.now() - stepStart,
+    })
+    .eq("id", step.id);
+
+  const nextCursor = cursor + 1;
+  const outputs = {
+    ...((run.step_outputs ?? {}) as Record<string, unknown>),
+    [node.key]: outcome.output ?? {},
+  };
+  const nextNode = ordered[nextCursor];
+
+  let state: Database["public"]["Enums"]["run_state"];
+  if (!outcome.ok) state = "failed";
+  else if (!nextNode) state = "succeeded";
+  else if (nextNode.kind === "approval") state = "awaiting_approval";
+  else state = "queued";
+
+  const finishedAt = new Date();
+  await client
+    .from("workflow_runs")
+    .update({
+      state,
+      cursor: outcome.ok ? nextCursor : cursor,
+      step_outputs: outputs as never,
+      error: outcome.ok ? null : (outcome.error ?? "Step failed"),
+      finished_at:
+        state === "succeeded" || state === "failed" ? finishedAt.toISOString() : null,
+      duration_ms: run.started_at
+        ? finishedAt.getTime() - new Date(run.started_at).getTime()
+        : null,
+      last_advanced_at: finishedAt.toISOString(),
+      last_advanced_by: actorId,
+    })
+    .eq("id", runId);
+
+  if (state === "awaiting_approval" && nextNode) {
+    await parkForApproval(client, workflow, runId, nextNode);
+  }
+
+  if (state === "succeeded" || state === "failed") {
+    await client
+      .from("workflows")
+      .update({ health: state === "failed" ? "failing" : "healthy" })
+      .eq("id", run.workflow_id);
+
+    await logActivity(client, {
+      actorKind: actorId ? "user" : "system",
+      actorId,
+      verb: `run.${state}`,
+      subjectKind: "workflow",
+      subjectId: run.workflow_id,
+      summary: `${workflow.name} run ${state}.`,
+      payload: { runId, triggerSource: run.trigger_source },
+    });
+  } else {
+    await logActivity(client, {
+      actorKind: actorId ? "user" : "system",
+      actorId,
+      verb: "run.step",
+      subjectKind: "workflow",
+      subjectId: run.workflow_id,
+      summary: `${workflow.name}: step ${cursor + 1} (${node.key}) ${outcome.ok ? "succeeded" : "failed"}.`,
+      payload: { runId, nodeKey: node.key },
+    });
+  }
+
+  if (state === "failed") {
+    await fileInboxItem(client, {
+      lane: "needs_attention",
+      sourceModule: "workflows",
+      title: `${workflow.name} failed`,
+      summary: outcome.error ?? "Step failed",
+      priority: 1,
+      subjectKind: "workflow",
+      subjectId: run.workflow_id,
+      actions: [{ kind: "open" }, { kind: "run" }],
+    });
+  }
+
+  return {
+    runId,
+    state,
+    stepKey: node.key,
+    stepState: outcome.ok ? "succeeded" : "failed",
+  };
+}
+
+/** Parks a run permanently, recording who stopped it and when. */
+export async function cancelRun(
+  client: Client,
+  runId: string,
+  actorId: string | null,
+): Promise<RunResult> {
+  const { data: run, error } = await client
+    .from("workflow_runs")
+    .select("id, state, workflow_id")
+    .eq("id", runId)
+    .single();
+  if (error) throw new Error(error.message);
+  if (run.state === "succeeded" || run.state === "failed" || run.state === "cancelled") {
+    throw new Error(`This run is already ${run.state} and cannot be cancelled.`);
+  }
+
+  const now = new Date().toISOString();
+  const { error: updateError } = await client
+    .from("workflow_runs")
+    .update({ state: "cancelled", cancelled_at: now, cancelled_by: actorId, finished_at: now })
+    .eq("id", runId);
+  if (updateError) throw new Error(updateError.message);
+
+  await logActivity(client, {
+    actorKind: actorId ? "user" : "system",
+    actorId,
+    verb: "run.cancelled",
+    subjectKind: "workflow",
+    subjectId: run.workflow_id,
+    summary: "Run cancelled by operator.",
+    payload: { runId },
+  });
+
+  return { runId, state: "cancelled" };
+}
+
+/**
+ * Unattended entry point, used by the scheduler. It advances automatically
+ * while the next step only reads, and parks the moment it reaches a step that
+ * changes something external or needs a decision.
  */
 export async function runWorkflow(
   client: Client,
@@ -75,132 +368,23 @@ export async function runWorkflow(
   triggerSource: string,
   actorId: string | null,
 ): Promise<RunResult> {
-  const { data: workflow, error: workflowError } = await client
-    .from("workflows")
-    .select("*")
-    .eq("id", workflowId)
-    .maybeSingle();
-  if (workflowError) throw new Error(workflowError.message);
-  if (!workflow) throw new Error("Workflow not found");
+  const { ordered } = await loadWorkflowGraph(client, workflowId);
+  const mutating = mutatingCapabilityKeys();
+  const started = await startRun(client, workflowId, triggerSource, actorId, "auto");
 
-  const graph = parseGraph(workflow.graph);
-  assertRunnableGraph(graph);
-  const ordered = orderNodes(graph);
-  const startedAt = new Date();
-
-  const { data: run, error: runError } = await client
-    .from("workflow_runs")
-    .insert({
-      tenant_id: await requireTenantId(client),
-      workflow_id: workflowId,
-      state: "running",
-      trigger_source: triggerSource,
-      started_at: startedAt.toISOString(),
-    })
-    .select("id")
-    .single();
-  if (runError) throw new Error(runError.message);
-
-  let finalState: Database["public"]["Enums"]["run_state"] = "succeeded";
-  let failure: string | null = null;
-
-  for (const [index, node] of ordered.entries()) {
-    const stepStart = Date.now();
-    const { data: step, error: stepError } = await client
-      .from("workflow_steps")
-      .insert({
-        tenant_id: await requireTenantId(client),
-        run_id: run.id,
-        node_key: node.key,
-        node_kind: node.kind,
-        ref: node.ref ?? null,
-        sequence: index,
-        state: "running",
-        started_at: new Date().toISOString(),
-        input: (node.inputs ?? {}) as never,
-      })
-      .select("id")
-      .single();
-    if (stepError) throw new Error(stepError.message);
-
-    if (node.kind === "approval") {
-      await client.from("workflow_steps").update({ state: "awaiting_approval" }).eq("id", step.id);
-      finalState = "awaiting_approval";
-      await fileInboxItem(client, {
-        lane: "pending_approval",
-        sourceModule: "workflows",
-        title: `Approval required: ${workflow.name}`,
-        summary: `Approval continuation is not wired. Open the parent workflow detail to inspect the run parked at "${node.key}".`,
-        priority: 1,
-        subjectKind: "workflow_run",
-        subjectId: run.id,
-        actions: [{ kind: "open", href: `/workflows/${workflowId}` }],
-      });
-      break;
-    }
-
-    const outcome = await executeNode(client, node, run.id);
-    const duration = Date.now() - stepStart;
-
-    await client
-      .from("workflow_steps")
-      .update({
-        state: outcome.ok ? "succeeded" : "failed",
-        output: (outcome.output ?? {}) as never,
-        error: outcome.error ?? null,
-        finished_at: new Date().toISOString(),
-        duration_ms: duration,
-      })
-      .eq("id", step.id);
-
-    if (!outcome.ok) {
-      finalState = "failed";
-      failure = outcome.error ?? "Step failed";
-      break;
-    }
+  let state = started.state;
+  let cursor = 0;
+  while (state === "queued" && cursor < ordered.length) {
+    const node = ordered[cursor]!;
+    if (isManualOnlyNode(node, mutating)) break;
+    const advanced = await advanceRun(client, started.runId, actorId);
+    state = advanced.state;
+    cursor += 1;
   }
 
-  const finishedAt = new Date();
-  await client
-    .from("workflow_runs")
-    .update({
-      state: finalState,
-      error: failure,
-      finished_at: finalState === "awaiting_approval" ? null : finishedAt.toISOString(),
-      duration_ms: finishedAt.getTime() - startedAt.getTime(),
-    })
-    .eq("id", run.id);
-
-  await client
-    .from("workflows")
-    .update({ health: finalState === "failed" ? "failing" : "healthy" })
-    .eq("id", workflowId);
-
-  await logActivity(client, {
-    actorKind: actorId ? "user" : "system",
-    actorId,
-    verb: `run.${finalState}`,
-    subjectKind: "workflow",
-    subjectId: workflowId,
-    summary: `${workflow.name} run ${finalState.replace("_", " ")}.`,
-    payload: { runId: run.id, triggerSource },
-  });
-
-  if (finalState === "failed") {
-    await fileInboxItem(client, {
-      lane: "needs_attention",
-      sourceModule: "workflows",
-      title: `${workflow.name} failed`,
-      summary: failure,
-      priority: 1,
-      subjectKind: "workflow",
-      subjectId: workflowId,
-      actions: [{ kind: "open" }, { kind: "run" }],
-    });
-  }
-
-  return { runId: run.id, state: finalState };
+  return { runId: started.runId, state };
 }
+
 
 type NodeOutcome = {
   ok: boolean;
