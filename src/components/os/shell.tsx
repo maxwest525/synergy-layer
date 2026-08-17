@@ -250,27 +250,59 @@ export function Shell({ children }: { children: ReactNode }) {
       <div className="relative flex min-h-screen w-full">
         <nav
           aria-label="Workspaces"
-          className="scrollbar-none sticky top-0 hidden h-screen w-80 shrink-0 flex-col overflow-y-auto border-r border-border/60 bg-sidebar/70 px-4 py-5 backdrop-blur-xl lg:flex"
+          className={cn(
+            "scrollbar-none sticky top-0 hidden h-screen shrink-0 flex-col overflow-y-auto border-r border-border/60 bg-sidebar/70 py-5 backdrop-blur-xl transition-[width] duration-200 lg:flex",
+            navCollapsed ? "w-[4.5rem] px-2" : "w-72 px-4",
+          )}
         >
-          <Link to="/" className="mb-5 block px-2.5">
-            <BrandMark />
-          </Link>
-
-          <div className="pb-4">
-            <TenantSwitcher session={session} />
+          <div
+            className={cn(
+              "mb-5 flex items-center gap-2",
+              navCollapsed ? "flex-col" : "justify-between px-2.5",
+            )}
+          >
+            {navCollapsed ? null : (
+              <Link to="/">
+                <BrandMark />
+              </Link>
+            )}
+            <button
+              type="button"
+              onClick={() => setNavCollapsed((open) => !open)}
+              aria-label={navCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+              aria-expanded={!navCollapsed}
+              className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg border border-border/70 text-foreground/80 transition-colors hover:border-primary/50 hover:text-foreground"
+            >
+              {navCollapsed ? (
+                <PanelLeftOpen aria-hidden className="size-4" />
+              ) : (
+                <PanelLeftClose aria-hidden className="size-4" />
+              )}
+            </button>
           </div>
 
+          {navCollapsed ? null : (
+            <div className="pb-4">
+              <TenantSwitcher session={session} />
+            </div>
+          )}
+
           <div className="flex-1 border-t border-border/50 pt-4">
-            <NavList pathname={pathname} />
+            <NavList pathname={pathname} collapsed={navCollapsed} />
           </div>
 
           <Link
             to="/auth"
-            className="mt-4 block truncate border-t border-border/50 px-2.5 pt-4 text-sm font-medium text-foreground/80 transition-colors hover:text-foreground"
+            title={navCollapsed ? accountLabel : undefined}
+            className={cn(
+              "mt-4 block truncate border-t border-border/50 pt-4 text-sm font-medium text-foreground transition-colors hover:text-primary",
+              navCollapsed ? "text-center text-xs" : "px-2.5",
+            )}
           >
-            {accountLabel}
+            {navCollapsed ? "Account" : accountLabel}
           </Link>
         </nav>
+
 
         <div className="flex min-w-0 flex-1 flex-col">
           <header className="sticky top-0 z-40 flex items-center gap-3 border-b border-border/60 bg-background/90 px-4 py-3 backdrop-blur lg:hidden">
