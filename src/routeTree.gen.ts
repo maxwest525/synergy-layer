@@ -37,6 +37,7 @@ import { Route as AdsIndexRouteImport } from './routes/ads.index'
 import { Route as AdsAdvertisersRouteImport } from './routes/ads.advertisers'
 import { Route as AgentsIndexRouteImport } from './routes/agents.index'
 import { Route as AgentsIdRouteImport } from './routes/agents.$id'
+import { Route as ApiStudioChatRouteImport } from './routes/api/studio-chat'
 import { Route as AssetsIndexRouteImport } from './routes/assets.index'
 import { Route as AssetsIdRouteImport } from './routes/assets.$id'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
@@ -207,6 +208,11 @@ const AgentsIdRoute = AgentsIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => AgentsRoute,
 } as any)
+const ApiStudioChatRoute = ApiStudioChatRouteImport.update({
+  id: '/api/studio-chat',
+  path: '/api/studio-chat',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AssetsIndexRoute = AssetsIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -376,6 +382,7 @@ export interface FileRoutesByFullPath {
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/ads/advertisers': typeof AdsAdvertisersRoute
   '/agents/$id': typeof AgentsIdRoute
+  '/api/studio-chat': typeof ApiStudioChatRoute
   '/assets/$id': typeof AssetsIdRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/capabilities/$id': typeof CapabilitiesIdRoute
@@ -425,6 +432,7 @@ export interface FileRoutesByTo {
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/ads/advertisers': typeof AdsAdvertisersRoute
   '/agents/$id': typeof AgentsIdRoute
+  '/api/studio-chat': typeof ApiStudioChatRoute
   '/assets/$id': typeof AssetsIdRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/capabilities/$id': typeof CapabilitiesIdRoute
@@ -482,6 +490,7 @@ export interface FileRoutesById {
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/ads/advertisers': typeof AdsAdvertisersRoute
   '/agents/$id': typeof AgentsIdRoute
+  '/api/studio-chat': typeof ApiStudioChatRoute
   '/assets/$id': typeof AssetsIdRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/capabilities/$id': typeof CapabilitiesIdRoute
@@ -541,6 +550,7 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-protected-resource'
     | '/ads/advertisers'
     | '/agents/$id'
+    | '/api/studio-chat'
     | '/assets/$id'
     | '/auth/callback'
     | '/capabilities/$id'
@@ -590,6 +600,7 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-protected-resource'
     | '/ads/advertisers'
     | '/agents/$id'
+    | '/api/studio-chat'
     | '/assets/$id'
     | '/auth/callback'
     | '/capabilities/$id'
@@ -646,6 +657,7 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-protected-resource'
     | '/ads/advertisers'
     | '/agents/$id'
+    | '/api/studio-chat'
     | '/assets/$id'
     | '/auth/callback'
     | '/capabilities/$id'
@@ -703,6 +715,7 @@ export interface RootRouteChildren {
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   AdsAdvertisersRoute: typeof AdsAdvertisersRoute
+  ApiStudioChatRoute: typeof ApiStudioChatRoute
   ChangesIdRoute: typeof ChangesIdRoute
   AdsIndexRoute: typeof AdsIndexRoute
   ChangesIndexRoute: typeof ChangesIndexRoute
@@ -911,6 +924,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/agents/$id'
       preLoaderRoute: typeof AgentsIdRouteImport
       parentRoute: typeof AgentsRoute
+    }
+    '/api/studio-chat': {
+      id: '/api/studio-chat'
+      path: '/api/studio-chat'
+      fullPath: '/api/studio-chat'
+      preLoaderRoute: typeof ApiStudioChatRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/assets/': {
       id: '/assets/'
@@ -1267,6 +1287,7 @@ const rootRouteChildren: RootRouteChildren = {
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
   AdsAdvertisersRoute: AdsAdvertisersRoute,
+  ApiStudioChatRoute: ApiStudioChatRoute,
   ChangesIdRoute: ChangesIdRoute,
   AdsIndexRoute: AdsIndexRoute,
   ChangesIndexRoute: ChangesIndexRoute,
