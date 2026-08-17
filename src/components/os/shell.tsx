@@ -4,6 +4,7 @@ import {
   Boxes,
   BrainCircuit,
   CalendarClock,
+  CheckCheck,
   ChevronDown,
 
   Gauge,
@@ -57,6 +58,7 @@ const workspaces: readonly Workspace[] = [
   { to: "/ask", label: "Ask", icon: Sparkles, hint: "Ask the agent anything", group: "decisions" },
   { to: "/essentials", label: "Coverage", icon: ListChecks, hint: "What is covered and what is missing", group: "evidence" },
 
+  { to: "/approvals", label: "Approvals", icon: CheckCheck, hint: "Approve or reject with a note", group: "decisions" },
   { to: "/changes", label: "Page changes", icon: FileDiff, hint: "Edits proposed to the site", group: "decisions" },
   { to: "/keywords", label: "Keywords", icon: Tags, hint: "Terms worth winning", group: "decisions" },
   { to: "/competitors", label: "Competitors", icon: Swords, hint: "Who we rank against", group: "decisions" },
@@ -108,7 +110,7 @@ const navSections: readonly NavSection[] = [
   // Suggestions and page changes are the propose to approve to execute path.
   // They sit under Today so the acting half of the system is visible from
   // every screen instead of being buried inside the SEO coverage map.
-  { primary: workspaceAt("/"), children: workspacesAt(["/recommendations", "/changes"]) },
+  { primary: workspaceAt("/"), children: workspacesAt(["/approvals", "/recommendations", "/changes"]) },
 
   {
     primary: workspaceAt("/command-center"),
