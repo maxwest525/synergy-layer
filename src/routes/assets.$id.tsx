@@ -14,6 +14,7 @@ import {
 } from "@/components/os/primitives";
 import { SearchConsolePanel } from "@/components/os/search-console-panel";
 import { getAsset } from "@/lib/os.functions";
+import { OperatorRouteError } from "@/components/os/route-error";
 
 const assetQuery = (id: string) => ({
   queryKey: ["asset", id],
@@ -44,6 +45,7 @@ export const Route = createFileRoute("/assets/$id")({
       ],
     };
   },
+  errorComponent: OperatorRouteError,
   component: AssetDetailPage,
 });
 

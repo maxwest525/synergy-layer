@@ -38,6 +38,7 @@ import { approveChangeRequest, rejectChangeRequest } from "@/lib/change-requests
 import { executeChangeRequest } from "@/lib/execution/execution.functions";
 import { resolveInboxItem } from "@/lib/os-admin.functions";
 import { getInbox, getOverview } from "@/lib/os.functions";
+import { OperatorRouteError } from "@/components/os/route-error";
 
 const lanes = ACTION_CENTER_PRESENTATION_LANES;
 
@@ -61,6 +62,7 @@ export const Route = createFileRoute("/")({
       },
     ],
   }),
+  errorComponent: OperatorRouteError,
   component: InboxPage,
 });
 

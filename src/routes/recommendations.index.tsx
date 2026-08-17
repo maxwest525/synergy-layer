@@ -10,6 +10,7 @@ import {
   toneForState,
 } from "@/components/os/primitives";
 import { getRecommendations } from "@/lib/os.functions";
+import { OperatorRouteError } from "@/components/os/route-error";
 
 const recommendationsQuery = { queryKey: ["recommendations"], queryFn: () => getRecommendations() };
 
@@ -38,6 +39,7 @@ export const Route = createFileRoute("/recommendations/")({
       },
     ],
   }),
+  errorComponent: OperatorRouteError,
   component: RecommendationsPage,
 });
 

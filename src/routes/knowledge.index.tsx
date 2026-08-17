@@ -17,6 +17,7 @@ import {
   ingestAndActivateGovernedKnowledge,
   probeGovernedKnowledgeEmbedding,
 } from "@/lib/knowledge/functions";
+import { OperatorRouteError } from "@/components/os/route-error";
 
 const knowledgeQuery = { queryKey: ["knowledge"], queryFn: () => getKnowledge() };
 
@@ -45,6 +46,7 @@ export const Route = createFileRoute("/knowledge/")({
       },
     ],
   }),
+  errorComponent: OperatorRouteError,
   component: KnowledgePage,
 });
 

@@ -10,6 +10,7 @@ import {
   toneForState,
 } from "@/components/os/primitives";
 import { getAgents } from "@/lib/os.functions";
+import { OperatorRouteError } from "@/components/os/route-error";
 
 const agentsQuery = { queryKey: ["agents"], queryFn: () => getAgents() };
 
@@ -38,6 +39,7 @@ export const Route = createFileRoute("/agents/")({
       },
     ],
   }),
+  errorComponent: OperatorRouteError,
   component: AgentsPage,
 });
 

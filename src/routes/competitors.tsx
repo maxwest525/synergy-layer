@@ -30,6 +30,7 @@ import {
   listCompetitorShortlist,
   updateCompanyClassification,
 } from "@/lib/competitors.functions";
+import { OperatorRouteError } from "@/components/os/route-error";
 
 const shortlistQuery = {
   queryKey: ["competitor-shortlist"],
@@ -58,6 +59,7 @@ export const Route = createFileRoute("/competitors")({
       { name: "twitter:card", content: "summary" },
     ],
   }),
+  errorComponent: OperatorRouteError,
   component: CompetitorReviewPage,
 });
 

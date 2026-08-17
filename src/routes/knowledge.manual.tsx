@@ -5,6 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { EmptyState, GlassCard, PageHeader, StatePill } from "@/components/os/primitives";
 import { Button } from "@/components/ui/button";
 import { getExecutionManual } from "@/lib/knowledge/functions";
+import { OperatorRouteError } from "@/components/os/route-error";
 
 export const Route = createFileRoute("/knowledge/manual")({
   ssr: false,
@@ -18,6 +19,7 @@ export const Route = createFileRoute("/knowledge/manual")({
       { name: "robots", content: "noindex" },
     ],
   }),
+  errorComponent: OperatorRouteError,
   component: ExecutionManualPage,
 });
 

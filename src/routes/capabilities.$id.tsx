@@ -16,6 +16,7 @@ import { McpPanel } from "@/components/os/mcp-panel";
 import { SearchConsolePanel } from "@/components/os/search-console-panel";
 
 import { getCapability } from "@/lib/os.functions";
+import { OperatorRouteError } from "@/components/os/route-error";
 
 const capabilityQuery = (id: string) => ({
   queryKey: ["capability", id],
@@ -51,6 +52,7 @@ export const Route = createFileRoute("/capabilities/$id")({
       ],
     };
   },
+  errorComponent: OperatorRouteError,
   component: CapabilityDetailPage,
 });
 

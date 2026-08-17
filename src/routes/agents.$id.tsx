@@ -16,6 +16,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { runReferenceAgent } from "@/lib/os-admin.functions";
 import { getAgent } from "@/lib/os.functions";
+import { OperatorRouteError } from "@/components/os/route-error";
 
 const agentQuery = (id: string) => ({
   queryKey: ["agent", id],
@@ -45,6 +46,7 @@ export const Route = createFileRoute("/agents/$id")({
       ],
     };
   },
+  errorComponent: OperatorRouteError,
   component: AgentDetailPage,
 });
 

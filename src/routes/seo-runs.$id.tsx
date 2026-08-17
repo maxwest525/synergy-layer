@@ -13,10 +13,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { isSeoRunEligibleForPreparation } from "@/lib/seo-runs/eligibility";
 import { evaluateSeoRun, getSeoRun, repairSeoRunProposalEvent } from "@/lib/seo-runs/functions";
+import { OperatorRouteError } from "@/components/os/route-error";
 
 export const Route = createFileRoute("/seo-runs/$id")({
   ssr: false,
   head: () => ({ meta: [{ title: "SEO Run — AOOS" }, { name: "robots", content: "noindex" }] }),
+  errorComponent: OperatorRouteError,
   component: SeoRunDetailPage,
 });
 
