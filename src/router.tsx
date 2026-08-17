@@ -56,7 +56,7 @@ export const getRouter = () => {
       for (const c of kids) walk(c, `${path}/${String(c.options?.path ?? c.options?.id ?? "?")}`);
     };
     walk(routeTree as any, "");
-    if (problems.length) console.error("ROUTE_DUPES", JSON.stringify(problems));
+    console.error("ROUTE_WALK", (routeTree as any).children?.length, JSON.stringify(problems));
   }
 
   let router;
