@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { getRequestHeader } from "@tanstack/react-start/server";
 
@@ -56,6 +58,8 @@ export function createRequestClient(): { db: Client; authenticated: boolean } {
     },
   });
 
+  if (token) clientFingerprints.set(db, createHash("sha256").update(token).digest("hex"));
+
   return { db, authenticated: token !== null };
 }
 
@@ -73,6 +77,44 @@ export async function listTenants(db: Client): Promise<TenantSummary[]> {
 const resolvedCache = new WeakMap<Client, string>();
 
 /**
+ * Cross-request cache for the resolved tenant id.
+ *
+ * Only derived, non-secret data is stored: a tenant uuid. The key is a SHA-256
+ * fingerprint of the bearer token, never the token itself, so one operator can
+ * never read an entry written by another and nothing here can be replayed as a
+ * credential. Entries expire quickly and are dropped outright when an operator
+ * switches workspaces, so a stale selection cannot survive a switch.
+ */
+const clientFingerprints = new WeakMap<Client, string>();
+const TENANT_CACHE_TTL_MS = 60_000;
+const tenantCache = new Map<string, { tenantId: string; expiresAt: number }>();
+
+function readTenantCache(db: Client): string | null {
+  const fingerprint = clientFingerprints.get(db);
+  if (!fingerprint) return null;
+  const entry = tenantCache.get(fingerprint);
+  if (!entry) return null;
+  if (entry.expiresAt <= Date.now()) {
+    tenantCache.delete(fingerprint);
+    return null;
+  }
+  return entry.tenantId;
+}
+
+function writeTenantCache(db: Client, tenantId: string): void {
+  const fingerprint = clientFingerprints.get(db);
+  if (!fingerprint) return;
+  if (tenantCache.size > 500) tenantCache.clear();
+  tenantCache.set(fingerprint, { tenantId, expiresAt: Date.now() + TENANT_CACHE_TTL_MS });
+}
+
+function clearTenantCache(db: Client): void {
+  const fingerprint = clientFingerprints.get(db);
+  if (fingerprint) tenantCache.delete(fingerprint);
+  resolvedCache.delete(db);
+}
+
+/**
  * Resolves the tenant a server operation belongs to. An explicit id is honoured
  * only when the caller can actually see that tenant; otherwise the operator's
  * saved active tenant wins, then their first membership, then the sole tenant
@@ -87,8 +129,12 @@ export async function resolveTenantId(
     if (data?.id) return data.id;
   }
 
-  const cached = resolvedCache.get(db);
-  if (cached) return cached;
+  const cached = resolvedCache.get(db) ?? readTenantCache(db);
+  if (cached) {
+    resolvedCache.set(db, cached);
+    writeTenantCache(db, cached);
+    return cached;
+  }
 
   // Resolve all RLS-scoped fallbacks in one network wave. In the normal case
   // the profile wins; parallel fallbacks prevent an older account without an
@@ -106,18 +152,21 @@ export async function resolveTenantId(
   const profile = profileResult.data;
   if (profile?.active_tenant_id) {
     resolvedCache.set(db, profile.active_tenant_id);
+    writeTenantCache(db, profile.active_tenant_id);
     return profile.active_tenant_id;
   }
 
   const membership = membershipResult.data;
   if (membership?.tenant_id) {
     resolvedCache.set(db, membership.tenant_id);
+    writeTenantCache(db, membership.tenant_id);
     return membership.tenant_id;
   }
 
   const tenants = tenantsResult.data;
   if (tenants && tenants.length === 1) {
     resolvedCache.set(db, tenants[0]!.id);
+    writeTenantCache(db, tenants[0]!.id);
     return tenants[0]!.id;
   }
 
@@ -148,4 +197,8 @@ export async function setActiveTenant(db: Client, userId: string, tenantId: stri
     .update({ active_tenant_id: tenantId })
     .eq("id", userId);
   if (error) throw new Error(error.message);
+
+  clearTenantCache(db);
+  resolvedCache.set(db, tenantId);
+  writeTenantCache(db, tenantId);
 }
