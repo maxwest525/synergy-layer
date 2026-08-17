@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { getInitialOperatorSession, getWorkspaceAccessState } from "./operator-session-gate";
+import {
+  getInitialOperatorSession,
+  getWorkspaceAccessState,
+  readStoredOperatorEmail,
+} from "./operator-session-gate";
 
 describe("operator workspace session gate", () => {
   it.each([
@@ -35,6 +39,36 @@ describe("operator session resolution", () => {
       email: null,
       signedIn: false,
     });
+    vi.unstubAllGlobals();
+  });
+
+  it("reads persisted display identity without invoking the auth client", () => {
+    const key = "sb-test-auth-token";
+    const store = new Map([[key, JSON.stringify({ user: { email: "operator@example.com" } })]]);
+    vi.stubGlobal("window", {
+      localStorage: {
+        length: store.size,
+        key: (index: number) => [...store.keys()][index] ?? null,
+        getItem: (itemKey: string) => store.get(itemKey) ?? null,
+      },
+    });
+
+    expect(readStoredOperatorEmail()).toBe("operator@example.com");
+    vi.unstubAllGlobals();
+  });
+
+  it("fails closed when persisted session metadata is malformed", () => {
+    const key = "sb-test-auth-token";
+    const store = new Map([[key, "not-json"]]);
+    vi.stubGlobal("window", {
+      localStorage: {
+        length: store.size,
+        key: () => key,
+        getItem: (itemKey: string) => store.get(itemKey) ?? null,
+      },
+    });
+
+    expect(readStoredOperatorEmail()).toBeNull();
     vi.unstubAllGlobals();
   });
 });

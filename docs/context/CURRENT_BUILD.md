@@ -8,7 +8,7 @@ It is not authoritative documentation. Provider digests under
 `docs/integrations/<provider>/DIGEST.md` and their PLAN files remain the source of
 truth for provider behaviour and must never be overwritten by this file.
 
-Last updated: 2026-08-17 (cold-load session restoration repaired).
+Last updated: 2026-08-17 (cold-load auth lock contention repaired).
 
 ## 1. What AOOS is
 
@@ -99,9 +99,11 @@ second visits served from the query cache. Applied fixes:
   parent-link mutation was removed. Development-only route-split HMR wrappers
   are disabled because they could evaluate a child against a stale parent and
   collapse multiple route IDs to `/`; normal Vite updates remain enabled.
-- The operator session hook performs an initial persisted-session read in
-  addition to subscribing to changes, so cold loads cannot remain indefinitely
-  on the session-checking state.
+- The operator session hook releases its visual gate from persisted identity
+  metadata and subscribes to future auth changes. It must not call
+  `auth.getSession()`: that competes for the auth client's session lock with the
+  server-function middleware and previously left every workspace suspended on
+  skeletons for several seconds. Authorization remains server-side.
 - Node's exact `abortIncoming` / `socketOnClose` error is classified as a browser
   request cancellation at both server boundaries and returns 499 without fatal
   logging, including when the framework logs before wrapping the response.
