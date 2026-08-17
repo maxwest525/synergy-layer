@@ -498,6 +498,8 @@ function EssentialsPage() {
       <Group title="Visibility and keywords" concerns={visibility} />
       <Group title="Off-page and authority" concerns={authorityGroup} />
       <Group title="Measurement and paid" concerns={measurement} />
+      <CoverageSection concerns={coverage.data.concerns} />
+
     </div>
   );
 }
