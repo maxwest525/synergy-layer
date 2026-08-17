@@ -1992,6 +1992,137 @@ export type Database = {
           },
         ]
       }
+      essential_concern_evaluations: {
+        Row: {
+          concern_id: string
+          derived_from: Json
+          evaluated_at: string
+          id: string
+          limitation: string | null
+          status: string
+          summary: string
+          tenant_id: string
+        }
+        Insert: {
+          concern_id: string
+          derived_from?: Json
+          evaluated_at?: string
+          id?: string
+          limitation?: string | null
+          status: string
+          summary: string
+          tenant_id: string
+        }
+        Update: {
+          concern_id?: string
+          derived_from?: Json
+          evaluated_at?: string
+          id?: string
+          limitation?: string | null
+          status?: string
+          summary?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "essential_concern_evaluations_concern_id_fkey"
+            columns: ["concern_id"]
+            isOneToOne: false
+            referencedRelation: "essential_concerns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "essential_concern_evaluations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      essential_concern_templates: {
+        Row: {
+          created_at: string
+          description: string
+          key: string
+          phase: string
+          sort_order: number
+          task: string
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          key: string
+          phase: string
+          sort_order?: number
+          task: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          key?: string
+          phase?: string
+          sort_order?: number
+          task?: string
+        }
+        Relationships: []
+      }
+      essential_concerns: {
+        Row: {
+          created_at: string
+          description: string
+          evidence_source: string | null
+          id: string
+          key: string
+          origin: string
+          phase: string
+          priority: number
+          retired_at: string | null
+          sort_order: number
+          task: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          evidence_source?: string | null
+          id?: string
+          key: string
+          origin?: string
+          phase: string
+          priority?: number
+          retired_at?: string | null
+          sort_order?: number
+          task: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          evidence_source?: string | null
+          id?: string
+          key?: string
+          origin?: string
+          phase?: string
+          priority?: number
+          retired_at?: string | null
+          sort_order?: number
+          task?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "essential_concerns_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ga4_snapshots: {
         Row: {
           collected_at: string
@@ -4680,6 +4811,10 @@ export type Database = {
         Returns: Json
       }
       revoke_operator: { Args: { _email: string }; Returns: string }
+      seed_essential_concerns_for_tenant: {
+        Args: { p_tenant_id: string }
+        Returns: number
+      }
       seed_tool_estate_for_tenant: {
         Args: { target_tenant: string }
         Returns: undefined
