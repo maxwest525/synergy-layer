@@ -4629,6 +4629,7 @@ export type Database = {
         }[]
       }
       normalize_email: { Args: { _email: string }; Returns: string }
+      provider_spend_summary: { Args: { _tenant_id: string }; Returns: Json }
       provision_operator_from_allowlist: {
         Args: { _auth_user_id: string }
         Returns: string
