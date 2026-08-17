@@ -33,6 +33,7 @@ import { Route as SpendRouteImport } from './routes/spend'
 import { Route as WorkflowsRouteImport } from './routes/workflows'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
+import { Route as AdsIndexRouteImport } from './routes/ads.index'
 import { Route as AdsAdvertisersRouteImport } from './routes/ads.advertisers'
 import { Route as AgentsIndexRouteImport } from './routes/agents.index'
 import { Route as AgentsIdRouteImport } from './routes/agents.$id'
@@ -186,6 +187,11 @@ const Char91DotwellKnownChar93OauthProtectedResourceRoute =
     path: '/.well-known/oauth-protected-resource',
     getParentRoute: () => rootRouteImport,
   } as any)
+const AdsIndexRoute = AdsIndexRouteImport.update({
+  id: '/ads/',
+  path: '/ads/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdsAdvertisersRoute = AdsAdvertisersRouteImport.update({
   id: '/ads/advertisers',
   path: '/ads/advertisers',
@@ -381,6 +387,7 @@ export interface FileRoutesByFullPath {
   '/scheduler/$id': typeof SchedulerIdRoute
   '/seo-runs/$id': typeof SeoRunsIdRoute
   '/workflows/$id': typeof WorkflowsIdRoute
+  '/ads/': typeof AdsIndexRoute
   '/agents/': typeof AgentsIndexRoute
   '/assets/': typeof AssetsIndexRoute
   '/capabilities/': typeof CapabilitiesIndexRoute
@@ -428,6 +435,7 @@ export interface FileRoutesByTo {
   '/scheduler/$id': typeof SchedulerIdRoute
   '/seo-runs/$id': typeof SeoRunsIdRoute
   '/workflows/$id': typeof WorkflowsIdRoute
+  '/ads': typeof AdsIndexRoute
   '/agents': typeof AgentsIndexRoute
   '/assets': typeof AssetsIndexRoute
   '/capabilities': typeof CapabilitiesIndexRoute
@@ -485,6 +493,7 @@ export interface FileRoutesById {
   '/scheduler/$id': typeof SchedulerIdRoute
   '/seo-runs/$id': typeof SeoRunsIdRoute
   '/workflows/$id': typeof WorkflowsIdRoute
+  '/ads/': typeof AdsIndexRoute
   '/agents/': typeof AgentsIndexRoute
   '/assets/': typeof AssetsIndexRoute
   '/capabilities/': typeof CapabilitiesIndexRoute
@@ -543,6 +552,7 @@ export interface FileRouteTypes {
     | '/scheduler/$id'
     | '/seo-runs/$id'
     | '/workflows/$id'
+    | '/ads/'
     | '/agents/'
     | '/assets/'
     | '/capabilities/'
@@ -590,6 +600,7 @@ export interface FileRouteTypes {
     | '/scheduler/$id'
     | '/seo-runs/$id'
     | '/workflows/$id'
+    | '/ads'
     | '/agents'
     | '/assets'
     | '/capabilities'
@@ -646,6 +657,7 @@ export interface FileRouteTypes {
     | '/scheduler/$id'
     | '/seo-runs/$id'
     | '/workflows/$id'
+    | '/ads/'
     | '/agents/'
     | '/assets/'
     | '/capabilities/'
@@ -692,6 +704,7 @@ export interface RootRouteChildren {
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   AdsAdvertisersRoute: typeof AdsAdvertisersRoute
   ChangesIdRoute: typeof ChangesIdRoute
+  AdsIndexRoute: typeof AdsIndexRoute
   ChangesIndexRoute: typeof ChangesIndexRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -869,6 +882,13 @@ declare module '@tanstack/react-router' {
       path: '/.well-known/oauth-protected-resource'
       fullPath: '/.well-known/oauth-protected-resource'
       preLoaderRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ads/': {
+      id: '/ads/'
+      path: '/ads'
+      fullPath: '/ads/'
+      preLoaderRoute: typeof AdsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/ads/advertisers': {
@@ -1248,6 +1268,7 @@ const rootRouteChildren: RootRouteChildren = {
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
   AdsAdvertisersRoute: AdsAdvertisersRoute,
   ChangesIdRoute: ChangesIdRoute,
+  AdsIndexRoute: AdsIndexRoute,
   ChangesIndexRoute: ChangesIndexRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
