@@ -14,6 +14,8 @@
     "knowledge:ingest": "tsx scripts/ingest-governed-knowledge.ts"
   },
   "dependencies": {
+    "@ai-sdk/openai-compatible": "^3.0.30",
+    "@ai-sdk/react": "^4.0.69",
     "@hookform/resolvers": "^5.2.2",
     "@lovable.dev/cloud-auth-js": "^1.1.2",
     "@lovable.dev/mcp-js": "^0.26.1",
@@ -49,6 +51,7 @@
     "@tanstack/react-router": "1.170.29",
     "@tanstack/react-start": "1.168.46",
     "@tanstack/router-plugin": "1.168.32",
+    "ai": "^7.0.66",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
