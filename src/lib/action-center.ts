@@ -24,6 +24,18 @@ export const ACTION_CENTER_PRESENTATION_LANES = [
 }>;
 
 /**
+ * Work that is live and sitting inside its measurement cycle. Nothing can be
+ * decided about it until the window closes, so it is shown as something to
+ * watch rather than something to do.
+ */
+export const ACTION_CENTER_MEASUREMENT_LANE = {
+  key: "fyi",
+  label: "In measurement",
+  hint: "Live and being measured. Nothing is asked of you until the window closes.",
+} as const satisfies { key: ActionCenterLane; label: string; hint: string };
+
+
+/**
  * A failed observation is a system health problem, not a marketing decision.
  * It is shown in its own strip so the decision lanes stay decisions.
  */
@@ -56,7 +68,9 @@ export type ActionCenterChange = {
 /**
  * Change requests stay actionable until they are rejected, verified, or rolled
  * back. Stored inbox state is only a fallback because older approvals were
- * incorrectly closed as soon as the operator approved them.
+ * incorrectly closed as soon as the operator approved them. An applied change
+ * is already inside its measurement cycle, so it becomes something to watch
+ * rather than an action.
  */
 export function actionCenterLane(
   storedLane: string,
@@ -65,8 +79,10 @@ export function actionCenterLane(
   if (!change) return isActionCenterLane(storedLane) ? storedLane : "needs_attention";
 
   if (change.state === "proposed") return "pending_approval";
-  if (change.state === "approved" || change.state === "applied") return "in_progress";
+  if (change.state === "approved") return "in_progress";
+  if (change.state === "applied") return "fyi";
   if (["rejected", "verified", "rolled_back"].includes(change.state)) return "completed";
+
   return isActionCenterLane(storedLane) ? storedLane : "needs_attention";
 }
 

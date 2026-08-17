@@ -27,7 +27,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { useOperatorSession } from "@/hooks/use-operator-session";
 import {
+  ACTION_CENTER_MEASUREMENT_LANE,
   ACTION_CENTER_PRESENTATION_LANES,
+
   actionCenterFieldChanges,
   actionCenterLane,
   actionCenterStage,
@@ -536,13 +538,14 @@ function InboxPage() {
 
   // One pass over the rows instead of a full-array filter per lane plus a route
   // resolve per card on every render.
-  const { open, grouped, failures } = useMemo(() => {
+  const { open, grouped, failures, measuring } = useMemo(() => {
     const buckets = new Map<
       string,
       { item: InboxItem; reviewRoute: InboxRoute | null; lane: ActionCenterLane }[]
     >();
     for (const lane of lanes) buckets.set(lane.key, []);
     const failed: InboxItem[] = [];
+    const inMeasurement: { item: InboxItem; reviewRoute: InboxRoute | null }[] = [];
     let openCount = 0;
     for (const item of data) {
       if (isSystemFailure(item)) {
@@ -550,13 +553,18 @@ function InboxPage() {
         continue;
       }
       const lane = actionCenterLane(item.lane, item.changeRequest);
+      if (lane === ACTION_CENTER_MEASUREMENT_LANE.key) {
+        inMeasurement.push({ item, reviewRoute: reviewRouteFor(item) });
+        continue;
+      }
       const bucket = buckets.get(lane);
       if (!bucket) continue;
       openCount += 1;
       bucket.push({ item, reviewRoute: reviewRouteFor(item), lane });
     }
-    return { open: openCount, grouped: buckets, failures: failed };
+    return { open: openCount, grouped: buckets, failures: failed, measuring: inMeasurement };
   }, [data]);
+
 
   return (
     <div className="space-y-10">
@@ -635,7 +643,42 @@ function InboxPage() {
         })}
       </div>
 
+      {measuring.length > 0 ? (
+        <Section
+          title={ACTION_CENTER_MEASUREMENT_LANE.label}
+          hint={`${measuring.length} · ${ACTION_CENTER_MEASUREMENT_LANE.hint}`}
+        >
+          <GlassCard className="p-5">
+            <ul className="space-y-3">
+              {measuring.map(({ item, reviewRoute }) => (
+                <li
+                  key={item.id}
+                  className="flex flex-wrap items-start justify-between gap-3 border-b border-border/50 pb-3 last:border-b-0 last:pb-0"
+                >
+                  <div className="min-w-0 space-y-1">
+                    {reviewRoute ? (
+                      <InboxLink route={reviewRoute}>{item.title}</InboxLink>
+                    ) : (
+                      <p className="text-sm font-medium text-foreground">{item.title}</p>
+                    )}
+                    {item.summary ? (
+                      <p className="text-sm text-muted-foreground">{item.summary}</p>
+                    ) : null}
+                    <p className="text-xs text-muted-foreground">
+                      {item.changeRequest ? `${actionCenterStage(item.changeRequest)} · ` : ""}
+                      {formatWhen(item.created_at)}
+                    </p>
+                  </div>
+                  <StatePill label="Watching" tone="primary" />
+                </li>
+              ))}
+            </ul>
+          </GlassCard>
+        </Section>
+      ) : null}
+
       <WhereThingsStand />
+
     </div>
   );
 }
