@@ -29,27 +29,47 @@ They should not be two peers in the sidebar. OpenSEO becomes a tool surface unde
 
 **"Shouldn't the workflow be categorized by type?"** Yes, and that is what this plan does: one taxonomy, four groups, applied identically in the sidebar, in page eyebrows, and in the Action Center lanes, with nothing uncategorized.
 
-## The taxonomy
+## The taxonomy, ordered the way a day actually runs
 
-Four groups, one meaning each:
+You are right that System health is not a day-to-day starting point. It is configuration and plumbing, so it goes last. The order is the loop itself:
 
 ```text
-System health   something the OS could not do, or a connection that is not proven
-Decisions       a human must say yes or no before anything changes
-Evidence        stored facts, read-only, nothing to decide
-Run work        automations, schedules, and manual tools that produce evidence or changes
+1 Decisions      something is waiting on your yes or no          <- you start here
+2 Evidence       the stored facts behind those decisions
+3 Run work       the automations and tools that produce more of both
+4 System health  connections, costs, access. Only when something breaks
 ```
 
-Every workspace, every page header, and every Action Center lane uses exactly one of these.
+## The loop, per type
+
+Each group is one stage of a single repeating cycle, not four unrelated buckets:
+
+```text
+        Run work  ──produces──>  Evidence  ──raises──>  Decisions
+            ^                                                │
+            └──────────── approved work re-runs ─────────────┘
+
+        System health sits underneath: it is only consulted when a
+        stage above cannot complete (a provider fails, a cost ceiling
+        is hit, an operator lacks access).
+```
+
+Written out per type:
+
+- **Decisions loop**: a proposal appears (page change, keyword, competitor, observation) to you approving or rejecting it, to the approved item entering Run work, to Evidence proving it landed. Every decision page ends with "what happens after you say yes."
+- **Evidence loop**: a workflow or schedule collects a snapshot, to the snapshot being stored immutably, to a rule reading it, to a new proposal in Decisions. Every evidence page says which run produced it and when the next one is due.
+- **Run work loop**: a workflow runs, either on schedule or because you approved something, to a run record, to either new evidence or an executed change. Every run page links back to the decision that authorized it.
+- **System health loop**: a stage fails, to a failure item, to a fix on the connection, cost, or access, to the failed stage retried. Failures surface as a strip on the Action Center so you do not have to go looking, but the workspace itself sits last in the sidebar.
 
 ## Assignment per page
 
-- **System health**: Capabilities, Tool estate, Data costs, People, plus the failure strip on the Action Center.
 - **Decisions**: Action center, Page changes, Keywords, Competitors, Observations.
 - **Evidence**: Overview, Search results, Site health, Competitor ads, Trust gaps, Marketing essentials, Assets, Knowledge.
 - **Run work**: Workflows, Schedule, SEO runs, SEO tools (OpenSEO), OpenAI Ads, Agents.
+- **System health**: Capabilities, Tool estate, Data costs, People.
 
-Changes from today: Agents moves from System to Run work (it does work). Knowledge moves from System to Evidence (it is stored fact). Capabilities and Tool estate group under System health rather than a generic "System".
+Changes from today: Decide becomes Decisions and stays first. Agents moves from System to Run work (it does work). Knowledge moves from System to Evidence (it is stored fact). The old "System" group becomes System health and drops to the bottom.
+
 
 ## Fixes bundled in, because the taxonomy exposes them
 
@@ -60,9 +80,9 @@ Changes from today: Agents moves from System to Run work (it does work). Knowled
 
 ## Technical notes
 
-- New module `src/lib/os-taxonomy.ts` exports the four group keys, their labels and one-line definitions, and a `WORKSPACE_GROUP` map from route path to group. Single source of truth.
-- `src/components/os/shell.tsx` builds `navGroups` from that map instead of its own inline list.
-- `src/components/os/primitives.tsx` gains a `group` prop on `PageHeader` that renders the group name as the eyebrow with its definition as hover text; each route passes `group` instead of a hand-written eyebrow string.
-- `src/lib/action-center.ts` lane labels align to the same words (System health, Decisions, Run work).
+- New module `src/lib/os-taxonomy.ts` exports the four group keys in loop order (decisions, evidence, run_work, system_health), their labels, one-line definitions, and a `WORKSPACE_GROUP` map from route path to group. Single source of truth for order and naming.
+- `src/components/os/shell.tsx` builds `navGroups` from that map instead of its own inline list, rendering in loop order with System health last.
+- `src/components/os/primitives.tsx` gains a `group` prop on `PageHeader` that renders the group name as the eyebrow with its definition as hover text, plus a one-line "next stage" pointer so each page states where the loop continues; each route passes `group` instead of a hand-written eyebrow string.
+- `src/lib/action-center.ts` lane labels align to the same words, decision lanes first and the failure strip labeled System health beneath them.
 - Keywords and Competitors: extend the existing list server functions to accept `"all"` (Keywords already supports it) and add client-side filter chips; no schema change, no new tables, no migration.
 - Tests updated: `src/lib/action-center.test.ts`, plus a new unit test asserting every route in the sidebar has exactly one taxonomy group.
