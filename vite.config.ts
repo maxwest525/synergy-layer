@@ -6,6 +6,30 @@
 // You can pass additional config via defineConfig({ vite: { ... }, etc... }) if needed.
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 import { mcpPlugin } from "@lovable.dev/mcp-js/stacks/tanstack/vite";
+import { createLogger } from "vite";
+
+// A browser that cancels an in-flight request makes Node raise
+// `Error: aborted` from `abortIncoming`/`socketOnClose`. Vite's dev logger
+// prints it as an SSR error, which the preview promotes to a crash dialog.
+// It is a transport cancellation, never an application failure, so drop only
+// that exact signature and keep every other error visible.
+const isClientDisconnectLog = (message: string): boolean =>
+  message.includes("Error: aborted") &&
+  message.includes("node:_http_server") &&
+  (message.includes("abortIncoming") || message.includes("socketOnClose"));
+
+const baseLogger = createLogger();
+const quietDisconnectLogger = {
+  ...baseLogger,
+  error(message: string, options?: Parameters<typeof baseLogger.error>[1]) {
+    if (isClientDisconnectLog(message)) return;
+    baseLogger.error(message, options);
+  },
+  warn(message: string, options?: Parameters<typeof baseLogger.warn>[1]) {
+    if (isClientDisconnectLog(message)) return;
+    baseLogger.warn(message, options);
+  },
+};
 
 export default defineConfig({
   // Local and self-hosted builds need a runnable production server. Lovable
