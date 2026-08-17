@@ -104,7 +104,8 @@ second visits served from the query cache. Applied fixes:
   on the session-checking state.
 - Node's exact `abortIncoming` / `socketOnClose` error is classified as a browser
   request cancellation at both server boundaries and returns 499 without fatal
-  logging. Generic application errors named `aborted` remain visible.
+  logging, including when the framework logs before wrapping the response.
+  Generic application errors named `aborted` remain visible.
 
 ## 8. Next build priorities
 

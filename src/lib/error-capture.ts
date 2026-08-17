@@ -1,6 +1,8 @@
 // Captures the original Error out-of-band so server.ts can recover the stack
 // when h3 has already swallowed the throw into a generic 500 Response.
 
+import { isIncomingRequestAbort } from "./http-request-errors";
+
 type ErrorCaptureState = {
   lastCapturedError: { error: unknown; at: number } | undefined;
   consoleInstalled?: boolean;
@@ -66,6 +68,11 @@ function isErrorLike(value: unknown): value is Error {
 if (!state.consoleInstalled) {
   state.originalConsoleError = console.error.bind(console);
   console.error = (...args: unknown[]) => {
+    const incomingAbort = args.find(isIncomingRequestAbort);
+    if (incomingAbort !== undefined) {
+      record(incomingAbort);
+      return;
+    }
     const expanded = args.map((arg) => {
       if (!isErrorLike(arg)) return arg;
       record(arg);
