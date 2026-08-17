@@ -213,6 +213,7 @@ export async function deliverConversions(admin: Admin, rawBody: unknown): Promis
       .eq("tenant_id", tenantId)
       .eq("pixel_id", connection.pixel_id)
       .eq("event_type", conversion.eventType)
+      .eq("custom_event_name", conversion.customEventName ?? "")
       .eq("event_id", conversion.eventId)
       .maybeSingle();
     const priorStatus = (existing.data as { status?: string } | null)?.status;
@@ -262,7 +263,7 @@ export async function deliverConversions(admin: Admin, rawBody: unknown): Promis
           tenant_id: tenantId,
           pixel_id: connection.pixel_id,
           event_type: conversion.eventType,
-          custom_event_name: conversion.customEventName,
+          custom_event_name: conversion.customEventName ?? "",
           event_id: conversion.eventId,
           status,
           validate_only: validateOnly,
