@@ -86,3 +86,39 @@ Changes from today: Decide becomes Decisions and stays first. Agents moves from 
 - `src/lib/action-center.ts` lane labels align to the same words, decision lanes first and the failure strip labeled System health beneath them.
 - Keywords and Competitors: extend the existing list server functions to accept `"all"` (Keywords already supports it) and add client-side filter chips; no schema change, no new tables, no migration.
 - Tests updated: `src/lib/action-center.test.ts`, plus a new unit test asserting every route in the sidebar has exactly one taxonomy group.
+
+## Where the uploaded SEO framework lands
+
+The 14-phase framework is a checklist of SEO work. AOOS is the loop that governs work. So the framework does not become a new workspace. Each phase is a **concern** with an owner in the existing loop: something that produces evidence, something that raises a decision, and something that executes it.
+
+Mapping, with honest coverage:
+
+```text
+Phase                                   Lands in            AOOS coverage today
+1  Strategic planning & intelligence    Evidence/Decisions  partial (keywords, competitors, SERP)
+2  Server & infrastructure              Evidence            none (no server/protocol probe)
+3  Indexation & crawl budget            Evidence/Decisions  partial (GSC coverage only, no log files)
+4  Semantic engineering & schema        Decisions           none (no schema audit, executor could ship it)
+5  On-page & internal links             Decisions           partial (title/H1 change requests only)
+6  E-E-A-T & trust                      Evidence            partial (trust gaps table, mostly empty)
+7  Digital PR & off-page equity         Evidence/Decisions  partial (backlink baseline, no outreach)
+8  UX & Core Web Vitals                 Evidence            partial (PageSpeed wired, zero snapshots)
+9  Legal, trust, accessibility          Evidence            partial (Marketing essentials concerns)
+10 Generative engine optimization       Evidence/Decisions  none
+11 Omni-channel surfaces                Evidence            none
+12 Localized search ecosystems          Evidence/Decisions  none (GBP not connected)
+13 Enterprise analytics & change ctrl   Run work/System     strong (GSC pipeline, GitHub executor, receipts)
+14 Monetization & funnel alignment      Decisions           blocked (no revenue access, by operator decision)
+```
+
+### How it gets optimized, concretely
+
+Each framework task becomes a row in the existing **Marketing essentials** concern model, not a new page. A concern already carries a status derived from real evidence, so the framework slots straight in:
+
+- Add a `phase` and `task` field to the essentials concern definitions and seed all 51 framework tasks as concerns.
+- Every concern declares which evidence source proves it (GSC, PageSpeed, DataForSEO, Firecrawl crawl, manual attestation) and stays **Not measured** until that source stores a real snapshot. No task shows green because it was typed in.
+- Concerns whose evidence source does not exist yet display **No way to check this yet** with the capability that would enable it. That is the honest answer for phases 2, 10, 11, 12.
+- When a measured concern fails and a supported change type exists (title/H1, schema block, internal link), it raises a proposal into Decisions and rides the existing approval and GitHub execution path.
+- Marketing essentials becomes the coverage map for the whole framework: 51 tasks, each either proven, failing, or explicitly unmeasurable.
+
+This is scoped as a follow-up slice after the taxonomy pass, not bundled into it.
