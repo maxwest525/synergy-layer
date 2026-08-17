@@ -268,7 +268,7 @@ export function Shell({ children }: { children: ReactNode }) {
               </SheetTrigger>
               <SheetContent
                 side="left"
-                className="flex w-[19rem] flex-col overflow-y-auto border-border/60 bg-sidebar px-4 py-6"
+                className="scrollbar-none flex w-[21rem] flex-col overflow-y-auto border-border/60 bg-sidebar px-4 py-6"
               >
                 <div className="mb-5 px-2.5">
                   <BrandMark />
