@@ -146,9 +146,96 @@ function Group({ title, concerns }: { title: string; concerns: Concern[] }) {
   );
 }
 
+
+const COVERAGE_ORDER: CoverageStatus[] = [
+  "broken",
+  "unproven",
+  "not_evaluated",
+  "cannot_measure",
+  "working",
+];
+
+function CoverageSection({
+  concerns,
+}: {
+  concerns: ReturnType<typeof groupByPhase>[number]["concerns"];
+}) {
+  const phases = groupByPhase(concerns);
+  const totals = summarizeCoverage(concerns);
+
+  return (
+    <section className="space-y-4">
+      <div className="flex flex-wrap items-baseline justify-between gap-3">
+        <h2 className="text-sm font-semibold tracking-tight text-foreground">
+          Coverage framework
+        </h2>
+        <p className="text-xs text-muted-foreground">
+          {concerns.length} concern(s) across {phases.length} phase(s)
+        </p>
+      </div>
+      <GlassCard className="p-5">
+        <div className="flex flex-wrap gap-x-6 gap-y-2">
+          {COVERAGE_ORDER.map((status) => (
+            <div key={status} className="flex items-baseline gap-2">
+              <span className="text-lg font-semibold text-foreground">{totals[status]}</span>
+              <StatePill label={COVERAGE_LABELS[status]} tone={COVERAGE_TONE[status]} />
+            </div>
+          ))}
+        </div>
+        <p className="mt-3 text-sm text-muted-foreground">
+          Each concern shows a status only when a stored evaluation produced one. Nothing here is
+          typed by hand, so a concern with no evaluation says so instead of looking healthy.
+        </p>
+      </GlassCard>
+      <div className="space-y-6">
+        {phases.map((phase) => (
+          <div key={phase.phase} className="space-y-3">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              {phase.phase}
+            </h3>
+            <div className="grid gap-4 lg:grid-cols-2">
+              {phase.concerns.map((concern) => {
+                const status = concernStatus(concern);
+                return (
+                  <GlassCard key={concern.id} className="p-5">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <h4 className="text-sm font-semibold text-foreground">{concern.task}</h4>
+                      <StatePill label={COVERAGE_LABELS[status]} tone={COVERAGE_TONE[status]} />
+                    </div>
+                    <p className="mt-2 text-sm text-muted-foreground">{concern.description}</p>
+                    {concern.latest ? (
+                      <>
+                        <p className="mt-2 text-sm text-foreground/80">{concern.latest.summary}</p>
+                        {concern.latest.limitation ? (
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            Limitation: {concern.latest.limitation}
+                          </p>
+                        ) : null}
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          Evaluated {formatWhen(concern.latest.evaluatedAt)}
+                        </p>
+                      </>
+                    ) : (
+                      <p className="mt-2 text-sm text-foreground/80">
+                        No evaluation has been stored for this concern yet, so AOOS makes no claim
+                        about it either way.
+                      </p>
+                    )}
+                  </GlassCard>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function EssentialsPage() {
   const loadTenantContext = useServerFn(getTenantContext);
   const loadEssentials = useServerFn(getEssentials);
+  const loadCoverage = useServerFn(getCoverage);
 
   const tenant = useSuspenseQuery({
     queryKey: ["tenant-context"],
@@ -162,6 +249,13 @@ function EssentialsPage() {
     queryFn: () => loadEssentials(),
     retry: false,
   });
+
+  const coverage = useSuspenseQuery({
+    queryKey: ["coverage", activeTenantId],
+    queryFn: () => loadCoverage(),
+    retry: false,
+  });
+
 
   const gsc = data.gsc;
   const system = (key: string) => data.systems[key] ?? null;
