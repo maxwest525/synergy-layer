@@ -699,12 +699,14 @@ export async function collectDaily(client: Client, property: string): Promise<Co
     const historyIds = await collectDailyTotalsHistory(client, property, reportingDate);
     // Still ensure the page+query snapshot exists for this finalized date.
     const backfilled = await collectPageQuery(client, property, reportingDate);
+    const gapIds = await backfillPageQueryGaps(client, property, reportingDate);
     return {
       property,
       reportingDate,
       snapshotIds: [
         ...historyIds,
         ...(backfilled.created && backfilled.snapshotId ? [backfilled.snapshotId] : []),
+        ...gapIds,
       ],
       emptyResult: false,
     };
