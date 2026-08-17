@@ -590,7 +590,28 @@ export async function collectPageQuery(
   return { snapshotId, rows: rows.length, created: true };
 }
 
+/**
+ * A failed run used to lose that day's page+query detail for good. Every run now
+ * fills any missing day inside a short trailing window, so one bad day heals itself.
+ */
+const PAGE_QUERY_BACKFILL_DAYS = 7;
+
+export async function backfillPageQueryGaps(
+  client: Client,
+  property: string,
+  reportingDate: string,
+): Promise<string[]> {
+  const created: string[] = [];
+  for (let offset = 1; offset <= PAGE_QUERY_BACKFILL_DAYS; offset += 1) {
+    const date = shiftDate(reportingDate, -offset);
+    const result = await collectPageQuery(client, property, date);
+    if (result.created && result.snapshotId) created.push(result.snapshotId);
+  }
+  return created;
+}
+
 const COMPARISON_HISTORY_DAYS = 56;
+
 
 /** One provider query backfills the two complete 28-day comparison windows. */
 async function collectDailyTotalsHistory(
