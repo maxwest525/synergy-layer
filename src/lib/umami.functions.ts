@@ -100,8 +100,8 @@ export const getUmamiState = createServerFn({ method: "POST" })
     const configured = isUmamiConfigured(presence);
     const requirements: string[] = [];
     if (!presence.baseUrl) requirements.push("UMAMI_BASE_URL is not set on the server.");
-    if (!presence.apiKey && !(presence.username && presence.password)) {
-      requirements.push("No Umami API key or username and password are set on the server.");
+    if (!presence.bearerToken && !presence.apiKey && !(presence.username && presence.password)) {
+      requirements.push("No Umami token, API key, or username and password are set on the server.");
     }
 
     return {
