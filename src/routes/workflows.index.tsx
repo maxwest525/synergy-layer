@@ -46,9 +46,9 @@ function WorkflowsPage() {
   return (
     <div className="space-y-10">
       <PageHeader
-        eyebrow="How work runs"
-        title="Workflow Registry"
-        description="Each workflow is a declarative graph. Execution and observability come first: every run records step state, duration, and error."
+        eyebrow="Run work"
+        title="Workflows"
+        description="Every automation the OS can run, what it does, when it last ran, and what happened. Anything that would change your site stops and waits for your approval."
       />
 
       {failedRuns.length > 0 ? (

@@ -1,6 +1,24 @@
+import { Link } from "@tanstack/react-router";
+import { ChevronLeft } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
+
+/**
+ * Every detail page needs a visible way back to its list. Several detail
+ * screens previously had no exit at all.
+ */
+export function BackLink({ to, children }: { to: string; children: ReactNode }) {
+  return (
+    <Link
+      to={to}
+      className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground transition-colors hover:text-primary"
+    >
+      <ChevronLeft aria-hidden className="size-3.5" />
+      {children}
+    </Link>
+  );
+}
 
 /**
  * One spacing scale for every workspace, so pages stack the same way:

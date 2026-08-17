@@ -107,9 +107,9 @@ function KeywordReviewPage() {
   return (
     <div className="space-y-10">
       <PageHeader
-        eyebrow="Human approval gate"
-        title="Keyword approval"
-        description="DataForSEO Labs proposed these from operator-approved seeds. Nothing reaches SERP observation until you approve it."
+        eyebrow="Decide"
+        title="Keywords"
+        description="Search terms worth winning. Candidates were proposed from seeds you already approved, and nothing is tracked or looked up until you approve it."
       />
 
       <div className="grid gap-4 sm:grid-cols-3">

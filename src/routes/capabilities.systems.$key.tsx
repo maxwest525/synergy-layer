@@ -5,6 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 
 import { OperatorRouteError } from "@/components/os/route-error";
 import {
+  BackLink,
   DetailRow,
   EmptyState,
   GlassCard,
@@ -107,6 +108,7 @@ function SystemDetailPage() {
 
   return (
     <div className="space-y-10">
+      <BackLink to="/capabilities/systems">All systems</BackLink>
       <PageHeader
         eyebrow={KIND_LABELS[system.kind] ?? system.kind}
         title={system.name}

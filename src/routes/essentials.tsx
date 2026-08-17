@@ -385,8 +385,8 @@ function EssentialsPage() {
   return (
     <div className="space-y-10">
       <PageHeader
-        eyebrow="Marketing essentials"
-        title="Essentials"
+        eyebrow="Evidence"
+        title="Marketing essentials"
         description="What is covered and what is missing. Every status below comes from evidence AOOS already stored. Configuration is never shown as a connection, and this page only navigates: it never runs a workflow or calls a provider."
       />
       <Group title="Search Console" concerns={searchConsole} />

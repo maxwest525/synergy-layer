@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { ExecutionCard } from "@/components/os/execution-card";
 import {
+  BackLink,
   DetailRow,
   EmptyNote,
   EmptyState,
@@ -391,6 +392,7 @@ function ChangeRequestPage() {
 
   return (
     <div className="space-y-10">
+      <BackLink to="/changes">All page changes</BackLink>
       <PageHeader
         eyebrow="Proposed page change"
         title={change.title}

@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 
 import {
+  BackLink,
   DetailRow,
   GlassCard,
   PageHeader,
@@ -74,6 +75,7 @@ function RecommendationDetailPage() {
 
   return (
     <div className="space-y-10">
+      <BackLink to="/recommendations">All observations</BackLink>
       <PageHeader
         eyebrow={observation ? "Observed evidence" : recommendation.source_module}
         title={recommendation.title}

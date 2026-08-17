@@ -55,8 +55,8 @@ function AuthorityPage() {
     <PageStack>
       <PageHeader
         eyebrow="Evidence"
-        title="Authority findings"
-        description="Observed authority and trust gaps, kept separate from proposals. A finding is an observation, not an instruction."
+        title="Trust gaps"
+        description="Pages missing the proof Google looks for, such as reviews, credentials, or named authorship. These are observations, not instructions."
       />
       {rows.length === 0 ? (
         <EmptyState

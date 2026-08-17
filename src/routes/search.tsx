@@ -274,9 +274,9 @@ function SearchWorkspacePage() {
   return (
     <div className="space-y-10">
       <PageHeader
-        eyebrow="Search"
-        title="What Search Console observed"
-        description="Stored, finalized Google Search Console evidence for the selected property. Nothing here is modelled, scored, or projected."
+        eyebrow="Evidence"
+        title="Search results"
+        description="What Google reports about your site: clicks, impressions, and positions for the connected property. Nothing here is modelled, scored, or projected."
         actions={
           <div className="flex flex-wrap gap-2">
             <Button

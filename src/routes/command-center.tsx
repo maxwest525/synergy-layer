@@ -110,7 +110,7 @@ function CommandCenterPage() {
       <div className="space-y-10">
         <PageHeader
           eyebrow="System state"
-          title="Command Center"
+          title="Overview"
           description="System state is readable by signed-in operators only."
         />
         <EmptyState
@@ -125,8 +125,8 @@ function CommandCenterPage() {
     <div className="space-y-10">
       <PageHeader
         eyebrow="System state"
-        title="Command Center"
-        description="One read on what exists, what is live, and what is drifting right now."
+        title="Overview"
+        description="How everything stands right now: what exists, what is live, and what is drifting."
       />
 
       <Section title="Quick actions" hint="Jump straight into work that is waiting">

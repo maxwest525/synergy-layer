@@ -3,6 +3,7 @@ import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 
 import { DataForSeoPanel } from "@/components/os/dataforseo-panel";
 import {
+  BackLink,
   DetailRow,
   EmptyNote,
   formatWhen,
@@ -53,6 +54,7 @@ function AssetDetailPage() {
 
   return (
     <div className="space-y-10">
+      <BackLink to="/assets">All assets</BackLink>
       <PageHeader
         eyebrow={asset.kind.replace(/_/g, " ")}
         title={asset.name}

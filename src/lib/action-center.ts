@@ -2,18 +2,42 @@ export type ActionCenterLane =
   "needs_attention" | "pending_approval" | "in_progress" | "scheduled" | "completed" | "fyi";
 
 export const ACTION_CENTER_PRESENTATION_LANES = [
-  { key: "needs_attention", label: "Needs attention", hint: "Broken, blocked, or drifting." },
-  { key: "pending_approval", label: "Pending approval", hint: "Waiting on a human decision." },
+  {
+    key: "pending_approval",
+    label: "Decisions waiting on you",
+    hint: "Nothing here happens until you approve it.",
+  },
   {
     key: "in_progress",
-    label: "In progress",
-    hint: "Approved work that still needs execution or proof.",
+    label: "Approved and in flight",
+    hint: "You said yes. These are still being applied or proven live.",
+  },
+  {
+    key: "needs_attention",
+    label: "Needs a look",
+    hint: "Drifting or blocked work that is not yet a decision.",
   },
 ] as const satisfies ReadonlyArray<{
   key: ActionCenterLane;
   label: string;
   hint: string;
 }>;
+
+/**
+ * A failed observation is a system health problem, not a marketing decision.
+ * It is shown in its own strip so the decision lanes stay decisions.
+ */
+export function isSystemFailure(item: {
+  metadata: unknown;
+  changeRequest: unknown | null;
+}): boolean {
+  if (item.changeRequest) return false;
+  if (!item.metadata || typeof item.metadata !== "object" || Array.isArray(item.metadata)) {
+    return false;
+  }
+  return (item.metadata as Record<string, unknown>)["category"] === "failure";
+}
+
 
 export type ActionCenterFieldChange = {
   field: string;

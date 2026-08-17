@@ -2,6 +2,7 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 
 import {
+  BackLink,
   EmptyState,
   GlassCard,
   PageHeader,
@@ -51,6 +52,7 @@ function KnowledgeCollectionPage() {
 
   return (
     <div className="space-y-10">
+      <BackLink to="/knowledge">All knowledge</BackLink>
       <PageHeader
         eyebrow={collection.kind.replace(/_/g, " ")}
         title={collection.name}

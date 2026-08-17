@@ -48,7 +48,7 @@ function AgentsPage() {
     <div className="space-y-10">
       <PageHeader
         eyebrow="Who does the work"
-        title="Agent Registry"
+        title="Agents"
         description="Purpose, model, memory scope, granted capabilities, current objective, and last result for every agent."
       />
 

@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 
 import {
+  BackLink,
   DetailRow,
   EmptyNote,
   formatWhen,
@@ -69,6 +70,7 @@ function AgentDetailPage() {
 
   return (
     <div className="space-y-10">
+      <BackLink to="/agents">All agents</BackLink>
       <PageHeader
         eyebrow="Agent"
         title={agent.name}

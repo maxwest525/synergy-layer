@@ -127,8 +127,8 @@ function CompetitorReviewPage() {
   return (
     <div className="space-y-10">
       <PageHeader
-        eyebrow="Human approval gate"
-        title="Competitor review"
+        eyebrow="Decide"
+        title="Competitors"
         description="Derived from the stored SERP evidence for approved keywords. Ranking alone is not proof of business competition, so every row carries its own confidence and reasoning. Nothing is tracked until you approve it."
       />
 
