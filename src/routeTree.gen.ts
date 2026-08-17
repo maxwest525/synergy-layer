@@ -19,6 +19,7 @@ import { Route as CapabilitiesRouteImport } from './routes/capabilities'
 import { Route as CommandCenterRouteImport } from './routes/command-center'
 import { Route as CompetitorsRouteImport } from './routes/competitors'
 import { Route as EssentialsRouteImport } from './routes/essentials'
+import { Route as Ga4RouteImport } from './routes/ga4'
 import { Route as KeywordsRouteImport } from './routes/keywords'
 import { Route as KnowledgeRouteImport } from './routes/knowledge'
 import { Route as McpRouteImport } from './routes/mcp'
@@ -117,6 +118,11 @@ const CompetitorsRoute = CompetitorsRouteImport.update({
 const EssentialsRoute = EssentialsRouteImport.update({
   id: '/essentials',
   path: '/essentials',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const Ga4Route = Ga4RouteImport.update({
+  id: '/ga4',
+  path: '/ga4',
   getParentRoute: () => rootRouteImport,
 } as any)
 const KeywordsRoute = KeywordsRouteImport.update({
@@ -384,6 +390,7 @@ export interface FileRoutesByFullPath {
   '/command-center': typeof CommandCenterRoute
   '/competitors': typeof CompetitorsRoute
   '/essentials': typeof EssentialsRoute
+  '/ga4': typeof Ga4Route
   '/keywords': typeof KeywordsRoute
   '/knowledge': typeof KnowledgeRouteWithChildren
   '/mcp': typeof McpRoute
@@ -442,6 +449,7 @@ export interface FileRoutesByTo {
   '/command-center': typeof CommandCenterRoute
   '/competitors': typeof CompetitorsRoute
   '/essentials': typeof EssentialsRoute
+  '/ga4': typeof Ga4Route
   '/keywords': typeof KeywordsRoute
   '/mcp': typeof McpRoute
   '/measurement': typeof MeasurementRoute
@@ -498,6 +506,7 @@ export interface FileRoutesById {
   '/command-center': typeof CommandCenterRoute
   '/competitors': typeof CompetitorsRoute
   '/essentials': typeof EssentialsRoute
+  '/ga4': typeof Ga4Route
   '/keywords': typeof KeywordsRoute
   '/knowledge': typeof KnowledgeRouteWithChildren
   '/mcp': typeof McpRoute
@@ -561,6 +570,7 @@ export interface FileRouteTypes {
     | '/command-center'
     | '/competitors'
     | '/essentials'
+    | '/ga4'
     | '/keywords'
     | '/knowledge'
     | '/mcp'
@@ -619,6 +629,7 @@ export interface FileRouteTypes {
     | '/command-center'
     | '/competitors'
     | '/essentials'
+    | '/ga4'
     | '/keywords'
     | '/mcp'
     | '/measurement'
@@ -674,6 +685,7 @@ export interface FileRouteTypes {
     | '/command-center'
     | '/competitors'
     | '/essentials'
+    | '/ga4'
     | '/keywords'
     | '/knowledge'
     | '/mcp'
@@ -736,6 +748,7 @@ export interface RootRouteChildren {
   CommandCenterRoute: typeof CommandCenterRoute
   CompetitorsRoute: typeof CompetitorsRoute
   EssentialsRoute: typeof EssentialsRoute
+  Ga4Route: typeof Ga4Route
   KeywordsRoute: typeof KeywordsRoute
   KnowledgeRoute: typeof KnowledgeRouteWithChildren
   McpRoute: typeof McpRoute
@@ -836,6 +849,13 @@ declare module '@tanstack/react-router' {
       path: '/essentials'
       fullPath: '/essentials'
       preLoaderRoute: typeof EssentialsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ga4': {
+      id: '/ga4'
+      path: '/ga4'
+      fullPath: '/ga4'
+      preLoaderRoute: typeof Ga4RouteImport
       parentRoute: typeof rootRouteImport
     }
     '/keywords': {
@@ -1331,6 +1351,7 @@ const rootRouteChildren: RootRouteChildren = {
   CommandCenterRoute: CommandCenterRoute,
   CompetitorsRoute: CompetitorsRoute,
   EssentialsRoute: EssentialsRoute,
+  Ga4Route: Ga4Route,
   KeywordsRoute: KeywordsRoute,
   KnowledgeRoute: KnowledgeRouteWithChildren,
   McpRoute: McpRoute,
