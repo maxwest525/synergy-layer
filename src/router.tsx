@@ -28,6 +28,23 @@ if (recoveryRuntime) {
   }
 }
 
+type RouteLike = {
+  children?: RouteLike[];
+  options?: { getParentRoute?: () => RouteLike };
+};
+
+function repairParentLinks(route: RouteLike) {
+  for (const child of route.children ?? []) {
+    const options = child.options;
+    if (options?.getParentRoute && options.getParentRoute() !== route) {
+      options.getParentRoute = () => route;
+    }
+    repairParentLinks(child);
+  }
+}
+
+
+
 export const getRouter = () => {
   // Workspace reads are operator scoped and change slowly. A short stale window
   // makes a second visit to a workspace render straight from cache instead of
