@@ -157,7 +157,7 @@ function NavRow({
 }: {
   workspace: Workspace;
   pathname: string;
-  onNavigate?: () => void;
+  onNavigate?: (() => void) | undefined;
   collapsed: boolean;
   nested?: boolean;
 }) {
