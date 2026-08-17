@@ -95,10 +95,10 @@ second visits served from the query cache. Applied fixes:
 - Request-scoped Supabase client cache keyed by bearer token, 60s TTL
   (`src/lib/tenant.server.ts`), removing repeated auth/tenant round trips.
 - Command Center metric fan-out collapsed into one `Promise.all` batch.
-- TanStack Start, Router, and router-plugin packages are version-aligned. The
-  generated route tree is treated as immutable; the former runtime parent-link
-  mutation was removed because repeated router construction could corrupt route
-  identity and surface `Duplicate routes found with id: /`.
+- The generated route tree is treated as immutable; the former runtime
+  parent-link mutation was removed. Development-only route-split HMR wrappers
+  are disabled because they could evaluate a child against a stale parent and
+  collapse multiple route IDs to `/`; normal Vite updates remain enabled.
 - The operator session hook performs an initial persisted-session read in
   addition to subscribing to changes, so cold loads cannot remain indefinitely
   on the session-checking state.

@@ -15,6 +15,13 @@ export default defineConfig({
     // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
     // nitro/vite builds from this
     server: { entry: "server" },
+    router: {
+      // The route splitter's development-only HMR wrappers can evaluate a child
+      // route against a stale parent module and collapse multiple route IDs to
+      // "/". Normal Vite module updates still apply; disabling only those
+      // wrappers keeps the generated route hierarchy stable during edits.
+      codeSplittingOptions: { addHmr: false },
+    },
   },
   vite: {
     // mcp-js 0.26 compares a POSIX repository path with a Windows-resolved
