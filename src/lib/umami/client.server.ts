@@ -21,6 +21,7 @@ export class UmamiFailure extends Error {
 
 export type UmamiEnvPresence = {
   baseUrl: boolean;
+  bearerToken: boolean;
   apiKey: boolean;
   username: boolean;
   password: boolean;
@@ -29,6 +30,7 @@ export type UmamiEnvPresence = {
 export function readUmamiEnvPresence(env: Record<string, string | undefined>): UmamiEnvPresence {
   return {
     baseUrl: Boolean(env["UMAMI_BASE_URL"]),
+    bearerToken: Boolean(env["UMAMI_BEARER_TOKEN"]),
     apiKey: Boolean(env["UMAMI_API_KEY"]),
     username: Boolean(env["UMAMI_USERNAME"]),
     password: Boolean(env["UMAMI_PASSWORD"]),
@@ -37,7 +39,10 @@ export function readUmamiEnvPresence(env: Record<string, string | undefined>): U
 
 /** Configured means credentials exist. It never means the instance answered. */
 export function isUmamiConfigured(presence: UmamiEnvPresence): boolean {
-  return presence.baseUrl && (presence.apiKey || (presence.username && presence.password));
+  return (
+    presence.baseUrl &&
+    (presence.bearerToken || presence.apiKey || (presence.username && presence.password))
+  );
 }
 
 function baseUrl(): string {
