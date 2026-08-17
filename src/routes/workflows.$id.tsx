@@ -1,4 +1,5 @@
-import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -6,40 +7,33 @@ import { toast } from "sonner";
 import {
   DetailRow,
   EmptyNote,
-  formatWhen,
   GlassCard,
   PageHeader,
   StatePill,
   toneForState,
 } from "@/components/os/primitives";
+import {
+  ApprovalGateCard,
+  humanize,
+  kindLabels,
+  RunHistoryTimeline,
+  StepDetailPanel,
+  type CapabilityMeta,
+  type Graph,
+  type GraphNode,
+  type Run,
+  type RunStep,
+} from "@/components/os/workflow-detail";
 import { Button } from "@/components/ui/button";
+import { useOperatorSession } from "@/hooks/use-operator-session";
+import { getOperatorAccess } from "@/lib/auth.functions";
 import { runWorkflowNow } from "@/lib/os-admin.functions";
-import { getWorkflow } from "@/lib/os.functions";
+import { getCapabilities, getWorkflow } from "@/lib/os.functions";
 
 const workflowQuery = (id: string) => ({
   queryKey: ["workflow", id],
   queryFn: () => getWorkflow({ data: { id } }),
 });
-
-type GraphNode = { key: string; kind: string; ref?: string };
-
-type Graph = {
-  nodes?: GraphNode[];
-  edges?: { from: string; to: string }[];
-};
-
-/** "collect_snapshots" / "dfs.labs" become readable step names. */
-function humanize(value: string) {
-  const words = value.replaceAll(/[._-]+/g, " ").trim();
-  return words.charAt(0).toUpperCase() + words.slice(1);
-}
-
-const kindLabels: Record<string, string> = {
-  capability: "Tool step",
-  agent: "Agent step",
-  approval: "Approval gate",
-  condition: "Condition",
-};
 
 function StepRef({ node }: { node: GraphNode }) {
   if (!node.ref) return null;
@@ -63,7 +57,6 @@ function StepRef({ node }: { node: GraphNode }) {
   }
   return <span className="text-xs text-muted-foreground">{label}</span>;
 }
-
 
 export const Route = createFileRoute("/workflows/$id")({
   // Operator-only workspace: nothing here is public, and rendering it on the
