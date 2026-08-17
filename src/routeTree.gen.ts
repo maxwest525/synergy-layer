@@ -9,139 +9,59 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as WorkflowsRouteImport } from './routes/workflows'
-import { Route as SeoRunsRouteImport } from './routes/seo-runs'
-import { Route as SearchRouteImport } from './routes/search'
-import { Route as SchedulerRouteImport } from './routes/scheduler'
-import { Route as RecommendationsRouteImport } from './routes/recommendations'
-import { Route as OpenseoRouteImport } from './routes/openseo'
-import { Route as OpenaiAdsRouteImport } from './routes/openai-ads'
-import { Route as MeasurementRouteImport } from './routes/measurement'
-import { Route as McpRouteImport } from './routes/mcp'
-import { Route as KnowledgeRouteImport } from './routes/knowledge'
-import { Route as KeywordsRouteImport } from './routes/keywords'
-import { Route as EssentialsRouteImport } from './routes/essentials'
-import { Route as CompetitorsRouteImport } from './routes/competitors'
-import { Route as CommandCenterRouteImport } from './routes/command-center'
-import { Route as CapabilitiesRouteImport } from './routes/capabilities'
-import { Route as AuthRouteImport } from './routes/auth'
-import { Route as AssetsRouteImport } from './routes/assets'
-import { Route as AgentsRouteImport } from './routes/agents'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as WorkflowsIndexRouteImport } from './routes/workflows.index'
-import { Route as SeoRunsIndexRouteImport } from './routes/seo-runs.index'
-import { Route as SchedulerIndexRouteImport } from './routes/scheduler.index'
-import { Route as RecommendationsIndexRouteImport } from './routes/recommendations.index'
-import { Route as KnowledgeIndexRouteImport } from './routes/knowledge.index'
-import { Route as CapabilitiesIndexRouteImport } from './routes/capabilities.index'
-import { Route as AssetsIndexRouteImport } from './routes/assets.index'
-import { Route as AgentsIndexRouteImport } from './routes/agents.index'
-import { Route as WorkflowsIdRouteImport } from './routes/workflows.$id'
-import { Route as SeoRunsIdRouteImport } from './routes/seo-runs.$id'
-import { Route as SchedulerIdRouteImport } from './routes/scheduler.$id'
-import { Route as RecommendationsIdRouteImport } from './routes/recommendations.$id'
-import { Route as KnowledgeManualRouteImport } from './routes/knowledge.manual'
-import { Route as KnowledgeIdRouteImport } from './routes/knowledge.$id'
-import { Route as ChangesIdRouteImport } from './routes/changes.$id'
-import { Route as CapabilitiesSystemsRouteImport } from './routes/capabilities.systems'
-import { Route as CapabilitiesIdRouteImport } from './routes/capabilities.$id'
-import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
-import { Route as AssetsIdRouteImport } from './routes/assets.$id'
-import { Route as AgentsIdRouteImport } from './routes/agents.$id'
-import { Route as AdsAdvertisersRouteImport } from './routes/ads.advertisers'
-import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
+import { Route as AgentsRouteImport } from './routes/agents'
+import { Route as AssetsRouteImport } from './routes/assets'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as CapabilitiesRouteImport } from './routes/capabilities'
+import { Route as CommandCenterRouteImport } from './routes/command-center'
+import { Route as CompetitorsRouteImport } from './routes/competitors'
+import { Route as EssentialsRouteImport } from './routes/essentials'
+import { Route as KeywordsRouteImport } from './routes/keywords'
+import { Route as KnowledgeRouteImport } from './routes/knowledge'
+import { Route as McpRouteImport } from './routes/mcp'
+import { Route as MeasurementRouteImport } from './routes/measurement'
+import { Route as OpenaiAdsRouteImport } from './routes/openai-ads'
+import { Route as OpenseoRouteImport } from './routes/openseo'
+import { Route as RecommendationsRouteImport } from './routes/recommendations'
+import { Route as SchedulerRouteImport } from './routes/scheduler'
+import { Route as SearchRouteImport } from './routes/search'
+import { Route as SeoRunsRouteImport } from './routes/seo-runs'
+import { Route as WorkflowsRouteImport } from './routes/workflows'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
+import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
+import { Route as AdsAdvertisersRouteImport } from './routes/ads.advertisers'
+import { Route as AgentsIndexRouteImport } from './routes/agents.index'
+import { Route as AgentsIdRouteImport } from './routes/agents.$id'
+import { Route as AssetsIndexRouteImport } from './routes/assets.index'
+import { Route as AssetsIdRouteImport } from './routes/assets.$id'
+import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
+import { Route as CapabilitiesIndexRouteImport } from './routes/capabilities.index'
+import { Route as CapabilitiesIdRouteImport } from './routes/capabilities.$id'
+import { Route as CapabilitiesSystemsRouteImport } from './routes/capabilities.systems'
+import { Route as ChangesIdRouteImport } from './routes/changes.$id'
+import { Route as KnowledgeIndexRouteImport } from './routes/knowledge.index'
+import { Route as KnowledgeIdRouteImport } from './routes/knowledge.$id'
+import { Route as KnowledgeManualRouteImport } from './routes/knowledge.manual'
+import { Route as RecommendationsIndexRouteImport } from './routes/recommendations.index'
+import { Route as RecommendationsIdRouteImport } from './routes/recommendations.$id'
+import { Route as SchedulerIndexRouteImport } from './routes/scheduler.index'
+import { Route as SchedulerIdRouteImport } from './routes/scheduler.$id'
+import { Route as SeoRunsIndexRouteImport } from './routes/seo-runs.index'
+import { Route as SeoRunsIdRouteImport } from './routes/seo-runs.$id'
+import { Route as WorkflowsIndexRouteImport } from './routes/workflows.index'
+import { Route as WorkflowsIdRouteImport } from './routes/workflows.$id'
+import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
+import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
 import { Route as CapabilitiesSystemsIndexRouteImport } from './routes/capabilities.systems.index'
 import { Route as CapabilitiesSystemsKeyRouteImport } from './routes/capabilities.systems.$key'
-import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
-import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
-import { Route as ApiPublicHooksSchedulerTickRouteImport } from './routes/api/public/hooks/scheduler-tick'
-import { Route as ApiPublicHooksOpenaiAdsEventsRouteImport } from './routes/api/public/hooks/openai-ads-events'
 import { Route as ApiPublicHooksDataforseoPostbackRouteImport } from './routes/api/public/hooks/dataforseo-postback'
+import { Route as ApiPublicHooksOpenaiAdsEventsRouteImport } from './routes/api/public/hooks/openai-ads-events'
+import { Route as ApiPublicHooksSchedulerTickRouteImport } from './routes/api/public/hooks/scheduler-tick'
 
-const WorkflowsRoute = WorkflowsRouteImport.update({
-  id: '/workflows',
-  path: '/workflows',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SeoRunsRoute = SeoRunsRouteImport.update({
-  id: '/seo-runs',
-  path: '/seo-runs',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SearchRoute = SearchRouteImport.update({
-  id: '/search',
-  path: '/search',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SchedulerRoute = SchedulerRouteImport.update({
-  id: '/scheduler',
-  path: '/scheduler',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const RecommendationsRoute = RecommendationsRouteImport.update({
-  id: '/recommendations',
-  path: '/recommendations',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const OpenseoRoute = OpenseoRouteImport.update({
-  id: '/openseo',
-  path: '/openseo',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const OpenaiAdsRoute = OpenaiAdsRouteImport.update({
-  id: '/openai-ads',
-  path: '/openai-ads',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const MeasurementRoute = MeasurementRouteImport.update({
-  id: '/measurement',
-  path: '/measurement',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const McpRoute = McpRouteImport.update({
-  id: '/mcp',
-  path: '/mcp',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const KnowledgeRoute = KnowledgeRouteImport.update({
-  id: '/knowledge',
-  path: '/knowledge',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const KeywordsRoute = KeywordsRouteImport.update({
-  id: '/keywords',
-  path: '/keywords',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const EssentialsRoute = EssentialsRouteImport.update({
-  id: '/essentials',
-  path: '/essentials',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CompetitorsRoute = CompetitorsRouteImport.update({
-  id: '/competitors',
-  path: '/competitors',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CommandCenterRoute = CommandCenterRouteImport.update({
-  id: '/command-center',
-  path: '/command-center',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CapabilitiesRoute = CapabilitiesRouteImport.update({
-  id: '/capabilities',
-  path: '/capabilities',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthRoute = AuthRouteImport.update({
-  id: '/auth',
-  path: '/auth',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AssetsRoute = AssetsRouteImport.update({
-  id: '/assets',
-  path: '/assets',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AgentsRoute = AgentsRouteImport.update({
@@ -149,89 +69,136 @@ const AgentsRoute = AgentsRouteImport.update({
   path: '/agents',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const AssetsRoute = AssetsRouteImport.update({
+  id: '/assets',
+  path: '/assets',
   getParentRoute: () => rootRouteImport,
 } as any)
-const WorkflowsIndexRoute = WorkflowsIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => WorkflowsRoute,
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const SeoRunsIndexRoute = SeoRunsIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => SeoRunsRoute,
+const CapabilitiesRoute = CapabilitiesRouteImport.update({
+  id: '/capabilities',
+  path: '/capabilities',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const SchedulerIndexRoute = SchedulerIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => SchedulerRoute,
+const CommandCenterRoute = CommandCenterRouteImport.update({
+  id: '/command-center',
+  path: '/command-center',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const RecommendationsIndexRoute = RecommendationsIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => RecommendationsRoute,
+const CompetitorsRoute = CompetitorsRouteImport.update({
+  id: '/competitors',
+  path: '/competitors',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const KnowledgeIndexRoute = KnowledgeIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => KnowledgeRoute,
+const EssentialsRoute = EssentialsRouteImport.update({
+  id: '/essentials',
+  path: '/essentials',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const CapabilitiesIndexRoute = CapabilitiesIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => CapabilitiesRoute,
+const KeywordsRoute = KeywordsRouteImport.update({
+  id: '/keywords',
+  path: '/keywords',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const AssetsIndexRoute = AssetsIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => AssetsRoute,
+const KnowledgeRoute = KnowledgeRouteImport.update({
+  id: '/knowledge',
+  path: '/knowledge',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const McpRoute = McpRouteImport.update({
+  id: '/mcp',
+  path: '/mcp',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MeasurementRoute = MeasurementRouteImport.update({
+  id: '/measurement',
+  path: '/measurement',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OpenaiAdsRoute = OpenaiAdsRouteImport.update({
+  id: '/openai-ads',
+  path: '/openai-ads',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OpenseoRoute = OpenseoRouteImport.update({
+  id: '/openseo',
+  path: '/openseo',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RecommendationsRoute = RecommendationsRouteImport.update({
+  id: '/recommendations',
+  path: '/recommendations',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SchedulerRoute = SchedulerRouteImport.update({
+  id: '/scheduler',
+  path: '/scheduler',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SearchRoute = SearchRouteImport.update({
+  id: '/search',
+  path: '/search',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SeoRunsRoute = SeoRunsRouteImport.update({
+  id: '/seo-runs',
+  path: '/seo-runs',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WorkflowsRoute = WorkflowsRouteImport.update({
+  id: '/workflows',
+  path: '/workflows',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const Char91DotmcpChar93ListToolsRoute =
+  Char91DotmcpChar93ListToolsRouteImport.update({
+    id: '/.mcp/list-tools',
+    path: '/.mcp/list-tools',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const Char91DotwellKnownChar93OauthProtectedResourceRoute =
+  Char91DotwellKnownChar93OauthProtectedResourceRouteImport.update({
+    id: '/.well-known/oauth-protected-resource',
+    path: '/.well-known/oauth-protected-resource',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const AdsAdvertisersRoute = AdsAdvertisersRouteImport.update({
+  id: '/ads/advertisers',
+  path: '/ads/advertisers',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AgentsIndexRoute = AgentsIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AgentsRoute,
 } as any)
-const WorkflowsIdRoute = WorkflowsIdRouteImport.update({
+const AgentsIdRoute = AgentsIdRouteImport.update({
   id: '/$id',
   path: '/$id',
-  getParentRoute: () => WorkflowsRoute,
+  getParentRoute: () => AgentsRoute,
 } as any)
-const SeoRunsIdRoute = SeoRunsIdRouteImport.update({
+const AssetsIndexRoute = AssetsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AssetsRoute,
+} as any)
+const AssetsIdRoute = AssetsIdRouteImport.update({
   id: '/$id',
   path: '/$id',
-  getParentRoute: () => SeoRunsRoute,
+  getParentRoute: () => AssetsRoute,
 } as any)
-const SchedulerIdRoute = SchedulerIdRouteImport.update({
-  id: '/$id',
-  path: '/$id',
-  getParentRoute: () => SchedulerRoute,
+const AuthCallbackRoute = AuthCallbackRouteImport.update({
+  id: '/callback',
+  path: '/callback',
+  getParentRoute: () => AuthRoute,
 } as any)
-const RecommendationsIdRoute = RecommendationsIdRouteImport.update({
-  id: '/$id',
-  path: '/$id',
-  getParentRoute: () => RecommendationsRoute,
-} as any)
-const KnowledgeManualRoute = KnowledgeManualRouteImport.update({
-  id: '/manual',
-  path: '/manual',
-  getParentRoute: () => KnowledgeRoute,
-} as any)
-const KnowledgeIdRoute = KnowledgeIdRouteImport.update({
-  id: '/$id',
-  path: '/$id',
-  getParentRoute: () => KnowledgeRoute,
-} as any)
-const ChangesIdRoute = ChangesIdRouteImport.update({
-  id: '/changes/$id',
-  path: '/changes/$id',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CapabilitiesSystemsRoute = CapabilitiesSystemsRouteImport.update({
-  id: '/systems',
-  path: '/systems',
+const CapabilitiesIndexRoute = CapabilitiesIndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => CapabilitiesRoute,
 } as any)
 const CapabilitiesIdRoute = CapabilitiesIdRouteImport.update({
@@ -239,36 +206,80 @@ const CapabilitiesIdRoute = CapabilitiesIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => CapabilitiesRoute,
 } as any)
-const AuthCallbackRoute = AuthCallbackRouteImport.update({
-  id: '/callback',
-  path: '/callback',
-  getParentRoute: () => AuthRoute,
+const CapabilitiesSystemsRoute = CapabilitiesSystemsRouteImport.update({
+  id: '/systems',
+  path: '/systems',
+  getParentRoute: () => CapabilitiesRoute,
 } as any)
-const AssetsIdRoute = AssetsIdRouteImport.update({
-  id: '/$id',
-  path: '/$id',
-  getParentRoute: () => AssetsRoute,
-} as any)
-const AgentsIdRoute = AgentsIdRouteImport.update({
-  id: '/$id',
-  path: '/$id',
-  getParentRoute: () => AgentsRoute,
-} as any)
-const AdsAdvertisersRoute = AdsAdvertisersRouteImport.update({
-  id: '/ads/advertisers',
-  path: '/ads/advertisers',
+const ChangesIdRoute = ChangesIdRouteImport.update({
+  id: '/changes/$id',
+  path: '/changes/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
-const Char91DotwellKnownChar93OauthProtectedResourceRoute =
-  Char91DotwellKnownChar93OauthProtectedResourceRouteImport.update({
-    id: '/.well-known/oauth-protected-resource',
-    path: '/.well-known/oauth-protected-resource',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const Char91DotmcpChar93ListToolsRoute =
-  Char91DotmcpChar93ListToolsRouteImport.update({
-    id: '/.mcp/list-tools',
-    path: '/.mcp/list-tools',
+const KnowledgeIndexRoute = KnowledgeIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => KnowledgeRoute,
+} as any)
+const KnowledgeIdRoute = KnowledgeIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => KnowledgeRoute,
+} as any)
+const KnowledgeManualRoute = KnowledgeManualRouteImport.update({
+  id: '/manual',
+  path: '/manual',
+  getParentRoute: () => KnowledgeRoute,
+} as any)
+const RecommendationsIndexRoute = RecommendationsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => RecommendationsRoute,
+} as any)
+const RecommendationsIdRoute = RecommendationsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => RecommendationsRoute,
+} as any)
+const SchedulerIndexRoute = SchedulerIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => SchedulerRoute,
+} as any)
+const SchedulerIdRoute = SchedulerIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => SchedulerRoute,
+} as any)
+const SeoRunsIndexRoute = SeoRunsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => SeoRunsRoute,
+} as any)
+const SeoRunsIdRoute = SeoRunsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => SeoRunsRoute,
+} as any)
+const WorkflowsIndexRoute = WorkflowsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => WorkflowsRoute,
+} as any)
+const WorkflowsIdRoute = WorkflowsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => WorkflowsRoute,
+} as any)
+const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
+  id: '/.lovable/oauth/consent',
+  path: '/.lovable/oauth/consent',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const Char91DotmcpChar93InvokeToolToolRoute =
+  Char91DotmcpChar93InvokeToolToolRouteImport.update({
+    id: '/.mcp/invoke-tool/$tool',
+    path: '/.mcp/invoke-tool/$tool',
     getParentRoute: () => rootRouteImport,
   } as any)
 const CapabilitiesSystemsIndexRoute =
@@ -282,21 +293,10 @@ const CapabilitiesSystemsKeyRoute = CapabilitiesSystemsKeyRouteImport.update({
   path: '/$key',
   getParentRoute: () => CapabilitiesSystemsRoute,
 } as any)
-const Char91DotmcpChar93InvokeToolToolRoute =
-  Char91DotmcpChar93InvokeToolToolRouteImport.update({
-    id: '/.mcp/invoke-tool/$tool',
-    path: '/.mcp/invoke-tool/$tool',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
-  id: '/.lovable/oauth/consent',
-  path: '/.lovable/oauth/consent',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPublicHooksSchedulerTickRoute =
-  ApiPublicHooksSchedulerTickRouteImport.update({
-    id: '/api/public/hooks/scheduler-tick',
-    path: '/api/public/hooks/scheduler-tick',
+const ApiPublicHooksDataforseoPostbackRoute =
+  ApiPublicHooksDataforseoPostbackRouteImport.update({
+    id: '/api/public/hooks/dataforseo-postback',
+    path: '/api/public/hooks/dataforseo-postback',
     getParentRoute: () => rootRouteImport,
   } as any)
 const ApiPublicHooksOpenaiAdsEventsRoute =
@@ -305,10 +305,10 @@ const ApiPublicHooksOpenaiAdsEventsRoute =
     path: '/api/public/hooks/openai-ads-events',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ApiPublicHooksDataforseoPostbackRoute =
-  ApiPublicHooksDataforseoPostbackRouteImport.update({
-    id: '/api/public/hooks/dataforseo-postback',
-    path: '/api/public/hooks/dataforseo-postback',
+const ApiPublicHooksSchedulerTickRoute =
+  ApiPublicHooksSchedulerTickRouteImport.update({
+    id: '/api/public/hooks/scheduler-tick',
+    path: '/api/public/hooks/scheduler-tick',
     getParentRoute: () => rootRouteImport,
   } as any)
 
@@ -637,123 +637,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/workflows': {
-      id: '/workflows'
-      path: '/workflows'
-      fullPath: '/workflows'
-      preLoaderRoute: typeof WorkflowsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/seo-runs': {
-      id: '/seo-runs'
-      path: '/seo-runs'
-      fullPath: '/seo-runs'
-      preLoaderRoute: typeof SeoRunsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/search': {
-      id: '/search'
-      path: '/search'
-      fullPath: '/search'
-      preLoaderRoute: typeof SearchRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/scheduler': {
-      id: '/scheduler'
-      path: '/scheduler'
-      fullPath: '/scheduler'
-      preLoaderRoute: typeof SchedulerRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/recommendations': {
-      id: '/recommendations'
-      path: '/recommendations'
-      fullPath: '/recommendations'
-      preLoaderRoute: typeof RecommendationsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/openseo': {
-      id: '/openseo'
-      path: '/openseo'
-      fullPath: '/openseo'
-      preLoaderRoute: typeof OpenseoRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/openai-ads': {
-      id: '/openai-ads'
-      path: '/openai-ads'
-      fullPath: '/openai-ads'
-      preLoaderRoute: typeof OpenaiAdsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/measurement': {
-      id: '/measurement'
-      path: '/measurement'
-      fullPath: '/measurement'
-      preLoaderRoute: typeof MeasurementRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/mcp': {
-      id: '/mcp'
-      path: '/mcp'
-      fullPath: '/mcp'
-      preLoaderRoute: typeof McpRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/knowledge': {
-      id: '/knowledge'
-      path: '/knowledge'
-      fullPath: '/knowledge'
-      preLoaderRoute: typeof KnowledgeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/keywords': {
-      id: '/keywords'
-      path: '/keywords'
-      fullPath: '/keywords'
-      preLoaderRoute: typeof KeywordsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/essentials': {
-      id: '/essentials'
-      path: '/essentials'
-      fullPath: '/essentials'
-      preLoaderRoute: typeof EssentialsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/competitors': {
-      id: '/competitors'
-      path: '/competitors'
-      fullPath: '/competitors'
-      preLoaderRoute: typeof CompetitorsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/command-center': {
-      id: '/command-center'
-      path: '/command-center'
-      fullPath: '/command-center'
-      preLoaderRoute: typeof CommandCenterRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/capabilities': {
-      id: '/capabilities'
-      path: '/capabilities'
-      fullPath: '/capabilities'
-      preLoaderRoute: typeof CapabilitiesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/auth': {
-      id: '/auth'
-      path: '/auth'
-      fullPath: '/auth'
-      preLoaderRoute: typeof AuthRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/assets': {
-      id: '/assets'
-      path: '/assets'
-      fullPath: '/assets'
-      preLoaderRoute: typeof AssetsRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/agents': {
@@ -763,158 +651,130 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AgentsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/assets': {
+      id: '/assets'
+      path: '/assets'
+      fullPath: '/assets'
+      preLoaderRoute: typeof AssetsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/workflows/': {
-      id: '/workflows/'
-      path: '/'
-      fullPath: '/workflows/'
-      preLoaderRoute: typeof WorkflowsIndexRouteImport
-      parentRoute: typeof WorkflowsRoute
-    }
-    '/seo-runs/': {
-      id: '/seo-runs/'
-      path: '/'
-      fullPath: '/seo-runs/'
-      preLoaderRoute: typeof SeoRunsIndexRouteImport
-      parentRoute: typeof SeoRunsRoute
-    }
-    '/scheduler/': {
-      id: '/scheduler/'
-      path: '/'
-      fullPath: '/scheduler/'
-      preLoaderRoute: typeof SchedulerIndexRouteImport
-      parentRoute: typeof SchedulerRoute
-    }
-    '/recommendations/': {
-      id: '/recommendations/'
-      path: '/'
-      fullPath: '/recommendations/'
-      preLoaderRoute: typeof RecommendationsIndexRouteImport
-      parentRoute: typeof RecommendationsRoute
-    }
-    '/knowledge/': {
-      id: '/knowledge/'
-      path: '/'
-      fullPath: '/knowledge/'
-      preLoaderRoute: typeof KnowledgeIndexRouteImport
-      parentRoute: typeof KnowledgeRoute
-    }
-    '/capabilities/': {
-      id: '/capabilities/'
-      path: '/'
-      fullPath: '/capabilities/'
-      preLoaderRoute: typeof CapabilitiesIndexRouteImport
-      parentRoute: typeof CapabilitiesRoute
-    }
-    '/assets/': {
-      id: '/assets/'
-      path: '/'
-      fullPath: '/assets/'
-      preLoaderRoute: typeof AssetsIndexRouteImport
-      parentRoute: typeof AssetsRoute
-    }
-    '/agents/': {
-      id: '/agents/'
-      path: '/'
-      fullPath: '/agents/'
-      preLoaderRoute: typeof AgentsIndexRouteImport
-      parentRoute: typeof AgentsRoute
-    }
-    '/workflows/$id': {
-      id: '/workflows/$id'
-      path: '/$id'
-      fullPath: '/workflows/$id'
-      preLoaderRoute: typeof WorkflowsIdRouteImport
-      parentRoute: typeof WorkflowsRoute
-    }
-    '/seo-runs/$id': {
-      id: '/seo-runs/$id'
-      path: '/$id'
-      fullPath: '/seo-runs/$id'
-      preLoaderRoute: typeof SeoRunsIdRouteImport
-      parentRoute: typeof SeoRunsRoute
-    }
-    '/scheduler/$id': {
-      id: '/scheduler/$id'
-      path: '/$id'
-      fullPath: '/scheduler/$id'
-      preLoaderRoute: typeof SchedulerIdRouteImport
-      parentRoute: typeof SchedulerRoute
-    }
-    '/recommendations/$id': {
-      id: '/recommendations/$id'
-      path: '/$id'
-      fullPath: '/recommendations/$id'
-      preLoaderRoute: typeof RecommendationsIdRouteImport
-      parentRoute: typeof RecommendationsRoute
-    }
-    '/knowledge/manual': {
-      id: '/knowledge/manual'
-      path: '/manual'
-      fullPath: '/knowledge/manual'
-      preLoaderRoute: typeof KnowledgeManualRouteImport
-      parentRoute: typeof KnowledgeRoute
-    }
-    '/knowledge/$id': {
-      id: '/knowledge/$id'
-      path: '/$id'
-      fullPath: '/knowledge/$id'
-      preLoaderRoute: typeof KnowledgeIdRouteImport
-      parentRoute: typeof KnowledgeRoute
-    }
-    '/changes/$id': {
-      id: '/changes/$id'
-      path: '/changes/$id'
-      fullPath: '/changes/$id'
-      preLoaderRoute: typeof ChangesIdRouteImport
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/capabilities/systems': {
-      id: '/capabilities/systems'
-      path: '/systems'
-      fullPath: '/capabilities/systems'
-      preLoaderRoute: typeof CapabilitiesSystemsRouteImport
-      parentRoute: typeof CapabilitiesRoute
+    '/capabilities': {
+      id: '/capabilities'
+      path: '/capabilities'
+      fullPath: '/capabilities'
+      preLoaderRoute: typeof CapabilitiesRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/capabilities/$id': {
-      id: '/capabilities/$id'
-      path: '/$id'
-      fullPath: '/capabilities/$id'
-      preLoaderRoute: typeof CapabilitiesIdRouteImport
-      parentRoute: typeof CapabilitiesRoute
+    '/command-center': {
+      id: '/command-center'
+      path: '/command-center'
+      fullPath: '/command-center'
+      preLoaderRoute: typeof CommandCenterRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/auth/callback': {
-      id: '/auth/callback'
-      path: '/callback'
-      fullPath: '/auth/callback'
-      preLoaderRoute: typeof AuthCallbackRouteImport
-      parentRoute: typeof AuthRoute
+    '/competitors': {
+      id: '/competitors'
+      path: '/competitors'
+      fullPath: '/competitors'
+      preLoaderRoute: typeof CompetitorsRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/assets/$id': {
-      id: '/assets/$id'
-      path: '/$id'
-      fullPath: '/assets/$id'
-      preLoaderRoute: typeof AssetsIdRouteImport
-      parentRoute: typeof AssetsRoute
+    '/essentials': {
+      id: '/essentials'
+      path: '/essentials'
+      fullPath: '/essentials'
+      preLoaderRoute: typeof EssentialsRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/agents/$id': {
-      id: '/agents/$id'
-      path: '/$id'
-      fullPath: '/agents/$id'
-      preLoaderRoute: typeof AgentsIdRouteImport
-      parentRoute: typeof AgentsRoute
+    '/keywords': {
+      id: '/keywords'
+      path: '/keywords'
+      fullPath: '/keywords'
+      preLoaderRoute: typeof KeywordsRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/ads/advertisers': {
-      id: '/ads/advertisers'
-      path: '/ads/advertisers'
-      fullPath: '/ads/advertisers'
-      preLoaderRoute: typeof AdsAdvertisersRouteImport
+    '/knowledge': {
+      id: '/knowledge'
+      path: '/knowledge'
+      fullPath: '/knowledge'
+      preLoaderRoute: typeof KnowledgeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mcp': {
+      id: '/mcp'
+      path: '/mcp'
+      fullPath: '/mcp'
+      preLoaderRoute: typeof McpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/measurement': {
+      id: '/measurement'
+      path: '/measurement'
+      fullPath: '/measurement'
+      preLoaderRoute: typeof MeasurementRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/openai-ads': {
+      id: '/openai-ads'
+      path: '/openai-ads'
+      fullPath: '/openai-ads'
+      preLoaderRoute: typeof OpenaiAdsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/openseo': {
+      id: '/openseo'
+      path: '/openseo'
+      fullPath: '/openseo'
+      preLoaderRoute: typeof OpenseoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/recommendations': {
+      id: '/recommendations'
+      path: '/recommendations'
+      fullPath: '/recommendations'
+      preLoaderRoute: typeof RecommendationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/scheduler': {
+      id: '/scheduler'
+      path: '/scheduler'
+      fullPath: '/scheduler'
+      preLoaderRoute: typeof SchedulerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/search': {
+      id: '/search'
+      path: '/search'
+      fullPath: '/search'
+      preLoaderRoute: typeof SearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/seo-runs': {
+      id: '/seo-runs'
+      path: '/seo-runs'
+      fullPath: '/seo-runs'
+      preLoaderRoute: typeof SeoRunsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/workflows': {
+      id: '/workflows'
+      path: '/workflows'
+      fullPath: '/workflows'
+      preLoaderRoute: typeof WorkflowsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/.mcp/list-tools': {
+      id: '/.mcp/list-tools'
+      path: '/.mcp/list-tools'
+      fullPath: '/.mcp/list-tools'
+      preLoaderRoute: typeof Char91DotmcpChar93ListToolsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/.well-known/oauth-protected-resource': {
@@ -924,11 +784,165 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/.mcp/list-tools': {
-      id: '/.mcp/list-tools'
-      path: '/.mcp/list-tools'
-      fullPath: '/.mcp/list-tools'
-      preLoaderRoute: typeof Char91DotmcpChar93ListToolsRouteImport
+    '/ads/advertisers': {
+      id: '/ads/advertisers'
+      path: '/ads/advertisers'
+      fullPath: '/ads/advertisers'
+      preLoaderRoute: typeof AdsAdvertisersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/agents/': {
+      id: '/agents/'
+      path: '/'
+      fullPath: '/agents/'
+      preLoaderRoute: typeof AgentsIndexRouteImport
+      parentRoute: typeof AgentsRoute
+    }
+    '/agents/$id': {
+      id: '/agents/$id'
+      path: '/$id'
+      fullPath: '/agents/$id'
+      preLoaderRoute: typeof AgentsIdRouteImport
+      parentRoute: typeof AgentsRoute
+    }
+    '/assets/': {
+      id: '/assets/'
+      path: '/'
+      fullPath: '/assets/'
+      preLoaderRoute: typeof AssetsIndexRouteImport
+      parentRoute: typeof AssetsRoute
+    }
+    '/assets/$id': {
+      id: '/assets/$id'
+      path: '/$id'
+      fullPath: '/assets/$id'
+      preLoaderRoute: typeof AssetsIdRouteImport
+      parentRoute: typeof AssetsRoute
+    }
+    '/auth/callback': {
+      id: '/auth/callback'
+      path: '/callback'
+      fullPath: '/auth/callback'
+      preLoaderRoute: typeof AuthCallbackRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/capabilities/': {
+      id: '/capabilities/'
+      path: '/'
+      fullPath: '/capabilities/'
+      preLoaderRoute: typeof CapabilitiesIndexRouteImport
+      parentRoute: typeof CapabilitiesRoute
+    }
+    '/capabilities/$id': {
+      id: '/capabilities/$id'
+      path: '/$id'
+      fullPath: '/capabilities/$id'
+      preLoaderRoute: typeof CapabilitiesIdRouteImport
+      parentRoute: typeof CapabilitiesRoute
+    }
+    '/capabilities/systems': {
+      id: '/capabilities/systems'
+      path: '/systems'
+      fullPath: '/capabilities/systems'
+      preLoaderRoute: typeof CapabilitiesSystemsRouteImport
+      parentRoute: typeof CapabilitiesRoute
+    }
+    '/changes/$id': {
+      id: '/changes/$id'
+      path: '/changes/$id'
+      fullPath: '/changes/$id'
+      preLoaderRoute: typeof ChangesIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/knowledge/': {
+      id: '/knowledge/'
+      path: '/'
+      fullPath: '/knowledge/'
+      preLoaderRoute: typeof KnowledgeIndexRouteImport
+      parentRoute: typeof KnowledgeRoute
+    }
+    '/knowledge/$id': {
+      id: '/knowledge/$id'
+      path: '/$id'
+      fullPath: '/knowledge/$id'
+      preLoaderRoute: typeof KnowledgeIdRouteImport
+      parentRoute: typeof KnowledgeRoute
+    }
+    '/knowledge/manual': {
+      id: '/knowledge/manual'
+      path: '/manual'
+      fullPath: '/knowledge/manual'
+      preLoaderRoute: typeof KnowledgeManualRouteImport
+      parentRoute: typeof KnowledgeRoute
+    }
+    '/recommendations/': {
+      id: '/recommendations/'
+      path: '/'
+      fullPath: '/recommendations/'
+      preLoaderRoute: typeof RecommendationsIndexRouteImport
+      parentRoute: typeof RecommendationsRoute
+    }
+    '/recommendations/$id': {
+      id: '/recommendations/$id'
+      path: '/$id'
+      fullPath: '/recommendations/$id'
+      preLoaderRoute: typeof RecommendationsIdRouteImport
+      parentRoute: typeof RecommendationsRoute
+    }
+    '/scheduler/': {
+      id: '/scheduler/'
+      path: '/'
+      fullPath: '/scheduler/'
+      preLoaderRoute: typeof SchedulerIndexRouteImport
+      parentRoute: typeof SchedulerRoute
+    }
+    '/scheduler/$id': {
+      id: '/scheduler/$id'
+      path: '/$id'
+      fullPath: '/scheduler/$id'
+      preLoaderRoute: typeof SchedulerIdRouteImport
+      parentRoute: typeof SchedulerRoute
+    }
+    '/seo-runs/': {
+      id: '/seo-runs/'
+      path: '/'
+      fullPath: '/seo-runs/'
+      preLoaderRoute: typeof SeoRunsIndexRouteImport
+      parentRoute: typeof SeoRunsRoute
+    }
+    '/seo-runs/$id': {
+      id: '/seo-runs/$id'
+      path: '/$id'
+      fullPath: '/seo-runs/$id'
+      preLoaderRoute: typeof SeoRunsIdRouteImport
+      parentRoute: typeof SeoRunsRoute
+    }
+    '/workflows/': {
+      id: '/workflows/'
+      path: '/'
+      fullPath: '/workflows/'
+      preLoaderRoute: typeof WorkflowsIndexRouteImport
+      parentRoute: typeof WorkflowsRoute
+    }
+    '/workflows/$id': {
+      id: '/workflows/$id'
+      path: '/$id'
+      fullPath: '/workflows/$id'
+      preLoaderRoute: typeof WorkflowsIdRouteImport
+      parentRoute: typeof WorkflowsRoute
+    }
+    '/.lovable/oauth/consent': {
+      id: '/.lovable/oauth/consent'
+      path: '/.lovable/oauth/consent'
+      fullPath: '/.lovable/oauth/consent'
+      preLoaderRoute: typeof DotlovableOauthConsentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/.mcp/invoke-tool/$tool': {
+      id: '/.mcp/invoke-tool/$tool'
+      path: '/.mcp/invoke-tool/$tool'
+      fullPath: '/.mcp/invoke-tool/$tool'
+      preLoaderRoute: typeof Char91DotmcpChar93InvokeToolToolRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/capabilities/systems/': {
@@ -945,25 +959,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CapabilitiesSystemsKeyRouteImport
       parentRoute: typeof CapabilitiesSystemsRoute
     }
-    '/.mcp/invoke-tool/$tool': {
-      id: '/.mcp/invoke-tool/$tool'
-      path: '/.mcp/invoke-tool/$tool'
-      fullPath: '/.mcp/invoke-tool/$tool'
-      preLoaderRoute: typeof Char91DotmcpChar93InvokeToolToolRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/.lovable/oauth/consent': {
-      id: '/.lovable/oauth/consent'
-      path: '/.lovable/oauth/consent'
-      fullPath: '/.lovable/oauth/consent'
-      preLoaderRoute: typeof DotlovableOauthConsentRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/hooks/scheduler-tick': {
-      id: '/api/public/hooks/scheduler-tick'
-      path: '/api/public/hooks/scheduler-tick'
-      fullPath: '/api/public/hooks/scheduler-tick'
-      preLoaderRoute: typeof ApiPublicHooksSchedulerTickRouteImport
+    '/api/public/hooks/dataforseo-postback': {
+      id: '/api/public/hooks/dataforseo-postback'
+      path: '/api/public/hooks/dataforseo-postback'
+      fullPath: '/api/public/hooks/dataforseo-postback'
+      preLoaderRoute: typeof ApiPublicHooksDataforseoPostbackRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/hooks/openai-ads-events': {
@@ -973,11 +973,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksOpenaiAdsEventsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/hooks/dataforseo-postback': {
-      id: '/api/public/hooks/dataforseo-postback'
-      path: '/api/public/hooks/dataforseo-postback'
-      fullPath: '/api/public/hooks/dataforseo-postback'
-      preLoaderRoute: typeof ApiPublicHooksDataforseoPostbackRouteImport
+    '/api/public/hooks/scheduler-tick': {
+      id: '/api/public/hooks/scheduler-tick'
+      path: '/api/public/hooks/scheduler-tick'
+      fullPath: '/api/public/hooks/scheduler-tick'
+      preLoaderRoute: typeof ApiPublicHooksSchedulerTickRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
