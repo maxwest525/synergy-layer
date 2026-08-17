@@ -112,42 +112,60 @@ export const getAdsOverview = createServerFn({ method: "POST" })
     const tenantId = await requireTenantId(context.supabase);
     const db = context.supabase;
 
-    const [capability, watchlist, ledger, candidates, advertisers, links] = await Promise.all([
-      db
-        .from("capabilities")
-        .select("config, integration_state, health")
-        .eq("key", "cap.serpapi_ads_transparency")
-        .maybeSingle(),
-      db
-        .from("ad_vendor_watchlist")
-        .select("id, domain, label, active, resolution_state")
-        .eq("tenant_id", tenantId)
-        .order("domain"),
-      db
-        .from("serpapi_requests")
-        .select("*")
-        .eq("tenant_id", tenantId)
-        .order("started_at", { ascending: false })
-        .limit(50),
-      db
-        .from("ad_advertiser_candidates")
-        .select("*")
-        .eq("tenant_id", tenantId)
-        .order("created_at", { ascending: false })
-        .limit(200),
-      db
-        .from("ad_advertisers")
-        .select("*")
-        .eq("tenant_id", tenantId)
-        .order("confirmed_at", { ascending: false })
-        .limit(200),
-      db
-        .from("ad_vendor_advertisers")
-        .select("watchlist_id, advertiser_fk")
-        .eq("tenant_id", tenantId),
-    ]);
+    const [capability, watchlist, ledger, candidates, advertisers, links, creatives] =
+      await Promise.all([
+        db
+          .from("capabilities")
+          .select("config, integration_state, health")
+          .eq("key", "cap.serpapi_ads_transparency")
+          .maybeSingle(),
+        db
+          .from("ad_vendor_watchlist")
+          .select("id, domain, label, active, resolution_state")
+          .eq("tenant_id", tenantId)
+          .order("domain"),
+        db
+          .from("serpapi_requests")
+          .select("*")
+          .eq("tenant_id", tenantId)
+          .order("started_at", { ascending: false })
+          .limit(50),
+        db
+          .from("ad_advertiser_candidates")
+          .select("*")
+          .eq("tenant_id", tenantId)
+          .order("created_at", { ascending: false })
+          .limit(200),
+        db
+          .from("ad_advertisers")
+          .select("*")
+          .eq("tenant_id", tenantId)
+          .order("confirmed_at", { ascending: false })
+          .limit(200),
+        db
+          .from("ad_vendor_advertisers")
+          .select("watchlist_id, advertiser_fk")
+          .eq("tenant_id", tenantId),
+        db
+          .from("ad_creatives")
+          .select(
+            "id, advertiser_fk, format, headline, snippet, call_to_action, target_domain, link, first_shown, last_shown, retrieved_at",
+          )
+          .eq("tenant_id", tenantId)
+          .order("last_detected_at", { ascending: false })
+          .limit(120),
+      ]);
 
-    for (const result of [capability, watchlist, ledger, candidates, advertisers, links]) {
+    for (const result of [
+      capability,
+      watchlist,
+      ledger,
+      candidates,
+      advertisers,
+      links,
+      creatives,
+    ]) {
+
       if (result.error) throw new Error(`Ads overview read failed: ${result.error.message}`);
     }
 
