@@ -1,3 +1,6 @@
+import { Link } from "@tanstack/react-router";
+import { ArrowRight } from "lucide-react";
+
 import { GlassCard, StatePill } from "@/components/os/primitives";
 import type { LoopState } from "@/lib/loop-state";
 import type { MissingReason } from "@/lib/next-actions";
@@ -26,8 +29,8 @@ export function WhatsMissing({
         />
       </div>
       <p className="mt-2 max-w-[70ch] text-sm text-muted-foreground">
-        Each line below is a list that is empty on purpose, with the stored reason it is empty.
-        Nothing here is an estimate.
+        Each line is an instruction: what is missing, the stored reason it is missing, and the
+        one step that fixes it. Nothing here is an estimate.
       </p>
 
       {missing.length === 0 ? (
@@ -59,8 +62,22 @@ export function WhatsMissing({
                       key={entry.id}
                       className="rounded-lg border border-border/60 bg-background/30 px-3 py-2"
                     >
-                      <p className="text-sm font-medium text-foreground">{entry.label}</p>
-                      <p className="mt-0.5 text-sm text-muted-foreground">{entry.reason}</p>
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-foreground">
+                            {entry.label} <span className="text-muted-foreground">&mdash;</span>{" "}
+                            <span className="text-primary">{entry.instruction}</span>
+                          </p>
+                          <p className="mt-0.5 text-sm text-muted-foreground">{entry.reason}</p>
+                        </div>
+                        <Link
+                          to={entry.to}
+                          className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-primary/40 px-2.5 py-1 text-xs font-medium text-primary transition-colors hover:bg-primary/10"
+                        >
+                          {entry.actionLabel}
+                          <ArrowRight className="size-3.5" />
+                        </Link>
+                      </div>
                     </li>
                   ))}
                 </ul>
