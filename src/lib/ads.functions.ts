@@ -250,6 +250,19 @@ export const getAdsOverview = createServerFn({ method: "POST" })
         confirmedAt: row.confirmed_at,
         linkedDomains: [...(domainsByAdvertiser.get(row.id) ?? [])],
       })),
+      creatives: (creatives.data ?? []).map((row) => ({
+        id: row.id,
+        advertiserFk: row.advertiser_fk,
+        format: row.format,
+        headline: row.headline,
+        snippet: row.snippet,
+        callToAction: row.call_to_action,
+        targetDomain: row.target_domain,
+        link: row.link,
+        firstShown: row.first_shown,
+        lastShown: row.last_shown,
+        observedAt: row.retrieved_at,
+      })),
       pendingCount: candidateRows.filter((row) => row.reviewState === "pending").length,
     };
   });
