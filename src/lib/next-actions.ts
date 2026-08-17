@@ -309,6 +309,10 @@ export type MissingReason = {
   group: TaxonomyGroupKey;
   label: string;
   reason: string;
+  /** Imperative next step. Every missing line is an instruction, never a note. */
+  instruction: string;
+  to: NextActionRoute;
+  actionLabel: string;
 };
 
 export function buildMissingReasons(facts: NextActionFacts): MissingReason[] {
@@ -321,6 +325,9 @@ export function buildMissingReasons(facts: NextActionFacts): MissingReason[] {
       label: "No keyword candidates",
       reason:
         "No keyword research run has stored a candidate set for this workspace, so the list is empty rather than showing zero opportunity.",
+      instruction: "Run keyword research to build the first candidate set.",
+      to: "/keywords",
+      actionLabel: "Run keyword research",
     });
   }
   if (facts.competitors.tracked === 0 && facts.competitors.pendingCandidates === 0) {
@@ -330,6 +337,9 @@ export function buildMissingReasons(facts: NextActionFacts): MissingReason[] {
       label: "No competitors",
       reason:
         "No competitor derivation run has stored candidates, so AOOS makes no claim about who you compete with.",
+      instruction: "Derive competitors from the selected property.",
+      to: "/competitors",
+      actionLabel: "Find competitors",
     });
   }
   if (facts.changes.total === 0) {
@@ -339,6 +349,9 @@ export function buildMissingReasons(facts: NextActionFacts): MissingReason[] {
       label: "No page changes proposed",
       reason:
         "No change request has ever been created, so the approval loop has not started once.",
+      instruction: "Propose the first page change from stored search evidence.",
+      to: "/changes",
+      actionLabel: "Propose a change",
     });
   }
   if (facts.ga4.snapshots === 0) {
@@ -349,6 +362,9 @@ export function buildMissingReasons(facts: NextActionFacts): MissingReason[] {
       reason: facts.ga4.lastError
         ? `Every analytics read failed. Last recorded error: ${facts.ga4.lastError}.`
         : "Analytics has never completed a stored read, so visit numbers are absent rather than zero.",
+      instruction: "Refresh analytics now and store the first snapshot.",
+      to: "/ga4",
+      actionLabel: "Refresh analytics",
     });
   }
   if (facts.pagespeed.snapshots === 0) {
@@ -360,6 +376,9 @@ export function buildMissingReasons(facts: NextActionFacts): MissingReason[] {
         facts.pagespeed.attempts > 0
           ? `${facts.pagespeed.attempts} attempt(s), all failed at the provider${facts.pagespeed.latestError ? `: ${facts.pagespeed.latestError}` : ""}.`
           : "No page speed run has been attempted yet.",
+      instruction: "Fix the page speed provider key, then measure now.",
+      to: "/measurement",
+      actionLabel: "Measure page speed",
     });
   }
   if (facts.umami.snapshots === 0) {
@@ -368,6 +387,9 @@ export function buildMissingReasons(facts: NextActionFacts): MissingReason[] {
       group: "evidence",
       label: "No self hosted traffic snapshots",
       reason: "The self hosted analytics reader has not stored a snapshot for this workspace yet.",
+      instruction: "Run the self hosted traffic reader now.",
+      to: "/measurement",
+      actionLabel: "Read traffic",
     });
   }
   if (facts.gsc.snapshots === 0) {
@@ -378,6 +400,9 @@ export function buildMissingReasons(facts: NextActionFacts): MissingReason[] {
       reason: facts.property
         ? `Property ${facts.property.siteUrl} is selected but no snapshot has been stored.`
         : "No Search Console property is selected for this workspace.",
+      instruction: "Run a search performance read now.",
+      to: "/search",
+      actionLabel: "Read search performance",
     });
   }
   if (facts.runs.total === 0) {
@@ -386,6 +411,9 @@ export function buildMissingReasons(facts: NextActionFacts): MissingReason[] {
       group: "run_work",
       label: "No workflow runs",
       reason: "Nothing has been run yet, so there is no run history to read.",
+      instruction: "Run a registered workflow now.",
+      to: "/workflows",
+      actionLabel: "Run a workflow",
     });
   }
   if (facts.workflows.scheduled === 0) {
@@ -394,6 +422,9 @@ export function buildMissingReasons(facts: NextActionFacts): MissingReason[] {
       group: "run_work",
       label: "No active schedules",
       reason: "No schedule is active, so evidence only appears when someone runs a workflow by hand.",
+      instruction: "Turn on a daily schedule now.",
+      to: "/scheduler",
+      actionLabel: "Set a schedule",
     });
   }
   if (facts.systems.proven === 0) {
@@ -403,6 +434,9 @@ export function buildMissingReasons(facts: NextActionFacts): MissingReason[] {
       label: "No proven connection",
       reason:
         "No catalogued system has a stored successful read, so every screen downstream is honestly empty.",
+      instruction: "Connect one system and prove it with a real read.",
+      to: "/capabilities/systems",
+      actionLabel: "Connect a system",
     });
   }
 
