@@ -3,6 +3,7 @@ import "./lib/error-capture";
 import { createStartHandler, defaultStreamHandler } from "@tanstack/react-start/server";
 import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
+import { cancelledRequestResponse, isIncomingRequestAbort } from "./lib/http-request-errors";
 
 // Keep the framework handler in this module's Vite graph. Caching a dynamic
 // server-entry import here survives route HMR and can retain an obsolete tree.
@@ -18,7 +19,9 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
   const body = await response.clone().text();
   if (!isH3SwallowedErrorBody(body)) return response;
 
-  console.error(consumeLastCapturedError() ?? new Error(`h3 swallowed SSR error: ${body}`));
+  const capturedError = consumeLastCapturedError();
+  if (isIncomingRequestAbort(capturedError)) return cancelledRequestResponse();
+  console.error(capturedError ?? new Error(`h3 swallowed SSR error: ${body}`));
   return new Response(renderErrorPage(), {
     status: 500,
     headers: { "content-type": "text/html; charset=utf-8" },
@@ -40,6 +43,7 @@ export default {
       const response = await startHandler(request);
       return await normalizeCatastrophicSsrResponse(response);
     } catch (error) {
+      if (isIncomingRequestAbort(error)) return cancelledRequestResponse();
       console.error(error);
       return new Response(renderErrorPage(), {
         status: 500,

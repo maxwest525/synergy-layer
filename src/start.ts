@@ -1,12 +1,14 @@
 import { createStart, createCsrfMiddleware, createMiddleware } from "@tanstack/react-start";
 
 import { renderErrorPage } from "./lib/error-page";
+import { cancelledRequestResponse, isIncomingRequestAbort } from "./lib/http-request-errors";
 import { attachSupabaseAuth } from "@/integrations/supabase/auth-attacher";
 
 const errorMiddleware = createMiddleware().server(async ({ next }) => {
   try {
     return await next();
   } catch (error) {
+    if (isIncomingRequestAbort(error)) return cancelledRequestResponse();
     if (error != null && typeof error === "object" && "statusCode" in error) {
       throw error;
     }
