@@ -30,6 +30,7 @@ import { Route as SchedulerRouteImport } from './routes/scheduler'
 import { Route as SearchRouteImport } from './routes/search'
 import { Route as SeoRunsRouteImport } from './routes/seo-runs'
 import { Route as SpendRouteImport } from './routes/spend'
+import { Route as StudioRouteImport } from './routes/studio'
 import { Route as WorkflowsRouteImport } from './routes/workflows'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
@@ -169,6 +170,11 @@ const SeoRunsRoute = SeoRunsRouteImport.update({
 const SpendRoute = SpendRouteImport.update({
   id: '/spend',
   path: '/spend',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StudioRoute = StudioRouteImport.update({
+  id: '/studio',
+  path: '/studio',
   getParentRoute: () => rootRouteImport,
 } as any)
 const WorkflowsRoute = WorkflowsRouteImport.update({
@@ -377,6 +383,7 @@ export interface FileRoutesByFullPath {
   '/search': typeof SearchRoute
   '/seo-runs': typeof SeoRunsRouteWithChildren
   '/spend': typeof SpendRoute
+  '/studio': typeof StudioRoute
   '/workflows': typeof WorkflowsRouteWithChildren
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -428,6 +435,7 @@ export interface FileRoutesByTo {
   '/operators': typeof OperatorsRoute
   '/search': typeof SearchRoute
   '/spend': typeof SpendRoute
+  '/studio': typeof StudioRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/ads/advertisers': typeof AdsAdvertisersRoute
@@ -485,6 +493,7 @@ export interface FileRoutesById {
   '/search': typeof SearchRoute
   '/seo-runs': typeof SeoRunsRouteWithChildren
   '/spend': typeof SpendRoute
+  '/studio': typeof StudioRoute
   '/workflows': typeof WorkflowsRouteWithChildren
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -545,6 +554,7 @@ export interface FileRouteTypes {
     | '/search'
     | '/seo-runs'
     | '/spend'
+    | '/studio'
     | '/workflows'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
@@ -596,6 +606,7 @@ export interface FileRouteTypes {
     | '/operators'
     | '/search'
     | '/spend'
+    | '/studio'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/ads/advertisers'
@@ -652,6 +663,7 @@ export interface FileRouteTypes {
     | '/search'
     | '/seo-runs'
     | '/spend'
+    | '/studio'
     | '/workflows'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
@@ -711,6 +723,7 @@ export interface RootRouteChildren {
   SearchRoute: typeof SearchRoute
   SeoRunsRoute: typeof SeoRunsRouteWithChildren
   SpendRoute: typeof SpendRoute
+  StudioRoute: typeof StudioRoute
   WorkflowsRoute: typeof WorkflowsRouteWithChildren
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -874,6 +887,13 @@ declare module '@tanstack/react-router' {
       path: '/spend'
       fullPath: '/spend'
       preLoaderRoute: typeof SpendRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/studio': {
+      id: '/studio'
+      path: '/studio'
+      fullPath: '/studio'
+      preLoaderRoute: typeof StudioRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/workflows': {
@@ -1282,6 +1302,7 @@ const rootRouteChildren: RootRouteChildren = {
   SearchRoute: SearchRoute,
   SeoRunsRoute: SeoRunsRouteWithChildren,
   SpendRoute: SpendRoute,
+  StudioRoute: StudioRoute,
   WorkflowsRoute: WorkflowsRouteWithChildren,
   Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
