@@ -114,7 +114,7 @@ function NavList({
             groupIndex === 0 && "pt-0",
           )}
         >
-          <p className="px-2 pb-2 text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground/70">
+          <p className="px-2 pb-2 text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-foreground/60">
             {group.title}
           </p>
           {/* A single hairline rail runs behind the group so its items read as
@@ -138,19 +138,19 @@ function NavList({
                       "flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm transition-colors",
                       active
                         ? "bg-sidebar-accent text-foreground"
-                        : "text-muted-foreground hover:bg-sidebar-accent/50 hover:text-foreground",
+                        : "text-foreground/85 hover:bg-sidebar-accent/50 hover:text-foreground",
                     )}
                   >
                     <workspace.icon
                       aria-hidden
                       className={cn(
                         "size-4 shrink-0",
-                        active ? "text-primary" : "text-muted-foreground/80",
+                        active ? "text-primary" : "text-foreground/70",
                       )}
                     />
                     <span className="min-w-0 flex-1 leading-tight">
                       <span className="block truncate font-medium">{workspace.label}</span>
-                      <span className="block truncate text-xs text-muted-foreground/70">
+                      <span className="block truncate text-xs text-foreground/55">
                         {workspace.hint}
                       </span>
                     </span>
@@ -235,7 +235,7 @@ export function Shell({ children }: { children: ReactNode }) {
       <div className="relative flex min-h-screen w-full">
         <nav
           aria-label="Workspaces"
-          className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col overflow-y-auto border-r border-border/60 bg-sidebar/70 px-4 py-5 backdrop-blur-xl lg:flex"
+          className="scrollbar-none sticky top-0 hidden h-screen w-80 shrink-0 flex-col overflow-y-auto border-r border-border/60 bg-sidebar/70 px-4 py-5 backdrop-blur-xl lg:flex"
         >
           <Link to="/" className="mb-5 block px-2.5">
             <BrandMark />
@@ -251,7 +251,7 @@ export function Shell({ children }: { children: ReactNode }) {
 
           <Link
             to="/auth"
-            className="mt-4 block truncate border-t border-border/50 px-2.5 pt-4 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+            className="mt-4 block truncate border-t border-border/50 px-2.5 pt-4 text-sm font-medium text-foreground/80 transition-colors hover:text-foreground"
           >
             {accountLabel}
           </Link>
@@ -268,7 +268,7 @@ export function Shell({ children }: { children: ReactNode }) {
               </SheetTrigger>
               <SheetContent
                 side="left"
-                className="flex w-[19rem] flex-col overflow-y-auto border-border/60 bg-sidebar px-4 py-6"
+                className="scrollbar-none flex w-[21rem] flex-col overflow-y-auto border-border/60 bg-sidebar px-4 py-6"
               >
                 <div className="mb-5 px-2.5">
                   <BrandMark />
@@ -282,7 +282,7 @@ export function Shell({ children }: { children: ReactNode }) {
                 <Link
                   to="/auth"
                   onClick={() => setMenuOpen(false)}
-                  className="mt-4 block truncate border-t border-border/50 px-2.5 pt-4 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+                  className="mt-4 block truncate border-t border-border/50 px-2.5 pt-4 text-sm font-medium text-foreground/80 transition-colors hover:text-foreground"
                 >
                   {accountLabel}
                 </Link>
