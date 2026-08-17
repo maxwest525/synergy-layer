@@ -11,8 +11,15 @@ const startHandler = createStartHandler(defaultStreamHandler);
 
 // h3 swallows in-handler throws into a normal 500 Response with body
 // {"unhandled":true,"message":"HTTPError"} — try/catch alone never fires for those.
-async function normalizeCatastrophicSsrResponse(response: Response): Promise<Response> {
+async function normalizeCatastrophicSsrResponse(
+  request: Request,
+  response: Response,
+): Promise<Response> {
   if (response.status < 500) return response;
+  // The browser closing the connection (navigation, reload, HMR) surfaces as a
+  // generic 500 downstream. That is a cancellation, never an app failure.
+  if (request.signal.aborted) return cancelledRequestResponse();
+
   const contentType = response.headers.get("content-type") ?? "";
   if (!contentType.includes("application/json")) return response;
 
@@ -41,9 +48,11 @@ export default {
   async fetch(request: Request) {
     try {
       const response = await startHandler(request);
-      return await normalizeCatastrophicSsrResponse(response);
+      return await normalizeCatastrophicSsrResponse(request, response);
     } catch (error) {
-      if (isIncomingRequestAbort(error)) return cancelledRequestResponse();
+      if (isIncomingRequestAbort(error) || request.signal.aborted) {
+        return cancelledRequestResponse();
+      }
       console.error(error);
       return new Response(renderErrorPage(), {
         status: 500,
@@ -52,3 +61,4 @@ export default {
     }
   },
 };
+
