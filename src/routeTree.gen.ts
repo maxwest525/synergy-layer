@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AgentsRouteImport } from './routes/agents'
 import { Route as AssetsRouteImport } from './routes/assets'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AuthorityRouteImport } from './routes/authority'
 import { Route as CapabilitiesRouteImport } from './routes/capabilities'
 import { Route as CommandCenterRouteImport } from './routes/command-center'
 import { Route as CompetitorsRouteImport } from './routes/competitors'
@@ -23,10 +24,12 @@ import { Route as McpRouteImport } from './routes/mcp'
 import { Route as MeasurementRouteImport } from './routes/measurement'
 import { Route as OpenaiAdsRouteImport } from './routes/openai-ads'
 import { Route as OpenseoRouteImport } from './routes/openseo'
+import { Route as OperatorsRouteImport } from './routes/operators'
 import { Route as RecommendationsRouteImport } from './routes/recommendations'
 import { Route as SchedulerRouteImport } from './routes/scheduler'
 import { Route as SearchRouteImport } from './routes/search'
 import { Route as SeoRunsRouteImport } from './routes/seo-runs'
+import { Route as SpendRouteImport } from './routes/spend'
 import { Route as WorkflowsRouteImport } from './routes/workflows'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
@@ -39,6 +42,7 @@ import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as CapabilitiesIndexRouteImport } from './routes/capabilities.index'
 import { Route as CapabilitiesIdRouteImport } from './routes/capabilities.$id'
 import { Route as CapabilitiesSystemsRouteImport } from './routes/capabilities.systems'
+import { Route as ChangesIndexRouteImport } from './routes/changes.index'
 import { Route as ChangesIdRouteImport } from './routes/changes.$id'
 import { Route as KnowledgeIndexRouteImport } from './routes/knowledge.index'
 import { Route as KnowledgeIdRouteImport } from './routes/knowledge.$id'
@@ -78,6 +82,11 @@ const AssetsRoute = AssetsRouteImport.update({
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthorityRoute = AuthorityRouteImport.update({
+  id: '/authority',
+  path: '/authority',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CapabilitiesRoute = CapabilitiesRouteImport.update({
@@ -130,6 +139,11 @@ const OpenseoRoute = OpenseoRouteImport.update({
   path: '/openseo',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OperatorsRoute = OperatorsRouteImport.update({
+  id: '/operators',
+  path: '/operators',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RecommendationsRoute = RecommendationsRouteImport.update({
   id: '/recommendations',
   path: '/recommendations',
@@ -148,6 +162,11 @@ const SearchRoute = SearchRouteImport.update({
 const SeoRunsRoute = SeoRunsRouteImport.update({
   id: '/seo-runs',
   path: '/seo-runs',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SpendRoute = SpendRouteImport.update({
+  id: '/spend',
+  path: '/spend',
   getParentRoute: () => rootRouteImport,
 } as any)
 const WorkflowsRoute = WorkflowsRouteImport.update({
@@ -211,6 +230,11 @@ const CapabilitiesSystemsRoute = CapabilitiesSystemsRouteImport.update({
   id: '/systems',
   path: '/systems',
   getParentRoute: () => CapabilitiesRoute,
+} as any)
+const ChangesIndexRoute = ChangesIndexRouteImport.update({
+  id: '/changes/',
+  path: '/changes/',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ChangesIdRoute = ChangesIdRouteImport.update({
   id: '/changes/$id',
@@ -324,6 +348,7 @@ export interface FileRoutesByFullPath {
   '/agents': typeof AgentsRouteWithChildren
   '/assets': typeof AssetsRouteWithChildren
   '/auth': typeof AuthRouteWithChildren
+  '/authority': typeof AuthorityRoute
   '/capabilities': typeof CapabilitiesRouteWithChildren
   '/command-center': typeof CommandCenterRoute
   '/competitors': typeof CompetitorsRoute
@@ -334,10 +359,12 @@ export interface FileRoutesByFullPath {
   '/measurement': typeof MeasurementRoute
   '/openai-ads': typeof OpenaiAdsRoute
   '/openseo': typeof OpenseoRoute
+  '/operators': typeof OperatorsRoute
   '/recommendations': typeof RecommendationsRouteWithChildren
   '/scheduler': typeof SchedulerRouteWithChildren
   '/search': typeof SearchRoute
   '/seo-runs': typeof SeoRunsRouteWithChildren
+  '/spend': typeof SpendRoute
   '/workflows': typeof WorkflowsRouteWithChildren
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -357,6 +384,7 @@ export interface FileRoutesByFullPath {
   '/agents/': typeof AgentsIndexRoute
   '/assets/': typeof AssetsIndexRoute
   '/capabilities/': typeof CapabilitiesIndexRoute
+  '/changes/': typeof ChangesIndexRoute
   '/knowledge/': typeof KnowledgeIndexRoute
   '/recommendations/': typeof RecommendationsIndexRoute
   '/scheduler/': typeof SchedulerIndexRoute
@@ -374,6 +402,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRouteWithChildren
+  '/authority': typeof AuthorityRoute
   '/command-center': typeof CommandCenterRoute
   '/competitors': typeof CompetitorsRoute
   '/essentials': typeof EssentialsRoute
@@ -382,7 +411,9 @@ export interface FileRoutesByTo {
   '/measurement': typeof MeasurementRoute
   '/openai-ads': typeof OpenaiAdsRoute
   '/openseo': typeof OpenseoRoute
+  '/operators': typeof OperatorsRoute
   '/search': typeof SearchRoute
+  '/spend': typeof SpendRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/ads/advertisers': typeof AdsAdvertisersRoute
@@ -400,6 +431,7 @@ export interface FileRoutesByTo {
   '/agents': typeof AgentsIndexRoute
   '/assets': typeof AssetsIndexRoute
   '/capabilities': typeof CapabilitiesIndexRoute
+  '/changes': typeof ChangesIndexRoute
   '/knowledge': typeof KnowledgeIndexRoute
   '/recommendations': typeof RecommendationsIndexRoute
   '/scheduler': typeof SchedulerIndexRoute
@@ -420,6 +452,7 @@ export interface FileRoutesById {
   '/agents': typeof AgentsRouteWithChildren
   '/assets': typeof AssetsRouteWithChildren
   '/auth': typeof AuthRouteWithChildren
+  '/authority': typeof AuthorityRoute
   '/capabilities': typeof CapabilitiesRouteWithChildren
   '/command-center': typeof CommandCenterRoute
   '/competitors': typeof CompetitorsRoute
@@ -430,10 +463,12 @@ export interface FileRoutesById {
   '/measurement': typeof MeasurementRoute
   '/openai-ads': typeof OpenaiAdsRoute
   '/openseo': typeof OpenseoRoute
+  '/operators': typeof OperatorsRoute
   '/recommendations': typeof RecommendationsRouteWithChildren
   '/scheduler': typeof SchedulerRouteWithChildren
   '/search': typeof SearchRoute
   '/seo-runs': typeof SeoRunsRouteWithChildren
+  '/spend': typeof SpendRoute
   '/workflows': typeof WorkflowsRouteWithChildren
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -453,6 +488,7 @@ export interface FileRoutesById {
   '/agents/': typeof AgentsIndexRoute
   '/assets/': typeof AssetsIndexRoute
   '/capabilities/': typeof CapabilitiesIndexRoute
+  '/changes/': typeof ChangesIndexRoute
   '/knowledge/': typeof KnowledgeIndexRoute
   '/recommendations/': typeof RecommendationsIndexRoute
   '/scheduler/': typeof SchedulerIndexRoute
@@ -474,6 +510,7 @@ export interface FileRouteTypes {
     | '/agents'
     | '/assets'
     | '/auth'
+    | '/authority'
     | '/capabilities'
     | '/command-center'
     | '/competitors'
@@ -484,10 +521,12 @@ export interface FileRouteTypes {
     | '/measurement'
     | '/openai-ads'
     | '/openseo'
+    | '/operators'
     | '/recommendations'
     | '/scheduler'
     | '/search'
     | '/seo-runs'
+    | '/spend'
     | '/workflows'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
@@ -507,6 +546,7 @@ export interface FileRouteTypes {
     | '/agents/'
     | '/assets/'
     | '/capabilities/'
+    | '/changes/'
     | '/knowledge/'
     | '/recommendations/'
     | '/scheduler/'
@@ -524,6 +564,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/authority'
     | '/command-center'
     | '/competitors'
     | '/essentials'
@@ -532,7 +573,9 @@ export interface FileRouteTypes {
     | '/measurement'
     | '/openai-ads'
     | '/openseo'
+    | '/operators'
     | '/search'
+    | '/spend'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/ads/advertisers'
@@ -550,6 +593,7 @@ export interface FileRouteTypes {
     | '/agents'
     | '/assets'
     | '/capabilities'
+    | '/changes'
     | '/knowledge'
     | '/recommendations'
     | '/scheduler'
@@ -569,6 +613,7 @@ export interface FileRouteTypes {
     | '/agents'
     | '/assets'
     | '/auth'
+    | '/authority'
     | '/capabilities'
     | '/command-center'
     | '/competitors'
@@ -579,10 +624,12 @@ export interface FileRouteTypes {
     | '/measurement'
     | '/openai-ads'
     | '/openseo'
+    | '/operators'
     | '/recommendations'
     | '/scheduler'
     | '/search'
     | '/seo-runs'
+    | '/spend'
     | '/workflows'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
@@ -602,6 +649,7 @@ export interface FileRouteTypes {
     | '/agents/'
     | '/assets/'
     | '/capabilities/'
+    | '/changes/'
     | '/knowledge/'
     | '/recommendations/'
     | '/scheduler/'
@@ -622,6 +670,7 @@ export interface RootRouteChildren {
   AgentsRoute: typeof AgentsRouteWithChildren
   AssetsRoute: typeof AssetsRouteWithChildren
   AuthRoute: typeof AuthRouteWithChildren
+  AuthorityRoute: typeof AuthorityRoute
   CapabilitiesRoute: typeof CapabilitiesRouteWithChildren
   CommandCenterRoute: typeof CommandCenterRoute
   CompetitorsRoute: typeof CompetitorsRoute
@@ -632,15 +681,18 @@ export interface RootRouteChildren {
   MeasurementRoute: typeof MeasurementRoute
   OpenaiAdsRoute: typeof OpenaiAdsRoute
   OpenseoRoute: typeof OpenseoRoute
+  OperatorsRoute: typeof OperatorsRoute
   RecommendationsRoute: typeof RecommendationsRouteWithChildren
   SchedulerRoute: typeof SchedulerRouteWithChildren
   SearchRoute: typeof SearchRoute
   SeoRunsRoute: typeof SeoRunsRouteWithChildren
+  SpendRoute: typeof SpendRoute
   WorkflowsRoute: typeof WorkflowsRouteWithChildren
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   AdsAdvertisersRoute: typeof AdsAdvertisersRoute
   ChangesIdRoute: typeof ChangesIdRoute
+  ChangesIndexRoute: typeof ChangesIndexRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
   ApiPublicHooksDataforseoPostbackRoute: typeof ApiPublicHooksDataforseoPostbackRoute
@@ -677,6 +729,13 @@ declare module '@tanstack/react-router' {
       path: '/auth'
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/authority': {
+      id: '/authority'
+      path: '/authority'
+      fullPath: '/authority'
+      preLoaderRoute: typeof AuthorityRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/capabilities': {
@@ -749,6 +808,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OpenseoRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/operators': {
+      id: '/operators'
+      path: '/operators'
+      fullPath: '/operators'
+      preLoaderRoute: typeof OperatorsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/recommendations': {
       id: '/recommendations'
       path: '/recommendations'
@@ -775,6 +841,13 @@ declare module '@tanstack/react-router' {
       path: '/seo-runs'
       fullPath: '/seo-runs'
       preLoaderRoute: typeof SeoRunsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/spend': {
+      id: '/spend'
+      path: '/spend'
+      fullPath: '/spend'
+      preLoaderRoute: typeof SpendRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/workflows': {
@@ -860,6 +933,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/capabilities/systems'
       preLoaderRoute: typeof CapabilitiesSystemsRouteImport
       parentRoute: typeof CapabilitiesRoute
+    }
+    '/changes/': {
+      id: '/changes/'
+      path: '/changes'
+      fullPath: '/changes/'
+      preLoaderRoute: typeof ChangesIndexRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/changes/$id': {
       id: '/changes/$id'
@@ -1145,6 +1225,7 @@ const rootRouteChildren: RootRouteChildren = {
   AgentsRoute: AgentsRouteWithChildren,
   AssetsRoute: AssetsRouteWithChildren,
   AuthRoute: AuthRouteWithChildren,
+  AuthorityRoute: AuthorityRoute,
   CapabilitiesRoute: CapabilitiesRouteWithChildren,
   CommandCenterRoute: CommandCenterRoute,
   CompetitorsRoute: CompetitorsRoute,
@@ -1155,16 +1236,19 @@ const rootRouteChildren: RootRouteChildren = {
   MeasurementRoute: MeasurementRoute,
   OpenaiAdsRoute: OpenaiAdsRoute,
   OpenseoRoute: OpenseoRoute,
+  OperatorsRoute: OperatorsRoute,
   RecommendationsRoute: RecommendationsRouteWithChildren,
   SchedulerRoute: SchedulerRouteWithChildren,
   SearchRoute: SearchRoute,
   SeoRunsRoute: SeoRunsRouteWithChildren,
+  SpendRoute: SpendRoute,
   WorkflowsRoute: WorkflowsRouteWithChildren,
   Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
   AdsAdvertisersRoute: AdsAdvertisersRoute,
   ChangesIdRoute: ChangesIdRoute,
+  ChangesIndexRoute: ChangesIndexRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
   ApiPublicHooksDataforseoPostbackRoute: ApiPublicHooksDataforseoPostbackRoute,
