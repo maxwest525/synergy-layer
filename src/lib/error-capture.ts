@@ -16,6 +16,7 @@ const errorCaptureGlobal = globalThis as typeof globalThis & {
   [errorCaptureKey]?: ErrorCaptureState;
 };
 const state = (errorCaptureGlobal[errorCaptureKey] ??= { capturedErrors: new Map() });
+state.capturedErrors ??= new Map();
 const requestScope = new AsyncLocalStorage<symbol>();
 const TTL_MS = 5_000;
 
