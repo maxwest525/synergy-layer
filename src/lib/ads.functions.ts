@@ -68,14 +68,31 @@ export type AdsAdvertiserView = {
   linkedDomains: string[];
 };
 
+/** One observed competitor ad. This data was stored but never shown before. */
+export type AdsCreativeView = {
+  id: string;
+  advertiserFk: string;
+  format: string | null;
+  headline: string | null;
+  snippet: string | null;
+  callToAction: string | null;
+  targetDomain: string | null;
+  link: string | null;
+  firstShown: string | null;
+  lastShown: string | null;
+  observedAt: string | null;
+};
+
 export type AdsOverview = {
   account: AdsAccountView;
   watchlist: AdsWatchlistView[];
   ledger: AdsLedgerView[];
   candidates: AdsCandidateView[];
   advertisers: AdsAdvertiserView[];
+  creatives: AdsCreativeView[];
   pendingCount: number;
 };
+
 
 function asRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
@@ -95,42 +112,60 @@ export const getAdsOverview = createServerFn({ method: "POST" })
     const tenantId = await requireTenantId(context.supabase);
     const db = context.supabase;
 
-    const [capability, watchlist, ledger, candidates, advertisers, links] = await Promise.all([
-      db
-        .from("capabilities")
-        .select("config, integration_state, health")
-        .eq("key", "cap.serpapi_ads_transparency")
-        .maybeSingle(),
-      db
-        .from("ad_vendor_watchlist")
-        .select("id, domain, label, active, resolution_state")
-        .eq("tenant_id", tenantId)
-        .order("domain"),
-      db
-        .from("serpapi_requests")
-        .select("*")
-        .eq("tenant_id", tenantId)
-        .order("started_at", { ascending: false })
-        .limit(50),
-      db
-        .from("ad_advertiser_candidates")
-        .select("*")
-        .eq("tenant_id", tenantId)
-        .order("created_at", { ascending: false })
-        .limit(200),
-      db
-        .from("ad_advertisers")
-        .select("*")
-        .eq("tenant_id", tenantId)
-        .order("confirmed_at", { ascending: false })
-        .limit(200),
-      db
-        .from("ad_vendor_advertisers")
-        .select("watchlist_id, advertiser_fk")
-        .eq("tenant_id", tenantId),
-    ]);
+    const [capability, watchlist, ledger, candidates, advertisers, links, creatives] =
+      await Promise.all([
+        db
+          .from("capabilities")
+          .select("config, integration_state, health")
+          .eq("key", "cap.serpapi_ads_transparency")
+          .maybeSingle(),
+        db
+          .from("ad_vendor_watchlist")
+          .select("id, domain, label, active, resolution_state")
+          .eq("tenant_id", tenantId)
+          .order("domain"),
+        db
+          .from("serpapi_requests")
+          .select("*")
+          .eq("tenant_id", tenantId)
+          .order("started_at", { ascending: false })
+          .limit(50),
+        db
+          .from("ad_advertiser_candidates")
+          .select("*")
+          .eq("tenant_id", tenantId)
+          .order("created_at", { ascending: false })
+          .limit(200),
+        db
+          .from("ad_advertisers")
+          .select("*")
+          .eq("tenant_id", tenantId)
+          .order("confirmed_at", { ascending: false })
+          .limit(200),
+        db
+          .from("ad_vendor_advertisers")
+          .select("watchlist_id, advertiser_fk")
+          .eq("tenant_id", tenantId),
+        db
+          .from("ad_creatives")
+          .select(
+            "id, advertiser_fk, format, headline, snippet, call_to_action, target_domain, link, first_shown, last_shown, retrieved_at",
+          )
+          .eq("tenant_id", tenantId)
+          .order("last_detected_at", { ascending: false })
+          .limit(120),
+      ]);
 
-    for (const result of [capability, watchlist, ledger, candidates, advertisers, links]) {
+    for (const result of [
+      capability,
+      watchlist,
+      ledger,
+      candidates,
+      advertisers,
+      links,
+      creatives,
+    ]) {
+
       if (result.error) throw new Error(`Ads overview read failed: ${result.error.message}`);
     }
 
@@ -214,6 +249,19 @@ export const getAdsOverview = createServerFn({ method: "POST" })
         vendorDomain: row.vendor_domain,
         confirmedAt: row.confirmed_at,
         linkedDomains: [...(domainsByAdvertiser.get(row.id) ?? [])],
+      })),
+      creatives: (creatives.data ?? []).map((row) => ({
+        id: row.id,
+        advertiserFk: row.advertiser_fk,
+        format: row.format,
+        headline: row.headline,
+        snippet: row.snippet,
+        callToAction: row.call_to_action,
+        targetDomain: row.target_domain,
+        link: row.link,
+        firstShown: row.first_shown,
+        lastShown: row.last_shown,
+        observedAt: row.retrieved_at,
       })),
       pendingCount: candidateRows.filter((row) => row.reviewState === "pending").length,
     };

@@ -12,6 +12,7 @@ import {
   formatWhen,
 } from "@/components/os/primitives";
 import { OperatorRouteError } from "@/components/os/route-error";
+import { RoutePending } from "@/components/os/route-pending";
 import { getProviderSpend } from "@/lib/operator-views.functions";
 
 const spendQuery = {
@@ -22,15 +23,16 @@ const spendQuery = {
 export const Route = createFileRoute("/spend")({
   ssr: false,
   errorComponent: OperatorRouteError,
+  pendingComponent: RoutePending,
   head: () => ({
     meta: [
-      { title: "Provider spend — AOOS" },
+      { title: "Data costs — AOOS" },
       {
         name: "description",
         content:
           "Recorded provider requests, failures, and charges for every paid data source the OS calls, with the current monthly ceiling.",
       },
-      { property: "og:title", content: "Provider spend — AOOS" },
+      { property: "og:title", content: "Data costs — AOOS" },
       {
         property: "og:description",
         content: "What each paid data provider actually cost, from the stored request ledger.",
@@ -56,12 +58,12 @@ function SpendPage() {
     <PageStack>
       <PageHeader
         eyebrow="System"
-        title="Provider spend"
-        description="Charges recorded in the provider request ledger. These are stored request facts, not estimates."
+        title="Data costs"
+        description="What each outside data source has cost you. These are recorded charges, not estimates."
       />
       <CardGrid columns={3}>
-        <MetricTile label="Recorded charges" value={usd(total)} hint="Across all providers" />
-        <MetricTile label="Requests" value={requests} hint="Last 1000 per provider" />
+        <MetricTile label="Charged so far" value={usd(total)} hint="Across all providers" />
+        <MetricTile label="Requests" value={requests} hint="Every recorded request" />
         <MetricTile
           label="Monthly ceiling"
           value={data.budget ? usd(data.budget.ceilingUsd) : "Not set"}

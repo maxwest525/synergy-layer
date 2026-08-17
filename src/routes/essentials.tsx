@@ -56,7 +56,7 @@ type Action =
         | "/keywords"
         | "/competitors"
         | "/capabilities/systems"
-        | "/ads/advertisers"
+        | "/ads"
         | "/recommendations"
         | "/measurement";
     }

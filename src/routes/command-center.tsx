@@ -59,7 +59,7 @@ function QuickAction({
   count,
   outcome,
 }: {
-  to: "/" | "/competitors" | "/ads/advertisers" | "/workflows" | "/essentials" | "/measurement";
+  to: "/" | "/competitors" | "/ads" | "/workflows" | "/essentials" | "/measurement";
   hash?: string;
   label: string;
   count?: number;
@@ -144,7 +144,7 @@ function CommandCenterPage() {
             outcome="Approving a candidate adds the domain to tracked competitors. Nothing is published."
           />
           <QuickAction
-            to="/ads/advertisers"
+            to="/ads"
             label="Review Google Ads advertiser candidate"
             count={quick.pendingAdvertisers}
             outcome="Confirming links an observed advertiser account to a watched vendor domain."

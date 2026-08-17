@@ -52,45 +52,45 @@ const navGroups: readonly WorkspaceGroup[] = [
   {
     title: "Decide",
     items: [
-      { to: "/", label: "Action Center", icon: Inbox, hint: "Decide and execute" },
+      { to: "/", label: "Action center", icon: Inbox, hint: "Decisions waiting on you" },
       {
         to: "/command-center",
-        label: "Command Center",
+        label: "Overview",
         icon: LayoutDashboard,
-        hint: "System state",
+        hint: "How everything stands",
       },
       {
         to: "/recommendations",
-        label: "Recommendations",
+        label: "Observations",
         icon: Lightbulb,
-        hint: "What to do next",
+        hint: "Things the system noticed",
       },
       {
         to: "/changes",
-        label: "Change requests",
+        label: "Page changes",
         icon: FileDiff,
-        hint: "Proposed page changes",
+        hint: "Edits proposed to the site",
       },
     ],
   },
   {
     title: "Evidence",
     items: [
-      { to: "/search", label: "Search", icon: Search, hint: "What Google observed" },
-      { to: "/measurement", label: "Measurement", icon: Gauge, hint: "Page speed and analytics" },
+      { to: "/search", label: "Search results", icon: Search, hint: "What Google reports" },
+      { to: "/measurement", label: "Site health", icon: Gauge, hint: "Speed and traffic" },
       { to: "/assets", label: "Assets", icon: Boxes, hint: "Everything we own" },
-      { to: "/keywords", label: "Keywords", icon: Tags, hint: "Candidates and approvals" },
+      { to: "/keywords", label: "Keywords", icon: Tags, hint: "Terms worth winning" },
       { to: "/competitors", label: "Competitors", icon: Swords, hint: "Who we rank against" },
       {
-        to: "/ads/advertisers",
-        label: "Ads Transparency",
+        to: "/ads",
+        label: "Competitor ads",
         icon: KeyRound,
-        hint: "Observed advertisers",
+        hint: "Ads they are running now",
       },
-      { to: "/authority", label: "Authority", icon: ShieldCheck, hint: "Trust and gap findings" },
+      { to: "/authority", label: "Trust gaps", icon: ShieldCheck, hint: "Missing proof on pages" },
       {
         to: "/essentials",
-        label: "Essentials",
+        label: "Marketing essentials",
         icon: ListChecks,
         hint: "Covered and missing",
       },
@@ -100,10 +100,10 @@ const navGroups: readonly WorkspaceGroup[] = [
     title: "Run work",
     items: [
       { to: "/openseo", label: "OpenSEO", icon: Radar, hint: "Live SEO tools" },
-      { to: "/seo-runs", label: "SEO Runs", icon: RouteIcon, hint: "Governed page changes" },
+      { to: "/seo-runs", label: "SEO runs", icon: RouteIcon, hint: "Governed page changes" },
       { to: "/openai-ads", label: "OpenAI Ads", icon: Megaphone, hint: "Pixel instrumentation" },
       { to: "/workflows", label: "Workflows", icon: Workflow, hint: "How work runs" },
-      { to: "/scheduler", label: "Scheduler", icon: CalendarClock, hint: "When work runs" },
+      { to: "/scheduler", label: "Schedule", icon: CalendarClock, hint: "When work runs" },
     ],
   },
   {
@@ -112,10 +112,11 @@ const navGroups: readonly WorkspaceGroup[] = [
       { to: "/capabilities", label: "Capabilities", icon: Plug, hint: "What the OS can do" },
       { to: "/knowledge", label: "Knowledge", icon: BrainCircuit, hint: "What the OS knows" },
       { to: "/agents", label: "Agents", icon: Activity, hint: "Who does the work" },
-      { to: "/spend", label: "Provider spend", icon: DollarSign, hint: "What providers cost" },
-      { to: "/operators", label: "Operators", icon: Users, hint: "Who is authorized" },
+      { to: "/spend", label: "Data costs", icon: DollarSign, hint: "What data sources cost" },
+      { to: "/operators", label: "People", icon: Users, hint: "Who has access" },
     ],
   },
+
 ] as const;
 
 const allWorkspaces = navGroups.flatMap((group) => group.items);
@@ -391,7 +392,7 @@ export function Shell({ children }: { children: ReactNode }) {
             </div>
           </header>
 
-          <main className="mx-auto w-full max-w-6xl flex-1 px-5 py-6 md:px-8 md:py-8">
+          <main className="mx-auto w-full max-w-[84rem] flex-1 px-5 py-6 md:px-8 md:py-8">
             {accessState === "loading" || accessState === "signed-out" ? (
               <div className="rounded-2xl border border-border/60 px-4 py-6" role="status">
                 <p className="text-sm text-muted-foreground">

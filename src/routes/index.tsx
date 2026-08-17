@@ -85,7 +85,7 @@ const detailHrefPattern =
 function routeFromHref(href: string): InboxRoute | null {
   if (href === "/keywords") return { kind: "keywords" };
   if (href === "/competitors") return { kind: "competitors" };
-  if (href === "/ads/advertisers") return { kind: "adsAdvertisers" };
+  if (href === "/ads") return { kind: "adsAdvertisers" };
 
   const match = href.match(detailHrefPattern);
   if (!match) return null;
@@ -139,7 +139,7 @@ function InboxLink({ route, children }: { route: InboxRoute; children: React.Rea
     );
   if (route.kind === "adsAdvertisers")
     return (
-      <Link to="/ads/advertisers" className={className}>
+      <Link to="/ads" className={className}>
         {children}
       </Link>
     );
@@ -190,7 +190,7 @@ function InboxActionLink({ route, children }: { route: InboxRoute; children: Rea
   if (route.kind === "adsAdvertisers")
     return (
       <Button asChild variant="outline" size="sm">
-        <Link to="/ads/advertisers">{children}</Link>
+        <Link to="/ads">{children}</Link>
       </Button>
     );
   if (route.kind === "change")
