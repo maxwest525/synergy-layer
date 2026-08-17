@@ -80,9 +80,9 @@ Changes from today: Decide becomes Decisions and stays first. Agents moves from 
 
 ## Technical notes
 
-- New module `src/lib/os-taxonomy.ts` exports the four group keys, their labels and one-line definitions, and a `WORKSPACE_GROUP` map from route path to group. Single source of truth.
-- `src/components/os/shell.tsx` builds `navGroups` from that map instead of its own inline list.
-- `src/components/os/primitives.tsx` gains a `group` prop on `PageHeader` that renders the group name as the eyebrow with its definition as hover text; each route passes `group` instead of a hand-written eyebrow string.
-- `src/lib/action-center.ts` lane labels align to the same words (System health, Decisions, Run work).
+- New module `src/lib/os-taxonomy.ts` exports the four group keys in loop order (decisions, evidence, run_work, system_health), their labels, one-line definitions, and a `WORKSPACE_GROUP` map from route path to group. Single source of truth for order and naming.
+- `src/components/os/shell.tsx` builds `navGroups` from that map instead of its own inline list, rendering in loop order with System health last.
+- `src/components/os/primitives.tsx` gains a `group` prop on `PageHeader` that renders the group name as the eyebrow with its definition as hover text, plus a one-line "next stage" pointer so each page states where the loop continues; each route passes `group` instead of a hand-written eyebrow string.
+- `src/lib/action-center.ts` lane labels align to the same words, decision lanes first and the failure strip labeled System health beneath them.
 - Keywords and Competitors: extend the existing list server functions to accept `"all"` (Keywords already supports it) and add client-side filter chips; no schema change, no new tables, no migration.
 - Tests updated: `src/lib/action-center.test.ts`, plus a new unit test asserting every route in the sidebar has exactly one taxonomy group.
