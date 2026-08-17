@@ -201,16 +201,28 @@ function WorkflowDetailPage() {
                   >
                     {index + 1}
                   </span>
-                  <div className="rounded-xl border border-border/60 bg-background/30 px-3 py-2.5 transition-colors hover:border-primary/40">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <span className="text-sm text-foreground">{humanize(node.key)}</span>
-                      <StatePill
-                        label={kindLabels[node.kind] ?? humanize(node.kind)}
-                        tone={node.kind === "approval" ? "warning" : "primary"}
-                      />
-                    </div>
+                  <div className="rounded-xl border border-border/60 bg-background/30 transition-colors hover:border-primary/40">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setInspectedStep(null);
+                        setSelectedKey(node.key);
+                      }}
+                      className="w-full px-3 py-2.5 text-left"
+                    >
+                      <span className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="text-sm text-foreground">{humanize(node.key)}</span>
+                        <StatePill
+                          label={kindLabels[node.kind] ?? humanize(node.kind)}
+                          tone={node.kind === "approval" ? "warning" : "primary"}
+                        />
+                      </span>
+                      <span className="mt-1 block text-xs text-muted-foreground">
+                        Open step details
+                      </span>
+                    </button>
                     {node.ref ? (
-                      <p className="mt-1 text-xs text-muted-foreground">
+                      <p className="px-3 pb-2.5 text-xs text-muted-foreground">
                         Runs <StepRef node={node} />
                       </p>
                     ) : null}
@@ -219,59 +231,30 @@ function WorkflowDetailPage() {
               ))}
             </ol>
           )}
-
         </GlassCard>
 
-        <GlassCard className="p-5">
-          <h2 className="text-sm font-semibold text-foreground">Run history</h2>
-          {data.runs.length === 0 ? (
-            <EmptyNote className="mt-2">No runs recorded yet.</EmptyNote>
-          ) : (
-            <ul className="mt-3 space-y-4">
-              {data.runs.map((run) => (
-                <li
-                  key={run.id}
-                  className="border-b border-border/50 pb-4 last:border-b-0 last:pb-0"
-                >
-                  <div className="flex flex-wrap items-center gap-2">
-                    <StatePill label={run.state} tone={toneForState(run.state)} />
-                    <span className="text-xs text-muted-foreground">
-                      {formatWhen(run.created_at)}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      {run.duration_ms ? `${run.duration_ms} ms` : "in progress"} ·{" "}
-                      {run.trigger_source}
-                    </span>
-                  </div>
-                  {run.error ? <p className="mt-1 text-sm text-destructive">{run.error}</p> : null}
-                  <ul className="mt-2 space-y-1 rounded-xl border border-border/50 bg-background/25 p-2">
-                    {[...run.workflow_steps]
-                      .sort((a, b) => a.sequence - b.sequence)
-                      .map((step) => (
-                        <li
-                          key={step.id}
-                          className="flex items-center justify-between gap-3 rounded-lg px-2 py-1 text-sm"
-                        >
-                          <span className="truncate text-muted-foreground">
-                            <span className="mr-2 text-xs text-primary/70">{step.sequence + 1}</span>
-                            {humanize(step.node_key)}
-                          </span>
-                          <span className="flex shrink-0 items-center gap-2">
-                            <span className="text-xs text-muted-foreground">
-                              {step.duration_ms ? `${step.duration_ms} ms` : "—"}
-                            </span>
-                            <StatePill label={step.state} tone={toneForState(step.state)} />
-                          </span>
-                        </li>
-                      ))}
-                  </ul>
-
-                </li>
-              ))}
-            </ul>
-          )}
-        </GlassCard>
+        <RunHistoryTimeline runs={runs} onInspectStep={openStep} />
       </div>
+
+      <ApprovalGateCard
+        graph={graph}
+        runs={runs}
+        operatorEmail={session.email}
+        canApprove={canApprove}
+      />
+
+      <StepDetailPanel
+        node={selectedNode}
+        step={panelStep}
+        capability={capability}
+        graph={graph}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelectedKey(null);
+            setInspectedStep(null);
+          }
+        }}
+      />
 
       <Link to="/workflows" className="text-sm text-primary underline-offset-4 hover:underline">
         Back to workflows
@@ -279,3 +262,4 @@ function WorkflowDetailPage() {
     </div>
   );
 }
+
