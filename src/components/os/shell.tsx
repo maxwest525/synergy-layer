@@ -15,6 +15,13 @@ import {
 
   Radar,
   ListChecks,
+  DollarSign,
+  FileDiff,
+  KeyRound,
+  ShieldCheck,
+  Swords,
+  Tags,
+  Users,
   Plug,
   Search,
   Route as RouteIcon,
@@ -49,6 +56,7 @@ const navGroups: readonly WorkspaceGroup[] = [
       { to: "/", label: "Action Center", icon: Inbox, hint: "Decide and execute" },
       { to: "/command-center", label: "Command Center", icon: LayoutDashboard, hint: "System state" },
       { to: "/recommendations", label: "Recommendations", icon: Lightbulb, hint: "What to do next" },
+      { to: "/changes", label: "Change requests", icon: FileDiff, hint: "Proposed page changes" },
     ],
   },
   {
@@ -57,6 +65,15 @@ const navGroups: readonly WorkspaceGroup[] = [
       { to: "/search", label: "Search", icon: Search, hint: "What Google observed" },
       { to: "/measurement", label: "Measurement", icon: Gauge, hint: "Page speed and analytics" },
       { to: "/assets", label: "Assets", icon: Boxes, hint: "Everything we own" },
+      { to: "/keywords", label: "Keywords", icon: Tags, hint: "Candidates and approvals" },
+      { to: "/competitors", label: "Competitors", icon: Swords, hint: "Who we rank against" },
+      {
+        to: "/ads/advertisers",
+        label: "Ads Transparency",
+        icon: KeyRound,
+        hint: "Observed advertisers",
+      },
+      { to: "/authority", label: "Authority", icon: ShieldCheck, hint: "Trust and gap findings" },
       {
         to: "/essentials",
         label: "Essentials",
@@ -81,6 +98,8 @@ const navGroups: readonly WorkspaceGroup[] = [
       { to: "/capabilities", label: "Capabilities", icon: Plug, hint: "What the OS can do" },
       { to: "/knowledge", label: "Knowledge", icon: BrainCircuit, hint: "What the OS knows" },
       { to: "/agents", label: "Agents", icon: Activity, hint: "Who does the work" },
+      { to: "/spend", label: "Provider spend", icon: DollarSign, hint: "What providers cost" },
+      { to: "/operators", label: "Operators", icon: Users, hint: "Who is authorized" },
     ],
   },
 ] as const;
