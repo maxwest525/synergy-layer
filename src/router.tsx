@@ -43,25 +43,16 @@ export const getRouter = () => {
     },
   });
 
-  if (typeof window === "undefined") {
-    const ids = new Map<string, string[]>();
-    let i = 0;
-    const walk = (r: any, parentLabel: string) => {
-      try {
-        r.init({ originalIndex: i++ });
-      } catch (e) {
-        console.error("INIT_FAIL", parentLabel, String(e));
-        return;
-      }
-      const list = ids.get(String(r.id)) ?? [];
-      list.push(parentLabel + "|" + String(r.options?.path ?? r.options?.id ?? "?"));
-      ids.set(String(r.id), list);
-      for (const c of (r.children ?? [])) walk(c, String(r.id));
-    };
-    walk(routeTree as any, "root");
-    const dupes = [...ids.entries()].filter(([, v]) => v.length > 1);
-    if (dupes.length) console.error("ID_DUPES", JSON.stringify(dupes));
-  }
+  // A route module can be re-evaluated on its own (dev code splitting fetches
+  // `?tsr-split=` variants of a route file) without its importers rebuilding.
+  // The generated tree then still holds the previous parent object while the
+  // child's `getParentRoute()` closure resolves the fresh, uninitialised one,
+  // so every child id collapses to "/" and the router throws
+  // "Duplicate routes found with id: /". Re-pointing each child at the parent
+  // it is actually attached to keeps id derivation correct.
+  repairParentLinks(routeTree as unknown as RouteLike);
+
+
 
   let router;
   try {
