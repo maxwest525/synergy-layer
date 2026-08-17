@@ -103,7 +103,9 @@ second visits served from the query cache. Applied fixes:
   metadata and subscribes to future auth changes. It must not call
   `auth.getSession()`: that competes for the auth client's session lock with the
   server-function middleware and previously left every workspace suspended on
-  skeletons for several seconds. Authorization remains server-side.
+  skeletons for several seconds. Server-function middleware also attaches the
+  already-persisted access token directly instead of acquiring that lock.
+  Authorization and token validation remain server-side.
 - Node's exact `abortIncoming` / `socketOnClose` error is classified as a browser
   request cancellation at both server boundaries and returns 499 without fatal
   logging, including when the framework logs before wrapping the response.
