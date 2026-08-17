@@ -43,6 +43,7 @@ export const Route = createFileRoute("/scheduler/$id")({
       ],
     };
   },
+  errorComponent: OperatorRouteError,
   component: ScheduleDetailPage,
 });
 
