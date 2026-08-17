@@ -24,6 +24,18 @@ export const ACTION_CENTER_PRESENTATION_LANES = [
 }>;
 
 /**
+ * Work that is live and sitting inside its measurement cycle. Nothing can be
+ * decided about it until the window closes, so it is shown as something to
+ * watch rather than something to do.
+ */
+export const ACTION_CENTER_MEASUREMENT_LANE = {
+  key: "fyi",
+  label: "In measurement",
+  hint: "Live and being measured. Nothing is asked of you until the window closes.",
+} as const satisfies { key: ActionCenterLane; label: string; hint: string };
+
+
+/**
  * A failed observation is a system health problem, not a marketing decision.
  * It is shown in its own strip so the decision lanes stay decisions.
  */
