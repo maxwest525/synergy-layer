@@ -53,6 +53,14 @@ export default defineConfig({
     // where the plugin remains enabled; local Windows checks skip only it.
     plugins: process.platform === "win32" ? [] : [mcpPlugin()],
     customLogger: quietDisconnectLogger,
+    // zod v4's core modules import each other circularly. When the route
+    // splitter emits the chat route as a lazy chunk, that cycle can evaluate
+    // `api.js` before `util.js` finishes, so `util.normalizeParams` is
+    // undefined and the page blanks. Prebundling zod (and the AI SDK that
+    // pulls it in) flattens the cycle into one stable module.
+    optimizeDeps: {
+      include: ["zod", "zod/v4/core", "ai", "@ai-sdk/react"],
+    },
     ssr: {
       // A stale SSR prebundle of the framework server helpers resolves
       // `getRequestHeader` to undefined and crashes every authenticated server
