@@ -51,21 +51,23 @@ type WorkspaceGroup = { title: string; definition: string; items: readonly Works
  * `TAXONOMY_GROUPS`, so navigation and page headers can never disagree.
  */
 const workspaces: readonly Workspace[] = [
-  { to: "/", label: "Action center", icon: Inbox, hint: "Decisions waiting on you", group: "decisions" },
-  { to: "/studio", label: "Studio", icon: Sparkles, hint: "Think out loud with the agent", group: "decisions" },
+  { to: "/", label: "Today", icon: Inbox, hint: "What needs your yes or no", group: "decisions" },
+  { to: "/ask", label: "Ask", icon: Sparkles, hint: "Ask the agent anything", group: "decisions" },
+  { to: "/essentials", label: "Coverage", icon: ListChecks, hint: "What is covered and what is missing", group: "evidence" },
+
   { to: "/changes", label: "Page changes", icon: FileDiff, hint: "Edits proposed to the site", group: "decisions" },
   { to: "/keywords", label: "Keywords", icon: Tags, hint: "Terms worth winning", group: "decisions" },
   { to: "/competitors", label: "Competitors", icon: Swords, hint: "Who we rank against", group: "decisions" },
   { to: "/recommendations", label: "Observations", icon: Lightbulb, hint: "Things the system noticed", group: "decisions" },
+  { to: "/studio", label: "Studio", icon: BrainCircuit, hint: "Think out loud, no tools", group: "decisions" },
 
   { to: "/command-center", label: "Overview", icon: LayoutDashboard, hint: "How everything stands", group: "evidence" },
   { to: "/search", label: "Search results", icon: Search, hint: "What Google reports", group: "evidence" },
   { to: "/measurement", label: "Site health", icon: Gauge, hint: "Speed and traffic", group: "evidence" },
   { to: "/ads", label: "Competitor ads", icon: KeyRound, hint: "Ads they are running now", group: "evidence" },
   { to: "/authority", label: "Trust gaps", icon: ShieldCheck, hint: "Missing proof on pages", group: "evidence" },
-  { to: "/essentials", label: "Marketing essentials", icon: ListChecks, hint: "Covered and missing", group: "evidence" },
   { to: "/assets", label: "Assets", icon: Boxes, hint: "Everything we own", group: "evidence" },
-  { to: "/knowledge", label: "Knowledge", icon: BrainCircuit, hint: "What the OS knows", group: "evidence" },
+  { to: "/knowledge", label: "Knowledge", icon: Radar, hint: "What the OS knows", group: "evidence" },
 
   { to: "/workflows", label: "Workflows", icon: Workflow, hint: "How work runs", group: "run_work" },
   { to: "/scheduler", label: "Schedule", icon: CalendarClock, hint: "When work runs", group: "run_work" },
@@ -79,13 +81,34 @@ const workspaces: readonly Workspace[] = [
   { to: "/operators", label: "People", icon: Users, hint: "Who has access", group: "system_health" },
 ] as const;
 
-const navGroups: readonly WorkspaceGroup[] = TAXONOMY_GROUPS.map((group) => ({
-  title: group.label,
-  definition: group.definition,
-  items: workspaces.filter((workspace) => workspace.group === group.key),
-}));
+/**
+ * Three destinations carry the day: what needs a decision, the agent, and the
+ * coverage map. Everything else stays reachable underneath, grouped by the
+ * loop stage it belongs to.
+ */
+const PRIMARY_ROUTES = ["/", "/ask", "/essentials"] as const;
+
+const primaryGroup: WorkspaceGroup = {
+  title: "Start here",
+  definition: "The three screens a normal day runs on.",
+  items: PRIMARY_ROUTES.map((route) => workspaces.find((workspace) => workspace.to === route)!),
+};
+
+const navGroups: readonly WorkspaceGroup[] = [
+  primaryGroup,
+  ...TAXONOMY_GROUPS.map((group) => ({
+    title: group.label,
+    definition: group.definition,
+    items: workspaces.filter(
+      (workspace) =>
+        workspace.group === group.key &&
+        !PRIMARY_ROUTES.includes(workspace.to as (typeof PRIMARY_ROUTES)[number]),
+    ),
+  })).filter((group) => group.items.length > 0),
+];
 
 const allWorkspaces = workspaces;
+
 
 
 function isActive(pathname: string, to: string): boolean {
