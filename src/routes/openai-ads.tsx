@@ -12,6 +12,7 @@ import {
   StatePill,
   formatWhen,
 } from "@/components/os/primitives";
+import { OpenAiAdsCapiSettings } from "@/components/os/openai-ads-capi-settings";
 import { OperatorRouteError } from "@/components/os/route-error";
 import {
   getOpenAiAdsState,
