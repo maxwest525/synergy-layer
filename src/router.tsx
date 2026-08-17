@@ -44,15 +44,19 @@ export const getRouter = () => {
   });
 
   if (typeof window === "undefined") {
-    const seen = new Map<string, number>();
-    const walk = (r: any, depth: number) => {
-      const key = `${depth}:${r.options?.id ?? r.options?.path ?? "root"}`;
-      seen.set(key, (seen.get(key) ?? 0) + 1);
-      for (const c of (r.children ?? [])) walk(c, depth + 1);
+    const problems: string[] = [];
+    const walk = (r: any, path: string) => {
+      const kids = (r.children ?? []) as any[];
+      const seen = new Map<string, number>();
+      for (const c of kids) {
+        const k = String(c.options?.id ?? c.options?.path ?? "?");
+        seen.set(k, (seen.get(k) ?? 0) + 1);
+      }
+      for (const [k, n] of seen) if (n > 1) problems.push(`${path} -> ${k} x${n}`);
+      for (const c of kids) walk(c, `${path}/${String(c.options?.path ?? c.options?.id ?? "?")}`);
     };
-    walk(routeTree as any, 0);
-    const dupes = [...seen.entries()].filter(([, n]) => n > 1);
-    if (dupes.length) console.error("ROUTE_DUPES", JSON.stringify(dupes));
+    walk(routeTree as any, "");
+    if (problems.length) console.error("ROUTE_DUPES", JSON.stringify(problems));
   }
 
   let router;
