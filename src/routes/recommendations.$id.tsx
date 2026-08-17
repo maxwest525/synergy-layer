@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { decideRecommendation } from "@/lib/os-admin.functions";
 import { getRecommendation } from "@/lib/os.functions";
 import { describeSuggestedAction, isObservationOnly } from "@/lib/recommendation-action";
+import { OperatorRouteError } from "@/components/os/route-error";
 
 const recommendationQuery = (id: string) => ({
   queryKey: ["recommendation", id],
@@ -49,6 +50,7 @@ export const Route = createFileRoute("/recommendations/$id")({
       ],
     };
   },
+  errorComponent: OperatorRouteError,
   component: RecommendationDetailPage,
 });
 

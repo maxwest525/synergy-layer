@@ -11,6 +11,7 @@ import {
   toneForState,
 } from "@/components/os/primitives";
 import { getWorkflows } from "@/lib/os.functions";
+import { OperatorRouteError } from "@/components/os/route-error";
 
 const workflowsQuery = { queryKey: ["workflows"], queryFn: () => getWorkflows() };
 
@@ -36,6 +37,7 @@ export const Route = createFileRoute("/workflows/")({
       { property: "og:description", content: "How work runs, and what happened on every run." },
     ],
   }),
+  errorComponent: OperatorRouteError,
   component: WorkflowsPage,
 });
 

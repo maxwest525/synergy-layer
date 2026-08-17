@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { AgentChat } from "@/components/os/agent-chat";
 import { PageHeader } from "@/components/os/primitives";
+import { OperatorRouteError } from "@/components/os/route-error";
 
 export const Route = createFileRoute("/studio")({
   ssr: false,
@@ -22,6 +23,7 @@ export const Route = createFileRoute("/studio")({
       { name: "twitter:card", content: "summary" },
     ],
   }),
+  errorComponent: OperatorRouteError,
   component: StudioPage,
 });
 

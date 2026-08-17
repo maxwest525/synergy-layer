@@ -14,6 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { syncRegistry } from "@/lib/os-admin.functions";
 import { getCapabilities } from "@/lib/os.functions";
+import { OperatorRouteError } from "@/components/os/route-error";
 
 const capabilitiesQuery = { queryKey: ["capabilities"], queryFn: () => getCapabilities() };
 
@@ -42,6 +43,7 @@ export const Route = createFileRoute("/capabilities/")({
       },
     ],
   }),
+  errorComponent: OperatorRouteError,
   component: CapabilitiesPage,
 });
 

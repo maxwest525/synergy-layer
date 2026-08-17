@@ -10,6 +10,7 @@ import {
   formatWhen,
 } from "@/components/os/primitives";
 import { getKnowledgeCollection } from "@/lib/os.functions";
+import { OperatorRouteError } from "@/components/os/route-error";
 
 const collectionQuery = (id: string) => ({
   queryKey: ["knowledge-collection", id],
@@ -42,6 +43,7 @@ export const Route = createFileRoute("/knowledge/$id")({
       ],
     };
   },
+  errorComponent: OperatorRouteError,
   component: KnowledgeCollectionPage,
 });
 

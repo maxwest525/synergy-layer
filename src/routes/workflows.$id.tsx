@@ -37,6 +37,7 @@ import {
   startWorkflowRun,
 } from "@/lib/os-admin.functions";
 import { getCapabilities, getWorkflow } from "@/lib/os.functions";
+import { OperatorRouteError } from "@/components/os/route-error";
 
 const workflowQuery = (id: string) => ({
   queryKey: ["workflow", id],
@@ -91,6 +92,7 @@ export const Route = createFileRoute("/workflows/$id")({
       ],
     };
   },
+  errorComponent: OperatorRouteError,
   component: WorkflowDetailPage,
 });
 

@@ -10,6 +10,7 @@ import {
   toneForState,
 } from "@/components/os/primitives";
 import { getAssets } from "@/lib/os.functions";
+import { OperatorRouteError } from "@/components/os/route-error";
 
 const assetsQuery = { queryKey: ["assets"], queryFn: () => getAssets() };
 
@@ -35,6 +36,7 @@ export const Route = createFileRoute("/assets/")({
       { property: "og:description", content: "Everything the company owns, in one registry." },
     ],
   }),
+  errorComponent: OperatorRouteError,
   component: AssetsPage,
 });
 

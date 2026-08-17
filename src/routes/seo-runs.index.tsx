@@ -25,10 +25,12 @@ import {
 } from "@/lib/seo-runs/batch";
 import { isSeoRunEligibleForPreparation } from "@/lib/seo-runs/eligibility";
 import { createSeoRuns, evaluateSeoRun, getSeoRuns } from "@/lib/seo-runs/functions";
+import { OperatorRouteError } from "@/components/os/route-error";
 
 export const Route = createFileRoute("/seo-runs/")({
   ssr: false,
   head: () => ({ meta: [{ title: "SEO Runs — AOOS" }, { name: "robots", content: "noindex" }] }),
+  errorComponent: OperatorRouteError,
   component: SeoRunsPage,
 });
 

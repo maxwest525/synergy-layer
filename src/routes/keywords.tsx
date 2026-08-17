@@ -15,6 +15,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { decideKeywordCandidates, listKeywordCandidates } from "@/lib/keywords.functions";
+import { OperatorRouteError } from "@/components/os/route-error";
 
 const candidatesQuery = {
   queryKey: ["keyword-candidates", "all"],
@@ -50,6 +51,7 @@ export const Route = createFileRoute("/keywords")({
       },
     ],
   }),
+  errorComponent: OperatorRouteError,
   component: KeywordReviewPage,
 });
 
