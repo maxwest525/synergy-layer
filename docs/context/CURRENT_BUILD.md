@@ -99,6 +99,9 @@ second visits served from the query cache. Applied fixes:
   generated route tree is treated as immutable; the former runtime parent-link
   mutation was removed because repeated router construction could corrupt route
   identity and surface `Duplicate routes found with id: /`.
+- The operator session hook performs an initial persisted-session read in
+  addition to subscribing to changes, so cold loads cannot remain indefinitely
+  on the session-checking state.
 
 ## 8. Next build priorities
 
