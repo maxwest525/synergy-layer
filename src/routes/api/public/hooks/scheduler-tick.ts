@@ -1,8 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-const AUTOMATED_SCHEDULE_KEY = "gsc-daily-observe";
+/** Only these read-only observation schedules may be triggered by pg_cron. */
+const AUTOMATED_SCHEDULE_KEYS = new Set(["gsc-daily-observe", "ga4-daily-observe"]);
 
-/** Dedicated pg_cron entry point for the free daily Search Console workflow. */
+/** Dedicated pg_cron entry point for the free daily observation workflows. */
 export const Route = createFileRoute("/api/public/hooks/scheduler-tick")({
   server: {
     handlers: {
@@ -36,7 +37,7 @@ export const Route = createFileRoute("/api/public/hooks/scheduler-tick")({
           body && typeof body === "object" && "scheduleKey" in body
             ? (body as { scheduleKey?: unknown }).scheduleKey
             : null;
-        if (scheduleKey !== AUTOMATED_SCHEDULE_KEY) {
+        if (typeof scheduleKey !== "string" || !AUTOMATED_SCHEDULE_KEYS.has(scheduleKey)) {
           return new Response(JSON.stringify({ error: "Unsupported schedule" }), {
             status: 400,
             headers: { "Content-Type": "application/json" },
@@ -45,7 +46,7 @@ export const Route = createFileRoute("/api/public/hooks/scheduler-tick")({
 
         try {
           const result = await tickScheduler(supabaseAdmin, new Date(), {
-            onlyKeys: [AUTOMATED_SCHEDULE_KEY],
+            onlyKeys: [scheduleKey],
             collectSerpBacklog: false,
             reconcileChangeMeasurements: true,
           });

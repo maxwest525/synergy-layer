@@ -8,7 +8,12 @@ import { ga4Window, readGa4EnvPresence, type Ga4CredentialKind } from "./ga4";
 type AdminClient = SupabaseClient<Database>;
 
 const TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token";
-const DATA_ENDPOINT = "https://analyticsdata.googleapis.com/v1beta";
+export const DATA_ENDPOINT = "https://analyticsdata.googleapis.com/v1beta";
+
+/** The exact Data API call AOOS makes for a property inventory read. */
+export function ga4RunReportEndpoint(property: string): string {
+  return `${DATA_ENDPOINT}/${property}:runReport`;
+}
 const ANALYTICS_SCOPE = "https://www.googleapis.com/auth/analytics.readonly";
 
 export type Ga4InventoryRow = {
@@ -291,7 +296,7 @@ export async function runGa4Inventory(
   admin: AdminClient,
   input: {
     tenantId: string;
-    actorId: string;
+    actorId?: string | null;
     property: string;
     now?: Date;
   },
@@ -304,7 +309,7 @@ export async function runGa4Inventory(
       provider: "ga4",
       target: input.property,
       strategy: "page_event_inventory",
-      actor_id: input.actorId,
+      actor_id: input.actorId ?? null,
       status: "running",
       cost_usd: 0,
     })
@@ -469,4 +474,73 @@ export async function runGa4PageWindow(
     });
     throw error;
   }
+}
+
+/**
+ * Scheduled GA4 observation. Runs one inventory read per tenant that has a
+ * selected Search Console property bound to a GA4 property. A provider failure
+ * is recorded as a failed run, never as zero traffic.
+ */
+export async function runGa4DailyObservation(
+  admin: AdminClient,
+  now = new Date(),
+): Promise<{
+  attempted: number;
+  succeeded: number;
+  failed: number;
+  results: Array<{
+    tenantId: string;
+    property: string;
+    status: "succeeded" | "failed";
+    rowCount?: number;
+    error?: string;
+  }>;
+}> {
+  const { ga4PropertyForSearchConsoleProperty } = await import("./ga4");
+  const { data: selected, error } = await admin
+    .from("search_console_properties")
+    .select("tenant_id, site_url")
+    .eq("selected", true);
+  if (error) throw new Error(`Could not read selected Search Console properties: ${error.message}`);
+
+  const results: Array<{
+    tenantId: string;
+    property: string;
+    status: "succeeded" | "failed";
+    rowCount?: number;
+    error?: string;
+  }> = [];
+
+  for (const row of selected ?? []) {
+    const property = ga4PropertyForSearchConsoleProperty(row.site_url);
+    if (!property || !row.tenant_id) continue;
+    try {
+      const result = await runGa4Inventory(admin, {
+        tenantId: row.tenant_id,
+        actorId: null,
+        property,
+        now,
+      });
+      results.push({
+        tenantId: row.tenant_id,
+        property,
+        status: "succeeded",
+        rowCount: result.rowCount,
+      });
+    } catch (providerError) {
+      results.push({
+        tenantId: row.tenant_id,
+        property,
+        status: "failed",
+        error: providerError instanceof Error ? providerError.message : String(providerError),
+      });
+    }
+  }
+
+  return {
+    attempted: results.length,
+    succeeded: results.filter((entry) => entry.status === "succeeded").length,
+    failed: results.filter((entry) => entry.status === "failed").length,
+    results,
+  };
 }

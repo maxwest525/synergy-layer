@@ -422,6 +422,7 @@ async function executeNode(
     const specialised =
       (await runSearchConsoleNode(client, node.ref ?? "")) ??
       (await runResearchNode(client, node.ref ?? "")) ??
+      (await runGa4Node(client, node.ref ?? "")) ??
       (await runSeoValidationNode(client, node.ref ?? "", runId)) ??
       (await runSerpCompetitorNode(client, node.ref ?? "")) ??
       (await runAdsTransparencyNode(client, node.ref ?? "", runId)) ??
@@ -522,6 +523,35 @@ async function runSearchConsoleNode(client: Client, ref: string): Promise<NodeOu
   }
 
   return null;
+}
+
+/**
+ * GA4 nodes run one real Data API inventory read per tenant with a bound
+ * property. A provider failure fails the node; it is never stored as zero.
+ */
+async function runGa4Node(client: Client, ref: string): Promise<NodeOutcome | null> {
+  if (ref !== "cap.ga4") return null;
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { runGa4DailyObservation } = await import("./measurement/ga4.server");
+  void client;
+  try {
+    const result = await runGa4DailyObservation(supabaseAdmin);
+    if (result.attempted === 0) {
+      return {
+        ok: true,
+        output: { noChange: true, reason: "No tenant has a GA4 property bound." },
+      };
+    }
+    if (result.succeeded === 0) {
+      return {
+        ok: false,
+        error: result.results.map((entry) => entry.error).filter(Boolean).join(" | "),
+      };
+    }
+    return { ok: true, output: { ...result } };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : String(error) };
+  }
 }
 
 /**
