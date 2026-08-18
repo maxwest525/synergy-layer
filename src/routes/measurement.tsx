@@ -16,6 +16,7 @@ import {
 } from "@/components/os/primitives";
 import { OperatorRouteError } from "@/components/os/route-error";
 import { UmamiPanel } from "@/components/os/umami-panel";
+import { ObservationCadences } from "@/components/os/observation-cadences";
 
 import { describeMissingSnapshot } from "@/lib/measurement/pagespeed";
 import { Button } from "@/components/ui/button";
