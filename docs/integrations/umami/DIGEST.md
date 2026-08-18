@@ -31,11 +31,15 @@ Credentials live in server secrets only. They are never written to
 | List properties | `GET /api/websites` |
 | Site totals | `GET /api/websites/{id}/stats?startAt={ms}&endAt={ms}` |
 | Time series | `GET /api/websites/{id}/pageviews?startAt&endAt&unit=day&timezone` |
-| Top pages | `GET /api/websites/{id}/metrics?startAt&endAt&type=url` |
+| Top pages | `GET /api/websites/{id}/metrics?startAt&endAt&type=path` |
 | Referrers | `GET /api/websites/{id}/metrics?startAt&endAt&type=referrer` |
 
 `startAt` and `endAt` are epoch milliseconds. `stats` returns pageviews, visitors,
 visits, bounces, and totaltime, each as `{ value, prev }`.
+
+Live revalidation on 2026-08-18 confirmed that this deployed Umami version rejects
+`type=url` with HTTP 400 and accepts `type=path`. AOOS therefore uses `path` for
+top-page metrics on this instance.
 
 ## Limits and risks
 

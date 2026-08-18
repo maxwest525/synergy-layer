@@ -109,7 +109,7 @@ export async function observeUmami(
     const [stats, series, pages, referrers] = await Promise.all([
       fetchUmamiStats(headers, website.id, startAt, endAt),
       fetchUmamiPageviews(headers, website.id, startAt, endAt),
-      fetchUmamiMetrics(headers, website.id, "url", startAt, endAt),
+      fetchUmamiMetrics(headers, website.id, "path", startAt, endAt),
       fetchUmamiMetrics(headers, website.id, "referrer", startAt, endAt),
     ]);
 

@@ -11,6 +11,9 @@ describe("Lovable preview auth runtime compatibility", () => {
       const source = readFileSync(`${sourceRoot}/${file}`, "utf8");
 
       expect(source).toContain("getRequestHeader");
+      if (file === "lib/tenant.server.ts") {
+        expect(source).toContain('from "@tanstack/start-server-core"');
+      }
       expect(source).not.toMatch(/\bgetRequest\s*\(/);
     },
   );
