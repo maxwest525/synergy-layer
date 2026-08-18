@@ -17,9 +17,35 @@ const empty: NextActionFacts = {
   workflows: { registered: 0, scheduled: 0 },
   recommendations: { proposed: 0, observed: 0 },
   systems: { total: 0, proven: 0, configuredOnly: 0, broken: 0 },
+  coverage: { total: 0, unowned: 0, overdue: 0, nextDue: null },
+  measurement: { failedRuns: 0, latestProvider: null, latestError: null },
 };
 
 describe("next actions", () => {
+  it("instructs the operator to clear overdue concerns before assigning owners", () => {
+    const actions = buildNextActions({
+      ...empty,
+      coverage: {
+        total: 54,
+        unowned: 40,
+        overdue: 3,
+        nextDue: { task: "Fix indexing", targetDate: "2026-08-01" },
+      },
+    });
+    const overdue = actions.findIndex((action) => action.id === "coverage-overdue");
+    const unowned = actions.findIndex((action) => action.id === "coverage-unowned");
+    expect(overdue).toBeGreaterThanOrEqual(0);
+    expect(overdue).toBeLessThan(unowned);
+  });
+
+  it("surfaces a failed measurement run as a retry instruction", () => {
+    const actions = buildNextActions({
+      ...empty,
+      measurement: { failedRuns: 13, latestProvider: "pagespeed", latestError: "Quota exceeded" },
+    });
+    expect(actions.some((action) => action.id === "run-measurement-failures")).toBe(true);
+  });
+
   it("ranks a broken connection above optional reads", () => {
     const actions = buildNextActions({
       ...empty,

@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { concernStatus, groupByPhase, summarizeCoverage, type CoverageConcern } from "./coverage";
+import {
+  concernStatus,
+  groupByPhase,
+  isOverdue,
+  summarizeCoverage,
+  summarizeOwnership,
+  type CoverageConcern,
+} from "./coverage";
 
 function concern(
   key: string,
@@ -16,6 +23,8 @@ function concern(
     priority: 0,
     origin: "framework",
     evidenceSource: null,
+    ownerName: null,
+    targetDate: null,
     latest,
   };
 }
@@ -55,5 +64,41 @@ describe("coverage status derivation", () => {
     const counts = summarizeCoverage([concern("a", "1"), concern("b", "1")]);
     expect(counts.not_evaluated).toBe(2);
     expect(counts.working).toBe(0);
+  });
+});
+
+describe("coverage ownership", () => {
+  const today = new Date("2026-08-18T00:00:00.000Z");
+
+  it("counts a concern with no owner or no date as unowned", () => {
+    const rows = [
+      { ...concern("a", "1"), ownerName: "Max", targetDate: "2026-09-01" },
+      { ...concern("b", "1"), ownerName: "Max", targetDate: null },
+      concern("c", "1"),
+    ];
+    const summary = summarizeOwnership(rows, today);
+    expect(summary.owned).toBe(1);
+    expect(summary.unowned).toBe(2);
+  });
+
+  it("does not call a working concern overdue", () => {
+    const done = {
+      ...concern("a", "1", {
+        status: "working" as const,
+        summary: "proven",
+        limitation: null,
+        evaluatedAt: "2026-08-17T00:00:00.000Z",
+      }),
+      ownerName: "Max",
+      targetDate: "2026-08-01",
+    };
+    expect(isOverdue(done, today)).toBe(false);
+    expect(summarizeOwnership([done], today).overdue).toBe(0);
+  });
+
+  it("counts an open concern past its target date as overdue", () => {
+    const late = { ...concern("a", "1"), ownerName: "Max", targetDate: "2026-08-01" };
+    expect(isOverdue(late, today)).toBe(true);
+    expect(summarizeOwnership([late], today).overdue).toBe(1);
   });
 });

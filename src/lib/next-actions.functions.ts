@@ -35,6 +35,9 @@ export const getNextActionFacts = createServerFn({ method: "GET" })
       schedules,
       recommendations,
       systems,
+      concerns,
+      concernEvaluations,
+      measurementFailures,
     ] = await Promise.all([
       db
         .from("search_console_properties")
@@ -114,6 +117,24 @@ export const getNextActionFacts = createServerFn({ method: "GET" })
         .select("credential_state, aoos_connection_state, implemented_state, verification_state")
         .eq("tenant_id", tenantId)
         .eq("visible_in_aoos", true),
+      db
+        .from("essential_concerns")
+        .select("id, task, owner_name, target_date")
+        .eq("tenant_id", tenantId)
+        .is("retired_at", null),
+      db
+        .from("essential_concern_evaluations")
+        .select("concern_id, status, evaluated_at")
+        .eq("tenant_id", tenantId)
+        .order("evaluated_at", { ascending: false })
+        .limit(500),
+      db
+        .from("measurement_runs")
+        .select("provider, status, error, started_at")
+        .eq("tenant_id", tenantId)
+        .neq("status", "succeeded")
+        .order("started_at", { ascending: false })
+        .limit(200),
     ]);
 
     assertRead("Search Console properties", properties);
@@ -134,6 +155,9 @@ export const getNextActionFacts = createServerFn({ method: "GET" })
     assertRead("Schedules", schedules);
     assertRead("Recommendations", recommendations);
     assertRead("Tool systems catalog", systems);
+    assertRead("Coverage concerns", concerns);
+    assertRead("Coverage evaluations", concernEvaluations);
+    assertRead("Measurement runs", measurementFailures);
 
     const propertyRows = properties.data ?? [];
     const selected = propertyRows.find((row) => row.selected) ?? propertyRows[0] ?? null;
@@ -163,6 +187,25 @@ export const getNextActionFacts = createServerFn({ method: "GET" })
         (row.credential_state === "configured" || row.credential_state === "encrypted_not_enumerated"),
     ).length;
     const broken = systemRows.filter((row) => row.verification_state === "failed").length;
+
+    const latestConcernStatus = new Map<string, string>();
+    for (const row of concernEvaluations.data ?? []) {
+      if (!latestConcernStatus.has(row.concern_id)) latestConcernStatus.set(row.concern_id, row.status);
+    }
+    const todayIso = new Date().toISOString().slice(0, 10);
+    const concernRows = concerns.data ?? [];
+    let unowned = 0;
+    let overdue = 0;
+    let nextDue: { task: string; targetDate: string } | null = null;
+    for (const row of concernRows) {
+      if (!row.owner_name || !row.target_date) unowned += 1;
+      if (!row.target_date) continue;
+      if (latestConcernStatus.get(row.id) === "working") continue;
+      if (row.target_date < todayIso) overdue += 1;
+      if (!nextDue || row.target_date < nextDue.targetDate)
+        nextDue = { task: row.task, targetDate: row.target_date };
+    }
+    const measurementRows = measurementFailures.data ?? [];
 
     return {
       property: selected
@@ -222,6 +265,12 @@ export const getNextActionFacts = createServerFn({ method: "GET" })
         observed: recommendationRows.filter((row) => row.state === "observed").length,
       },
       systems: { total: systemRows.length, proven, configuredOnly, broken },
+      coverage: { total: concernRows.length, unowned, overdue, nextDue },
+      measurement: {
+        failedRuns: measurementRows.length,
+        latestProvider: measurementRows[0]?.provider ?? null,
+        latestError: measurementRows[0]?.error ?? null,
+      },
     };
   });
 

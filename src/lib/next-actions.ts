@@ -25,6 +25,13 @@ export type NextActionFacts = {
   workflows: { registered: number; scheduled: number };
   recommendations: { proposed: number; observed: number };
   systems: { total: number; proven: number; configuredOnly: number; broken: number };
+  coverage: {
+    total: number;
+    unowned: number;
+    overdue: number;
+    nextDue: { task: string; targetDate: string } | null;
+  };
+  measurement: { failedRuns: number; latestProvider: string | null; latestError: string | null };
 };
 
 export type NextActionRoute =
@@ -43,6 +50,7 @@ export type NextActionRoute =
   | "/assets"
   | "/seo-runs"
   | "/openseo"
+  | "/essentials"
   | "/ask";
 
 export type NextAction = {
@@ -269,6 +277,49 @@ export function buildNextActions(facts: NextActionFacts): NextAction[] {
       to: "/scheduler",
       actionLabel: "Open scheduler",
       weight: 65,
+    });
+  }
+
+  // Coverage ownership: a concern nobody owns is work nobody will do.
+  if (facts.coverage.overdue > 0) {
+    actions.push({
+      id: "coverage-overdue",
+      group: "decisions",
+      title: "Clear the overdue coverage concerns",
+      reason: `${plural(facts.coverage.overdue, "concern")} passed the target date you set and is still not working.`,
+      evidence: `${facts.coverage.overdue} overdue of ${facts.coverage.total} concern(s).${facts.coverage.nextDue ? ` Earliest target ${facts.coverage.nextDue.targetDate} on "${facts.coverage.nextDue.task}".` : ""}`,
+      blockedBy: null,
+      to: "/essentials",
+      actionLabel: "Open coverage",
+      weight: 18,
+    });
+  }
+  if (facts.coverage.unowned > 0) {
+    actions.push({
+      id: "coverage-unowned",
+      group: "decisions",
+      title: "Assign an owner and target date to the unowned concerns",
+      reason: `${plural(facts.coverage.unowned, "concern")} has nobody named against it, so nothing moves it forward.`,
+      evidence: `${facts.coverage.unowned} of ${facts.coverage.total} concern(s) have no owner or no target date stored.`,
+      blockedBy: null,
+      to: "/essentials",
+      actionLabel: "Assign owners",
+      weight: 55,
+    });
+  }
+
+  // Run work: an overnight read that failed leaves stale evidence behind.
+  if (facts.measurement.failedRuns > 0) {
+    actions.push({
+      id: "run-measurement-failures",
+      group: "run_work",
+      title: "Retry the failed measurement runs",
+      reason: `${plural(facts.measurement.failedRuns, "measurement run")} failed, so the evidence on those cards is stale rather than current.`,
+      evidence: `${facts.measurement.failedRuns} failed run(s)${facts.measurement.latestProvider ? `, latest from ${facts.measurement.latestProvider}` : ""}.${facts.measurement.latestError ? ` Last error: ${facts.measurement.latestError}.` : ""}`,
+      blockedBy: null,
+      to: "/measurement",
+      actionLabel: "Open measurement",
+      weight: 22,
     });
   }
 

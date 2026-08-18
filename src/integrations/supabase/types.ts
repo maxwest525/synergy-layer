@@ -4950,6 +4950,36 @@ export type Database = {
         Args: { target_tenant: string }
         Returns: undefined
       }
+      set_concern_ownership: {
+        Args: {
+          p_concern_id: string
+          p_owner_name: string
+          p_target_date: string
+        }
+        Returns: {
+          created_at: string
+          description: string
+          evidence_source: string | null
+          id: string
+          key: string
+          origin: string
+          owner_name: string | null
+          phase: string
+          priority: number
+          retired_at: string | null
+          sort_order: number
+          target_date: string | null
+          task: string
+          tenant_id: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "essential_concerns"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       transition_change_request: {
         Args: {
           _action: string

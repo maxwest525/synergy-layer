@@ -1,7 +1,8 @@
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
+import { toast } from "sonner";
 
 import { GlassCard, PageHeader, StatePill, formatWhen } from "@/components/os/primitives";
 import { NextBestActions } from "@/components/os/next-best-actions";
@@ -11,10 +12,13 @@ import {
   COVERAGE_TONE,
   concernStatus,
   groupByPhase,
+  isOverdue,
   summarizeCoverage,
+  summarizeOwnership,
+  type CoverageConcern,
   type CoverageStatus,
 } from "@/lib/coverage";
-import { getCoverage } from "@/lib/coverage.functions";
+import { getCoverage, setConcernOwnership } from "@/lib/coverage.functions";
 import {
   backlinkAuthority,
   describePageSpeed,
@@ -156,6 +160,80 @@ const COVERAGE_ORDER: CoverageStatus[] = [
   "working",
 ];
 
+const FIELD_CLASS =
+  "w-full rounded-lg border border-border/70 bg-background/60 px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary/60 focus:outline-none";
+
+function ConcernOwnership({ concern }: { concern: CoverageConcern }) {
+  const queryClient = useQueryClient();
+  const save = useServerFn(setConcernOwnership);
+  const [owner, setOwner] = useState(concern.ownerName ?? "");
+  const [targetDate, setTargetDate] = useState(concern.targetDate ?? "");
+
+  const mutation = useMutation({
+    mutationFn: () =>
+      save({
+        data: {
+          concernId: concern.id,
+          ownerName: owner.trim() ? owner.trim() : null,
+          targetDate: targetDate ? targetDate : null,
+        },
+      }),
+    onSuccess: () => {
+      toast.success("Ownership saved for this concern.");
+      void queryClient.invalidateQueries({ queryKey: ["coverage"] });
+      void queryClient.invalidateQueries({ queryKey: ["next-action-facts"] });
+    },
+    onError: (error: unknown) => {
+      toast.error(error instanceof Error ? error.message : "Saving ownership failed.");
+    },
+  });
+
+  const overdue = isOverdue(concern);
+  const dirty = (concern.ownerName ?? "") !== owner || (concern.targetDate ?? "") !== targetDate;
+
+  return (
+    <div className="mt-4 border-t border-border/60 pt-3">
+      <div className="flex flex-wrap items-center gap-2 text-xs">
+        <span className="text-muted-foreground">
+          {concern.ownerName ? `Owner ${concern.ownerName}` : "Name an owner for this concern"}
+        </span>
+        {concern.targetDate ? (
+          <StatePill
+            label={overdue ? `Overdue since ${concern.targetDate}` : `Due ${concern.targetDate}`}
+            tone={overdue ? "danger" : "neutral"}
+          />
+        ) : (
+          <StatePill label="Set a target date" tone="warning" />
+        )}
+      </div>
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        <input
+          className={`${FIELD_CLASS} sm:max-w-[12rem]`}
+          value={owner}
+          placeholder="Owner name"
+          aria-label={`Owner for ${concern.task}`}
+          onChange={(event) => setOwner(event.target.value)}
+        />
+        <input
+          type="date"
+          className={`${FIELD_CLASS} sm:max-w-[10rem]`}
+          value={targetDate}
+          aria-label={`Target date for ${concern.task}`}
+          onChange={(event) => setTargetDate(event.target.value)}
+        />
+        <button
+          type="button"
+          className={`${ACTION_CLASS} disabled:cursor-not-allowed disabled:opacity-50`}
+          disabled={!dirty || mutation.isPending}
+          onClick={() => mutation.mutate()}
+        >
+          {mutation.isPending ? "Saving" : "Save ownership"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function CoverageSection({
   concerns,
 }: {
@@ -163,6 +241,7 @@ function CoverageSection({
 }) {
   const phases = groupByPhase(concerns);
   const totals = summarizeCoverage(concerns);
+  const ownership = summarizeOwnership(concerns);
 
   return (
     <section className="space-y-4">
@@ -186,6 +265,14 @@ function CoverageSection({
         <p className="mt-3 text-sm text-muted-foreground">
           Each concern shows a status only when a stored evaluation produced one. Nothing here is
           typed by hand, so a concern with no evaluation says so instead of looking healthy.
+        </p>
+        <p className="mt-2 text-sm text-foreground/80">
+          {ownership.overdue > 0
+            ? `${ownership.overdue} concern(s) passed their target date. Clear them first.`
+            : "No concern is past its target date."}{" "}
+          {ownership.unowned > 0
+            ? `Assign an owner and a target date to the remaining ${ownership.unowned} concern(s) below.`
+            : "Every concern has an owner and a target date."}
         </p>
       </GlassCard>
       <div className="space-y-6">
@@ -222,6 +309,7 @@ function CoverageSection({
                         about it either way.
                       </p>
                     )}
+                    <ConcernOwnership concern={concern} />
                   </GlassCard>
                 );
               })}
