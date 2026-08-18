@@ -1,14 +1,24 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { Check, GitPullRequestArrow, Loader2, TriangleAlert } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { toast } from "sonner";
 
 import { EmptyNote, StatePill, formatWhen, toneForState } from "./primitives";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Textarea } from "@/components/ui/textarea";
+import { decideChangeRequestsBulk } from "@/lib/change-requests.functions";
 import type { PipelineStage, SuggestionItem } from "@/lib/suggestions.functions";
 import { listSuggestionPipeline } from "@/lib/suggestions.functions";
 import { cn } from "@/lib/utils";
+
+/** Only proposed page changes can be decided straight from this panel. */
+function isDecidable(item: SuggestionItem): boolean {
+  return item.kind === "change" && item.state === "proposed";
+}
 
 const STAGES: readonly { key: PipelineStage; label: string }[] = [
   { key: "propose", label: "Propose" },
@@ -55,10 +65,42 @@ function StageTrack({ item }: { item: SuggestionItem }) {
   );
 }
 
-function ItemRow({ item, onNavigate }: { item: SuggestionItem; onNavigate: () => void }) {
+function ItemRow({
+  item,
+  onNavigate,
+  selectable,
+  selected,
+  onSelectedChange,
+  note,
+  onNoteChange,
+  busy,
+}: {
+  item: SuggestionItem;
+  onNavigate: () => void;
+  selectable: boolean;
+  selected: boolean;
+  onSelectedChange: (next: boolean) => void;
+  note: string;
+  onNoteChange: (next: string) => void;
+  busy: boolean;
+}) {
   return (
-    <li className="rounded-xl border border-border/60 px-3 py-3">
+    <li
+      className={cn(
+        "rounded-xl border px-3 py-3",
+        selected ? "border-primary/60 bg-primary/5" : "border-border/60",
+      )}
+    >
       <div className="flex items-start justify-between gap-2">
+        {selectable ? (
+          <Checkbox
+            checked={selected}
+            onCheckedChange={(value) => onSelectedChange(value === true)}
+            disabled={busy}
+            aria-label={`Select ${item.title} for a bulk decision`}
+            className="mt-0.5 shrink-0"
+          />
+        ) : null}
         <p className="min-w-0 flex-1 text-sm font-medium text-foreground">{item.title}</p>
         <StatePill label={item.state} tone={item.blocked ? "danger" : toneForState(item.state)} />
       </div>
@@ -68,6 +110,18 @@ function ItemRow({ item, onNavigate }: { item: SuggestionItem; onNavigate: () =>
       <StageTrack item={item} />
       <p className="mt-2 text-xs text-muted-foreground">{item.statusLine}</p>
       <p className="mt-1 text-xs font-medium text-primary">{item.instruction}</p>
+      {selectable && selected ? (
+        <Textarea
+          value={note}
+          onChange={(event) => onNoteChange(event.target.value)}
+          maxLength={2000}
+          rows={2}
+          disabled={busy}
+          placeholder="Note for this item (optional). It is stored with the decision."
+          className="mt-2 text-xs"
+          aria-label={`Decision note for ${item.title}`}
+        />
+      ) : null}
       <div className="mt-2 flex items-center justify-between gap-2">
         <span className="text-[0.65rem] text-muted-foreground">{formatWhen(item.updatedAt)}</span>
         {item.actionId ? (
