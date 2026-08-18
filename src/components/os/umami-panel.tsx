@@ -32,14 +32,14 @@ export function UmamiPanel() {
 
   const mutation = useMutation({
     mutationFn: () => refresh({ data: { days: 28 } }),
-    onSuccess: (result) =>
+    onSuccess: async (result) => {
+      const latest = await loadState();
+      queryClient.setQueryData(["umami-state"], latest);
       toast.success(
         `Umami read stored: ${result.written} new snapshot(s), ${result.unchanged} unchanged, for ${result.websiteName}.`,
-      ),
-    onError: (mutationError: Error) => toast.error(mutationError.message),
-    onSettled: () => {
-      void queryClient.invalidateQueries({ queryKey: ["umami-state"] });
+      );
     },
+    onError: (mutationError: Error) => toast.error(mutationError.message),
   });
 
   if (isLoading) {
