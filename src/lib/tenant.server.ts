@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { getRequestHeader } from "@tanstack/react-start/server";
+import { getRequestHeader } from "@tanstack/start-server-core";
 
 import type { Database } from "@/integrations/supabase/types";
 

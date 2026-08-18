@@ -31,6 +31,18 @@ const quietDisconnectLogger = {
   },
 };
 
+const stableGeneratedAuthRequestHelper = {
+  name: "stable-generated-auth-request-helper",
+  enforce: "pre" as const,
+  transform(code: string, id: string) {
+    if (!id.endsWith("/src/integrations/supabase/auth-middleware.ts")) return null;
+    return code.replace(
+      'from "@tanstack/react-start/server"',
+      'from "@tanstack/start-server-core"',
+    );
+  },
+};
+
 export default defineConfig({
   // Local and self-hosted builds need a runnable production server. Lovable
   // pins its own Cloudflare preset inside the Lovable build environment.
@@ -51,7 +63,10 @@ export default defineConfig({
     // mcp-js 0.26 compares a POSIX repository path with a Windows-resolved
     // routes path and aborts before Vite can build. Lovable builds on Linux,
     // where the plugin remains enabled; local Windows checks skip only it.
-    plugins: process.platform === "win32" ? [] : [mcpPlugin()],
+    plugins:
+      process.platform === "win32"
+        ? [stableGeneratedAuthRequestHelper]
+        : [stableGeneratedAuthRequestHelper, mcpPlugin()],
     customLogger: quietDisconnectLogger,
     // zod v4's core modules import each other circularly. When the route
     // splitter emits the chat route as a lazy chunk, that cycle can evaluate
