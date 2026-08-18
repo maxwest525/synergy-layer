@@ -139,6 +139,9 @@ export const getMeasurementState = createServerFn({ method: "POST" })
           "key, name, cron, enabled, health, last_state, last_run_at, last_duration_ms, next_run_at, failure_count",
         )
         .eq("key", "ga4-daily-observe")
+        .eq("tenant_id", tenantId)
+        .order("updated_at", { ascending: false })
+        .limit(1)
         .maybeSingle(),
     ]);
 
