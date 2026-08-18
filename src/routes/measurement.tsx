@@ -281,7 +281,10 @@ function MeasurementPage() {
         description="Speed, indexing, and traffic evidence for pages you own. Every number here came back from a real provider response, and analytics stays honest about whether it is connected."
       />
 
+      <ObservationCadences />
+
       <UmamiPanel />
+
 
 
 
