@@ -62,7 +62,7 @@ function readStoredAccessToken(): string | null {
 /**
  * Attaches the already-persisted bearer token without waiting on the auth
  * client's session lock. When the stored token is missing or expired, the auth
- * client is asked for a refreshed session before the call goes out. The server
+ * client explicitly refreshes the session before the call goes out. The server
  * middleware still validates signature, claims, and identity.
  */
 export const attachStoredAuth = createMiddleware({ type: "function" }).client(async ({ next }) => {
@@ -71,7 +71,7 @@ export const attachStoredAuth = createMiddleware({ type: "function" }).client(as
   if (!token) {
     try {
       const { supabase } = await import("@/integrations/supabase/client");
-      const { data } = await supabase.auth.getSession();
+      const { data } = await supabase.auth.refreshSession();
       token = data.session?.access_token ?? null;
     } catch {
       token = null;
