@@ -449,6 +449,12 @@ export function Shell({ children }: { children: ReactNode }) {
             </div>
           )}
 
+          {session.signedIn ? (
+            <div className={cn("pb-4", navCollapsed && "flex justify-center")}>
+              <SuggestionsPanel collapsed={navCollapsed} />
+            </div>
+          ) : null}
+
           <div className="flex-1 border-t border-border/50 pt-4">
             <NavList pathname={pathname} collapsed={navCollapsed} />
           </div>
