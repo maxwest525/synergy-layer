@@ -70,6 +70,7 @@ import { Route as CapabilitiesSystemsKeyRouteImport } from './routes/capabilitie
 import { Route as ApiPublicHooksDataforseoPostbackRouteImport } from './routes/api/public/hooks/dataforseo-postback'
 import { Route as ApiPublicHooksOpenaiAdsConversionsRouteImport } from './routes/api/public/hooks/openai-ads-conversions'
 import { Route as ApiPublicHooksOpenaiAdsEventsRouteImport } from './routes/api/public/hooks/openai-ads-events'
+import { Route as ApiPublicHooksProposeFromEvidenceRouteImport } from './routes/api/public/hooks/propose-from-evidence'
 import { Route as ApiPublicHooksSchedulerTickRouteImport } from './routes/api/public/hooks/scheduler-tick'
 
 const IndexRoute = IndexRouteImport.update({
@@ -384,6 +385,12 @@ const ApiPublicHooksOpenaiAdsEventsRoute =
     path: '/api/public/hooks/openai-ads-events',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksProposeFromEvidenceRoute =
+  ApiPublicHooksProposeFromEvidenceRouteImport.update({
+    id: '/api/public/hooks/propose-from-evidence',
+    path: '/api/public/hooks/propose-from-evidence',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksSchedulerTickRoute =
   ApiPublicHooksSchedulerTickRouteImport.update({
     id: '/api/public/hooks/scheduler-tick',
@@ -453,6 +460,7 @@ export interface FileRoutesByFullPath {
   '/api/public/hooks/dataforseo-postback': typeof ApiPublicHooksDataforseoPostbackRoute
   '/api/public/hooks/openai-ads-conversions': typeof ApiPublicHooksOpenaiAdsConversionsRoute
   '/api/public/hooks/openai-ads-events': typeof ApiPublicHooksOpenaiAdsEventsRoute
+  '/api/public/hooks/propose-from-evidence': typeof ApiPublicHooksProposeFromEvidenceRoute
   '/api/public/hooks/scheduler-tick': typeof ApiPublicHooksSchedulerTickRoute
 }
 export interface FileRoutesByTo {
@@ -508,6 +516,7 @@ export interface FileRoutesByTo {
   '/api/public/hooks/dataforseo-postback': typeof ApiPublicHooksDataforseoPostbackRoute
   '/api/public/hooks/openai-ads-conversions': typeof ApiPublicHooksOpenaiAdsConversionsRoute
   '/api/public/hooks/openai-ads-events': typeof ApiPublicHooksOpenaiAdsEventsRoute
+  '/api/public/hooks/propose-from-evidence': typeof ApiPublicHooksProposeFromEvidenceRoute
   '/api/public/hooks/scheduler-tick': typeof ApiPublicHooksSchedulerTickRoute
 }
 export interface FileRoutesById {
@@ -573,6 +582,7 @@ export interface FileRoutesById {
   '/api/public/hooks/dataforseo-postback': typeof ApiPublicHooksDataforseoPostbackRoute
   '/api/public/hooks/openai-ads-conversions': typeof ApiPublicHooksOpenaiAdsConversionsRoute
   '/api/public/hooks/openai-ads-events': typeof ApiPublicHooksOpenaiAdsEventsRoute
+  '/api/public/hooks/propose-from-evidence': typeof ApiPublicHooksProposeFromEvidenceRoute
   '/api/public/hooks/scheduler-tick': typeof ApiPublicHooksSchedulerTickRoute
 }
 export interface FileRouteTypes {
@@ -639,6 +649,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/dataforseo-postback'
     | '/api/public/hooks/openai-ads-conversions'
     | '/api/public/hooks/openai-ads-events'
+    | '/api/public/hooks/propose-from-evidence'
     | '/api/public/hooks/scheduler-tick'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -694,6 +705,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/dataforseo-postback'
     | '/api/public/hooks/openai-ads-conversions'
     | '/api/public/hooks/openai-ads-events'
+    | '/api/public/hooks/propose-from-evidence'
     | '/api/public/hooks/scheduler-tick'
   id:
     | '__root__'
@@ -758,6 +770,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/dataforseo-postback'
     | '/api/public/hooks/openai-ads-conversions'
     | '/api/public/hooks/openai-ads-events'
+    | '/api/public/hooks/propose-from-evidence'
     | '/api/public/hooks/scheduler-tick'
   fileRoutesById: FileRoutesById
 }
@@ -802,6 +815,7 @@ export interface RootRouteChildren {
   ApiPublicHooksDataforseoPostbackRoute: typeof ApiPublicHooksDataforseoPostbackRoute
   ApiPublicHooksOpenaiAdsConversionsRoute: typeof ApiPublicHooksOpenaiAdsConversionsRoute
   ApiPublicHooksOpenaiAdsEventsRoute: typeof ApiPublicHooksOpenaiAdsEventsRoute
+  ApiPublicHooksProposeFromEvidenceRoute: typeof ApiPublicHooksProposeFromEvidenceRoute
   ApiPublicHooksSchedulerTickRoute: typeof ApiPublicHooksSchedulerTickRoute
 }
 
@@ -1234,6 +1248,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksOpenaiAdsEventsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/propose-from-evidence': {
+      id: '/api/public/hooks/propose-from-evidence'
+      path: '/api/public/hooks/propose-from-evidence'
+      fullPath: '/api/public/hooks/propose-from-evidence'
+      preLoaderRoute: typeof ApiPublicHooksProposeFromEvidenceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/scheduler-tick': {
       id: '/api/public/hooks/scheduler-tick'
       path: '/api/public/hooks/scheduler-tick'
@@ -1423,6 +1444,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicHooksOpenaiAdsConversionsRoute:
     ApiPublicHooksOpenaiAdsConversionsRoute,
   ApiPublicHooksOpenaiAdsEventsRoute: ApiPublicHooksOpenaiAdsEventsRoute,
+  ApiPublicHooksProposeFromEvidenceRoute:
+    ApiPublicHooksProposeFromEvidenceRoute,
   ApiPublicHooksSchedulerTickRoute: ApiPublicHooksSchedulerTickRoute,
 }
 export const routeTree = rootRouteImport
