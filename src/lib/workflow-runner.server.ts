@@ -556,6 +556,37 @@ async function runGa4Node(client: Client, ref: string): Promise<NodeOutcome | nu
 }
 
 /**
+ * Umami nodes run one real read-only observation per tenant against the
+ * self-hosted instance. A refusal fails the node; it is never stored as zero.
+ */
+async function runUmamiNode(client: Client, ref: string): Promise<NodeOutcome | null> {
+  if (ref !== "cap.umami") return null;
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { observeUmami } = await import("./umami/observe.server");
+  const { data, error } = await client.from("tenants").select("id");
+  if (error) return { ok: false, error: error.message };
+  const tenants = data ?? [];
+  if (tenants.length === 0) {
+    return { ok: true, output: { noChange: true, reason: "No tenant to observe." } };
+  }
+  const results: Record<string, unknown>[] = [];
+  const failures: string[] = [];
+  for (const tenant of tenants) {
+    try {
+      const result = await observeUmami(supabaseAdmin, supabaseAdmin, {
+        tenantId: tenant.id,
+        actorId: null,
+      });
+      results.push({ ...result });
+    } catch (failure) {
+      failures.push(failure instanceof Error ? failure.message : String(failure));
+    }
+  }
+  if (results.length === 0) return { ok: false, error: failures.join(" | ") };
+  return { ok: true, output: { results, failures } };
+}
+
+/**
  * Research nodes run the real Perplexity + Firecrawl pass. A pass that files no
  * new entries is a successful step; only a genuine fault fails the node.
  */
