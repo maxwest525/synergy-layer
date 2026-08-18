@@ -117,7 +117,7 @@ const navSections: readonly NavSection[] = [
   // Suggestions and page changes are the propose to approve to execute path.
   // They sit under Today so the acting half of the system is visible from
   // every screen instead of being buried inside the SEO coverage map.
-  { primary: workspaceAt("/"), children: workspacesAt(["/approvals", "/recommendations", "/changes"]) },
+  { primary: workspaceAt("/"), children: workspacesAt(["/approvals", "/recommendations", "/changes", "/roadmap", "/notes"]) },
 
   {
     primary: workspaceAt("/command-center"),
