@@ -511,6 +511,8 @@ export function Shell({ children }: { children: ReactNode }) {
                 {currentWorkspaceLabel(pathname)}
               </p>
             </div>
+
+            {session.signedIn ? <SuggestionsPanel collapsed /> : null}
           </header>
 
           <main className="mx-auto w-full max-w-[84rem] flex-1 px-5 py-6 md:px-8 md:py-8">
