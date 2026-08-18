@@ -32,6 +32,7 @@ import { Route as OpenseoRouteImport } from './routes/openseo'
 import { Route as OperatorsRouteImport } from './routes/operators'
 import { Route as PagesRouteImport } from './routes/pages'
 import { Route as RecommendationsRouteImport } from './routes/recommendations'
+import { Route as RoadmapRouteImport } from './routes/roadmap'
 import { Route as SchedulerRouteImport } from './routes/scheduler'
 import { Route as SearchRouteImport } from './routes/search'
 import { Route as SeoRunsRouteImport } from './routes/seo-runs'
@@ -188,6 +189,11 @@ const PagesRoute = PagesRouteImport.update({
 const RecommendationsRoute = RecommendationsRouteImport.update({
   id: '/recommendations',
   path: '/recommendations',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RoadmapRoute = RoadmapRouteImport.update({
+  id: '/roadmap',
+  path: '/roadmap',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SchedulerRoute = SchedulerRouteImport.update({
@@ -434,6 +440,7 @@ export interface FileRoutesByFullPath {
   '/operators': typeof OperatorsRoute
   '/pages': typeof PagesRoute
   '/recommendations': typeof RecommendationsRouteWithChildren
+  '/roadmap': typeof RoadmapRoute
   '/scheduler': typeof SchedulerRouteWithChildren
   '/search': typeof SearchRoute
   '/seo-runs': typeof SeoRunsRouteWithChildren
@@ -496,6 +503,7 @@ export interface FileRoutesByTo {
   '/openseo': typeof OpenseoRoute
   '/operators': typeof OperatorsRoute
   '/pages': typeof PagesRoute
+  '/roadmap': typeof RoadmapRoute
   '/search': typeof SearchRoute
   '/spend': typeof SpendRoute
   '/studio': typeof StudioRoute
@@ -560,6 +568,7 @@ export interface FileRoutesById {
   '/operators': typeof OperatorsRoute
   '/pages': typeof PagesRoute
   '/recommendations': typeof RecommendationsRouteWithChildren
+  '/roadmap': typeof RoadmapRoute
   '/scheduler': typeof SchedulerRouteWithChildren
   '/search': typeof SearchRoute
   '/seo-runs': typeof SeoRunsRouteWithChildren
@@ -629,6 +638,7 @@ export interface FileRouteTypes {
     | '/operators'
     | '/pages'
     | '/recommendations'
+    | '/roadmap'
     | '/scheduler'
     | '/search'
     | '/seo-runs'
@@ -691,6 +701,7 @@ export interface FileRouteTypes {
     | '/openseo'
     | '/operators'
     | '/pages'
+    | '/roadmap'
     | '/search'
     | '/spend'
     | '/studio'
@@ -754,6 +765,7 @@ export interface FileRouteTypes {
     | '/operators'
     | '/pages'
     | '/recommendations'
+    | '/roadmap'
     | '/scheduler'
     | '/search'
     | '/seo-runs'
@@ -822,6 +834,7 @@ export interface RootRouteChildren {
   OperatorsRoute: typeof OperatorsRoute
   PagesRoute: typeof PagesRoute
   RecommendationsRoute: typeof RecommendationsRouteWithChildren
+  RoadmapRoute: typeof RoadmapRoute
   SchedulerRoute: typeof SchedulerRouteWithChildren
   SearchRoute: typeof SearchRoute
   SeoRunsRoute: typeof SeoRunsRouteWithChildren
@@ -1006,6 +1019,13 @@ declare module '@tanstack/react-router' {
       path: '/recommendations'
       fullPath: '/recommendations'
       preLoaderRoute: typeof RecommendationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/roadmap': {
+      id: '/roadmap'
+      path: '/roadmap'
+      fullPath: '/roadmap'
+      preLoaderRoute: typeof RoadmapRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/scheduler': {
@@ -1465,6 +1485,7 @@ const rootRouteChildren: RootRouteChildren = {
   OperatorsRoute: OperatorsRoute,
   PagesRoute: PagesRoute,
   RecommendationsRoute: RecommendationsRouteWithChildren,
+  RoadmapRoute: RoadmapRoute,
   SchedulerRoute: SchedulerRouteWithChildren,
   SearchRoute: SearchRoute,
   SeoRunsRoute: SeoRunsRouteWithChildren,

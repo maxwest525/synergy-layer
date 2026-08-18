@@ -3387,6 +3387,86 @@ export type Database = {
           },
         ]
       }
+      roadmap_comments: {
+        Row: {
+          author_id: string | null
+          body: string
+          created_at: string
+          id: string
+          item_id: string
+          tenant_id: string
+        }
+        Insert: {
+          author_id?: string | null
+          body: string
+          created_at?: string
+          id?: string
+          item_id: string
+          tenant_id: string
+        }
+        Update: {
+          author_id?: string | null
+          body?: string
+          created_at?: string
+          id?: string
+          item_id?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "roadmap_comments_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "roadmap_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      roadmap_items: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          detail: string
+          id: string
+          linked_url: string | null
+          priority: Database["public"]["Enums"]["roadmap_priority"]
+          shipped_note: string | null
+          sort_order: number
+          status: Database["public"]["Enums"]["roadmap_status"]
+          tenant_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          detail?: string
+          id?: string
+          linked_url?: string | null
+          priority?: Database["public"]["Enums"]["roadmap_priority"]
+          shipped_note?: string | null
+          sort_order?: number
+          status?: Database["public"]["Enums"]["roadmap_status"]
+          tenant_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          detail?: string
+          id?: string
+          linked_url?: string | null
+          priority?: Database["public"]["Enums"]["roadmap_priority"]
+          shipped_note?: string | null
+          sort_order?: number
+          status?: Database["public"]["Enums"]["roadmap_status"]
+          tenant_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       schedule_dependencies: {
         Row: {
           condition: Database["public"]["Enums"]["dependency_condition"]
@@ -5099,6 +5179,8 @@ export type Database = {
         | "failed"
         | "rolled_back"
         | "observed"
+      roadmap_priority: "now" | "next" | "later"
+      roadmap_status: "requested" | "in_progress" | "shipped" | "parked"
       run_state:
         | "queued"
         | "running"
@@ -5298,6 +5380,8 @@ export const Constants = {
         "rolled_back",
         "observed",
       ],
+      roadmap_priority: ["now", "next", "later"],
+      roadmap_status: ["requested", "in_progress", "shipped", "parked"],
       run_state: [
         "queued",
         "running",

@@ -66,6 +66,7 @@ const workspaces: readonly Workspace[] = [
   { to: "/competitors", label: "Competitors", icon: Swords, hint: "Who we rank against", group: "decisions" },
   { to: "/recommendations", label: "Observations", icon: Lightbulb, hint: "Things the system noticed", group: "decisions" },
   { to: "/studio", label: "Studio", icon: BrainCircuit, hint: "Think out loud, no tools", group: "decisions" },
+  { to: "/roadmap", label: "Roadmap", icon: ListChecks, hint: "What we are building next", group: "decisions" },
   { to: "/notes", label: "Notes", icon: NotebookPen, hint: "Your private notes pad", group: "decisions" },
 
 
@@ -116,7 +117,7 @@ const navSections: readonly NavSection[] = [
   // Suggestions and page changes are the propose to approve to execute path.
   // They sit under Today so the acting half of the system is visible from
   // every screen instead of being buried inside the SEO coverage map.
-  { primary: workspaceAt("/"), children: workspacesAt(["/approvals", "/recommendations", "/changes"]) },
+  { primary: workspaceAt("/"), children: workspacesAt(["/approvals", "/recommendations", "/changes", "/roadmap", "/notes"]) },
 
   {
     primary: workspaceAt("/command-center"),
