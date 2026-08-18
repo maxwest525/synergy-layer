@@ -61,6 +61,8 @@ export const WORKSPACE_GROUP: Readonly<Record<string, TaxonomyGroupKey>> = {
   "/keywords": "decisions",
   "/competitors": "decisions",
   "/recommendations": "decisions",
+  "/roadmap": "decisions",
+  "/notes": "decisions",
 
   "/command-center": "evidence",
   "/search": "evidence",
