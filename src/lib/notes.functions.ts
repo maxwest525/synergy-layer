@@ -89,11 +89,16 @@ export const updateNote = createServerFn({ method: "POST" })
     noteInput.partial().extend({ id: z.string().uuid(), pinned: z.boolean().optional() }).parse(raw),
   )
   .handler(async ({ context, data }): Promise<OperatorNote> => {
-    const patch: Record<string, unknown> = {};
-    if (data.title !== undefined) patch["title"] = data.title;
-    if (data.body !== undefined) patch["body"] = data.body;
-    if (data.linkedUrl !== undefined) patch["linked_url"] = data.linkedUrl;
-    if (data.pinned !== undefined) patch["pinned"] = data.pinned;
+    const patch: {
+      title?: string;
+      body?: string;
+      linked_url?: string | null;
+      pinned?: boolean;
+    } = {};
+    if (data.title !== undefined) patch.title = data.title;
+    if (data.body !== undefined) patch.body = data.body;
+    if (data.linkedUrl !== undefined) patch.linked_url = data.linkedUrl;
+    if (data.pinned !== undefined) patch.pinned = data.pinned;
 
     const { data: row, error } = await context.supabase
       .from("operator_notes")
