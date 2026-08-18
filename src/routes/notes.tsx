@@ -91,7 +91,7 @@ function NotesPage() {
   return (
     <PageStack>
       <PageHeader
-        group="decisions"
+        eyebrow="Decisions"
         title="Notes pad"
         description="Your private scratch space. Write the thought down now, pin the ones you keep returning to, and attach the page on the site it belongs to."
       />
