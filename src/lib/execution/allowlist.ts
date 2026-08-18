@@ -1,11 +1,15 @@
 /**
- * Hard allowlist for the only governed execution target.
+ * Hard allowlist for the governed execution target.
  *
  * Stored change-request metadata still drives display and audit, but a
  * malformed or tampered row must never be able to point a broad write token at
  * another repository, branch, file, project, or site. Every write path, every
  * read-only preflight, and every rendered verification path checks these
  * constants first.
+ *
+ * The executor is scoped by change kind rather than by a single file. Each kind
+ * declares exactly which files it may touch, so widening one kind can never
+ * widen another, and a kind with no declared file can never reach a commit.
  */
 
 import type { ExecutionResult } from "./source-change";
@@ -13,8 +17,40 @@ import type { ExecutionResult } from "./source-change";
 export const GOVERNED_REPO = "maxwest525/brittmove-829a7519";
 export const GOVERNED_BRANCH = "main";
 export const GOVERNED_PROJECT_ID = "3c0c30e5-798a-425c-b077-6d5e8cb04e5b";
-export const GOVERNED_FILE = "src/pages/services/servicesData.ts";
 export const GOVERNED_ORIGIN = "https://trumoveinc.com";
+
+/** The service page data file: titles and H1s. The original governed target. */
+export const GOVERNED_FILE = "src/pages/services/servicesData.ts";
+
+/**
+ * Every change kind the executor can write, and the exact files each may touch.
+ * A kind is executable only while this map lists at least one file for it.
+ */
+export const GOVERNED_CHANGE_KINDS = {
+  "service.title_h1": [GOVERNED_FILE],
+  "page.metadata": ["src/components/seo/SeoHead.tsx", "src/components/seo/DefaultSeo.tsx"],
+  "site.crawl_directives": ["public/robots.txt", "public/sitemap.xml"],
+  "site.structured_data": ["src/platform/content/schema/index.ts"],
+  "content.blog_post": ["src/pages/blog/posts.ts"],
+} as const satisfies Record<string, readonly string[]>;
+
+export type GovernedChangeKind = keyof typeof GOVERNED_CHANGE_KINDS;
+
+/** Every file any governed kind may touch. */
+export const GOVERNED_FILES: readonly string[] = Object.values(GOVERNED_CHANGE_KINDS).flat();
+
+export function isGovernedChangeKind(value: unknown): value is GovernedChangeKind {
+  return typeof value === "string" && value in GOVERNED_CHANGE_KINDS;
+}
+
+/** The change kind that owns a file, or null when no kind may write it. */
+export function changeKindForFile(filePath: string | null | undefined): GovernedChangeKind | null {
+  for (const [kind, files] of Object.entries(GOVERNED_CHANGE_KINDS)) {
+    if (files.includes(filePath as never)) return kind as GovernedChangeKind;
+  }
+  return null;
+}
+
 
 export type GovernedTarget = {
   repo: string;
