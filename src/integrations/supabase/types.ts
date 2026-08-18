@@ -974,6 +974,65 @@ export type Database = {
         }
         Relationships: []
       }
+      automation_jobs: {
+        Row: {
+          created_at: string
+          id: string
+          key: string
+          last_created_count: number
+          last_error: string | null
+          last_run_at: string | null
+          last_state: string | null
+          lease_until: string | null
+          paused: boolean
+          paused_at: string | null
+          paused_reason: string | null
+          run_count: number
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          key: string
+          last_created_count?: number
+          last_error?: string | null
+          last_run_at?: string | null
+          last_state?: string | null
+          lease_until?: string | null
+          paused?: boolean
+          paused_at?: string | null
+          paused_reason?: string | null
+          run_count?: number
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          key?: string
+          last_created_count?: number
+          last_error?: string | null
+          last_run_at?: string | null
+          last_state?: string | null
+          lease_until?: string | null
+          paused?: boolean
+          paused_at?: string | null
+          paused_reason?: string | null
+          run_count?: number
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_jobs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       capabilities: {
         Row: {
           auth_kind: string | null
@@ -2075,10 +2134,12 @@ export type Database = {
           id: string
           key: string
           origin: string
+          owner_name: string | null
           phase: string
           priority: number
           retired_at: string | null
           sort_order: number
+          target_date: string | null
           task: string
           tenant_id: string
           updated_at: string
@@ -2090,10 +2151,12 @@ export type Database = {
           id?: string
           key: string
           origin?: string
+          owner_name?: string | null
           phase: string
           priority?: number
           retired_at?: string | null
           sort_order?: number
+          target_date?: string | null
           task: string
           tenant_id: string
           updated_at?: string
@@ -2105,10 +2168,12 @@ export type Database = {
           id?: string
           key?: string
           origin?: string
+          owner_name?: string | null
           phase?: string
           priority?: number
           retired_at?: string | null
           sort_order?: number
+          target_date?: string | null
           task?: string
           tenant_id?: string
           updated_at?: string
