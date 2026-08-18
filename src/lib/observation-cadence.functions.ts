@@ -189,19 +189,36 @@ export const setObservationCadence = createServerFn({ method: "POST" })
     const source = cadenceSource(data.source);
 
     if (data.enabled) {
-      const table = {
-        gsc: "search_console_snapshots",
-        ga4: "ga4_snapshots",
-        umami: "umami_snapshots",
-        pagespeed: "pagespeed_snapshots",
-      }[data.source];
-      const { count, error } = await context.supabase
-        .from(table)
-        .select("id", { count: "exact", head: true })
-        .eq("tenant_id", tenantId);
+      const countRows = async () => {
+        const options = { count: "exact", head: true } as const;
+        switch (data.source) {
+          case "gsc":
+            return context.supabase
+              .from("search_console_snapshots")
+              .select("id", options)
+              .eq("tenant_id", tenantId);
+          case "ga4":
+            return context.supabase
+              .from("ga4_snapshots")
+              .select("id", options)
+              .eq("tenant_id", tenantId);
+          case "umami":
+            return context.supabase
+              .from("umami_snapshots")
+              .select("id", options)
+              .eq("tenant_id", tenantId);
+          case "pagespeed":
+            return context.supabase
+              .from("pagespeed_snapshots")
+              .select("id", options)
+              .eq("tenant_id", tenantId);
+        }
+      };
+      const { count, error } = await countRows();
       if (error) throw new Error(`Could not confirm stored rows: ${error.message}`);
       assertCadenceMayEnable(source, count ?? 0);
     }
+
 
     const { data: existing, error: readError } = await supabaseAdmin
       .from("schedules")
