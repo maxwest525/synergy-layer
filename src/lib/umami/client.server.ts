@@ -190,7 +190,7 @@ export type UmamiMetricRow = { label: string; count: number };
 export async function fetchUmamiMetrics(
   headers: AuthHeaders,
   websiteId: string,
-  type: "url" | "referrer",
+  type: "path" | "referrer",
   startAt: number,
   endAt: number,
   limit = 25,
