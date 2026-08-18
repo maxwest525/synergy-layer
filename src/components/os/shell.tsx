@@ -70,6 +70,7 @@ const workspaces: readonly Workspace[] = [
 
 
   { to: "/command-center", label: "Evidence", icon: LayoutDashboard, hint: "Every stored fact, by source", group: "evidence" },
+  { to: "/pages", label: "Site pages", icon: FileDiff, hint: "Every page, its numbers, and its edit", group: "evidence" },
   { to: "/search", label: "Search results", icon: Search, hint: "What Google reports", group: "evidence" },
   { to: "/measurement", label: "Site health", icon: Gauge, hint: "Speed and traffic", group: "evidence" },
   { to: "/ga4", label: "Analytics", icon: Gauge, hint: "GA4 property reads", group: "evidence" },
