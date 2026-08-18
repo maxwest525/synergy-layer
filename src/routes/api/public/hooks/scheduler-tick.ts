@@ -1,7 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 /** Only these read-only observation schedules may be triggered by pg_cron. */
-const AUTOMATED_SCHEDULE_KEYS = new Set(["gsc-daily-observe", "ga4-daily-observe"]);
+const AUTOMATED_SCHEDULE_KEYS = new Set([
+  "gsc-daily-observe",
+  "ga4-daily-observe",
+  "umami-daily-observe",
+]);
 
 /** Dedicated pg_cron entry point for the free daily observation workflows. */
 export const Route = createFileRoute("/api/public/hooks/scheduler-tick")({
