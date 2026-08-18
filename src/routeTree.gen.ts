@@ -30,6 +30,7 @@ import { Route as NotesRouteImport } from './routes/notes'
 import { Route as OpenaiAdsRouteImport } from './routes/openai-ads'
 import { Route as OpenseoRouteImport } from './routes/openseo'
 import { Route as OperatorsRouteImport } from './routes/operators'
+import { Route as PagesRouteImport } from './routes/pages'
 import { Route as RecommendationsRouteImport } from './routes/recommendations'
 import { Route as SchedulerRouteImport } from './routes/scheduler'
 import { Route as SearchRouteImport } from './routes/search'
@@ -177,6 +178,11 @@ const OpenseoRoute = OpenseoRouteImport.update({
 const OperatorsRoute = OperatorsRouteImport.update({
   id: '/operators',
   path: '/operators',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PagesRoute = PagesRouteImport.update({
+  id: '/pages',
+  path: '/pages',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RecommendationsRoute = RecommendationsRouteImport.update({
@@ -426,6 +432,7 @@ export interface FileRoutesByFullPath {
   '/openai-ads': typeof OpenaiAdsRoute
   '/openseo': typeof OpenseoRoute
   '/operators': typeof OperatorsRoute
+  '/pages': typeof PagesRoute
   '/recommendations': typeof RecommendationsRouteWithChildren
   '/scheduler': typeof SchedulerRouteWithChildren
   '/search': typeof SearchRoute
@@ -488,6 +495,7 @@ export interface FileRoutesByTo {
   '/openai-ads': typeof OpenaiAdsRoute
   '/openseo': typeof OpenseoRoute
   '/operators': typeof OperatorsRoute
+  '/pages': typeof PagesRoute
   '/search': typeof SearchRoute
   '/spend': typeof SpendRoute
   '/studio': typeof StudioRoute
@@ -550,6 +558,7 @@ export interface FileRoutesById {
   '/openai-ads': typeof OpenaiAdsRoute
   '/openseo': typeof OpenseoRoute
   '/operators': typeof OperatorsRoute
+  '/pages': typeof PagesRoute
   '/recommendations': typeof RecommendationsRouteWithChildren
   '/scheduler': typeof SchedulerRouteWithChildren
   '/search': typeof SearchRoute
@@ -618,6 +627,7 @@ export interface FileRouteTypes {
     | '/openai-ads'
     | '/openseo'
     | '/operators'
+    | '/pages'
     | '/recommendations'
     | '/scheduler'
     | '/search'
@@ -680,6 +690,7 @@ export interface FileRouteTypes {
     | '/openai-ads'
     | '/openseo'
     | '/operators'
+    | '/pages'
     | '/search'
     | '/spend'
     | '/studio'
@@ -741,6 +752,7 @@ export interface FileRouteTypes {
     | '/openai-ads'
     | '/openseo'
     | '/operators'
+    | '/pages'
     | '/recommendations'
     | '/scheduler'
     | '/search'
@@ -808,6 +820,7 @@ export interface RootRouteChildren {
   OpenaiAdsRoute: typeof OpenaiAdsRoute
   OpenseoRoute: typeof OpenseoRoute
   OperatorsRoute: typeof OperatorsRoute
+  PagesRoute: typeof PagesRoute
   RecommendationsRoute: typeof RecommendationsRouteWithChildren
   SchedulerRoute: typeof SchedulerRouteWithChildren
   SearchRoute: typeof SearchRoute
@@ -979,6 +992,13 @@ declare module '@tanstack/react-router' {
       path: '/operators'
       fullPath: '/operators'
       preLoaderRoute: typeof OperatorsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pages': {
+      id: '/pages'
+      path: '/pages'
+      fullPath: '/pages'
+      preLoaderRoute: typeof PagesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/recommendations': {
@@ -1443,6 +1463,7 @@ const rootRouteChildren: RootRouteChildren = {
   OpenaiAdsRoute: OpenaiAdsRoute,
   OpenseoRoute: OpenseoRoute,
   OperatorsRoute: OperatorsRoute,
+  PagesRoute: PagesRoute,
   RecommendationsRoute: RecommendationsRouteWithChildren,
   SchedulerRoute: SchedulerRouteWithChildren,
   SearchRoute: SearchRoute,
