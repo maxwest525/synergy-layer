@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState, type ComponentType, type ReactNode } from "react";
 
+import { SuggestionsPanel } from "./suggestions-panel";
 import { TenantSwitcher } from "./tenant-switcher";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useOperatorSession } from "@/hooks/use-operator-session";
@@ -448,6 +449,12 @@ export function Shell({ children }: { children: ReactNode }) {
             </div>
           )}
 
+          {session.signedIn ? (
+            <div className={cn("pb-4", navCollapsed && "flex justify-center")}>
+              <SuggestionsPanel collapsed={navCollapsed} />
+            </div>
+          ) : null}
+
           <div className="flex-1 border-t border-border/50 pt-4">
             <NavList pathname={pathname} collapsed={navCollapsed} />
           </div>
@@ -504,6 +511,8 @@ export function Shell({ children }: { children: ReactNode }) {
                 {currentWorkspaceLabel(pathname)}
               </p>
             </div>
+
+            {session.signedIn ? <SuggestionsPanel collapsed /> : null}
           </header>
 
           <main className="mx-auto w-full max-w-[84rem] flex-1 px-5 py-6 md:px-8 md:py-8">
