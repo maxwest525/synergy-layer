@@ -16,6 +16,7 @@ import {
 } from "@/components/os/primitives";
 import { OperatorRouteError } from "@/components/os/route-error";
 import { UmamiPanel } from "@/components/os/umami-panel";
+import { ObservationCadences } from "@/components/os/observation-cadences";
 
 import { describeMissingSnapshot } from "@/lib/measurement/pagespeed";
 import { Button } from "@/components/ui/button";
@@ -281,7 +282,10 @@ function MeasurementPage() {
         description="Speed, indexing, and traffic evidence for pages you own. Every number here came back from a real provider response, and analytics stays honest about whether it is connected."
       />
 
+      <ObservationCadences />
+
       <UmamiPanel />
+
 
 
 
