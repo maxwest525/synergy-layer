@@ -2,7 +2,11 @@ import { createServerFn } from "@tanstack/react-start";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { isChangeState } from "./change-request-state";
-import { parseChangeTransitionInput, parseUuidInput } from "./server-input";
+import {
+  parseBulkChangeDecisionInput,
+  parseChangeTransitionInput,
+  parseUuidInput,
+} from "./server-input";
 
 export const getChangeRequest = createServerFn({ method: "GET" })
   .inputValidator(parseUuidInput)
@@ -95,3 +99,51 @@ export const rollBackChangeRequest = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) =>
     runTransition(context.supabase, context.userId, "roll_back", data),
   );
+
+export type BulkDecisionOutcome = {
+  id: string;
+  ok: boolean;
+  state: string | null;
+  error: string | null;
+};
+
+export type BulkDecisionResult = {
+  decision: "approve" | "reject";
+  succeeded: number;
+  failed: number;
+  outcomes: BulkDecisionOutcome[];
+};
+
+/**
+ * Decide several proposed change requests in one operator action. Each row is
+ * transitioned individually through the same guarded RPC as a single decision,
+ * so a failure on one item never silently applies to the others.
+ */
+export const decideChangeRequestsBulk = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(parseBulkChangeDecisionInput)
+  .handler(async ({ data, context }): Promise<BulkDecisionResult> => {
+    const outcomes: BulkDecisionOutcome[] = [];
+    for (const item of data.items) {
+      try {
+        const result = await runTransition(context.supabase, context.userId, data.decision, {
+          id: item.id,
+          notes: item.notes ?? null,
+        });
+        outcomes.push({ id: item.id, ok: true, state: result.changeRequest.state, error: null });
+      } catch (error: unknown) {
+        outcomes.push({
+          id: item.id,
+          ok: false,
+          state: null,
+          error: error instanceof Error ? error.message : "The decision could not be recorded.",
+        });
+      }
+    }
+    return {
+      decision: data.decision,
+      succeeded: outcomes.filter((outcome) => outcome.ok).length,
+      failed: outcomes.filter((outcome) => !outcome.ok).length,
+      outcomes,
+    };
+  });

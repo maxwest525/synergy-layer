@@ -40,3 +40,35 @@ export function parseChangeTransitionInput(data: unknown): {
     revision: readOptionalText(input["revision"], 200, "revision"),
   };
 }
+
+export type BulkChangeDecisionItem = {
+  id: string;
+  notes: string | null | undefined;
+};
+
+export function parseBulkChangeDecisionInput(data: unknown): {
+  decision: "approve" | "reject";
+  items: BulkChangeDecisionItem[];
+} {
+  const input = readRecord(data);
+  const decision = input["decision"];
+  if (decision !== "approve" && decision !== "reject") {
+    throw new Error("decision must be approve or reject.");
+  }
+  const rawItems = input["items"];
+  if (!Array.isArray(rawItems) || rawItems.length === 0) {
+    throw new Error("Select at least one suggestion.");
+  }
+  if (rawItems.length > 50) {
+    throw new Error("Decide no more than 50 suggestions at a time.");
+  }
+  const seen = new Set<string>();
+  const items = rawItems.map((entry) => {
+    const record = readRecord(entry);
+    const id = readUuid(record["id"]);
+    if (seen.has(id)) throw new Error("The same suggestion was selected twice.");
+    seen.add(id);
+    return { id, notes: readOptionalText(record["notes"], 2_000, "notes") };
+  });
+  return { decision, items };
+}
