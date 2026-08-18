@@ -57,12 +57,14 @@ export type GovernedTarget = {
   branch: string;
   filePath: string;
   projectId: string;
+  changeKind: GovernedChangeKind;
 };
 
 /**
- * The one repository, branch, file, and source project that may be touched.
- * Used identically by the read-only preflight and by execution, so a preflight
- * can never prove something a commit would not be allowed to write.
+ * The one repository, branch, and source project that may be touched, plus the
+ * governed file set derived from the change kinds above. Used identically by
+ * the read-only preflight and by execution, so a preflight can never prove
+ * something a commit would not be allowed to write.
  */
 export function checkSourceTarget(input: {
   repo: string | null;
@@ -76,10 +78,11 @@ export function checkSourceTarget(input: {
       reason: `Refused without writing: this executor is allowlisted to ${GOVERNED_REPO} on ${GOVERNED_BRANCH}. The stored change request points at ${input.repo ?? "no repository"} on ${input.branch ?? "no branch"}.`,
     };
   }
-  if (input.filePath !== GOVERNED_FILE) {
+  const changeKind = changeKindForFile(input.filePath);
+  if (!changeKind) {
     return {
       ok: false,
-      reason: `Refused without writing: this executor is allowlisted to the single file ${GOVERNED_FILE}. The stored change request points at ${input.filePath ?? "no file"}.`,
+      reason: `Refused without writing: no governed change kind owns ${input.filePath ?? "no file"}. The executor may only write ${GOVERNED_FILES.join(", ")}.`,
     };
   }
   if (input.projectId !== GOVERNED_PROJECT_ID) {
@@ -93,11 +96,13 @@ export function checkSourceTarget(input: {
     value: {
       repo: GOVERNED_REPO,
       branch: GOVERNED_BRANCH,
-      filePath: GOVERNED_FILE,
+      filePath: input.filePath as string,
       projectId: GOVERNED_PROJECT_ID,
+      changeKind,
     },
   };
 }
+
 
 /** The public origin a rendered verification may read. */
 export function checkTargetUrl(url: string | null): ExecutionResult<string> {
