@@ -79,8 +79,9 @@ export const setConcernOwnership = createServerFn({ method: "POST" })
   .handler(async ({ context, data }): Promise<{ ownerName: string | null; targetDate: string | null }> => {
     const result = await context.supabase.rpc("set_concern_ownership", {
       p_concern_id: data.concernId,
-      p_owner_name: data.ownerName,
-      p_target_date: data.targetDate,
+      // The routine normalises an empty owner to null; the date column accepts null.
+      p_owner_name: data.ownerName ?? "",
+      p_target_date: data.targetDate as unknown as string,
     });
     if (result.error) throw new Error(`Concern ownership: ${result.error.message}`);
     const row = result.data as { owner_name: string | null; target_date: string | null } | null;
