@@ -423,6 +423,7 @@ async function executeNode(
       (await runSearchConsoleNode(client, node.ref ?? "")) ??
       (await runResearchNode(client, node.ref ?? "")) ??
       (await runGa4Node(client, node.ref ?? "")) ??
+      (await runUmamiNode(client, node.ref ?? "")) ??
       (await runSeoValidationNode(client, node.ref ?? "", runId)) ??
       (await runSerpCompetitorNode(client, node.ref ?? "")) ??
       (await runAdsTransparencyNode(client, node.ref ?? "", runId)) ??
