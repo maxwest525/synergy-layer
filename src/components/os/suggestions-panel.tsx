@@ -24,10 +24,10 @@ function StageTrack({ item }: { item: SuggestionItem }) {
         const complete = item.done.includes(stage.key);
         const current = item.stage === stage.key;
         return (
-          <li key={stage.key} className="flex min-w-0 flex-1 items-center gap-1">
+          <li key={stage.key} className="flex flex-1 items-center gap-1">
             <span
               className={cn(
-                "flex min-w-0 flex-1 items-center gap-1 rounded-md border px-1.5 py-1 text-[0.65rem] uppercase tracking-[0.08em]",
+                "flex flex-1 items-center justify-center gap-1 rounded-md border px-1 py-1 text-[0.6rem] uppercase tracking-[0.06em]",
                 complete && "border-primary/40 text-primary",
                 current && !item.blocked && "border-primary text-primary",
                 current && item.blocked && "border-destructive/60 text-destructive",
@@ -43,7 +43,7 @@ function StageTrack({ item }: { item: SuggestionItem }) {
                   <Loader2 aria-hidden className="size-3 shrink-0 animate-spin" />
                 )
               ) : null}
-              <span className="truncate">{stage.label}</span>
+              <span>{stage.label}</span>
             </span>
             {index < STAGES.length - 1 ? (
               <span aria-hidden className="h-px w-2 shrink-0 bg-border/60" />
