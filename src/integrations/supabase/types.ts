@@ -3072,6 +3072,50 @@ export type Database = {
           },
         ]
       }
+      operator_notes: {
+        Row: {
+          author_id: string
+          body: string
+          created_at: string
+          id: string
+          linked_url: string | null
+          pinned: boolean
+          tenant_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          author_id?: string
+          body?: string
+          created_at?: string
+          id?: string
+          linked_url?: string | null
+          pinned?: boolean
+          tenant_id: string
+          title?: string
+          updated_at?: string
+        }
+        Update: {
+          author_id?: string
+          body?: string
+          created_at?: string
+          id?: string
+          linked_url?: string | null
+          pinned?: boolean
+          tenant_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "operator_notes_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pagespeed_snapshots: {
         Row: {
           analysis_timestamp: string | null

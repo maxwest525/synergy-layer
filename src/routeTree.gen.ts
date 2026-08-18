@@ -26,6 +26,7 @@ import { Route as KeywordsRouteImport } from './routes/keywords'
 import { Route as KnowledgeRouteImport } from './routes/knowledge'
 import { Route as McpRouteImport } from './routes/mcp'
 import { Route as MeasurementRouteImport } from './routes/measurement'
+import { Route as NotesRouteImport } from './routes/notes'
 import { Route as OpenaiAdsRouteImport } from './routes/openai-ads'
 import { Route as OpenseoRouteImport } from './routes/openseo'
 import { Route as OperatorsRouteImport } from './routes/operators'
@@ -156,6 +157,11 @@ const McpRoute = McpRouteImport.update({
 const MeasurementRoute = MeasurementRouteImport.update({
   id: '/measurement',
   path: '/measurement',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NotesRoute = NotesRouteImport.update({
+  id: '/notes',
+  path: '/notes',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OpenaiAdsRoute = OpenaiAdsRouteImport.update({
@@ -416,6 +422,7 @@ export interface FileRoutesByFullPath {
   '/knowledge': typeof KnowledgeRouteWithChildren
   '/mcp': typeof McpRoute
   '/measurement': typeof MeasurementRoute
+  '/notes': typeof NotesRoute
   '/openai-ads': typeof OpenaiAdsRoute
   '/openseo': typeof OpenseoRoute
   '/operators': typeof OperatorsRoute
@@ -477,6 +484,7 @@ export interface FileRoutesByTo {
   '/keywords': typeof KeywordsRoute
   '/mcp': typeof McpRoute
   '/measurement': typeof MeasurementRoute
+  '/notes': typeof NotesRoute
   '/openai-ads': typeof OpenaiAdsRoute
   '/openseo': typeof OpenseoRoute
   '/operators': typeof OperatorsRoute
@@ -538,6 +546,7 @@ export interface FileRoutesById {
   '/knowledge': typeof KnowledgeRouteWithChildren
   '/mcp': typeof McpRoute
   '/measurement': typeof MeasurementRoute
+  '/notes': typeof NotesRoute
   '/openai-ads': typeof OpenaiAdsRoute
   '/openseo': typeof OpenseoRoute
   '/operators': typeof OperatorsRoute
@@ -605,6 +614,7 @@ export interface FileRouteTypes {
     | '/knowledge'
     | '/mcp'
     | '/measurement'
+    | '/notes'
     | '/openai-ads'
     | '/openseo'
     | '/operators'
@@ -666,6 +676,7 @@ export interface FileRouteTypes {
     | '/keywords'
     | '/mcp'
     | '/measurement'
+    | '/notes'
     | '/openai-ads'
     | '/openseo'
     | '/operators'
@@ -726,6 +737,7 @@ export interface FileRouteTypes {
     | '/knowledge'
     | '/mcp'
     | '/measurement'
+    | '/notes'
     | '/openai-ads'
     | '/openseo'
     | '/operators'
@@ -792,6 +804,7 @@ export interface RootRouteChildren {
   KnowledgeRoute: typeof KnowledgeRouteWithChildren
   McpRoute: typeof McpRoute
   MeasurementRoute: typeof MeasurementRoute
+  NotesRoute: typeof NotesRoute
   OpenaiAdsRoute: typeof OpenaiAdsRoute
   OpenseoRoute: typeof OpenseoRoute
   OperatorsRoute: typeof OperatorsRoute
@@ -938,6 +951,13 @@ declare module '@tanstack/react-router' {
       path: '/measurement'
       fullPath: '/measurement'
       preLoaderRoute: typeof MeasurementRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/notes': {
+      id: '/notes'
+      path: '/notes'
+      fullPath: '/notes'
+      preLoaderRoute: typeof NotesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/openai-ads': {
@@ -1419,6 +1439,7 @@ const rootRouteChildren: RootRouteChildren = {
   KnowledgeRoute: KnowledgeRouteWithChildren,
   McpRoute: McpRoute,
   MeasurementRoute: MeasurementRoute,
+  NotesRoute: NotesRoute,
   OpenaiAdsRoute: OpenaiAdsRoute,
   OpenseoRoute: OpenseoRoute,
   OperatorsRoute: OperatorsRoute,
