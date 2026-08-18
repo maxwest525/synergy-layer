@@ -11,6 +11,7 @@ import {
   Inbox,
   LayoutDashboard,
   Lightbulb,
+  NotebookPen,
   Megaphone,
   Menu,
   PanelLeftClose,
