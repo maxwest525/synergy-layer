@@ -2,7 +2,11 @@ import { createServerFn } from "@tanstack/react-start";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { isChangeState } from "./change-request-state";
-import { parseChangeTransitionInput, parseUuidInput } from "./server-input";
+import {
+  parseBulkChangeDecisionInput,
+  parseChangeTransitionInput,
+  parseUuidInput,
+} from "./server-input";
 
 export const getChangeRequest = createServerFn({ method: "GET" })
   .inputValidator(parseUuidInput)
