@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState, type ComponentType, type ReactNode } from "react";
 
+import { SuggestionsPanel } from "./suggestions-panel";
 import { TenantSwitcher } from "./tenant-switcher";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useOperatorSession } from "@/hooks/use-operator-session";
