@@ -41,7 +41,7 @@ operator surfaces for Keywords and Competitors.
 | --- | --- | --- |
 | PageSpeed Insights (Measurement workspace) | implemented, provider-blocked, manual only | `/measurement`. One click, one v5 request. No schedule. Runs and immutable snapshots are stored in `measurement_runs` / `pagespeed_snapshots`. The configured provider project is returning HTTP 429 daily-quota failures: 5 stored attempts, 0 stored measurements. Missing data is not reported as zero. |
 | GA4 Data API | real | Property `properties/536830122`. First successful immutable snapshot stored 2026-08-18: 124 returned rows, 48 pages, 135 sessions, and 748 events for the 28-day window. Daily read-only schedule is enabled. |
-| Umami (self-hosted) | pending first stored reading | Credentials and property listing are proven. The deployed instance accepts `metrics type=path`, not the documented older `type=url`; AOOS was corrected on 2026-08-18 and awaits the confirming stored run. |
+| Umami (self-hosted) | real | Credentials, property listing, and the first authenticated 28-day read are proven. Four immutable rows were stored on 2026-08-18 for TruMove. The provider returned zero pageviews, visitors, visits, and bounces for that window; this is a real provider result, not substituted missing data. The deployed instance accepts `metrics type=path`, not `type=url`. |
 | Google Search Console | real | Idempotent daily site / page / query snapshots. |
 | DataForSEO Labs | real | Keyword ideas, competitor derivation. |
 | DataForSEO SERP (Standard queue) | real | Postback hook at `/api/public/hooks/dataforseo-postback`. |
