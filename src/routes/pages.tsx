@@ -5,6 +5,7 @@ import { ExternalLink, RefreshCw } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
+import { DuplicateWordingPanel } from "@/components/os/duplicate-wording-panel";
 import { EmptyState, GlassCard, PageHeader, PageStack, StatePill } from "@/components/os/primitives";
 import { OperatorRouteError } from "@/components/os/route-error";
 import { Button } from "@/components/ui/button";
