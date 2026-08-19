@@ -3118,6 +3118,7 @@ export type Database = {
       }
       page_metadata_observations: {
         Row: {
+          details: Json | null
           error: string | null
           final_url: string | null
           h1: string | null
@@ -3131,6 +3132,7 @@ export type Database = {
           url: string
         }
         Insert: {
+          details?: Json | null
           error?: string | null
           final_url?: string | null
           h1?: string | null
@@ -3144,6 +3146,7 @@ export type Database = {
           url: string
         }
         Update: {
+          details?: Json | null
           error?: string | null
           final_url?: string | null
           h1?: string | null
