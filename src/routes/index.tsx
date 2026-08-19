@@ -478,6 +478,17 @@ function InboxPage() {
     queryFn: () => fetchInbox(),
     enabled: session.signedIn,
   });
+  const fetchMeasurementWatch = useServerFn(getMeasurementWatch);
+  const { data: measurementWatch = [] } = useQuery({
+    queryKey: ["measurement-watch"],
+    queryFn: () => fetchMeasurementWatch(),
+    enabled: session.signedIn,
+  });
+  const watchBySubject = useMemo(
+    () => new Map(measurementWatch.map((entry) => [entry.changeRequestId, entry])),
+    [measurementWatch],
+  );
+
   const queryClient = useQueryClient();
   const resolve = useServerFn(resolveInboxItem);
   const approve = useServerFn(approveChangeRequest);
