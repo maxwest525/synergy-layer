@@ -141,8 +141,9 @@ const navSections: readonly NavSection[] = [
   },
   {
     primary: workspaceAt("/capabilities"),
-    children: workspacesAt(["/spend", "/operators"]),
+    children: workspacesAt(["/gaps", "/spend", "/operators"]),
   },
+
 
   // Ask and Coverage are side surfaces, not stages of the daily loop, so they
   // sit below it. Nothing is hidden; they are simply out of the way.
