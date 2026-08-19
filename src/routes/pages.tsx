@@ -5,6 +5,7 @@ import { ExternalLink, RefreshCw } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
+import { DuplicateWordingPanel } from "@/components/os/duplicate-wording-panel";
 import { EmptyState, GlassCard, PageHeader, PageStack, StatePill } from "@/components/os/primitives";
 import { OperatorRouteError } from "@/components/os/route-error";
 import { Button } from "@/components/ui/button";
@@ -97,6 +98,8 @@ function SitePagesRoute() {
       />
 
       <GlassCard className="p-4 text-sm text-muted-foreground">{data?.instruction ?? "Loading the page list..."}</GlassCard>
+
+      <DuplicateWordingPanel />
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_420px]">
         <GlassCard className="space-y-3 p-5">
