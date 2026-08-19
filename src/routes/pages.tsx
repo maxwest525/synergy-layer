@@ -98,6 +98,8 @@ function SitePagesRoute() {
 
       <GlassCard className="p-4 text-sm text-muted-foreground">{data?.instruction ?? "Loading the page list..."}</GlassCard>
 
+      <DuplicateWordingPanel />
+
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_420px]">
         <GlassCard className="space-y-3 p-5">
           <Input
