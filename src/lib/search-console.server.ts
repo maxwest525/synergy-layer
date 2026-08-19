@@ -251,7 +251,7 @@ export async function inspectUrl(
   client: Client,
   property: string,
   candidateUrl: string,
-  actorId: string,
+  actorId: string | null,
 ): Promise<InspectionRow> {
   const inspectedUrl = normalizeOwnedUrl(property, candidateUrl);
   const payload = await gateway<unknown>("/v1/urlInspection/index:inspect", {

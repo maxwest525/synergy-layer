@@ -47,6 +47,22 @@ export const definition: ModuleDefinition = {
       ],
     },
     {
+      key: "search.console.inspect",
+      name: "Search Console Inspection Sweep",
+      kind: "internal_module",
+      category: "Analysis",
+      description:
+        "Quota-aware nightly URL inspection over the audited page set so index coverage is known for every page, not only hand-inspected ones. Read-only at Google.",
+      integrationState: "real",
+      operations: [
+        {
+          name: "urlInspection.sweep",
+          description: "Inspect due pages, oldest inspection first, capped per run.",
+        },
+      ],
+      config: { mutating: false, perRunCap: 25, refreshDays: 30 },
+    },
+    {
       key: "seo.validation",
       name: "SEO Validation Engine",
       kind: "internal_module",
@@ -70,9 +86,13 @@ export const definition: ModuleDefinition = {
       graph: {
         nodes: [
           { key: "collect", kind: "capability", ref: "search.console" },
+          { key: "inspect", kind: "capability", ref: "search.console.inspect" },
           { key: "evaluate", kind: "capability", ref: "search.console.rules" },
         ],
-        edges: [{ from: "collect", to: "evaluate" }],
+        edges: [
+          { from: "collect", to: "inspect" },
+          { from: "inspect", to: "evaluate" },
+        ],
       },
     },
     {
