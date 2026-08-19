@@ -11,7 +11,7 @@ export const Route = createFileRoute("/knowledge/manual")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Execution Handbook — AOOS" },
+      { title: "Execution Handbook — Marky" },
       {
         name: "description",
         content: "The active, versioned AOOS Execution Handbook rendered from runtime knowledge.",

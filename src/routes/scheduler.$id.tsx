@@ -30,8 +30,8 @@ export const Route = createFileRoute("/scheduler/$id")({
   },
   head: ({ loaderData }) => {
     const title = loaderData?.schedule
-      ? `${loaderData.schedule.name} — Scheduler — AOOS`
-      : "Schedule — AOOS";
+      ? `${loaderData.schedule.name} — Scheduler — Marky`
+      : "Schedule — Marky";
     const description =
       loaderData?.schedule?.description ?? "Schedule cadence, dependencies, and last outcome.";
     return {

@@ -24,12 +24,12 @@ export const Route = createFileRoute("/command-center")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Command Center — AOOS" },
+      { title: "Command Center — Marky" },
       {
         name: "description",
         content: "Live system state across assets, capabilities, agents, workflows, and schedules.",
       },
-      { property: "og:title", content: "Command Center — AOOS" },
+      { property: "og:title", content: "Command Center — Marky" },
       {
         property: "og:description",
         content: "Live system state for the marketing operating system.",

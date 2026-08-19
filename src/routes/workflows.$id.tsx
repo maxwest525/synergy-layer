@@ -79,8 +79,8 @@ export const Route = createFileRoute("/workflows/$id")({
   },
   head: ({ loaderData }) => {
     const title = loaderData?.workflow
-      ? `${loaderData.workflow.name} — Workflows — AOOS`
-      : "Workflow — AOOS";
+      ? `${loaderData.workflow.name} — Workflows — Marky`
+      : "Workflow — Marky";
     const description = loaderData?.workflow?.description ?? "Workflow definition and run history.";
     return {
       meta: [

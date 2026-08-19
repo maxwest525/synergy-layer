@@ -38,13 +38,13 @@ export const Route = createFileRoute("/keywords")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Keyword approval — AOOS Marketing Operating System" },
+      { title: "Keyword approval — Marky" },
       {
         name: "description",
         content:
           "Review DataForSEO Labs keyword candidates with volume, CPC, competition, and provenance, then approve or reject each one before SERP observation runs.",
       },
-      { property: "og:title", content: "Keyword approval — AOOS Marketing Operating System" },
+      { property: "og:title", content: "Keyword approval — Marky" },
       {
         property: "og:description",
         content: "The human gate between keyword discovery and paid SERP observation.",

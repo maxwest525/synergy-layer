@@ -35,13 +35,13 @@ export const Route = createFileRoute("/capabilities/systems/$key")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "System detail — AOOS tool estate" },
+      { title: "System detail — Marky tool estate" },
       {
         name: "description",
         content:
           "One canonical system: its operations, what each one can change, its cost, and whether AOOS can call it today.",
       },
-      { property: "og:title", content: "System detail — AOOS tool estate" },
+      { property: "og:title", content: "System detail — Marky tool estate" },
       {
         property: "og:description",
         content: "Operations with read, draft, and write modes, plus current AOOS availability.",

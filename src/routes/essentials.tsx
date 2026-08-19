@@ -41,13 +41,13 @@ export const Route = createFileRoute("/essentials")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Essentials — AOOS Marketing Operating System" },
+      { title: "Essentials — Marky" },
       {
         name: "description",
         content:
           "What marketing coverage AOOS actually has today and what is still missing, concern by concern, in plain language.",
       },
-      { property: "og:title", content: "Essentials — AOOS Marketing Operating System" },
+      { property: "og:title", content: "Essentials — Marky" },
       {
         property: "og:description",
         content: "Operator status for every marketing essential, based only on stored evidence.",

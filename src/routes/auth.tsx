@@ -24,13 +24,13 @@ export const Route = createFileRoute("/auth")({
   },
   head: () => ({
     meta: [
-      { title: "Sign in — AOOS" },
+      { title: "Sign in — Marky" },
       {
         name: "description",
         content:
           "Operator sign-in for the AOOS marketing operating system. Read access is open; actions require a role.",
       },
-      { property: "og:title", content: "Sign in — AOOS" },
+      { property: "og:title", content: "Sign in — Marky" },
       { property: "og:description", content: "Operator sign-in for AOOS." },
       { name: "robots", content: "noindex" },
     ],

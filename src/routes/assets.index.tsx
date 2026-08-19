@@ -26,13 +26,13 @@ export const Route = createFileRoute("/assets/")({
   },
   head: () => ({
     meta: [
-      { title: "Assets — AOOS" },
+      { title: "Assets — Marky" },
       {
         name: "description",
         content:
           "Every owned marketing asset: sites, landing pages, ad accounts, repositories, backends, datasets, and knowledge collections.",
       },
-      { property: "og:title", content: "Assets — AOOS" },
+      { property: "og:title", content: "Assets — Marky" },
       { property: "og:description", content: "Everything the company owns, in one registry." },
     ],
   }),

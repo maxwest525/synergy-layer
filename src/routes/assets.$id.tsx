@@ -32,7 +32,7 @@ export const Route = createFileRoute("/assets/$id")({
     return data;
   },
   head: ({ loaderData }) => {
-    const title = loaderData?.asset ? `${loaderData.asset.name} — Assets — AOOS` : "Asset — AOOS";
+    const title = loaderData?.asset ? `${loaderData.asset.name} — Assets — Marky` : "Asset — Marky";
     const description =
       loaderData?.asset?.description ?? "Asset detail, health, and history in AOOS.";
     return {

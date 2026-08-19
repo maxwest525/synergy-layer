@@ -37,8 +37,8 @@ export const Route = createFileRoute("/capabilities/$id")({
   },
   head: ({ loaderData }) => {
     const title = loaderData?.capability
-      ? `${loaderData.capability.name} — Capabilities — AOOS`
-      : "Capability — AOOS";
+      ? `${loaderData.capability.name} — Capabilities — Marky`
+      : "Capability — Marky";
     const description =
       loaderData?.capability?.description ??
       "Capability detail, operations, and integration state.";

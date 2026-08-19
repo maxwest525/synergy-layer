@@ -40,13 +40,13 @@ export const Route = createFileRoute("/search")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Search workspace — AOOS Marketing Operating System" },
+      { title: "Search workspace — Marky" },
       {
         name: "description",
         content:
           "What Google Search Console actually observed for the selected property: finalized daily clicks, impressions, CTR, average position, pages, queries, devices, countries, and sitemap status.",
       },
-      { property: "og:title", content: "Search workspace — AOOS Marketing Operating System" },
+      { property: "og:title", content: "Search workspace — Marky" },
       {
         property: "og:description",
         content: "Stored Search Console evidence, shown exactly as Google reported it.",

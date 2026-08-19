@@ -34,7 +34,7 @@ export const Route = createFileRoute("/agents/$id")({
     return data;
   },
   head: ({ loaderData }) => {
-    const title = loaderData?.agent ? `${loaderData.agent.name} — Agents — AOOS` : "Agent — AOOS";
+    const title = loaderData?.agent ? `${loaderData.agent.name} — Agents — Marky` : "Agent — Marky";
     const description = loaderData?.agent?.purpose ?? "Agent detail, grants, and run history.";
     return {
       meta: [

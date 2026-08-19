@@ -8,13 +8,13 @@ export const Route = createFileRoute("/ask")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Ask the agent — AOOS" },
+      { title: "Ask the agent — Marky" },
       {
         name: "description",
         content:
           "Ask the AOOS agent anything about stored marketing evidence. It reads Search Console, keywords, competitors, change requests, and runs, cites the rows it used, and drafts proposals you approve.",
       },
-      { property: "og:title", content: "Ask the agent — AOOS" },
+      { property: "og:title", content: "Ask the agent — Marky" },
       {
         property: "og:description",
         content: "One place to ask what the evidence says and what to do next.",

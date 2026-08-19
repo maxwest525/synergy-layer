@@ -27,13 +27,13 @@ export const Route = createFileRoute("/workflows/")({
   },
   head: () => ({
     meta: [
-      { title: "Workflow Registry — AOOS" },
+      { title: "Workflow Registry — Marky" },
       {
         name: "description",
         content:
           "Declarative workflows with full run history, step-level state, durations, and failure reasons.",
       },
-      { property: "og:title", content: "Workflow Registry — AOOS" },
+      { property: "og:title", content: "Workflow Registry — Marky" },
       { property: "og:description", content: "How work runs, and what happened on every run." },
     ],
   }),
