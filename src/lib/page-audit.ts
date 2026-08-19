@@ -5,6 +5,7 @@
  */
 
 import type { CheckFinding, PageFacts } from "./page-checks";
+import type { SiteFinding } from "./site-checks";
 
 export type PageMetadataObservation = {
   url: string;
@@ -33,6 +34,10 @@ export type PageAuditView = {
   observations: PageMetadataObservation[];
   duplicates: DuplicateGroup[];
   findings: CheckFinding[];
+  /** Whole site crawl defects: robots.txt, sitemap, and pages that would not render. */
+  siteFindings: SiteFinding[];
+  siteInstruction: string;
+  siteObservedAt: string | null;
   instruction: string;
 };
 

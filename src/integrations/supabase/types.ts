@@ -4176,6 +4176,44 @@ export type Database = {
           },
         ]
       }
+      site_audit_snapshots: {
+        Row: {
+          facts: Json
+          id: string
+          observed_at: string
+          origin: string
+          property: string
+          requested_by: string | null
+          tenant_id: string
+        }
+        Insert: {
+          facts: Json
+          id?: string
+          observed_at?: string
+          origin: string
+          property: string
+          requested_by?: string | null
+          tenant_id: string
+        }
+        Update: {
+          facts?: Json
+          id?: string
+          observed_at?: string
+          origin?: string
+          property?: string
+          requested_by?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "site_audit_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenant_connections: {
         Row: {
           capability_key: string
