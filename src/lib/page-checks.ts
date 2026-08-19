@@ -1,0 +1,531 @@
+/**
+ * Pure on page analysis. Everything here reads the rendered HTML of a page and
+ * reports what is actually there. Nothing fetches, nothing estimates, nothing
+ * scores. A check either found a real defect on a real page or it did not.
+ */
+
+export type PageFacts = {
+  title: string | null;
+  metaDescription: string | null;
+  canonical: string | null;
+  robots: string | null;
+  lang: string | null;
+  hasViewport: boolean;
+  h1s: string[];
+  h2Count: number;
+  headingSkips: boolean;
+  imageCount: number;
+  imagesMissingAlt: number;
+  jsonLdTypes: string[];
+  jsonLdInvalid: boolean;
+  internalLinks: number;
+  externalLinks: number;
+  wordCount: number;
+  ogTitle: string | null;
+  ogImage: string | null;
+  hasFavicon: boolean;
+};
+
+export type CheckId =
+  | "title_missing"
+  | "title_too_long"
+  | "title_too_short"
+  | "title_duplicate"
+  | "description_missing"
+  | "description_too_long"
+  | "description_too_short"
+  | "description_duplicate"
+  | "h1_missing"
+  | "h1_multiple"
+  | "h1_duplicate"
+  | "canonical_missing"
+  | "noindex"
+  | "nofollow"
+  | "viewport_missing"
+  | "lang_missing"
+  | "structured_data_missing"
+  | "structured_data_invalid"
+  | "image_alt_missing"
+  | "thin_content"
+  | "no_internal_links"
+  | "og_missing";
+
+export type Severity = "critical" | "warning" | "advice";
+
+export type PageIssue = {
+  check: CheckId;
+  url: string;
+  severity: Severity;
+  detail: string;
+};
+
+export type CheckDefinition = {
+  check: CheckId;
+  label: string;
+  severity: Severity;
+  /** Imperative instruction shown when this check has at least one affected page. */
+  instruction: (pageCount: number) => string;
+  /** True when the existing title and H1 proposal loop can fix it in one click. */
+  fixableByWordingProposal: boolean;
+};
+
+export const CHECKS: Record<CheckId, CheckDefinition> = {
+  title_missing: {
+    check: "title_missing",
+    label: "Missing tab title",
+    severity: "critical",
+    instruction: (n) => `Write a tab title for ${n} pages that have none.`,
+    fixableByWordingProposal: true,
+  },
+  title_too_long: {
+    check: "title_too_long",
+    label: "Tab title cut off in results",
+    severity: "warning",
+    instruction: (n) => `Shorten the tab title on ${n} pages so Google stops truncating it.`,
+    fixableByWordingProposal: true,
+  },
+  title_too_short: {
+    check: "title_too_short",
+    label: "Tab title too thin",
+    severity: "advice",
+    instruction: (n) => `Expand the tab title on ${n} pages to describe the page and the service.`,
+    fixableByWordingProposal: true,
+  },
+  title_duplicate: {
+    check: "title_duplicate",
+    label: "Same tab title on several pages",
+    severity: "critical",
+    instruction: (n) => `Give each of these ${n} pages its own tab title.`,
+    fixableByWordingProposal: true,
+  },
+  description_missing: {
+    check: "description_missing",
+    label: "Missing search description",
+    severity: "critical",
+    instruction: (n) => `Write a search description for ${n} pages so Google stops inventing one.`,
+    fixableByWordingProposal: false,
+  },
+  description_too_long: {
+    check: "description_too_long",
+    label: "Search description cut off",
+    severity: "advice",
+    instruction: (n) => `Trim the search description on ${n} pages to under 160 characters.`,
+    fixableByWordingProposal: false,
+  },
+  description_too_short: {
+    check: "description_too_short",
+    label: "Search description too thin",
+    severity: "advice",
+    instruction: (n) => `Expand the search description on ${n} pages to at least 70 characters.`,
+    fixableByWordingProposal: false,
+  },
+  description_duplicate: {
+    check: "description_duplicate",
+    label: "Same search description on several pages",
+    severity: "warning",
+    instruction: (n) => `Give each of these ${n} pages its own search description.`,
+    fixableByWordingProposal: false,
+  },
+  h1_missing: {
+    check: "h1_missing",
+    label: "Missing headline",
+    severity: "critical",
+    instruction: (n) => `Add a main headline to ${n} pages that have none.`,
+    fixableByWordingProposal: true,
+  },
+  h1_multiple: {
+    check: "h1_multiple",
+    label: "More than one main headline",
+    severity: "warning",
+    instruction: (n) => `Leave one main headline on ${n} pages and demote the rest.`,
+    fixableByWordingProposal: true,
+  },
+  h1_duplicate: {
+    check: "h1_duplicate",
+    label: "Same headline on several pages",
+    severity: "critical",
+    instruction: (n) => `Give each of these ${n} pages its own headline.`,
+    fixableByWordingProposal: true,
+  },
+  canonical_missing: {
+    check: "canonical_missing",
+    label: "No canonical address",
+    severity: "warning",
+    instruction: (n) => `Declare the canonical address on ${n} pages so duplicates cannot split.`,
+    fixableByWordingProposal: false,
+  },
+  noindex: {
+    check: "noindex",
+    label: "Page blocked from Google",
+    severity: "critical",
+    instruction: (n) => `Remove the noindex tag from ${n} pages that should be findable.`,
+    fixableByWordingProposal: false,
+  },
+  nofollow: {
+    check: "nofollow",
+    label: "Links on the page not followed",
+    severity: "warning",
+    instruction: (n) => `Remove the nofollow robots tag from ${n} pages.`,
+    fixableByWordingProposal: false,
+  },
+  viewport_missing: {
+    check: "viewport_missing",
+    label: "Not set up for phones",
+    severity: "critical",
+    instruction: (n) => `Add the mobile viewport tag to ${n} pages.`,
+    fixableByWordingProposal: false,
+  },
+  lang_missing: {
+    check: "lang_missing",
+    label: "Language not declared",
+    severity: "advice",
+    instruction: (n) => `Declare the page language on ${n} pages.`,
+    fixableByWordingProposal: false,
+  },
+  structured_data_missing: {
+    check: "structured_data_missing",
+    label: "No structured data",
+    severity: "warning",
+    instruction: (n) =>
+      `Add structured data to ${n} pages so Google can show richer results for them.`,
+    fixableByWordingProposal: false,
+  },
+  structured_data_invalid: {
+    check: "structured_data_invalid",
+    label: "Broken structured data",
+    severity: "critical",
+    instruction: (n) => `Fix unreadable structured data on ${n} pages. Google is ignoring it now.`,
+    fixableByWordingProposal: false,
+  },
+  image_alt_missing: {
+    check: "image_alt_missing",
+    label: "Images with no description",
+    severity: "warning",
+    instruction: (n) => `Describe the images on ${n} pages so they are readable and searchable.`,
+    fixableByWordingProposal: false,
+  },
+  thin_content: {
+    check: "thin_content",
+    label: "Very little text",
+    severity: "warning",
+    instruction: (n) => `Add real content to ${n} pages that carry almost no text.`,
+    fixableByWordingProposal: false,
+  },
+  no_internal_links: {
+    check: "no_internal_links",
+    label: "Orphaned from the rest of the site",
+    severity: "warning",
+    instruction: (n) => `Link ${n} isolated pages to the rest of the site.`,
+    fixableByWordingProposal: false,
+  },
+  og_missing: {
+    check: "og_missing",
+    label: "No share preview",
+    severity: "advice",
+    instruction: (n) => `Add a share title and image to ${n} pages so shared links look right.`,
+    fixableByWordingProposal: false,
+  },
+};
+
+export const TITLE_MAX = 60;
+export const TITLE_MIN = 25;
+export const DESCRIPTION_MAX = 160;
+export const DESCRIPTION_MIN = 70;
+export const THIN_CONTENT_WORDS = 250;
+
+function attr(tag: string, name: string): string | null {
+  const match = new RegExp(`${name}\\s*=\\s*("([^"]*)"|'([^']*)')`, "i").exec(tag);
+  const value = match?.[2] ?? match?.[3] ?? null;
+  return value === null ? null : decodeEntities(value.trim());
+}
+
+function decodeEntities(value: string): string {
+  return value
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">");
+}
+
+function text(fragment: string): string {
+  return decodeEntities(fragment.replace(/<[^>]*>/g, " "))
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function metaTags(html: string): string[] {
+  return html.match(/<meta\b[^>]*>/gi) ?? [];
+}
+
+function metaContent(html: string, kind: "name" | "property", key: string): string | null {
+  for (const tag of metaTags(html)) {
+    const found = attr(tag, kind);
+    if (found && found.toLowerCase() === key) {
+      const content = attr(tag, "content");
+      return content && content.length > 0 ? content : null;
+    }
+  }
+  return null;
+}
+
+function sameHost(href: string, pageUrl: string): boolean | null {
+  try {
+    const base = new URL(pageUrl);
+    const target = new URL(href, base);
+    if (!target.protocol.startsWith("http")) return null;
+    return target.host === base.host;
+  } catch {
+    return null;
+  }
+}
+
+/** Reads the observable facts of one rendered page. Never throws on odd markup. */
+export function extractPageFacts(html: string, markdown: string, pageUrl: string): PageFacts {
+  const titleMatch = /<title[^>]*>([\s\S]*?)<\/title>/i.exec(html);
+  const title = titleMatch ? text(titleMatch[1]) || null : null;
+
+  const h1s = [...html.matchAll(/<h1\b[^>]*>([\s\S]*?)<\/h1>/gi)]
+    .map((match) => text(match[1]))
+    .filter((value) => value.length > 0);
+  const headings = [...html.matchAll(/<h([1-6])\b[^>]*>/gi)].map((match) => Number(match[1]));
+  let headingSkips = false;
+  for (let index = 1; index < headings.length; index += 1) {
+    if (headings[index] - headings[index - 1] > 1) headingSkips = true;
+  }
+
+  const images = html.match(/<img\b[^>]*>/gi) ?? [];
+  const imagesMissingAlt = images.filter((tag) => {
+    const alt = attr(tag, "alt");
+    return alt === null || alt.length === 0;
+  }).length;
+
+  const jsonLdTypes: string[] = [];
+  let jsonLdInvalid = false;
+  for (const block of html.matchAll(
+    /<script\b[^>]*type\s*=\s*["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi,
+  )) {
+    try {
+      const parsed: unknown = JSON.parse(block[1].trim());
+      const walk = (node: unknown): void => {
+        if (Array.isArray(node)) {
+          node.forEach(walk);
+          return;
+        }
+        if (node && typeof node === "object") {
+          const record = node as Record<string, unknown>;
+          const type = record["@type"];
+          if (typeof type === "string") jsonLdTypes.push(type);
+          if (Array.isArray(type)) {
+            type.filter((entry): entry is string => typeof entry === "string").forEach((entry) =>
+              jsonLdTypes.push(entry),
+            );
+          }
+          if (Array.isArray(record["@graph"])) walk(record["@graph"]);
+        }
+      };
+      walk(parsed);
+    } catch {
+      jsonLdInvalid = true;
+    }
+  }
+
+  let internalLinks = 0;
+  let externalLinks = 0;
+  for (const tag of html.match(/<a\b[^>]*>/gi) ?? []) {
+    const href = attr(tag, "href");
+    if (!href || href.startsWith("#")) continue;
+    const internal = sameHost(href, pageUrl);
+    if (internal === true) internalLinks += 1;
+    else if (internal === false) externalLinks += 1;
+  }
+
+  let canonical: string | null = null;
+  let hasFavicon = false;
+  for (const tag of html.match(/<link\b[^>]*>/gi) ?? []) {
+    const rel = attr(tag, "rel")?.toLowerCase() ?? "";
+    if (rel === "canonical" && !canonical) canonical = attr(tag, "href");
+    if (rel.includes("icon")) hasFavicon = true;
+  }
+
+  const htmlTag = /<html\b[^>]*>/i.exec(html)?.[0] ?? "";
+
+  const words = markdown
+    .replace(/```[\s\S]*?```/g, " ")
+    .replace(/[#*_>[\]()!|-]/g, " ")
+    .split(/\s+/)
+    .filter((word) => word.length > 1);
+
+  return {
+    title,
+    metaDescription: metaContent(html, "name", "description"),
+    canonical,
+    robots: metaContent(html, "name", "robots"),
+    lang: attr(htmlTag, "lang"),
+    hasViewport: metaContent(html, "name", "viewport") !== null,
+    h1s,
+    h2Count: (html.match(/<h2\b/gi) ?? []).length,
+    headingSkips,
+    imageCount: images.length,
+    imagesMissingAlt,
+    jsonLdTypes: [...new Set(jsonLdTypes)],
+    jsonLdInvalid,
+    internalLinks,
+    externalLinks,
+    wordCount: words.length,
+    ogTitle: metaContent(html, "property", "og:title"),
+    ogImage: metaContent(html, "property", "og:image"),
+    hasFavicon,
+  };
+}
+
+/** Case and whitespace insensitive comparison key. Empty wording never collides. */
+export function normalizeWording(value: string | null | undefined): string | null {
+  if (typeof value !== "string") return null;
+  const collapsed = value.replace(/\s+/g, " ").trim().toLowerCase();
+  return collapsed.length > 0 ? collapsed : null;
+}
+
+function duplicateKeys(values: (string | null)[]): Set<string> {
+  const counts = new Map<string, number>();
+  for (const value of values) {
+    const key = normalizeWording(value);
+    if (!key) continue;
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  return new Set([...counts.entries()].filter(([, count]) => count > 1).map(([key]) => key));
+}
+
+export type AnalyzedPage = { url: string; facts: PageFacts };
+
+/** Every real defect found across every analyzed page. */
+export function evaluatePages(pages: AnalyzedPage[]): PageIssue[] {
+  const duplicateTitles = duplicateKeys(pages.map((page) => page.facts.title));
+  const duplicateH1s = duplicateKeys(pages.map((page) => page.facts.h1s[0] ?? null));
+  const duplicateDescriptions = duplicateKeys(pages.map((page) => page.facts.metaDescription));
+
+  const issues: PageIssue[] = [];
+  const add = (check: CheckId, url: string, detail: string): void => {
+    issues.push({ check, url, severity: CHECKS[check].severity, detail });
+  };
+
+  for (const { url, facts } of pages) {
+    const title = facts.title;
+    if (!title) add("title_missing", url, "The page has no tab title at all.");
+    else {
+      if (title.length > TITLE_MAX)
+        add("title_too_long", url, `${title.length} characters: "${title}"`);
+      if (title.length < TITLE_MIN)
+        add("title_too_short", url, `${title.length} characters: "${title}"`);
+      if (duplicateTitles.has(normalizeWording(title) ?? "")) {
+        add("title_duplicate", url, `Shared tab title: "${title}"`);
+      }
+    }
+
+    const description = facts.metaDescription;
+    if (!description) add("description_missing", url, "No search description is set.");
+    else {
+      if (description.length > DESCRIPTION_MAX)
+        add("description_too_long", url, `${description.length} characters.`);
+      if (description.length < DESCRIPTION_MIN)
+        add("description_too_short", url, `${description.length} characters.`);
+      if (duplicateDescriptions.has(normalizeWording(description) ?? "")) {
+        add("description_duplicate", url, `Shared description: "${description.slice(0, 90)}"`);
+      }
+    }
+
+    const h1 = facts.h1s[0] ?? null;
+    if (facts.h1s.length === 0) add("h1_missing", url, "The page has no main headline.");
+    if (facts.h1s.length > 1)
+      add("h1_multiple", url, `${facts.h1s.length} main headlines on one page.`);
+    if (h1 && duplicateH1s.has(normalizeWording(h1) ?? "")) {
+      add("h1_duplicate", url, `Shared headline: "${h1}"`);
+    }
+
+    if (!facts.canonical) add("canonical_missing", url, "No canonical address is declared.");
+
+    const robots = facts.robots?.toLowerCase() ?? "";
+    if (robots.includes("noindex")) add("noindex", url, `Robots tag says "${facts.robots}".`);
+    if (robots.includes("nofollow")) add("nofollow", url, `Robots tag says "${facts.robots}".`);
+
+    if (!facts.hasViewport) add("viewport_missing", url, "No mobile viewport tag.");
+    if (!facts.lang) add("lang_missing", url, "The html tag declares no language.");
+
+    if (facts.jsonLdInvalid)
+      add("structured_data_invalid", url, "Structured data on the page is not readable JSON.");
+    else if (facts.jsonLdTypes.length === 0)
+      add("structured_data_missing", url, "No structured data blocks were found.");
+
+    if (facts.imagesMissingAlt > 0) {
+      add(
+        "image_alt_missing",
+        url,
+        `${facts.imagesMissingAlt} of ${facts.imageCount} images have no description.`,
+      );
+    }
+
+    if (facts.wordCount < THIN_CONTENT_WORDS)
+      add("thin_content", url, `About ${facts.wordCount} words of text.`);
+
+    if (facts.internalLinks === 0)
+      add("no_internal_links", url, "No links from this page to the rest of the site.");
+
+    if (!facts.ogTitle || !facts.ogImage)
+      add("og_missing", url, "Share title or share image is missing.");
+  }
+
+  return issues;
+}
+
+export type CheckFinding = {
+  check: CheckId;
+  label: string;
+  severity: Severity;
+  instruction: string;
+  fixableByWordingProposal: boolean;
+  pages: { url: string; detail: string }[];
+};
+
+const SEVERITY_ORDER: Record<Severity, number> = { critical: 0, warning: 1, advice: 2 };
+
+/** One finding per check that actually matched, worst first. */
+export function groupFindings(issues: PageIssue[]): CheckFinding[] {
+  const byCheck = new Map<CheckId, { url: string; detail: string }[]>();
+  for (const issue of issues) {
+    const list = byCheck.get(issue.check) ?? [];
+    list.push({ url: issue.url, detail: issue.detail });
+    byCheck.set(issue.check, list);
+  }
+  return [...byCheck.entries()]
+    .map(([check, pages]) => {
+      const definition = CHECKS[check];
+      return {
+        check,
+        label: definition.label,
+        severity: definition.severity,
+        instruction: definition.instruction(pages.length),
+        fixableByWordingProposal: definition.fixableByWordingProposal,
+        pages: [...pages].sort((a, b) => a.url.localeCompare(b.url)),
+      };
+    })
+    .sort(
+      (a, b) =>
+        SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity] ||
+        b.pages.length - a.pages.length ||
+        a.label.localeCompare(b.label),
+    );
+}
+
+export function buildAuditHeadline(input: {
+  observedPages: number;
+  findings: CheckFinding[];
+}): string {
+  if (input.observedPages === 0) {
+    return "No pages have been read yet. Run the page audit to check every page Google reported.";
+  }
+  const worst = input.findings[0];
+  if (!worst) return `No defects found across ${input.observedPages} read pages.`;
+  const total = input.findings.reduce((sum, finding) => sum + finding.pages.length, 0);
+  return `${total} defects across ${input.observedPages} pages. Start here: ${worst.instruction}`;
+}
