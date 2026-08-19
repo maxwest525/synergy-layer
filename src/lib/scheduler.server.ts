@@ -84,7 +84,14 @@ export async function tickScheduler(
     const startedAt = Date.now();
     let state: Database["public"]["Enums"]["run_state"] = "failed";
     try {
-      if (schedule.target_kind === "workflow" && schedule.target_id) {
+      if (schedule.target_kind === "workflow") {
+        // A workflow schedule with no workflow attached must never report success:
+        // that is the "configured is not connected" failure this system exists to catch.
+        if (!schedule.target_id) {
+          throw new Error(
+            `Schedule "${schedule.key}" is set to run a workflow but no workflow is attached.`,
+          );
+        }
         const run = await runWorkflow(client, schedule.target_id, `schedule:${schedule.key}`, null);
         state = run.state;
       } else {
