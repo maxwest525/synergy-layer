@@ -159,12 +159,91 @@ function isActive(pathname: string, to: string): boolean {
   return to === "/" ? pathname === "/" : pathname.startsWith(to);
 }
 
-function currentWorkspaceLabel(pathname: string): string {
-  const match = [...allWorkspaces]
+function currentWorkspace(pathname: string): Workspace | undefined {
+  return [...allWorkspaces]
     .sort((a, b) => b.to.length - a.to.length)
     .find((workspace) => isActive(pathname, workspace.to));
-  return match?.label ?? "AOOS";
 }
+
+function currentWorkspaceLabel(pathname: string): string {
+  return currentWorkspace(pathname)?.label ?? "AOOS";
+}
+
+type Crumb = { label: string; to?: string };
+
+/** Turn a trailing detail segment into something readable, never a raw UUID wall. */
+function readableSegment(segment: string): string {
+  const decoded = decodeURIComponent(segment);
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(decoded)) return `${decoded.slice(0, 8)}…`;
+  if (decoded.length > 28) return `${decoded.slice(0, 28)}…`;
+  return decoded.replace(/[-_.]/g, " ");
+}
+
+/**
+ * One breadcrumb trail for the whole OS, built from the same taxonomy and nav
+ * sections the sidebar reads, so a page can never describe its own location
+ * differently from the way you navigated to it.
+ */
+export function breadcrumbsForPath(pathname: string): readonly Crumb[] {
+  const workspace = currentWorkspace(pathname);
+  if (!workspace) return [];
+
+  const crumbs: Crumb[] = [{ label: "Today", to: "/" }];
+
+  const section = navSections.find(
+    (entry) => entry.primary.to === workspace.to || entry.children.some((c) => c.to === workspace.to),
+  );
+  if (section && section.primary.to !== workspace.to && section.primary.to !== "/") {
+    crumbs.push({ label: section.primary.label, to: section.primary.to });
+  }
+
+  if (workspace.to !== "/") {
+    crumbs.push({ label: workspace.label, to: workspace.to });
+  }
+
+  const rest = pathname.slice(workspace.to === "/" ? 1 : workspace.to.length).split("/").filter(Boolean);
+  for (const segment of rest) {
+    crumbs.push({ label: readableSegment(segment) });
+  }
+
+  return crumbs;
+}
+
+function Breadcrumbs({ pathname }: { pathname: string }) {
+  const crumbs = breadcrumbsForPath(pathname);
+  if (crumbs.length < 2) return null;
+  return (
+    <nav aria-label="Breadcrumb" className="mb-5">
+      <ol className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+        {crumbs.map((crumb, index) => {
+          const last = index === crumbs.length - 1;
+          return (
+            <li key={`${crumb.label}-${index}`} className="flex items-center gap-2">
+              {index > 0 ? (
+                <span aria-hidden className="text-muted-foreground/50">
+                  /
+                </span>
+              ) : null}
+              {crumb.to && !last ? (
+                <Link to={crumb.to} className="transition-colors hover:text-primary">
+                  {crumb.label}
+                </Link>
+              ) : (
+                <span
+                  aria-current={last ? "page" : undefined}
+                  className={cn("truncate", last && "text-foreground")}
+                >
+                  {crumb.label}
+                </span>
+              )}
+            </li>
+          );
+        })}
+      </ol>
+    </nav>
+  );
+}
+
 
 function NavRow({
   workspace,
@@ -521,7 +600,9 @@ export function Shell({ children }: { children: ReactNode }) {
           </header>
 
           <main className="mx-auto w-full max-w-[84rem] flex-1 px-5 py-6 md:px-8 md:py-8">
+            {accessState === "ready" ? <Breadcrumbs pathname={pathname} /> : null}
             {accessState === "loading" || accessState === "signed-out" ? (
+
               <div className="rounded-2xl border border-border/60 px-4 py-6" role="status">
                 <p className="text-sm text-muted-foreground">
                   {/* Before hydration the browser session is unknown, so the
