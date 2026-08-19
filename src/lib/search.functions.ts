@@ -284,6 +284,19 @@ export const getSearchWorkspace = createServerFn({ method: "GET" })
       pageQueries: rowsFor("page_query", ["page", "query"]),
       devices: rowsFor("dimensional_rows", ["device"]),
       countries: rowsFor("dimensional_rows", ["country"]),
+      searchAppearance: rowsFor("dimensional_rows", ["searchAppearance"]),
+      surfaces: latest
+        .filter((snapshot) => matches(snapshot, "dimensional_rows", ["searchType"]))
+        .map((snapshot) => {
+          const totals = (snapshot.totals ?? {}) as Record<string, unknown>;
+          return {
+            surface: snapshot.search_type ?? "unknown",
+            clicks: num(totals["clicks"]),
+            impressions: num(totals["impressions"]),
+            position: optionalNum(totals["position"]),
+          };
+        })
+        .sort((a, b) => b.impressions - a.impressions),
       sitemaps: sitemapSnapshot ? readSitemaps(sitemapSnapshot.payload) : [],
       recentInspections: (inspectionResult.data ?? []).map((inspection) => ({
         id: inspection.id,
