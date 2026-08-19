@@ -235,9 +235,22 @@ export const setObservationCadence = createServerFn({ method: "POST" })
         .eq("id", existing.id);
       if (error) throw new Error(`Could not update the cadence: ${error.message}`);
     } else {
+      // The cadence must point at the workflow that actually performs the read,
+      // otherwise a tick would report success without observing anything.
+      const { data: workflow, error: workflowError } = await supabaseAdmin
+        .from("workflows")
+        .select("id")
+        .eq("key", source.scheduleKey)
+        .maybeSingle();
+      if (workflowError) throw new Error(`Could not read the workflow: ${workflowError.message}`);
+      if (!workflow) {
+        throw new Error(`No workflow named "${source.scheduleKey}" exists, so the cadence cannot run.`);
+      }
+
       const { error } = await supabaseAdmin.from("schedules").insert({
         tenant_id: tenantId,
         key: source.scheduleKey,
+        target_id: workflow.id,
         name: `${source.label} daily observation`,
         description: `Read-only daily ${source.label} observation. Stores an immutable snapshot per run.`,
         cron: source.defaultCron,
