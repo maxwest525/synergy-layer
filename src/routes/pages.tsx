@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { SitePage } from "@/lib/site-pages.functions";
 import { listSitePages } from "@/lib/site-pages.functions";
-import { generateTitleH1Proposal } from "@/lib/title-h1-proposals.functions";
+import { proposeAuditFix } from "@/lib/audit-proposals.functions";
 
 export const Route = createFileRoute("/pages")({
   ssr: false,
@@ -50,7 +50,7 @@ function SitePagesRoute() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const list = useServerFn(listSitePages);
-  const propose = useServerFn(generateTitleH1Proposal);
+  const propose = useServerFn(proposeAuditFix);
 
   const [filter, setFilter] = useState("");
   const [selected, setSelected] = useState<string | null>(null);
@@ -62,7 +62,7 @@ function SitePagesRoute() {
 
   const proposeMutation = useMutation({
     mutationFn: (targetUrl: string) =>
-      propose({ data: { targetUrl, idempotencyKey: crypto.randomUUID(), mode: "gemini" } }),
+      propose({ data: { scope: "page", targetUrl, idempotencyKey: crypto.randomUUID() } }),
     onSuccess: (result) => {
       toast.success("Edit proposed. Review it before anything is published.");
       void queryClient.invalidateQueries({ queryKey: ["site-pages"] });
