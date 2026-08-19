@@ -22,6 +22,7 @@ import { Route as CommandCenterRouteImport } from './routes/command-center'
 import { Route as CompetitorsRouteImport } from './routes/competitors'
 import { Route as EssentialsRouteImport } from './routes/essentials'
 import { Route as Ga4RouteImport } from './routes/ga4'
+import { Route as GapsRouteImport } from './routes/gaps'
 import { Route as KeywordsRouteImport } from './routes/keywords'
 import { Route as KnowledgeRouteImport } from './routes/knowledge'
 import { Route as McpRouteImport } from './routes/mcp'
@@ -139,6 +140,11 @@ const EssentialsRoute = EssentialsRouteImport.update({
 const Ga4Route = Ga4RouteImport.update({
   id: '/ga4',
   path: '/ga4',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GapsRoute = GapsRouteImport.update({
+  id: '/gaps',
+  path: '/gaps',
   getParentRoute: () => rootRouteImport,
 } as any)
 const KeywordsRoute = KeywordsRouteImport.update({
@@ -430,6 +436,7 @@ export interface FileRoutesByFullPath {
   '/competitors': typeof CompetitorsRoute
   '/essentials': typeof EssentialsRoute
   '/ga4': typeof Ga4Route
+  '/gaps': typeof GapsRoute
   '/keywords': typeof KeywordsRoute
   '/knowledge': typeof KnowledgeRouteWithChildren
   '/mcp': typeof McpRoute
@@ -495,6 +502,7 @@ export interface FileRoutesByTo {
   '/competitors': typeof CompetitorsRoute
   '/essentials': typeof EssentialsRoute
   '/ga4': typeof Ga4Route
+  '/gaps': typeof GapsRoute
   '/keywords': typeof KeywordsRoute
   '/mcp': typeof McpRoute
   '/measurement': typeof MeasurementRoute
@@ -558,6 +566,7 @@ export interface FileRoutesById {
   '/competitors': typeof CompetitorsRoute
   '/essentials': typeof EssentialsRoute
   '/ga4': typeof Ga4Route
+  '/gaps': typeof GapsRoute
   '/keywords': typeof KeywordsRoute
   '/knowledge': typeof KnowledgeRouteWithChildren
   '/mcp': typeof McpRoute
@@ -628,6 +637,7 @@ export interface FileRouteTypes {
     | '/competitors'
     | '/essentials'
     | '/ga4'
+    | '/gaps'
     | '/keywords'
     | '/knowledge'
     | '/mcp'
@@ -693,6 +703,7 @@ export interface FileRouteTypes {
     | '/competitors'
     | '/essentials'
     | '/ga4'
+    | '/gaps'
     | '/keywords'
     | '/mcp'
     | '/measurement'
@@ -755,6 +766,7 @@ export interface FileRouteTypes {
     | '/competitors'
     | '/essentials'
     | '/ga4'
+    | '/gaps'
     | '/keywords'
     | '/knowledge'
     | '/mcp'
@@ -824,6 +836,7 @@ export interface RootRouteChildren {
   CompetitorsRoute: typeof CompetitorsRoute
   EssentialsRoute: typeof EssentialsRoute
   Ga4Route: typeof Ga4Route
+  GapsRoute: typeof GapsRoute
   KeywordsRoute: typeof KeywordsRoute
   KnowledgeRoute: typeof KnowledgeRouteWithChildren
   McpRoute: typeof McpRoute
@@ -949,6 +962,13 @@ declare module '@tanstack/react-router' {
       path: '/ga4'
       fullPath: '/ga4'
       preLoaderRoute: typeof Ga4RouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/gaps': {
+      id: '/gaps'
+      path: '/gaps'
+      fullPath: '/gaps'
+      preLoaderRoute: typeof GapsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/keywords': {
@@ -1475,6 +1495,7 @@ const rootRouteChildren: RootRouteChildren = {
   CompetitorsRoute: CompetitorsRoute,
   EssentialsRoute: EssentialsRoute,
   Ga4Route: Ga4Route,
+  GapsRoute: GapsRoute,
   KeywordsRoute: KeywordsRoute,
   KnowledgeRoute: KnowledgeRouteWithChildren,
   McpRoute: McpRoute,

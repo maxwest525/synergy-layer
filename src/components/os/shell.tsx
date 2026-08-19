@@ -89,8 +89,10 @@ const workspaces: readonly Workspace[] = [
   { to: "/agents", label: "Agents", icon: Activity, hint: "Who does the work", group: "run_work" },
 
   { to: "/capabilities", label: "Setup", icon: Plug, hint: "Connections, costs, access", group: "system_health" },
+  { to: "/gaps", label: "Connection gaps", icon: Plug, hint: "Every operation, wired or not", group: "system_health" },
   { to: "/spend", label: "Data costs", icon: DollarSign, hint: "What data sources cost", group: "system_health" },
   { to: "/operators", label: "People", icon: Users, hint: "Who has access", group: "system_health" },
+
 ] as const;
 
 /**
