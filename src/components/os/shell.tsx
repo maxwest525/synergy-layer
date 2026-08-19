@@ -600,7 +600,9 @@ export function Shell({ children }: { children: ReactNode }) {
           </header>
 
           <main className="mx-auto w-full max-w-[84rem] flex-1 px-5 py-6 md:px-8 md:py-8">
+            {accessState === "ready" ? <Breadcrumbs pathname={pathname} /> : null}
             {accessState === "loading" || accessState === "signed-out" ? (
+
               <div className="rounded-2xl border border-border/60 px-4 py-6" role="status">
                 <p className="text-sm text-muted-foreground">
                   {/* Before hydration the browser session is unknown, so the
