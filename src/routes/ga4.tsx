@@ -25,7 +25,7 @@ export const Route = createFileRoute("/ga4")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Google Analytics 4 — AOOS Marketing Operating System" },
+      { title: "Google Analytics 4 — Marky" },
       {
         name: "description",
         content:
@@ -33,7 +33,7 @@ export const Route = createFileRoute("/ga4")({
       },
       {
         property: "og:title",
-        content: "Google Analytics 4 — AOOS Marketing Operating System",
+        content: "Google Analytics 4 — Marky",
       },
       {
         property: "og:description",

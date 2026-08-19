@@ -51,13 +51,13 @@ export const Route = createFileRoute("/")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Action Center — AOOS Marketing Operating System" },
+      { title: "Action Center — Marky" },
       {
         name: "description",
         content:
           "The operational center of AOOS: everything that needs attention, approval, or awareness across every marketing asset, agent, and workflow.",
       },
-      { property: "og:title", content: "Action Center — AOOS Marketing Operating System" },
+      { property: "og:title", content: "Action Center — Marky" },
       {
         property: "og:description",
         content: "One queue for every decision the marketing operating system needs from you.",

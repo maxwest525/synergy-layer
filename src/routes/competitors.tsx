@@ -44,13 +44,13 @@ export const Route = createFileRoute("/competitors")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Competitor review — AOOS Marketing Operating System" },
+      { title: "Competitor review — Marky" },
       {
         name: "description",
         content:
           "Review the evidence-backed competitor shortlist derived from observed SERPs: keyword overlap, SERP share, head to head positions, and observed page mechanics, before anything becomes tracked.",
       },
-      { property: "og:title", content: "Competitor review — AOOS Marketing Operating System" },
+      { property: "og:title", content: "Competitor review — Marky" },
       {
         property: "og:description",
         content: "The human gate between competitor discovery and recurring competitor tracking.",
