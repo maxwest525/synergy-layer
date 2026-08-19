@@ -5045,6 +5045,29 @@ export type Database = {
         }
       }
       command_center_overview: { Args: { _tenant_id: string }; Returns: Json }
+      create_governed_proposal: {
+        Args: {
+          _actor: string
+          _changes: Json
+          _evidence: Json
+          _evidence_limitations: string
+          _evidence_summary: string
+          _generation_context: Json
+          _idempotency_key: string
+          _proposal_type: string
+          _rationale: string
+          _risk_note: string
+          _source_branch: string
+          _source_file: string
+          _source_project_id: string
+          _source_repo: string
+          _source_revision_before: string
+          _target_url: string
+          _tenant_id: string
+          _title: string
+        }
+        Returns: Json
+      }
       create_title_h1_proposal: {
         Args: {
           _actor: string

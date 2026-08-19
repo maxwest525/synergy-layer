@@ -7,9 +7,10 @@ import { toast } from "sonner";
 
 import { EmptyNote, GlassCard, StatePill, formatWhen } from "@/components/os/primitives";
 import { Button } from "@/components/ui/button";
+import { fixTargetForPageCheck, fixTargetForSiteCheck } from "@/lib/audit-fixes";
+import { proposeAuditFix } from "@/lib/audit-proposals.functions";
 import { getPageAudit, runPageWordingAudit } from "@/lib/page-audit.functions";
 import type { CheckFinding, Severity } from "@/lib/page-checks";
-import { generateTitleH1Proposal } from "@/lib/title-h1-proposals.functions";
 
 const TONE: Record<Severity, "danger" | "warning" | "neutral"> = {
   critical: "danger",
@@ -27,7 +28,7 @@ export function PageAuditPanel() {
   const queryClient = useQueryClient();
   const read = useServerFn(getPageAudit);
   const run = useServerFn(runPageWordingAudit);
-  const propose = useServerFn(generateTitleH1Proposal);
+  const propose = useServerFn(proposeAuditFix);
   const [openCheck, setOpenCheck] = useState<string | null>(null);
 
   const audit = useQuery({
@@ -47,10 +48,10 @@ export function PageAuditPanel() {
   });
 
   const proposeFix = useMutation({
-    mutationFn: (targetUrl: string) =>
-      propose({ data: { targetUrl, idempotencyKey: crypto.randomUUID(), mode: "gemini" } }),
+    mutationFn: (variables: { scope: "page" | "site"; check: string; targetUrl?: string }) =>
+      propose({ data: { ...variables, idempotencyKey: crypto.randomUUID() } }),
     onSuccess: (result) => {
-      toast.success("Edit proposed. Review it before anything is published.");
+      toast.success("Fix proposed. Review it before anything is published.");
       void navigate({ to: "/changes/$id", params: { id: result.changeRequest.id } });
     },
     onError: (error: Error) => toast.error(error.message),
@@ -107,11 +108,18 @@ export function PageAuditPanel() {
                   </div>
                   <p className="mt-1 break-all text-xs text-muted-foreground">{finding.detail}</p>
                 </div>
-                <span className="text-xs text-muted-foreground">
-                  {finding.fixableByChangeKind
-                    ? "Fix goes through crawl directives"
-                    : "Manual fix for now"}
-                </span>
+                {fixTargetForSiteCheck(finding.check) ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={proposeFix.isPending}
+                    onClick={() => proposeFix.mutate({ scope: "site", check: finding.check })}
+                  >
+                    Propose the fix
+                  </Button>
+                ) : (
+                  <span className="text-xs text-muted-foreground">Manual fix for now</span>
+                )}
               </li>
             ))}
           </ul>
@@ -157,14 +165,20 @@ export function PageAuditPanel() {
                           <p className="break-all text-xs text-foreground">{page.url}</p>
                           <p className="text-xs text-muted-foreground">{page.detail}</p>
                         </div>
-                        {finding.fixableByWordingProposal ? (
+                        {fixTargetForPageCheck(finding.check) ? (
                           <Button
                             variant="outline"
                             size="sm"
                             disabled={proposeFix.isPending}
-                            onClick={() => proposeFix.mutate(page.url)}
+                            onClick={() =>
+                              proposeFix.mutate({
+                                scope: "page",
+                                check: finding.check,
+                                targetUrl: page.url,
+                              })
+                            }
                           >
-                            Propose a fix
+                            Propose the fix
                           </Button>
                         ) : (
                           <span className="text-xs text-muted-foreground">Manual fix for now</span>
