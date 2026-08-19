@@ -258,3 +258,26 @@ documentation-first rule, authoritative digests were filed before any code:
 
 No capability, schema, secret, or route exists for either. Both remain
 unapproved. The Hub API has no digest because the vendor is unidentified.
+
+## Google Search Essentials skim, 2026-08-19
+
+Operator supplied the Search Essentials, Search Console tooling, starter guide,
+Rich Results Test, and Schema.org links. Filed
+`docs/integrations/google-search-essentials/DIGEST.md`.
+
+Findings that change how AOOS should treat Search Console:
+
+- Google's material is three layers: Essentials (pass/fail eligibility),
+  Strategy (the starter guide's page-level work), and Enhancements (structured
+  data). AOOS only touches performance rows, which sit under none of them.
+- Page Indexing, Rich result status, Core Web Vitals, Removals, Manual actions,
+  and Security have no API. They must be reconstructed URL by URL through URL
+  Inspection against a prioritized page list.
+- URL Inspection already stores coverage state, canonical mismatch, mobile
+  usability, and rich results verdict. Nothing consumes those fields.
+- `site.structured_data` is already an allowed change kind, but no code ever
+  reads a page's JSON-LD or proposes markup.
+
+Sequencing recommended, none of it implemented: consume the stored inspection
+fields, ingest layers 1 and 2 as citable knowledge, add a JSON-LD reader and
+diff, then widen page proposals beyond title and H1.
