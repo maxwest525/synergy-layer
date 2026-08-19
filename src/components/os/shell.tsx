@@ -89,8 +89,10 @@ const workspaces: readonly Workspace[] = [
   { to: "/agents", label: "Agents", icon: Activity, hint: "Who does the work", group: "run_work" },
 
   { to: "/capabilities", label: "Setup", icon: Plug, hint: "Connections, costs, access", group: "system_health" },
+  { to: "/gaps", label: "Connection gaps", icon: Plug, hint: "Every operation, wired or not", group: "system_health" },
   { to: "/spend", label: "Data costs", icon: DollarSign, hint: "What data sources cost", group: "system_health" },
   { to: "/operators", label: "People", icon: Users, hint: "Who has access", group: "system_health" },
+
 ] as const;
 
 /**
@@ -139,8 +141,9 @@ const navSections: readonly NavSection[] = [
   },
   {
     primary: workspaceAt("/capabilities"),
-    children: workspacesAt(["/spend", "/operators"]),
+    children: workspacesAt(["/gaps", "/spend", "/operators"]),
   },
+
 
   // Ask and Coverage are side surfaces, not stages of the daily loop, so they
   // sit below it. Nothing is hidden; they are simply out of the way.
