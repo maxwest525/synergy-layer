@@ -284,15 +284,17 @@ function sameHost(href: string, pageUrl: string): boolean | null {
 /** Reads the observable facts of one rendered page. Never throws on odd markup. */
 export function extractPageFacts(html: string, markdown: string, pageUrl: string): PageFacts {
   const titleMatch = /<title[^>]*>([\s\S]*?)<\/title>/i.exec(html);
-  const title = titleMatch ? text(titleMatch[1]) || null : null;
+  const title = titleMatch ? text(titleMatch[1] ?? "") || null : null;
 
   const h1s = [...html.matchAll(/<h1\b[^>]*>([\s\S]*?)<\/h1>/gi)]
-    .map((match) => text(match[1]))
+    .map((match) => text(match[1] ?? ""))
     .filter((value) => value.length > 0);
   const headings = [...html.matchAll(/<h([1-6])\b[^>]*>/gi)].map((match) => Number(match[1]));
   let headingSkips = false;
   for (let index = 1; index < headings.length; index += 1) {
-    if (headings[index] - headings[index - 1] > 1) headingSkips = true;
+    const current = headings[index] ?? 0;
+    const previous = headings[index - 1] ?? 0;
+    if (current - previous > 1) headingSkips = true;
   }
 
   const images = html.match(/<img\b[^>]*>/gi) ?? [];
@@ -307,7 +309,7 @@ export function extractPageFacts(html: string, markdown: string, pageUrl: string
     /<script\b[^>]*type\s*=\s*["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi,
   )) {
     try {
-      const parsed: unknown = JSON.parse(block[1].trim());
+      const parsed: unknown = JSON.parse((block[1] ?? "").trim());
       const walk = (node: unknown): void => {
         if (Array.isArray(node)) {
           node.forEach(walk);
