@@ -29,8 +29,8 @@ export const Route = createFileRoute("/knowledge/$id")({
   },
   head: ({ loaderData }) => {
     const title = loaderData?.collection
-      ? `${loaderData.collection.name} — Knowledge — AOOS`
-      : "Knowledge collection — AOOS";
+      ? `${loaderData.collection.name} — Knowledge — Marky`
+      : "Knowledge collection — Marky";
     const description =
       loaderData?.collection?.description ?? "Knowledge collection contents in AOOS.";
     return {

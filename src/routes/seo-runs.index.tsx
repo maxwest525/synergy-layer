@@ -29,7 +29,7 @@ import { OperatorRouteError } from "@/components/os/route-error";
 
 export const Route = createFileRoute("/seo-runs/")({
   ssr: false,
-  head: () => ({ meta: [{ title: "SEO Runs — AOOS" }, { name: "robots", content: "noindex" }] }),
+  head: () => ({ meta: [{ title: "SEO Runs — Marky" }, { name: "robots", content: "noindex" }] }),
   errorComponent: OperatorRouteError,
   component: SeoRunsPage,
 });

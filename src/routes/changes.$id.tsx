@@ -35,13 +35,13 @@ export const Route = createFileRoute("/changes/$id")({
   errorComponent: OperatorRouteError,
   head: () => ({
     meta: [
-      { title: "Proposed page change — AOOS" },
+      { title: "Proposed page change — Marky" },
       {
         name: "description",
         content:
           "Review one exact proposed page change, the dated evidence behind it, and its execution and verification status.",
       },
-      { property: "og:title", content: "Proposed page change — AOOS" },
+      { property: "og:title", content: "Proposed page change — Marky" },
       {
         property: "og:description",
         content:

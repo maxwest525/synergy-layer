@@ -17,7 +17,7 @@ import { OperatorRouteError } from "@/components/os/route-error";
 
 export const Route = createFileRoute("/seo-runs/$id")({
   ssr: false,
-  head: () => ({ meta: [{ title: "SEO Run — AOOS" }, { name: "robots", content: "noindex" }] }),
+  head: () => ({ meta: [{ title: "SEO Run — Marky" }, { name: "robots", content: "noindex" }] }),
   errorComponent: OperatorRouteError,
   component: SeoRunDetailPage,
 });

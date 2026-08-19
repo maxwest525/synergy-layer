@@ -33,13 +33,13 @@ export const Route = createFileRoute("/knowledge/")({
   },
   head: () => ({
     meta: [
-      { title: "Knowledge — AOOS" },
+      { title: "Knowledge — Marky" },
       {
         name: "description",
         content:
           "The central knowledge layer: documents, repositories, skills, prompts, playbooks, research, and agent memory.",
       },
-      { property: "og:title", content: "Knowledge — AOOS" },
+      { property: "og:title", content: "Knowledge — Marky" },
       {
         property: "og:description",
         content: "Everything the operating system knows, in one layer.",

@@ -30,13 +30,13 @@ export const Route = createFileRoute("/scheduler/")({
   },
   head: () => ({
     meta: [
-      { title: "Scheduler — AOOS" },
+      { title: "Scheduler — Marky" },
       {
         name: "description",
         content:
           "Dependency-aware scheduling: recurring work, chained workflows, next run times, and failure counts in one view.",
       },
-      { property: "og:title", content: "Scheduler — AOOS" },
+      { property: "og:title", content: "Scheduler — Marky" },
       { property: "og:description", content: "When work runs, and what it waits on." },
     ],
   }),

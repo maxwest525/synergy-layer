@@ -18,13 +18,13 @@ export const Route = createFileRoute("/pages")({
   errorComponent: OperatorRouteError,
   head: () => ({
     meta: [
-      { title: "Site pages — AOOS" },
+      { title: "Site pages — Marky" },
       {
         name: "description",
         content:
           "Every page Google reported for the connected property, with clicks, impressions and position, a live preview, and a one click title and H1 edit proposal.",
       },
-      { property: "og:title", content: "Site pages — AOOS" },
+      { property: "og:title", content: "Site pages — Marky" },
       {
         property: "og:description",
         content: "Page inventory, live preview, and on page edits in one place.",

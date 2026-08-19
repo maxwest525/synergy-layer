@@ -30,13 +30,13 @@ export const Route = createFileRoute("/capabilities/")({
   },
   head: () => ({
     meta: [
-      { title: "Capability Registry — AOOS" },
+      { title: "Capability Registry — Marky" },
       {
         name: "description",
         content:
           "Every MCP, API, connector, skill, model, repository, and internal module the operating system can call, with its true integration state.",
       },
-      { property: "og:title", content: "Capability Registry — AOOS" },
+      { property: "og:title", content: "Capability Registry — Marky" },
       {
         property: "og:description",
         content: "What the operating system can actually do, and what is only declared.",
