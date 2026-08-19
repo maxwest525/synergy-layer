@@ -438,6 +438,7 @@ type SnapshotInput = {
   property: string;
   kind: "property_totals" | "dimensional_rows" | "page_query";
   dimensions: string[];
+  searchType?: string;
   aggregationType: string;
   responseAggregationType: string | null;
   rowLimit: number;
@@ -454,6 +455,7 @@ async function persistSnapshot(client: Client, input: SnapshotInput): Promise<st
     property: input.property,
     kind: input.kind,
     dimensions: input.dimensions,
+    searchType: input.searchType ?? "web",
     aggregationType: input.aggregationType,
     periodStart: input.periodStart,
     periodEnd: input.periodEnd,
@@ -466,7 +468,7 @@ async function persistSnapshot(client: Client, input: SnapshotInput): Promise<st
       tenant_id: tenantId,
       property: input.property,
       kind: input.kind,
-      search_type: "web",
+      search_type: input.searchType ?? "web",
       dimensions: input.dimensions,
       filters: [] as never,
       aggregation_type: input.aggregationType,
@@ -743,7 +745,7 @@ export async function collectDaily(client: Client, property: string): Promise<Co
     }),
   );
 
-  for (const dimensions of [["page"], ["query"], ["device"], ["country"]]) {
+  for (const dimensions of [["page"], ["query"], ["device"], ["country"], ["searchAppearance"]]) {
     const response = await query(property, {
       startDate: reportingDate,
       endDate: reportingDate,
@@ -771,6 +773,41 @@ export async function collectDaily(client: Client, property: string): Promise<Co
       }),
     );
   }
+
+  // Non-web surfaces. Each surface is its own Search Console report; a zero row
+  // count means Google recorded no activity there, not a collection failure.
+  for (const surface of ["image", "video", "news", "discover", "googleNews"]) {
+    const response = await query(property, {
+      startDate: reportingDate,
+      endDate: reportingDate,
+      type: surface,
+      rowLimit: 1,
+    });
+    const row = response.rows?.[0];
+    snapshotIds.push(
+      await persistSnapshot(client, {
+        property,
+        kind: "dimensional_rows",
+        dimensions: ["searchType"],
+        searchType: surface,
+        aggregationType: "auto",
+        responseAggregationType: response.responseAggregationType ?? null,
+        rowLimit: 1,
+        paginatedRequestCount: 1,
+        periodStart: reportingDate,
+        periodEnd: reportingDate,
+        rows: row ? [row] : [],
+        totals: {
+          clicks: row?.clicks ?? 0,
+          impressions: row?.impressions ?? 0,
+          ctr: row && row.impressions > 0 ? row.clicks / row.impressions : null,
+          position: row?.position ?? null,
+        },
+      }),
+    );
+  }
+
+
 
   const pageQuery = await collectPageQuery(client, property, reportingDate);
   if (pageQuery.created && pageQuery.snapshotId) snapshotIds.push(pageQuery.snapshotId);

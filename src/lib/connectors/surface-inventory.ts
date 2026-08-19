@@ -60,10 +60,11 @@ export const CONNECTION_SURFACES: SurfaceConnection[] = [
       op({
         id: "gsc.searchanalytics.query",
         operation: "searchAnalytics.query",
-        purpose: "Clicks, impressions, CTR and position by date, page and query.",
+        purpose:
+          "Clicks, impressions, CTR and position by date, page, query, device, country, search appearance and surface.",
         status: "partial",
         evidence: "src/lib/search-console.server.ts",
-        gap: "Only date, page and query dimensions are stored. Country, device, search appearance and search type (image, video, news, discover) are never requested, so no device or geography evidence exists.",
+        gap: "Date, page, query, device, country and search appearance dimensions are stored, plus image, video, news, Discover and Google News totals. Still missing: dimension filter groups (for example one country or one page prefix) and multi-day aggregated reports.",
       }),
       op({
         id: "gsc.urlinspection.inspect",

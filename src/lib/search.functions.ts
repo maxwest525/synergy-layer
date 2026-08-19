@@ -60,11 +60,19 @@ export type SitemapEntry = {
 type SnapshotRow = {
   kind: string;
   dimensions: string[] | null;
+  search_type: string | null;
   period_end_pt: string;
   returned_row_count: number;
   totals: unknown;
   payload: unknown;
   collected_at: string;
+};
+
+export type SurfaceTotals = {
+  surface: string;
+  clicks: number;
+  impressions: number;
+  position: number | null;
 };
 
 function num(value: unknown): number {
@@ -180,6 +188,8 @@ export const getSearchWorkspace = createServerFn({ method: "GET" })
         pageQueries: [] as SearchRow[],
         devices: [] as SearchRow[],
         countries: [] as SearchRow[],
+        searchAppearance: [] as SearchRow[],
+        surfaces: [] as SurfaceTotals[],
         sitemaps: [] as SitemapEntry[],
         recentInspections: [] as UrlInspectionEntry[],
         sitemapSubmissions: [] as SitemapSubmissionEntry[],
@@ -192,7 +202,7 @@ export const getSearchWorkspace = createServerFn({ method: "GET" })
       client
         .from("search_console_snapshots")
         .select(
-          "kind, dimensions, period_end_pt, returned_row_count, totals, payload, collected_at",
+          "kind, dimensions, search_type, period_end_pt, returned_row_count, totals, payload, collected_at",
         )
         .eq("tenant_id", tenantId)
         .eq("property", selectedProperty.site_url)
@@ -274,6 +284,19 @@ export const getSearchWorkspace = createServerFn({ method: "GET" })
       pageQueries: rowsFor("page_query", ["page", "query"]),
       devices: rowsFor("dimensional_rows", ["device"]),
       countries: rowsFor("dimensional_rows", ["country"]),
+      searchAppearance: rowsFor("dimensional_rows", ["searchAppearance"]),
+      surfaces: latest
+        .filter((snapshot) => matches(snapshot, "dimensional_rows", ["searchType"]))
+        .map((snapshot) => {
+          const totals = (snapshot.totals ?? {}) as Record<string, unknown>;
+          return {
+            surface: snapshot.search_type ?? "unknown",
+            clicks: num(totals["clicks"]),
+            impressions: num(totals["impressions"]),
+            position: optionalNum(totals["position"]),
+          };
+        })
+        .sort((a, b) => b.impressions - a.impressions),
       sitemaps: sitemapSnapshot ? readSitemaps(sitemapSnapshot.payload) : [],
       recentInspections: (inspectionResult.data ?? []).map((inspection) => ({
         id: inspection.id,
