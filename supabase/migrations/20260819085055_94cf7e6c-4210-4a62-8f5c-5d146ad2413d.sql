@@ -1,0 +1,1 @@
+ALTER TABLE public.page_metadata_observations ADD COLUMN IF NOT EXISTS details jsonb;

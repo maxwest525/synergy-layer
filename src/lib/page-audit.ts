@@ -4,6 +4,8 @@
  * reused across more than one page. Nothing here fetches or estimates.
  */
 
+import type { CheckFinding, PageFacts } from "./page-checks";
+
 export type PageMetadataObservation = {
   url: string;
   finalUrl: string | null;
@@ -12,6 +14,7 @@ export type PageMetadataObservation = {
   renderedBy: string | null;
   error: string | null;
   observedAt: string;
+  facts?: PageFacts | null;
 };
 
 export type DuplicateField = "title" | "h1";
@@ -29,6 +32,7 @@ export type PageAuditView = {
   lastObservedAt: string | null;
   observations: PageMetadataObservation[];
   duplicates: DuplicateGroup[];
+  findings: CheckFinding[];
   instruction: string;
 };
 

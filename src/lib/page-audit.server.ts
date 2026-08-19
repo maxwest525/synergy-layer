@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database } from "@/integrations/supabase/types";
-import { createRenderedVerifier } from "./execution/execute.server";
+import { extractPageFacts, evaluatePages, groupFindings, buildAuditHeadline, type PageFacts } from "./page-checks";
 import {
   buildAuditInstruction,
   findDuplicateWording,
@@ -9,6 +9,56 @@ import {
   type PageAuditView,
   type PageMetadataObservation,
 } from "./page-audit";
+
+const FIRECRAWL_URL = "https://api.firecrawl.dev/v2/scrape";
+
+/** Renders one live page and returns its raw HTML and text. Throws with the real reason. */
+async function scrapePage(url: string, key: string): Promise<{ html: string; markdown: string; finalUrl: string }> {
+  const response = await fetch(FIRECRAWL_URL, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      url,
+      formats: ["rawHtml", "markdown"],
+      onlyMainContent: false,
+      waitFor: 3000,
+      maxAge: 0,
+    }),
+  });
+  const text = await response.text();
+  if (!response.ok) throw new Error(`Firecrawl responded ${response.status}, so nothing was read.`);
+  let parsed: {
+    success?: boolean;
+    error?: string;
+    data?: {
+      rawHtml?: string;
+      markdown?: string;
+      metadata?: { sourceURL?: string; url?: string; statusCode?: number };
+    };
+  };
+  try {
+    parsed = JSON.parse(text) as typeof parsed;
+  } catch {
+    throw new Error("Firecrawl returned an unreadable response, so nothing was read.");
+  }
+  if (parsed.success === false) {
+    throw new Error(`Firecrawl could not render the page: ${parsed.error ?? "no reason given"}.`);
+  }
+  const status = parsed.data?.metadata?.statusCode;
+  if (typeof status === "number" && (status < 200 || status >= 300)) {
+    throw new Error(`The public page returned HTTP ${status} when rendered.`);
+  }
+  return {
+    html: parsed.data?.rawHtml ?? "",
+    markdown: parsed.data?.markdown ?? "",
+    finalUrl: parsed.data?.metadata?.sourceURL ?? parsed.data?.metadata?.url ?? url,
+  };
+}
+
+function factsFromDetails(details: unknown): PageFacts | null {
+  if (!details || typeof details !== "object") return null;
+  return details as PageFacts;
+}
 
 type Client = SupabaseClient<Database>;
 
@@ -75,6 +125,7 @@ function toObservation(row: {
   rendered_by: string | null;
   error: string | null;
   observed_at: string;
+  details: unknown;
 }): PageMetadataObservation {
   return {
     url: row.url,
@@ -84,6 +135,7 @@ function toObservation(row: {
     renderedBy: row.rendered_by,
     error: row.error,
     observedAt: row.observed_at,
+    facts: factsFromDetails(row.details),
   };
 }
 
@@ -98,13 +150,14 @@ export async function readPageAudit(client: Client, tenantId: string): Promise<P
       lastObservedAt: null,
       observations: [],
       duplicates: [],
-      instruction: "Select a Search Console property before auditing page wording.",
+      findings: [],
+      instruction: "Select a Search Console property before auditing your pages.",
     };
   }
 
   const { data, error } = await client
     .from("page_metadata_observations")
-    .select("url, final_url, title, h1, rendered_by, error, observed_at")
+    .select("url, final_url, title, h1, rendered_by, error, observed_at, details")
     .eq("tenant_id", tenantId)
     .eq("property", property)
     .order("observed_at", { ascending: false })
@@ -114,6 +167,10 @@ export async function readPageAudit(client: Client, tenantId: string): Promise<P
   const observations = selectLatestObservations((data ?? []).map(toObservation));
   const readable = observations.filter((observation) => observation.error === null);
   const duplicates = findDuplicateWording(readable);
+  const analyzed = readable
+    .filter((observation) => observation.facts)
+    .map((observation) => ({ url: observation.url, facts: observation.facts as PageFacts }));
+  const findings = groupFindings(evaluatePages(analyzed));
 
   return {
     property,
@@ -122,11 +179,15 @@ export async function readPageAudit(client: Client, tenantId: string): Promise<P
     lastObservedAt: observations[0]?.observedAt ?? null,
     observations,
     duplicates,
-    instruction: buildAuditInstruction({
-      observedPages: readable.length,
-      failedPages: observations.length - readable.length,
-      duplicates,
-    }),
+    findings,
+    instruction:
+      analyzed.length > 0
+        ? buildAuditHeadline({ observedPages: readable.length, findings })
+        : buildAuditInstruction({
+            observedPages: readable.length,
+            failedPages: observations.length - readable.length,
+            duplicates,
+          }),
   };
 }
 
@@ -143,9 +204,9 @@ export async function runPageAudit(
   const property = await selectedProperty(client, tenantId);
   if (!property) throw new Error("Select a Search Console property before auditing page wording.");
 
-  const renderer = createRenderedVerifier();
-  if (!renderer) {
-    throw new Error("Page wording cannot be read: FIRECRAWL_API_KEY is not configured.");
+  const key = process.env["FIRECRAWL_API_KEY"];
+  if (!key) {
+    throw new Error("Pages cannot be read: FIRECRAWL_API_KEY is not configured.");
   }
 
   const urls = (await reportedPageUrls(client, tenantId, property)).slice(0, AUDIT_PAGE_LIMIT);
@@ -159,15 +220,17 @@ export async function runPageAudit(
   const rows: Database["public"]["Tables"]["page_metadata_observations"]["Insert"][] = [];
   for (const url of urls) {
     try {
-      const rendered = await renderer.render(url);
+      const rendered = await scrapePage(url, key);
+      const facts = extractPageFacts(rendered.html, rendered.markdown, rendered.finalUrl);
       rows.push({
         tenant_id: tenantId,
         property,
         url,
         final_url: rendered.finalUrl,
-        title: rendered.title,
-        h1: rendered.heading,
-        rendered_by: rendered.renderedBy,
+        title: facts.title,
+        h1: facts.h1s[0] ?? null,
+        rendered_by: "Firecrawl",
+        details: JSON.parse(JSON.stringify(facts)) as Database["public"]["Tables"]["page_metadata_observations"]["Row"]["details"],
         error: null,
         observed_at: observedAt,
         requested_by: actorId,
