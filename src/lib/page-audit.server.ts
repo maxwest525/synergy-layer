@@ -9,6 +9,15 @@ import {
   type PageAuditView,
   type PageMetadataObservation,
 } from "./page-audit";
+import {
+  buildSiteHeadline,
+  declaredSitemapsFrom,
+  evaluateSite,
+  isSitemapIndex,
+  pagesMissingFromSitemap,
+  sitemapLocations,
+  type SiteFacts,
+} from "./site-checks";
 
 const FIRECRAWL_URL = "https://api.firecrawl.dev/v2/scrape";
 
@@ -63,7 +72,91 @@ function factsFromDetails(details: unknown): PageFacts | null {
 type Client = SupabaseClient<Database>;
 
 /** Upper bound on pages read in one audit run so a single click cannot fan out unbounded. */
-export const AUDIT_PAGE_LIMIT = 40;
+export const AUDIT_PAGE_LIMIT = 100;
+
+/** The public origin of a Search Console property, or null when it has none. */
+export function originForProperty(property: string): string | null {
+  if (property.startsWith("sc-domain:")) {
+    const domain = property.slice("sc-domain:".length).trim();
+    return domain ? `https://${domain}` : null;
+  }
+  try {
+    return new URL(property).origin;
+  } catch {
+    return null;
+  }
+}
+
+async function fetchText(url: string): Promise<{ status: number | null; body: string | null }> {
+  try {
+    const response = await fetch(url, { redirect: "follow" });
+    const body = await response.text();
+    return { status: response.status, body: response.ok ? body : null };
+  } catch {
+    return { status: null, body: null };
+  }
+}
+
+/**
+ * Reads the crawl directives of the whole site: robots.txt, every sitemap it
+ * declares, and the well known sitemap address. One level of sitemap index is
+ * followed so a split sitemap still yields its page list.
+ */
+export async function readSiteDocuments(origin: string): Promise<{
+  robotsStatus: number | null;
+  robotsBody: string | null;
+  declaredSitemaps: string[];
+  sitemapUrl: string | null;
+  sitemapStatus: number | null;
+  sitemapUrls: string[];
+}> {
+  const robots = await fetchText(`${origin}/robots.txt`);
+  const declaredSitemaps = robots.body ? declaredSitemapsFrom(robots.body) : [];
+  const candidates = [...new Set([...declaredSitemaps, `${origin}/sitemap.xml`])];
+
+  for (const candidate of candidates) {
+    const document = await fetchText(candidate);
+    if (document.body === null) {
+      if (candidate === candidates.at(-1)) {
+        return {
+          robotsStatus: robots.status,
+          robotsBody: robots.body,
+          declaredSitemaps,
+          sitemapUrl: candidate,
+          sitemapStatus: document.status,
+          sitemapUrls: [],
+        };
+      }
+      continue;
+    }
+    let urls = sitemapLocations(document.body);
+    if (isSitemapIndex(document.body)) {
+      const children: string[] = [];
+      for (const child of urls.slice(0, 10)) {
+        const childDocument = await fetchText(child);
+        if (childDocument.body) children.push(...sitemapLocations(childDocument.body));
+      }
+      urls = [...new Set(children)];
+    }
+    return {
+      robotsStatus: robots.status,
+      robotsBody: robots.body,
+      declaredSitemaps,
+      sitemapUrl: candidate,
+      sitemapStatus: document.status,
+      sitemapUrls: urls,
+    };
+  }
+
+  return {
+    robotsStatus: robots.status,
+    robotsBody: robots.body,
+    declaredSitemaps,
+    sitemapUrl: null,
+    sitemapStatus: null,
+    sitemapUrls: [],
+  };
+}
 
 function payloadPageUrls(payload: unknown): string[] {
   const rows =
@@ -139,6 +232,29 @@ function toObservation(row: {
   };
 }
 
+function siteFactsFrom(value: unknown): SiteFacts | null {
+  if (!value || typeof value !== "object") return null;
+  const record = value as Record<string, unknown>;
+  return typeof record["origin"] === "string" ? (value as SiteFacts) : null;
+}
+
+async function latestSiteFacts(
+  client: Client,
+  tenantId: string,
+  property: string,
+): Promise<{ facts: SiteFacts | null; observedAt: string | null }> {
+  const { data, error } = await client
+    .from("site_audit_snapshots")
+    .select("facts, observed_at")
+    .eq("tenant_id", tenantId)
+    .eq("property", property)
+    .order("observed_at", { ascending: false })
+    .limit(1);
+  if (error) throw new Error(error.message);
+  const row = data?.[0];
+  return { facts: row ? siteFactsFrom(row.facts) : null, observedAt: row?.observed_at ?? null };
+}
+
 /** Reads the stored audit without touching any external service. */
 export async function readPageAudit(client: Client, tenantId: string): Promise<PageAuditView> {
   const property = await selectedProperty(client, tenantId);
@@ -151,6 +267,10 @@ export async function readPageAudit(client: Client, tenantId: string): Promise<P
       observations: [],
       duplicates: [],
       findings: [],
+      siteFindings: [],
+      siteInstruction:
+        "Select a Search Console property before running the technical site checks.",
+      siteObservedAt: null,
       instruction: "Select a Search Console property before auditing your pages.",
     };
   }
@@ -161,7 +281,7 @@ export async function readPageAudit(client: Client, tenantId: string): Promise<P
     .eq("tenant_id", tenantId)
     .eq("property", property)
     .order("observed_at", { ascending: false })
-    .limit(600);
+    .limit(1200);
   if (error) throw new Error(error.message);
 
   const observations = selectLatestObservations((data ?? []).map(toObservation));
@@ -172,6 +292,9 @@ export async function readPageAudit(client: Client, tenantId: string): Promise<P
     .map((observation) => ({ url: observation.url, facts: observation.facts as PageFacts }));
   const findings = groupFindings(evaluatePages(analyzed));
 
+  const site = await latestSiteFacts(client, tenantId, property);
+  const siteFindings = site.facts ? evaluateSite(site.facts) : [];
+
   return {
     property,
     observedPages: readable.length,
@@ -180,6 +303,11 @@ export async function readPageAudit(client: Client, tenantId: string): Promise<P
     observations,
     duplicates,
     findings,
+    siteFindings,
+    siteInstruction: site.facts
+      ? buildSiteHeadline(siteFindings, readable.length)
+      : "No technical site checks have run yet. Run the audit to read robots.txt, the sitemap and every page.",
+    siteObservedAt: site.observedAt,
     instruction:
       analyzed.length > 0
         ? buildAuditHeadline({ observedPages: readable.length, findings })
@@ -192,9 +320,10 @@ export async function readPageAudit(client: Client, tenantId: string): Promise<P
 }
 
 /**
- * Reads the live wording of every page Google reported for the selected
- * property and stores one immutable observation per page. A page that cannot
- * be rendered is stored with its failure reason rather than skipped.
+ * Reads the whole site: robots.txt, the sitemap, and the live wording of every
+ * page discovered from the sitemap and from what Google reported. One immutable
+ * observation is stored per page, and one per site wide read. A page that
+ * cannot be rendered is stored with its failure reason rather than skipped.
  */
 export async function runPageAudit(
   client: Client,
@@ -209,15 +338,27 @@ export async function runPageAudit(
     throw new Error("Pages cannot be read: FIRECRAWL_API_KEY is not configured.");
   }
 
-  const urls = (await reportedPageUrls(client, tenantId, property)).slice(0, AUDIT_PAGE_LIMIT);
+  const origin = originForProperty(property);
+  if (!origin) {
+    throw new Error(`The selected property ${property} has no readable public address.`);
+  }
+
+  const documents = await readSiteDocuments(origin);
+  const reported = await reportedPageUrls(client, tenantId, property);
+  const sitemapPages = documents.sitemapUrls.filter((url) => url.startsWith(origin));
+
+  // Pages Google reported come first: they already carry search evidence. The
+  // sitemap then fills in everything Google has not reported yet.
+  const urls = [...new Set([...reported, ...sitemapPages])].slice(0, AUDIT_PAGE_LIMIT);
   if (urls.length === 0) {
     throw new Error(
-      "No page rows are stored yet. Run the Search Console observation first, then audit page wording.",
+      "No pages could be discovered. Publish a sitemap or run the Search Console observation first, then audit the site.",
     );
   }
 
   const observedAt = new Date().toISOString();
   const rows: Database["public"]["Tables"]["page_metadata_observations"]["Insert"][] = [];
+  const unreadablePages: string[] = [];
   for (const url of urls) {
     try {
       const rendered = await scrapePage(url, key);
@@ -236,6 +377,7 @@ export async function runPageAudit(
         requested_by: actorId,
       });
     } catch (error) {
+      unreadablePages.push(url);
       rows.push({
         tenant_id: tenantId,
         property,
@@ -253,6 +395,31 @@ export async function runPageAudit(
 
   const { error } = await client.from("page_metadata_observations").insert(rows);
   if (error) throw new Error(error.message);
+
+  const siteFacts: SiteFacts = {
+    origin,
+    robotsStatus: documents.robotsStatus,
+    robotsBody: documents.robotsBody,
+    declaredSitemaps: documents.declaredSitemaps,
+    sitemapUrl: documents.sitemapUrl,
+    sitemapStatus: documents.sitemapStatus,
+    sitemapUrlCount: documents.sitemapUrl ? documents.sitemapUrls.length : null,
+    pagesMissingFromSitemap: pagesMissingFromSitemap({
+      reportedUrls: reported,
+      sitemapUrls: documents.sitemapUrls,
+    }),
+    unreadablePages,
+  };
+
+  const { error: siteError } = await client.from("site_audit_snapshots").insert({
+    tenant_id: tenantId,
+    property,
+    origin,
+    facts: JSON.parse(JSON.stringify(siteFacts)) as Database["public"]["Tables"]["site_audit_snapshots"]["Insert"]["facts"],
+    observed_at: observedAt,
+    requested_by: actorId,
+  });
+  if (siteError) throw new Error(siteError.message);
 
   return readPageAudit(client, tenantId);
 }
