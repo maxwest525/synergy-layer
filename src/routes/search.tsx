@@ -542,6 +542,49 @@ function SearchWorkspacePage() {
             </SectionCard>
           </div>
 
+          <div className="grid gap-4 lg:grid-cols-2">
+            <SectionCard
+              id="search-appearance"
+              title="Search appearance"
+              description="Which rich result types earned impressions on the latest finalized date. An empty list means Google recorded no enhanced appearances, so add structured data to compete for them."
+            >
+              <RowTable
+                rows={data.searchAppearance}
+                label="Appearance"
+                emptyTitle="No search appearance rows stored"
+              />
+            </SectionCard>
+            <SectionCard
+              id="surfaces"
+              title="Surfaces beyond web search"
+              description="Image, video, news, Discover and Google News totals for the latest finalized date. Zero means Google recorded no activity there, not a missing read."
+            >
+              {data.surfaces.length === 0 ? (
+                <p className="text-xs text-muted-foreground">
+                  No surface totals stored yet. Run a Search Console collection to record them.
+                </p>
+              ) : (
+                <ul className="divide-y divide-border/60">
+                  {data.surfaces.map((surface) => (
+                    <li
+                      key={surface.surface}
+                      className="flex items-center justify-between gap-3 py-2 text-xs"
+                    >
+                      <span className="font-medium capitalize text-foreground">
+                        {surface.surface}
+                      </span>
+                      <span className="text-muted-foreground">
+                        {surface.clicks.toLocaleString()} clicks ·{" "}
+                        {surface.impressions.toLocaleString()} impressions
+                        {surface.position === null ? "" : ` · pos ${surface.position.toFixed(1)}`}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </SectionCard>
+          </div>
+
           <SectionCard
             id="indexing"
             title="URL indexing & sitemaps"
