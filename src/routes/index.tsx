@@ -38,6 +38,7 @@ import {
 } from "@/lib/action-center";
 import { approveChangeRequest, rejectChangeRequest } from "@/lib/change-requests.functions";
 import { executeChangeRequest } from "@/lib/execution/execution.functions";
+import { getMeasurementWatch } from "@/lib/measurement-watch.functions";
 import { resolveInboxItem } from "@/lib/os-admin.functions";
 import { getInbox, getOverview } from "@/lib/os.functions";
 import { OperatorRouteError } from "@/components/os/route-error";
@@ -478,6 +479,17 @@ function InboxPage() {
     queryFn: () => fetchInbox(),
     enabled: session.signedIn,
   });
+  const fetchMeasurementWatch = useServerFn(getMeasurementWatch);
+  const { data: measurementWatch = [] } = useQuery({
+    queryKey: ["measurement-watch"],
+    queryFn: () => fetchMeasurementWatch(),
+    enabled: session.signedIn,
+  });
+  const watchBySubject = useMemo(
+    () => new Map(measurementWatch.map((entry) => [entry.changeRequestId, entry])),
+    [measurementWatch],
+  );
+
   const queryClient = useQueryClient();
   const resolve = useServerFn(resolveInboxItem);
   const approve = useServerFn(approveChangeRequest);
@@ -651,28 +663,50 @@ function InboxPage() {
         >
           <GlassCard className="p-5">
             <ul className="space-y-3">
-              {measuring.map(({ item, reviewRoute }) => (
-                <li
-                  key={item.id}
-                  className="flex flex-wrap items-start justify-between gap-3 border-b border-border/50 pb-3 last:border-b-0 last:pb-0"
-                >
-                  <div className="min-w-0 space-y-1">
-                    {reviewRoute ? (
-                      <InboxLink route={reviewRoute}>{item.title}</InboxLink>
+              {measuring.map(({ item, reviewRoute }) => {
+                const watch = item.subject_id ? watchBySubject.get(item.subject_id) : undefined;
+                const ready = (watch?.readyWindowDays.length ?? 0) > 0;
+                return (
+                  <li
+                    key={item.id}
+                    className="flex flex-wrap items-start justify-between gap-3 border-b border-border/50 pb-3 last:border-b-0 last:pb-0"
+                  >
+                    <div className="min-w-0 space-y-1">
+                      {reviewRoute ? (
+                        <InboxLink route={reviewRoute}>{item.title}</InboxLink>
+                      ) : (
+                        <p className="text-sm font-medium text-foreground">{item.title}</p>
+                      )}
+                      {item.summary ? (
+                        <p className="text-sm text-muted-foreground">{item.summary}</p>
+                      ) : null}
+                      {watch ? (
+                        <p className="text-sm text-foreground/80">
+                          {ready
+                            ? `${watch.readyWindowDays.join(" and ")} day evidence is stored. Close the loop: record the outcome.`
+                            : watch.nextWindowAvailableOn
+                              ? `No outcome yet. The ${watch.nextWindowDays} day evidence window opens ${watch.nextWindowAvailableOn}.`
+                              : "No follow-up evidence window is scheduled for this change."}
+                        </p>
+                      ) : null}
+                      <p className="text-xs text-muted-foreground">
+                        {item.changeRequest ? `${actionCenterStage(item.changeRequest)} · ` : ""}
+                        {formatWhen(item.created_at)}
+                      </p>
+                    </div>
+                    {ready && item.subject_id ? (
+                      <Button asChild variant="outline" size="sm">
+                        <Link to="/changes/$id" params={{ id: item.subject_id }}>
+                          Record the outcome
+                        </Link>
+                      </Button>
                     ) : (
-                      <p className="text-sm font-medium text-foreground">{item.title}</p>
+                      <StatePill label="Watching" tone="primary" />
                     )}
-                    {item.summary ? (
-                      <p className="text-sm text-muted-foreground">{item.summary}</p>
-                    ) : null}
-                    <p className="text-xs text-muted-foreground">
-                      {item.changeRequest ? `${actionCenterStage(item.changeRequest)} · ` : ""}
-                      {formatWhen(item.created_at)}
-                    </p>
-                  </div>
-                  <StatePill label="Watching" tone="primary" />
-                </li>
-              ))}
+                  </li>
+                );
+              })}
+
             </ul>
           </GlassCard>
         </Section>
