@@ -3116,6 +3116,56 @@ export type Database = {
           },
         ]
       }
+      page_metadata_observations: {
+        Row: {
+          error: string | null
+          final_url: string | null
+          h1: string | null
+          id: string
+          observed_at: string
+          property: string
+          rendered_by: string | null
+          requested_by: string | null
+          tenant_id: string
+          title: string | null
+          url: string
+        }
+        Insert: {
+          error?: string | null
+          final_url?: string | null
+          h1?: string | null
+          id?: string
+          observed_at?: string
+          property: string
+          rendered_by?: string | null
+          requested_by?: string | null
+          tenant_id: string
+          title?: string | null
+          url: string
+        }
+        Update: {
+          error?: string | null
+          final_url?: string | null
+          h1?: string | null
+          id?: string
+          observed_at?: string
+          property?: string
+          rendered_by?: string | null
+          requested_by?: string | null
+          tenant_id?: string
+          title?: string | null
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "page_metadata_observations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pagespeed_snapshots: {
         Row: {
           analysis_timestamp: string | null
