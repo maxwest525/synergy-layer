@@ -239,3 +239,22 @@ secret paths are stored.
   resolution, creative intelligence, and live paid-SERP observation remain
   blocked until their own registry states become real. All ads schedules remain
   disabled.
+
+## Discovery only, no implementation: two further Google APIs
+
+Operator disclosed on 2026-08-19 that the GA4 Measurement Protocol and the GA4
+Admin API are available, plus a third "Hub API" that is still unnamed. Per the
+documentation-first rule, authoritative digests were filed before any code:
+
+- `docs/integrations/ga4-admin-api/DIGEST.md` — read-only configuration
+  discovery. `accountSummaries.list` would make GA4 property binding
+  evidence-driven instead of the hardcoded `properties/536830122` reference.
+  REST over fetch, not the gRPC GAPIC client, because of the Worker runtime.
+- `docs/integrations/ga4-measurement-protocol/DIGEST.md` — a write-only path
+  into a live GA4 property. Its live endpoint returns no error codes, so a
+  successful POST is not evidence of anything; proof requires a debug-endpoint
+  validation pass plus a subsequent Data API read observing the event. Mutating,
+  therefore approval-gated and never on a cadence.
+
+No capability, schema, secret, or route exists for either. Both remain
+unapproved. The Hub API has no digest because the vendor is unidentified.
