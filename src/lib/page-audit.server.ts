@@ -230,7 +230,7 @@ export async function runPageAudit(
         title: facts.title,
         h1: facts.h1s[0] ?? null,
         rendered_by: "Firecrawl",
-        details: facts as unknown as Database["public"]["Tables"]["page_metadata_observations"]["Insert"]["details"],
+        details: JSON.parse(JSON.stringify(facts)) as Database["public"]["Tables"]["page_metadata_observations"]["Row"]["details"],
         error: null,
         observed_at: observedAt,
         requested_by: actorId,
