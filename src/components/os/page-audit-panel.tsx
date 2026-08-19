@@ -85,6 +85,39 @@ export function PageAuditPanel() {
         </Button>
       </div>
 
+      <div className="space-y-2 rounded-xl border border-border/60 p-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h3 className="text-sm font-semibold text-foreground">Technical site checks</h3>
+          <span className="text-xs text-muted-foreground">
+            {data?.siteObservedAt ? `Read ${formatWhen(data.siteObservedAt)}` : "Not read yet"}
+          </span>
+        </div>
+        <p className="text-sm text-muted-foreground">{data?.siteInstruction ?? "Loading..."}</p>
+        {(data?.siteFindings ?? []).length > 0 ? (
+          <ul className="space-y-2">
+            {(data?.siteFindings ?? []).map((finding) => (
+              <li
+                key={finding.check}
+                className="flex flex-wrap items-start justify-between gap-2 border-t border-border/40 pt-2"
+              >
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <StatePill tone={TONE[finding.severity]} label={finding.label} />
+                    <span className="text-sm text-foreground">{finding.instruction}</span>
+                  </div>
+                  <p className="mt-1 break-all text-xs text-muted-foreground">{finding.detail}</p>
+                </div>
+                <span className="text-xs text-muted-foreground">
+                  {finding.fixableByChangeKind
+                    ? "Fix goes through crawl directives"
+                    : "Manual fix for now"}
+                </span>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </div>
+
       {audit.isError ? (
         <p className="text-sm text-destructive">
           The page audit could not be loaded. {audit.error.message}
