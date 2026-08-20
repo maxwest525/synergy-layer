@@ -44,6 +44,11 @@ export type QueueSource = {
   readonly severity: AuditSeverity | null;
   /** Set when a change request was already drafted from this recommendation. */
   readonly linkedChangeId: string | null;
+  /**
+   * `change_requests.proposal_type`, on change rows only. It decides whether a
+   * redraft is possible: only the title/H1 lane has one.
+   */
+  readonly proposalType?: string | null;
   readonly createdAt: string;
   readonly updatedAt: string;
 };
@@ -55,6 +60,8 @@ export type QueueItem = QueueSource & {
   readonly tone: UrgencyTone;
   readonly canRestore: boolean;
   readonly canIgnore: boolean;
+  /** False when no redraft path exists for this row, so the verb is not offered. */
+  readonly canRegenerate: boolean;
 };
 
 export type Queue = {
@@ -160,6 +167,22 @@ function canIgnoreSource(source: QueueSource): boolean {
 }
 
 /**
+ * Whether the wording can be redrafted in place.
+ *
+ * Only `regenerateTitleH1Proposal` exists, and it accepts a title/H1 change
+ * request that is still `proposed`; approval freezes the wording, and the
+ * page-metadata lane has no redraft path at all. Offering the verb anywhere else
+ * would be a button that always fails, so it is reported as unavailable instead.
+ */
+function canRegenerateSource(source: QueueSource): boolean {
+  return (
+    source.kind === "change" &&
+    source.proposalType === "title_h1" &&
+    source.storedState === "proposed"
+  );
+}
+
+/**
  * Collapses repeats of the same finding *within one queue state*.
  *
  * Duplicates are matched on `(kind, fingerprint)` so a recommendation and the
@@ -213,6 +236,7 @@ function toItem(source: QueueSource, queueState: QueueState, now: string): Queue
     tone: toneForUrgency(urgency),
     canRestore: canRestoreSource(source),
     canIgnore: canIgnoreSource(source),
+    canRegenerate: canRegenerateSource(source),
   };
 }
 

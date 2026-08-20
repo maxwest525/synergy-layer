@@ -114,6 +114,33 @@ describe("restore and ignore legality", () => {
     expect(queue.ignored[0]?.canRestore).toBe(false);
   });
 
+  it("offers regenerate only for a title fix that is still a draft", () => {
+    const queue = buildQueue(
+      [
+        source({ id: "ok", kind: "change", storedState: "proposed", proposalType: "title_h1" }),
+        // Approval freezes the wording, so there is nothing left to redraft.
+        source({ id: "frozen", kind: "change", storedState: "applied", proposalType: "title_h1" }),
+        // The page-metadata lane has no redraft path at all.
+        source({
+          id: "meta",
+          kind: "change",
+          storedState: "proposed",
+          proposalType: "page_metadata",
+        }),
+        // A finding is not a draft yet; drafting it is a different verb.
+        source({ id: "finding" }),
+      ],
+      NOW,
+    );
+    const byId = new Map(
+      [...queue.open, ...queue.done].map((item) => [item.id, item.canRegenerate]),
+    );
+    expect(byId.get("ok")).toBe(true);
+    expect(byId.get("frozen")).toBe(false);
+    expect(byId.get("meta")).toBe(false);
+    expect(byId.get("finding")).toBe(false);
+  });
+
   it("refuses to offer ignore for an audit finding, which has nowhere to store it", () => {
     const queue = buildQueue(
       [source({ id: "a1", kind: "audit", storedState: "proposed", severity: "critical" })],
