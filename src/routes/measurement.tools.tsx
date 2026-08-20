@@ -28,7 +28,7 @@ import {
   type PageSpeedSnapshotView,
 } from "@/lib/measurement.functions";
 
-export const Route = createFileRoute("/measurement")({
+export const Route = createFileRoute("/measurement/tools")({
   // Operator surface: nothing here is public and the server read needs the
   // operator bearer token, so it renders client side like the other workspaces.
   ssr: false,

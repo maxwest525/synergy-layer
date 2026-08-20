@@ -147,7 +147,16 @@ const workspaces: readonly Workspace[] = [
     to: "/measurement",
     label: "Site health",
     icon: Gauge,
-    hint: "Speed and traffic",
+    hint: "Crawl checks and fix outcomes",
+    // The category front door, matching os-taxonomy. Its evidence workspace is
+    // the entry below.
+    group: "decisions",
+  },
+  {
+    to: "/measurement/tools",
+    label: "Speed and runs",
+    icon: Gauge,
+    hint: "PageSpeed readings and measurement runs",
     group: "evidence",
   },
   { to: "/ga4", label: "Analytics", icon: Gauge, hint: "GA4 property reads", group: "evidence" },
@@ -261,7 +270,12 @@ type NavSection = {
 };
 
 function workspaceAt(route: string): Workspace {
-  return workspaces.find((workspace) => workspace.to === route)!;
+  const found = workspaces.find((workspace) => workspace.to === route);
+  // Thrown by name rather than asserted. A non-null assertion here turned a
+  // renamed route into `undefined` inside a section, and every breadcrumb
+  // lookup after it threw a TypeError several functions away.
+  if (!found) throw new Error(`No workspace is registered for ${route}.`);
+  return found;
 }
 
 function workspacesAt(routes: readonly string[]): readonly Workspace[] {
@@ -283,7 +297,7 @@ const navSections: readonly NavSection[] = [
       "/search",
       "/keywords",
       "/competitors",
-      "/measurement",
+      "/measurement/tools",
       "/ga4",
       "/ads",
       "/authority",

@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/integrations/supabase/types";
+import type { MeasurementWindowDays } from "./change-measurement";
 import {
   buildGscWindowObservation,
   ptDate,
@@ -182,7 +183,7 @@ async function captureGsc(admin: Client, cycle: Cycle, window: Window) {
     property: cycle.gsc_property,
     targetUrl: cycle.target_url,
     window: {
-      windowDays: window.window_days as 0 | 7 | 14 | 28,
+      windowDays: window.window_days as MeasurementWindowDays,
       periodStartPt: window.period_start_pt,
       periodEndPt: window.period_end_pt,
     },
@@ -275,7 +276,7 @@ async function captureGa4(admin: Client, cycle: Cycle, window: Window) {
       targetUrl: cycle.target_url,
       startDate: window.period_start_pt,
       endDate: window.period_end_pt,
-      windowDays: window.window_days as 0 | 7 | 14 | 28,
+      windowDays: window.window_days as MeasurementWindowDays,
     });
     const observation = result.inventory;
     await append(admin, {

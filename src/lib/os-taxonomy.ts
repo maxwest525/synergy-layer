@@ -72,7 +72,9 @@ export const WORKSPACE_GROUP: Readonly<Record<string, TaxonomyGroupKey>> = {
   // Same split: the category page is a front door, its workspace is evidence.
   "/pages": "decisions",
   "/pages/tools": "evidence",
-  "/measurement": "evidence",
+  // The category front door, not an evidence workspace.
+  "/measurement": "decisions",
+  "/measurement/tools": "evidence",
   "/ads": "evidence",
   "/authority": "evidence",
   "/essentials": "evidence",

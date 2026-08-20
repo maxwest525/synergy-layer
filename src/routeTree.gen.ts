@@ -26,7 +26,6 @@ import { Route as GapsRouteImport } from './routes/gaps'
 import { Route as KeywordsRouteImport } from './routes/keywords'
 import { Route as KnowledgeRouteImport } from './routes/knowledge'
 import { Route as McpRouteImport } from './routes/mcp'
-import { Route as MeasurementRouteImport } from './routes/measurement'
 import { Route as NotesRouteImport } from './routes/notes'
 import { Route as OpenaiAdsRouteImport } from './routes/openai-ads'
 import { Route as OpenseoRouteImport } from './routes/openseo'
@@ -58,6 +57,8 @@ import { Route as ChangesIdRouteImport } from './routes/changes.$id'
 import { Route as KnowledgeIndexRouteImport } from './routes/knowledge.index'
 import { Route as KnowledgeIdRouteImport } from './routes/knowledge.$id'
 import { Route as KnowledgeManualRouteImport } from './routes/knowledge.manual'
+import { Route as MeasurementIndexRouteImport } from './routes/measurement.index'
+import { Route as MeasurementToolsRouteImport } from './routes/measurement.tools'
 import { Route as PagesIndexRouteImport } from './routes/pages.index'
 import { Route as PagesToolsRouteImport } from './routes/pages.tools'
 import { Route as RecommendationsIndexRouteImport } from './routes/recommendations.index'
@@ -163,11 +164,6 @@ const KnowledgeRoute = KnowledgeRouteImport.update({
 const McpRoute = McpRouteImport.update({
   id: '/mcp',
   path: '/mcp',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const MeasurementRoute = MeasurementRouteImport.update({
-  id: '/measurement',
-  path: '/measurement',
   getParentRoute: () => rootRouteImport,
 } as any)
 const NotesRoute = NotesRouteImport.update({
@@ -327,6 +323,16 @@ const KnowledgeManualRoute = KnowledgeManualRouteImport.update({
   path: '/manual',
   getParentRoute: () => KnowledgeRoute,
 } as any)
+const MeasurementIndexRoute = MeasurementIndexRouteImport.update({
+  id: '/measurement/',
+  path: '/measurement/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MeasurementToolsRoute = MeasurementToolsRouteImport.update({
+  id: '/measurement/tools',
+  path: '/measurement/tools',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PagesIndexRoute = PagesIndexRouteImport.update({
   id: '/pages/',
   path: '/pages/',
@@ -458,7 +464,6 @@ export interface FileRoutesByFullPath {
   '/keywords': typeof KeywordsRoute
   '/knowledge': typeof KnowledgeRouteWithChildren
   '/mcp': typeof McpRoute
-  '/measurement': typeof MeasurementRoute
   '/notes': typeof NotesRoute
   '/openai-ads': typeof OpenaiAdsRoute
   '/openseo': typeof OpenseoRoute
@@ -484,6 +489,7 @@ export interface FileRoutesByFullPath {
   '/changes/$id': typeof ChangesIdRoute
   '/knowledge/$id': typeof KnowledgeIdRoute
   '/knowledge/manual': typeof KnowledgeManualRoute
+  '/measurement/tools': typeof MeasurementToolsRoute
   '/pages/tools': typeof PagesToolsRoute
   '/recommendations/$id': typeof RecommendationsIdRoute
   '/scheduler/$id': typeof SchedulerIdRoute
@@ -496,6 +502,7 @@ export interface FileRoutesByFullPath {
   '/capabilities/': typeof CapabilitiesIndexRoute
   '/changes/': typeof ChangesIndexRoute
   '/knowledge/': typeof KnowledgeIndexRoute
+  '/measurement/': typeof MeasurementIndexRoute
   '/pages/': typeof PagesIndexRoute
   '/recommendations/': typeof RecommendationsIndexRoute
   '/scheduler/': typeof SchedulerIndexRoute
@@ -526,7 +533,6 @@ export interface FileRoutesByTo {
   '/gaps': typeof GapsRoute
   '/keywords': typeof KeywordsRoute
   '/mcp': typeof McpRoute
-  '/measurement': typeof MeasurementRoute
   '/notes': typeof NotesRoute
   '/openai-ads': typeof OpenaiAdsRoute
   '/openseo': typeof OpenseoRoute
@@ -547,6 +553,7 @@ export interface FileRoutesByTo {
   '/changes/$id': typeof ChangesIdRoute
   '/knowledge/$id': typeof KnowledgeIdRoute
   '/knowledge/manual': typeof KnowledgeManualRoute
+  '/measurement/tools': typeof MeasurementToolsRoute
   '/pages/tools': typeof PagesToolsRoute
   '/recommendations/$id': typeof RecommendationsIdRoute
   '/scheduler/$id': typeof SchedulerIdRoute
@@ -559,6 +566,7 @@ export interface FileRoutesByTo {
   '/capabilities': typeof CapabilitiesIndexRoute
   '/changes': typeof ChangesIndexRoute
   '/knowledge': typeof KnowledgeIndexRoute
+  '/measurement': typeof MeasurementIndexRoute
   '/pages': typeof PagesIndexRoute
   '/recommendations': typeof RecommendationsIndexRoute
   '/scheduler': typeof SchedulerIndexRoute
@@ -594,7 +602,6 @@ export interface FileRoutesById {
   '/keywords': typeof KeywordsRoute
   '/knowledge': typeof KnowledgeRouteWithChildren
   '/mcp': typeof McpRoute
-  '/measurement': typeof MeasurementRoute
   '/notes': typeof NotesRoute
   '/openai-ads': typeof OpenaiAdsRoute
   '/openseo': typeof OpenseoRoute
@@ -620,6 +627,7 @@ export interface FileRoutesById {
   '/changes/$id': typeof ChangesIdRoute
   '/knowledge/$id': typeof KnowledgeIdRoute
   '/knowledge/manual': typeof KnowledgeManualRoute
+  '/measurement/tools': typeof MeasurementToolsRoute
   '/pages/tools': typeof PagesToolsRoute
   '/recommendations/$id': typeof RecommendationsIdRoute
   '/scheduler/$id': typeof SchedulerIdRoute
@@ -632,6 +640,7 @@ export interface FileRoutesById {
   '/capabilities/': typeof CapabilitiesIndexRoute
   '/changes/': typeof ChangesIndexRoute
   '/knowledge/': typeof KnowledgeIndexRoute
+  '/measurement/': typeof MeasurementIndexRoute
   '/pages/': typeof PagesIndexRoute
   '/recommendations/': typeof RecommendationsIndexRoute
   '/scheduler/': typeof SchedulerIndexRoute
@@ -668,7 +677,6 @@ export interface FileRouteTypes {
     | '/keywords'
     | '/knowledge'
     | '/mcp'
-    | '/measurement'
     | '/notes'
     | '/openai-ads'
     | '/openseo'
@@ -694,6 +702,7 @@ export interface FileRouteTypes {
     | '/changes/$id'
     | '/knowledge/$id'
     | '/knowledge/manual'
+    | '/measurement/tools'
     | '/pages/tools'
     | '/recommendations/$id'
     | '/scheduler/$id'
@@ -706,6 +715,7 @@ export interface FileRouteTypes {
     | '/capabilities/'
     | '/changes/'
     | '/knowledge/'
+    | '/measurement/'
     | '/pages/'
     | '/recommendations/'
     | '/scheduler/'
@@ -736,7 +746,6 @@ export interface FileRouteTypes {
     | '/gaps'
     | '/keywords'
     | '/mcp'
-    | '/measurement'
     | '/notes'
     | '/openai-ads'
     | '/openseo'
@@ -757,6 +766,7 @@ export interface FileRouteTypes {
     | '/changes/$id'
     | '/knowledge/$id'
     | '/knowledge/manual'
+    | '/measurement/tools'
     | '/pages/tools'
     | '/recommendations/$id'
     | '/scheduler/$id'
@@ -769,6 +779,7 @@ export interface FileRouteTypes {
     | '/capabilities'
     | '/changes'
     | '/knowledge'
+    | '/measurement'
     | '/pages'
     | '/recommendations'
     | '/scheduler'
@@ -803,7 +814,6 @@ export interface FileRouteTypes {
     | '/keywords'
     | '/knowledge'
     | '/mcp'
-    | '/measurement'
     | '/notes'
     | '/openai-ads'
     | '/openseo'
@@ -829,6 +839,7 @@ export interface FileRouteTypes {
     | '/changes/$id'
     | '/knowledge/$id'
     | '/knowledge/manual'
+    | '/measurement/tools'
     | '/pages/tools'
     | '/recommendations/$id'
     | '/scheduler/$id'
@@ -841,6 +852,7 @@ export interface FileRouteTypes {
     | '/capabilities/'
     | '/changes/'
     | '/knowledge/'
+    | '/measurement/'
     | '/pages/'
     | '/recommendations/'
     | '/scheduler/'
@@ -876,7 +888,6 @@ export interface RootRouteChildren {
   KeywordsRoute: typeof KeywordsRoute
   KnowledgeRoute: typeof KnowledgeRouteWithChildren
   McpRoute: typeof McpRoute
-  MeasurementRoute: typeof MeasurementRoute
   NotesRoute: typeof NotesRoute
   OpenaiAdsRoute: typeof OpenaiAdsRoute
   OpenseoRoute: typeof OpenseoRoute
@@ -895,10 +906,12 @@ export interface RootRouteChildren {
   ApiAgentChatRoute: typeof ApiAgentChatRoute
   ApiStudioChatRoute: typeof ApiStudioChatRoute
   ChangesIdRoute: typeof ChangesIdRoute
+  MeasurementToolsRoute: typeof MeasurementToolsRoute
   PagesToolsRoute: typeof PagesToolsRoute
   SearchToolsRoute: typeof SearchToolsRoute
   AdsIndexRoute: typeof AdsIndexRoute
   ChangesIndexRoute: typeof ChangesIndexRoute
+  MeasurementIndexRoute: typeof MeasurementIndexRoute
   PagesIndexRoute: typeof PagesIndexRoute
   SearchIndexRoute: typeof SearchIndexRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
@@ -1029,13 +1042,6 @@ declare module '@tanstack/react-router' {
       path: '/mcp'
       fullPath: '/mcp'
       preLoaderRoute: typeof McpRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/measurement': {
-      id: '/measurement'
-      path: '/measurement'
-      fullPath: '/measurement'
-      preLoaderRoute: typeof MeasurementRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/notes': {
@@ -1254,6 +1260,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/knowledge/manual'
       preLoaderRoute: typeof KnowledgeManualRouteImport
       parentRoute: typeof KnowledgeRoute
+    }
+    '/measurement/': {
+      id: '/measurement/'
+      path: '/measurement'
+      fullPath: '/measurement/'
+      preLoaderRoute: typeof MeasurementIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/measurement/tools': {
+      id: '/measurement/tools'
+      path: '/measurement/tools'
+      fullPath: '/measurement/tools'
+      preLoaderRoute: typeof MeasurementToolsRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/pages/': {
       id: '/pages/'
@@ -1559,7 +1579,6 @@ const rootRouteChildren: RootRouteChildren = {
   KeywordsRoute: KeywordsRoute,
   KnowledgeRoute: KnowledgeRouteWithChildren,
   McpRoute: McpRoute,
-  MeasurementRoute: MeasurementRoute,
   NotesRoute: NotesRoute,
   OpenaiAdsRoute: OpenaiAdsRoute,
   OpenseoRoute: OpenseoRoute,
@@ -1579,10 +1598,12 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAgentChatRoute: ApiAgentChatRoute,
   ApiStudioChatRoute: ApiStudioChatRoute,
   ChangesIdRoute: ChangesIdRoute,
+  MeasurementToolsRoute: MeasurementToolsRoute,
   PagesToolsRoute: PagesToolsRoute,
   SearchToolsRoute: SearchToolsRoute,
   AdsIndexRoute: AdsIndexRoute,
   ChangesIndexRoute: ChangesIndexRoute,
+  MeasurementIndexRoute: MeasurementIndexRoute,
   PagesIndexRoute: PagesIndexRoute,
   SearchIndexRoute: SearchIndexRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,

@@ -52,6 +52,8 @@ export type NextActionRoute =
   | "/search/tools"
   | "/ga4"
   | "/measurement"
+  // The measurement workspace, behind the Site health category page.
+  | "/measurement/tools"
   | "/keywords"
   | "/competitors"
   | "/changes"
@@ -191,7 +193,7 @@ export function buildNextActions(facts: NextActionFacts): NextAction[] {
           : "No page speed run has been attempted, so there is no measurement to act on.",
       evidence: `${facts.pagespeed.attempts} attempt(s), ${facts.pagespeed.failures} failed, 0 stored measurement(s).${facts.pagespeed.latestError ? ` Last error: ${facts.pagespeed.latestError}.` : ""}`,
       blockedBy: facts.pagespeed.failures > 0 ? "The last provider attempt failed." : null,
-      to: "/measurement",
+      to: "/measurement/tools",
       actionLabel: "Open measurement",
       weight: 70,
     });
@@ -330,7 +332,7 @@ export function buildNextActions(facts: NextActionFacts): NextAction[] {
       reason: `${plural(facts.measurement.failedRuns, "measurement run")} failed, so the evidence on those cards is stale rather than current.`,
       evidence: `${facts.measurement.failedRuns} failed run(s)${facts.measurement.latestProvider ? `, latest from ${facts.measurement.latestProvider}` : ""}.${facts.measurement.latestError ? ` Last error: ${facts.measurement.latestError}.` : ""}`,
       blockedBy: null,
-      to: "/measurement",
+      to: "/measurement/tools",
       actionLabel: "Open measurement",
       weight: 22,
     });
@@ -440,7 +442,7 @@ export function buildMissingReasons(facts: NextActionFacts): MissingReason[] {
           ? `${facts.pagespeed.attempts} attempt(s), all failed at the provider${facts.pagespeed.latestError ? `: ${facts.pagespeed.latestError}` : ""}.`
           : "No page speed run has been attempted yet.",
       instruction: "Fix the page speed provider key, then measure now.",
-      to: "/measurement",
+      to: "/measurement/tools",
       actionLabel: "Measure page speed",
     });
   }
@@ -451,7 +453,7 @@ export function buildMissingReasons(facts: NextActionFacts): MissingReason[] {
       label: "No self hosted traffic snapshots",
       reason: "The self hosted analytics reader has not stored a snapshot for this workspace yet.",
       instruction: "Run the self hosted traffic reader now.",
-      to: "/measurement",
+      to: "/measurement/tools",
       actionLabel: "Read traffic",
     });
   }

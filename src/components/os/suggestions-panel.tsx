@@ -133,6 +133,18 @@ function ItemRow({
           >
             {item.actionLabel}
           </Link>
+        ) : item.actionTo === "/measurement" ? (
+          // The outcome lives on a tab, so the link says which one. Without it
+          // "See measurement" lands on Suggestions, which usually says nothing
+          // is waiting.
+          <Link
+            to="/measurement"
+            search={{ tab: "outcomes" as const }}
+            onClick={onNavigate}
+            className="rounded-lg border border-primary/50 px-2.5 py-1 text-xs font-medium text-primary transition-colors hover:bg-primary/10"
+          >
+            {item.actionLabel}
+          </Link>
         ) : (
           <Link
             to={item.actionTo}
