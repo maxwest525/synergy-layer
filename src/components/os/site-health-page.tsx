@@ -260,7 +260,7 @@ export function SiteHealthPage({ initialTab }: { initialTab?: TabId } = {}) {
         {tab === "suggestions" ? (
           <QueueList
             items={view.suggestions}
-            empty="No open suggestion is filed under site health right now."
+            empty="No open suggestion is filed under site health right now. Some checks cannot run at this site's traffic yet: Getting found on Google lists which."
           />
         ) : null}
 

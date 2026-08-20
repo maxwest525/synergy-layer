@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { categoryForFinding } from "./finding-router";
 import {
   assessReach,
   citedRuleCount,
@@ -8,11 +9,24 @@ import {
   type VolumeEvidence,
 } from "./rule-reachability";
 
-/** Roughly what this property actually produces: 18 impressions a day site wide. */
+/**
+ * Roughly what this property produces: eighteen impressions a day site wide,
+ * spread thin enough that no single search or page-and-search pair reaches
+ * double figures.
+ */
 const REAL: VolumeEvidence = {
-  bestPageImpressions: 40,
-  bestPageClicks: 1,
+  bestPage: { impressions: 40, clicks: 1 },
+  bestQueryImpressions: 12,
+  bestPageQueryImpressions: 9,
   pagesReported: 48,
+  windowDays: 28,
+};
+
+const NOTHING: VolumeEvidence = {
+  bestPage: null,
+  bestQueryImpressions: null,
+  bestPageQueryImpressions: null,
+  pagesReported: 0,
   windowDays: 28,
 };
 
@@ -21,6 +35,46 @@ function requirement(rule: string) {
   if (!found) throw new Error(`no requirement for ${rule}`);
   return found;
 }
+
+describe("the registry has to match the rules that actually exist", () => {
+  it("covers every rule the router files under this category", () => {
+    // The first version missed position_loss and visibility_gain, so the
+    // headline under-reported how much was blocked. Nothing pinned the two
+    // together, which is why it was invisible.
+    const registered = new Set(RULE_REQUIREMENTS.map((entry) => entry.rule));
+    const missing = ROUTED_TO_SEARCH.filter((rule) => !registered.has(rule));
+    expect(missing).toEqual([]);
+  });
+
+  it("registers nothing the router does not route here", () => {
+    for (const entry of RULE_REQUIREMENTS) {
+      expect(categoryForFinding("search-console-rules", { rule: entry.rule })).toBe("search");
+    }
+  });
+});
+
+/**
+ * Every rule the finding router files under the search category, which is the
+ * set this page filters to. Kept as a literal so a rule added to the router
+ * without a registry entry fails the test above rather than silently shrinking
+ * the count on screen.
+ */
+const ROUTED_TO_SEARCH = [
+  "declining_clicks",
+  "declining_impressions",
+  "declining_position",
+  "high_impression_low_ctr",
+  "zero_click_page",
+  "possible_query_overlap",
+  "significant_period_change",
+  "research_page_traction",
+  "striking_distance_query",
+  "position_loss",
+  "visibility_gain",
+  "zero_impression_page",
+  "query_coverage_gap",
+  "index_coverage_drift",
+] as const;
 
 describe("the finding this module exists to state", () => {
   it("says most checks cannot run at this site's volume", () => {
@@ -31,104 +85,124 @@ describe("the finding this module exists to state", () => {
   });
 
   it("says it is not the operator's fault and not a broken check", () => {
-    // An empty screen currently reads as either "all good" or "this is broken".
-    // Neither is true, and the third answer has to be sayable.
     expect(assessReach(REAL).headline).toMatch(/not a fault|not enough evidence/i);
   });
 
-  it("rests on no citations at all, which is the point", () => {
-    // Thirteen rules decide what the operator is told. Not one of them was
-    // derived from anything. Raising this number is the work in the handoff.
-    expect(citedRuleCount()).toBe(0);
+  it("rests on almost no citations, which is the point", () => {
+    // Raising this is the work in the handoff, so it is pinned as a ceiling
+    // rather than an exact number: adding the first citation must not turn the
+    // suite red on whoever does it.
+    expect(citedRuleCount()).toBeLessThan(RULE_REQUIREMENTS.length);
   });
 });
 
-describe("what a rule needs, against what the site has", () => {
-  it("names both numbers and the shortfall", () => {
+describe("measuring against the rows the rule actually reads", () => {
+  it("judges a search rule on the busiest search, not the busiest page", () => {
+    // A page with forty impressions spread over twelve searches clears a page
+    // floor of twenty-five and clears no search floor at all. Measuring both
+    // against the page count reported four rules as reachable that cannot fire.
+    const reach = reachOf(requirement("striking_distance_query"), REAL);
+    expect(reach.reachable).toBe(false);
+    expect(reach.reason).toContain("one search");
+    expect(reach.reason).toContain("had 12 in");
+  });
+
+  it("judges a page-and-search rule on that pair", () => {
+    const reach = reachOf(requirement("query_coverage_gap"), REAL);
+    expect(reach.reachable).toBe(false);
+    expect(reach.reason).toContain("page and search pair");
+    expect(reach.reason).toContain("had 9 in");
+  });
+
+  it("judges a page rule on the busiest page", () => {
     const reach = reachOf(requirement("declining_impressions"), REAL);
-    expect(reach.reachable).toBe(false);
-    expect(reach.reason).toContain("100");
-    expect(reach.reason).toContain("40");
-    expect(reach.reason).toContain("60");
+    expect(reach.reason).toContain("one page");
+    expect(reach.reason).toContain("had 40 in");
+    expect(reach.reason).toContain("60 short");
   });
 
-  it("measures against the busiest page, not the site total", () => {
-    // A rule needing 200 impressions on one page is not helped by 200 spread
-    // across forty pages.
-    const reach = reachOf(requirement("weak_ctr_page"), { ...REAL, pagesReported: 5000 });
-    expect(reach.reachable).toBe(false);
-  });
-
-  it("clears a rule the site can actually reach", () => {
-    const reach = reachOf(requirement("research_page_traction"), REAL);
-    expect(reach.reachable).toBe(true);
-    expect(reach.reason).toContain("clears");
-  });
-
-  it("counts clicks against clicks, not against impressions", () => {
+  it("reads clicks off the same page as the impressions", () => {
+    // Independent maxima reported "your busiest page had 3 clicks" about a page
+    // that had none, because the clicks belonged to a different, smaller page.
     const reach = reachOf(requirement("declining_clicks"), REAL);
     expect(reach.reason).toContain("10 clicks");
-    // 1 click against the 10 it needs, not the page's 40 impressions.
     expect(reach.reason).toContain("had 1 in");
-    expect(reach.reason).not.toContain("40");
+  });
+});
+
+describe("naming what a rule waits on besides volume", () => {
+  it("says when a rule needs a second collection to compare against", () => {
+    // Six rules compare against a prior window and cannot fire at any volume
+    // until a second collection has run. The registry used to record only the
+    // impression floor.
+    const reach = reachOf(requirement("significant_period_change"), REAL);
+    expect(reach.reason).toMatch(/second collection/i);
+  });
+
+  it("does not claim a fact-shaped rule is ready when nothing has read the page", () => {
+    const reach = reachOf(requirement("zero_impression_page"), REAL);
+    expect(reach.reason).toMatch(/page audit to have read the page/i);
+  });
+
+  it("carries the extra condition even when the volume floor is cleared", () => {
+    const reach = reachOf(requirement("research_page_traction"), REAL);
+    expect(reach.reachable).toBe(true);
+    expect(reach.reason).toMatch(/stored research address/i);
   });
 });
 
 describe("the three kinds of answer", () => {
   it("lets a fact about a page fire at any volume", () => {
-    // "Google has never shown this page" is a fact, not a measurement, so no
-    // threshold applies to it.
     for (const rule of ["zero_impression_page", "index_coverage_drift"]) {
-      const reach = reachOf(requirement(rule), { ...REAL, bestPageImpressions: 0 });
+      const reach = reachOf(requirement(rule), {
+        ...REAL,
+        bestPage: { impressions: 0, clicks: 0 },
+      });
       expect(reach.reachable).toBe(true);
       expect(reach.reason).toMatch(/fact about the page/i);
     }
   });
 
-  it("says a click question cannot be answered per page however long you wait", () => {
-    // This is the distinction that matters: waiting fixes a volume problem and
-    // does not fix this one. Only changing the unit of analysis does.
+  it("says a click-through question cannot be answered per page however long you wait", () => {
     const reach = reachOf(requirement("high_impression_low_ctr"), REAL);
     expect(reach.answerability).toBe("pooled_only");
     expect(reach.reason).toMatch(/however long you wait/i);
-    expect(reach.reason).toMatch(/group of pages/i);
   });
 
-  it("says a volume question is only short, not impossible", () => {
-    const reach = reachOf(requirement("striking_distance_query"), REAL);
+  it("does not say that about a rule where waiting is the fix", () => {
+    // declining_clicks is a click *count* trend, not a rate estimate: it fires
+    // as soon as one page accumulates ten clicks. Labelling it pooled-only told
+    // the operator waiting would not help, which is false.
+    const reach = reachOf(requirement("declining_clicks"), REAL);
     expect(reach.answerability).toBe("needs_volume");
-    expect(reach.reason).toMatch(/short/i);
     expect(reach.reason).not.toMatch(/however long you wait/i);
   });
 });
 
 describe("refusing to guess", () => {
   it("does not claim a rule is blocked when nothing has been collected", () => {
-    const summary = assessReach({
-      bestPageImpressions: null,
-      bestPageClicks: null,
-      pagesReported: 0,
-      windowDays: 28,
-    });
+    const summary = assessReach(NOTHING);
     expect(summary.headline).toMatch(/nothing has been collected/i);
     const measured = summary.rules.find((rule) => rule.needs !== null);
     expect(measured?.reason).toMatch(/no way to tell/i);
   });
 
   it("keeps a measured zero as a real shortfall, not as unknown", () => {
-    // Zero impressions is a fact. It is not the same as never having looked.
     const reach = reachOf(requirement("declining_impressions"), {
       ...REAL,
-      bestPageImpressions: 0,
+      bestPage: { impressions: 0, clicks: 0 },
     });
     expect(reach.reason).not.toMatch(/no way to tell/i);
-    expect(reach.reason).toContain("0 impressions");
+    // Asserted as "had 0 in" rather than "0 impressions", which matched
+    // vacuously inside "100 impressions" and passed even with the zero dropped.
+    expect(reach.reason).toContain("had 0 in");
   });
 
   it("says nothing at all when every rule can fire", () => {
     const summary = assessReach({
-      bestPageImpressions: 100_000,
-      bestPageClicks: 5_000,
+      bestPage: { impressions: 100_000, clicks: 5_000 },
+      bestQueryImpressions: 40_000,
+      bestPageQueryImpressions: 20_000,
       pagesReported: 400,
       windowDays: 28,
     });

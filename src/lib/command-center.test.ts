@@ -351,7 +351,10 @@ describe("waiting counts and the assist line", () => {
   it("says nothing needs you when the queue is empty", () => {
     const view = buildCommandCenter(facts);
     expect(view.assistLine).toEqual([]);
-    expect(view.emptyHeadline).toBe("Nothing needs you");
+    // Not a bare "nothing needs you": that is a claim about what was looked
+    // at, and several checks cannot run at this site's traffic.
+    expect(view.emptyHeadline).toMatch(/^Nothing is waiting for you\./);
+    expect(view.emptyHeadline).toMatch(/cannot run at this traffic/i);
   });
 });
 

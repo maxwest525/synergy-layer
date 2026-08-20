@@ -53,7 +53,13 @@ function facts(overrides: Partial<GettingFoundFacts> = {}): GettingFoundFacts {
     queueSources: [],
     coverage: null,
     sessions: null,
-    volume: { bestPageImpressions: 40, bestPageClicks: 1, pagesReported: 48, windowDays: 28 },
+    volume: {
+      bestPage: { impressions: 40, clicks: 1 },
+      bestQueryImpressions: 12,
+      bestPageQueryImpressions: 9,
+      pagesReported: 48,
+      windowDays: 28,
+    },
     ...overrides,
   };
 }
@@ -228,8 +234,9 @@ describe("an empty list that explains itself", () => {
     show({
       queueSources: [],
       volume: {
-        bestPageImpressions: 100_000,
-        bestPageClicks: 5_000,
+        bestPage: { impressions: 100_000, clicks: 5_000 },
+        bestQueryImpressions: 40_000,
+        bestPageQueryImpressions: 20_000,
         pagesReported: 400,
         windowDays: 28,
       },
@@ -237,8 +244,23 @@ describe("an empty list that explains itself", () => {
     expect(screen.getByText("Nothing is waiting here")).toBeInTheDocument();
   });
 
-  it("says nothing about reach once there are findings to show", () => {
+  it("still says which checks are blind when a short list is showing", () => {
+    // A short list is exactly when the operator reads it as the whole picture,
+    // and the checks that produced it are not the ones that stayed silent.
     show({ queueSources: [source("a")] });
-    expect(screen.queryByText(/cannot run on this site yet/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/cannot run on this site yet/i)).toBeInTheDocument();
+  });
+
+  it("lets the blocked checks be opened one by one", async () => {
+    // Rendered rather than summarised: a count the operator cannot open is a
+    // count they have to take on trust, and four rules were measured against
+    // the wrong row set with nothing on screen to show it.
+    show({ queueSources: [] });
+    await userEvent.click(screen.getByRole("button", { name: /checks that cannot run/i }));
+    const striking = screen.getByText("A search you almost rank for").parentElement;
+    expect(striking?.textContent).toContain("one search");
+    // Measured against the busiest search, not the busiest page: forty
+    // impressions spread over twelve searches clears no per-search floor.
+    expect(striking?.textContent).toContain("had 12 in");
   });
 });

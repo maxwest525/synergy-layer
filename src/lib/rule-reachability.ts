@@ -39,15 +39,34 @@ export type Answerability =
    */
   | "pooled_only";
 
+/**
+ * Which set of rows a rule reads.
+ *
+ * This decides which count its threshold is measured against, and getting it
+ * wrong is not cosmetic: a page with forty impressions spread over twelve
+ * searches clears a page-level floor of twenty-five and clears no query-level
+ * floor at all.
+ */
+export type RuleDimension = "page" | "query" | "page_query";
+
 /** What one rule needs before it can say anything. */
 export type RuleRequirement = {
   readonly rule: string;
   readonly label: string;
-  /** Which Search Console dimension it reads. */
-  readonly dimension: "page" | "query" | "site";
+  readonly dimension: RuleDimension;
   readonly answerability: Answerability;
-  /** The threshold that binds hardest, in impressions or clicks on one page. */
+  /** The volume threshold, measured against the row set named by `dimension`. */
   readonly needs: { readonly amount: number; readonly unit: "impressions" | "clicks" } | null;
+  /**
+   * A condition other than volume that also has to hold, or null.
+   *
+   * Recorded because volume is often not what binds first. Six rules compare
+   * against a prior window and cannot fire at any volume until a second
+   * collection has run, and two read stored rows from a different table
+   * entirely. A registry that listed only the impression floor would report
+   * those as reachable while they sat waiting on something else.
+   */
+  readonly alsoNeeds: string | null;
   /**
    * Where the number came from, or null when nothing derives it.
    *
@@ -74,6 +93,7 @@ export const RULE_REQUIREMENTS: readonly RuleRequirement[] = [
     // from a sample, so no volume is required to state it.
     answerability: "any_volume",
     needs: null,
+    alsoNeeds: "the page audit to have read the page at least once",
     source: null,
   },
   {
@@ -82,14 +102,18 @@ export const RULE_REQUIREMENTS: readonly RuleRequirement[] = [
     dimension: "page",
     answerability: "any_volume",
     needs: null,
+    alsoNeeds: "a stored URL inspection to compare against",
     source: null,
   },
   {
     rule: "declining_clicks",
     label: "Clicks falling on a page",
     dimension: "page",
-    answerability: "pooled_only",
+    // A click count trend, not a rate estimate: it fires the moment one page
+    // accumulates ten clicks in a window, so waiting is exactly the fix.
+    answerability: "needs_volume",
     needs: { amount: 10, unit: "clicks" },
+    alsoNeeds: "a second collection, to compare against a prior window",
     source: null,
   },
   {
@@ -98,6 +122,7 @@ export const RULE_REQUIREMENTS: readonly RuleRequirement[] = [
     dimension: "page",
     answerability: "needs_volume",
     needs: { amount: 100, unit: "impressions" },
+    alsoNeeds: "a second collection, to compare against a prior window",
     source: null,
   },
   {
@@ -106,14 +131,37 @@ export const RULE_REQUIREMENTS: readonly RuleRequirement[] = [
     dimension: "query",
     answerability: "needs_volume",
     needs: { amount: 50, unit: "impressions" },
+    alsoNeeds: "a second collection, to compare against a prior window",
     source: null,
   },
   {
+    rule: "position_loss",
+    label: "A search you have slipped down",
+    dimension: "query",
+    answerability: "needs_volume",
+    needs: { amount: 100, unit: "impressions" },
+    alsoNeeds: "a second collection, to compare against a prior window",
+    source: null,
+  },
+  {
+    rule: "visibility_gain",
+    label: "A page being shown much more often",
+    dimension: "page",
+    answerability: "needs_volume",
+    needs: { amount: 100, unit: "impressions" },
+    alsoNeeds: "a second collection, to compare against a prior window",
+    source: null,
+  },
+  {
+    // `weak_ctr_page` in the other engine is the identical predicate over the
+    // same rows. Listed once, so the count is of questions rather than of
+    // implementations. Collapsing the two is handed off.
     rule: "high_impression_low_ctr",
     label: "Shown often, rarely clicked",
     dimension: "page",
     answerability: "pooled_only",
     needs: { amount: 200, unit: "impressions" },
+    alsoNeeds: null,
     source: null,
   },
   {
@@ -122,14 +170,7 @@ export const RULE_REQUIREMENTS: readonly RuleRequirement[] = [
     dimension: "page",
     answerability: "pooled_only",
     needs: { amount: 150, unit: "impressions" },
-    source: null,
-  },
-  {
-    rule: "weak_ctr_page",
-    label: "A page people see and pass over",
-    dimension: "page",
-    answerability: "pooled_only",
-    needs: { amount: 200, unit: "impressions" },
+    alsoNeeds: null,
     source: null,
   },
   {
@@ -138,14 +179,16 @@ export const RULE_REQUIREMENTS: readonly RuleRequirement[] = [
     dimension: "query",
     answerability: "needs_volume",
     needs: { amount: 50, unit: "impressions" },
+    alsoNeeds: null,
     source: null,
   },
   {
     rule: "possible_query_overlap",
     label: "Two pages competing for one search",
-    dimension: "query",
+    dimension: "page_query",
     answerability: "needs_volume",
     needs: { amount: 25, unit: "impressions" },
+    alsoNeeds: "two pages clearing that on the same search, and a prior window",
     source: null,
   },
   {
@@ -154,6 +197,7 @@ export const RULE_REQUIREMENTS: readonly RuleRequirement[] = [
     dimension: "page",
     answerability: "needs_volume",
     needs: { amount: 100, unit: "impressions" },
+    alsoNeeds: "a second collection, to compare against a prior window",
     source: null,
   },
   {
@@ -162,32 +206,34 @@ export const RULE_REQUIREMENTS: readonly RuleRequirement[] = [
     dimension: "page",
     answerability: "needs_volume",
     needs: { amount: 20, unit: "impressions" },
+    alsoNeeds: "the page to match a stored research address, and a prior window",
     source: null,
   },
   {
     rule: "query_coverage_gap",
     label: "A search you show up for but have no page for",
-    dimension: "query",
+    dimension: "page_query",
     answerability: "needs_volume",
     needs: { amount: 25, unit: "impressions" },
+    alsoNeeds: null,
     source: null,
   },
 ];
 
-/**
- * The window the rules read, in days.
- *
- * Mirrors `RULE_WINDOW_DAYS` in `search-console.server.ts`, which cannot be
- * imported here without pulling a server module into the browser bundle.
- */
-export const RULE_WINDOW_DAYS = 28;
-
-/** What the site actually produced in the window the rules read. */
+/** What the site produced in the window, per row set the rules read. */
 export type VolumeEvidence = {
-  /** Impressions on the single busiest page. Null when nothing was stored. */
-  readonly bestPageImpressions: number | null;
-  /** Clicks on the single busiest page. Null when nothing was stored. */
-  readonly bestPageClicks: number | null;
+  /**
+   * The busiest single page: its impressions and its own clicks.
+   *
+   * Both counts come from the same row. Taking independent maxima reported
+   * "your busiest page had 3 clicks" about a page that had none, because the
+   * clicks belonged to a different, smaller page.
+   */
+  readonly bestPage: { readonly impressions: number; readonly clicks: number } | null;
+  /** Impressions on the busiest single search. Null when nothing was stored. */
+  readonly bestQueryImpressions: number | null;
+  /** Impressions on the busiest single page-and-search pair. */
+  readonly bestPageQueryImpressions: number | null;
   /** Every page Search Console reported in the window. */
   readonly pagesReported: number;
   readonly windowDays: number;
@@ -203,24 +249,42 @@ export type RuleReach = RuleRequirement & {
 const NOTHING_STORED =
   "Nothing has been collected yet, so there is no way to tell whether this could fire.";
 
+const ROW_SET: Record<RuleDimension, string> = {
+  page: "page",
+  query: "search",
+  page_query: "page and search pair",
+};
+
+/** The count this rule's threshold is measured against, by the rows it reads. */
+function availableFor(requirement: RuleRequirement, evidence: VolumeEvidence): number | null {
+  if (requirement.needs?.unit === "clicks") return evidence.bestPage?.clicks ?? null;
+  if (requirement.dimension === "query") return evidence.bestQueryImpressions;
+  if (requirement.dimension === "page_query") return evidence.bestPageQueryImpressions;
+  return evidence.bestPage?.impressions ?? null;
+}
+
 /**
  * Whether one rule could fire, and why not when it could not.
  *
- * Measured against the busiest page rather than the site total, because these
- * are per-page thresholds: a rule needing two hundred impressions on one page
- * is not helped by two hundred spread across forty.
+ * Measured against the busiest single row of the set the rule reads, rather
+ * than a site total, because these are per-row thresholds: a rule needing two
+ * hundred impressions on one page is not helped by two hundred spread across
+ * forty, and a page-level total does not clear a per-search floor.
  */
 export function reachOf(requirement: RuleRequirement, evidence: VolumeEvidence): RuleReach {
+  const waitingOn =
+    requirement.alsoNeeds === null ? "" : ` It also needs ${requirement.alsoNeeds}.`;
+
   if (requirement.needs === null) {
     return {
       ...requirement,
       reachable: true,
-      reason: "Needs no minimum: this is a fact about the page, not a measurement of it.",
+      reason: `Needs no minimum: this is a fact about the page, not a measurement of it.${waitingOn}`,
     };
   }
 
-  const has =
-    requirement.needs.unit === "clicks" ? evidence.bestPageClicks : evidence.bestPageImpressions;
+  const has = availableFor(requirement, evidence);
+  const set = ROW_SET[requirement.dimension];
 
   if (has === null) {
     return { ...requirement, reachable: false, reason: NOTHING_STORED };
@@ -230,7 +294,7 @@ export function reachOf(requirement: RuleRequirement, evidence: VolumeEvidence):
     return {
       ...requirement,
       reachable: true,
-      reason: `Your busiest page had ${has} ${requirement.needs.unit} in ${evidence.windowDays} days, which clears the ${requirement.needs.amount} this needs.`,
+      reason: `Your busiest ${set} had ${has} ${requirement.needs.unit} in ${evidence.windowDays} days, which clears the ${requirement.needs.amount} this needs.${waitingOn}`,
     };
   }
 
@@ -240,8 +304,8 @@ export function reachOf(requirement: RuleRequirement, evidence: VolumeEvidence):
     reachable: false,
     reason:
       requirement.answerability === "pooled_only"
-        ? `Needs ${requirement.needs.amount} ${requirement.needs.unit} on one page. Your busiest had ${has} in ${evidence.windowDays} days. A question about clicks cannot be answered for a single page at this volume, however long you wait: it has to be asked across a group of pages instead.`
-        : `Needs ${requirement.needs.amount} ${requirement.needs.unit} on one page. Your busiest had ${has} in ${evidence.windowDays} days, so it is ${shortfall} short.`,
+        ? `Needs ${requirement.needs.amount} ${requirement.needs.unit} on one ${set}. Your busiest had ${has} in ${evidence.windowDays} days. A question about click-through cannot be answered for a single page at this volume, however long you wait: it has to be asked across a group of pages instead.`
+        : `Needs ${requirement.needs.amount} ${requirement.needs.unit} on one ${set}. Your busiest had ${has} in ${evidence.windowDays} days, so it is ${shortfall} short.${waitingOn}`,
   };
 }
 
@@ -271,7 +335,7 @@ export function assessReach(evidence: VolumeEvidence): ReachSummary {
 
   if (blocked === 0) return { rules, reachable, blocked, headline: null };
 
-  if (evidence.bestPageImpressions === null) {
+  if (evidence.bestPage === null) {
     return {
       rules,
       reachable,
@@ -284,7 +348,7 @@ export function assessReach(evidence: VolumeEvidence): ReachSummary {
     rules,
     reachable,
     blocked,
-    headline: `${blocked} of ${rules.length} checks cannot run on this site yet. Your busiest page was shown ${evidence.bestPageImpressions} times in ${evidence.windowDays} days, and they need more than that. This is not a fault in your site or in the checks: there is not enough evidence yet for those questions to have an answer.`,
+    headline: `${blocked} of ${rules.length} checks cannot run on this site yet. Your busiest page was shown ${evidence.bestPage.impressions} times in ${evidence.windowDays} days, and they need more than that. This is not a fault in your site or in the checks: there is not enough evidence yet for those questions to have an answer.`,
   };
 }
 

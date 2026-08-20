@@ -486,6 +486,12 @@ export function buildCommandCenter(facts: CommandCenterFacts): CommandCenterView
     totalWaiting: queue.open.length,
     suggestedNext,
     statusLine: statusLineFor(facts.health),
-    emptyHeadline: queue.open.length === 0 ? "Nothing needs you" : null,
+    emptyHeadline:
+      queue.open.length === 0
+        ? // Not "nothing needs you": that is a claim about what was looked at,
+          // and several checks cannot run at this site's traffic. Getting found
+          // on Google carries the detail rather than repeating it here.
+          "Nothing is waiting for you. Some checks cannot run at this traffic yet, which Getting found on Google explains."
+        : null,
   };
 }

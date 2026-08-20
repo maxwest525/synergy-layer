@@ -129,6 +129,19 @@ threshold that cannot be traced is a guess and must be labelled as one beside th
 constant; never lower a threshold to make a rule fire; and when the data cannot
 answer the question, say which fact is missing rather than returning a number.
 
+## Where to start
+
+`src/lib/rule-reachability.ts` already holds the registry: every rule, the row
+set it reads, the threshold that binds, what else it waits on, and a `source`
+field that is `null` on all fourteen. Filling those `source` fields **is** most
+of this work. `citedRuleCount()` counts them and its test asserts only that the
+count is below the total, so adding the first citation will not turn the suite
+red.
+
+The registry is pinned against `finding-router.ts` by a test, so a rule added to
+the router without a registry entry fails rather than silently shrinking the
+count the operator sees.
+
 ## Definition of done
 
 - Every constant in the table above either carries a citation in a comment, or
@@ -141,6 +154,11 @@ answer the question, say which fact is missing rather than returning a number.
   movement, uses `confidence.ts`, never reports failure at 14 days, and reports
   a Google-rewritten title as unmeasured rather than failed.
 - Rules that read the `query` dimension say on screen that the data is filtered.
+- `RULE_REQUIREMENTS` carries a `source` for every entry it can, and the ones it
+  cannot are labelled assumptions with what would settle them.
+- `weak_ctr_page` and `high_impression_low_ctr` are collapsed: they are the
+  identical predicate over the same rows in two engines, and counting them
+  separately inflates every total.
 - The full suite, typecheck and lint stay green, and the adversarial review runs
   before merge as on every other phase.
 

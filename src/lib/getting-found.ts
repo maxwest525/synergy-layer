@@ -25,7 +25,7 @@ import {
   type QueueItem,
   type QueueSource,
 } from "./suggestion-queue";
-import { assessReach, type VolumeEvidence } from "./rule-reachability";
+import { assessReach, type RuleReach, type VolumeEvidence } from "./rule-reachability";
 import type { PeriodComparison } from "./search-console";
 
 export type SearchListRow = {
@@ -218,6 +218,14 @@ export type GettingFoundView = {
    * realise they were asking.
    */
   readonly reachNote: string | null;
+  /**
+   * Every check that cannot run, with what each is waiting for.
+   *
+   * Rendered, not just counted. The per-rule detail is what makes the summary
+   * checkable: an adversarial review found four rules measured against the
+   * wrong row set precisely because nothing put them on screen.
+   */
+  readonly blockedChecks: readonly RuleReach[];
 };
 
 const NO_PROPERTY =
@@ -345,8 +353,18 @@ function positionTile(comparison: PeriodComparison, reason: string | null): Gett
  * abstract items, per the spec's "Mostly OK, clicks dipped, 2 things worth
  * fixing".
  */
-function statusFor(open: ReturnType<typeof buildQueue>["open"]): GettingFoundStatus {
-  if (open.length === 0) return { text: "Nothing needs you here", tone: "positive" };
+function statusFor(
+  open: ReturnType<typeof buildQueue>["open"],
+  blocked: number,
+): GettingFoundStatus {
+  if (open.length === 0) {
+    // "Nothing needs you" is a claim about what was looked at. With most checks
+    // unable to run it is the wrong answer, and it was rendering in green
+    // directly above the sentence explaining that they are blind.
+    return blocked > 0
+      ? { text: `${blocked} checks cannot run yet`, tone: "warning" }
+      : { text: "Nothing needs you here", tone: "positive" };
+  }
 
   const urgent = open.filter((item) => item.urgency === "fix_now").length;
   const rest = open.length - urgent;
@@ -374,6 +392,7 @@ export function buildGettingFound(facts: GettingFoundFacts): GettingFoundView {
 
   const queue = buildQueue(facts.queueSources, facts.now);
   const open = [...queue.open].sort(compareQueueItems);
+  const reach = assessReach(facts.volume);
   const handled = queue.ignored.length + queue.done.length;
   const constraint = constraintFor(facts, open);
   const ordered = orderByConstraint(facts, open);
@@ -385,7 +404,7 @@ export function buildGettingFound(facts: GettingFoundFacts): GettingFoundView {
       ctrTile(facts.comparison, reason),
       positionTile(facts.comparison, reason),
     ],
-    status: statusFor(open),
+    status: statusFor(open, reach.blocked),
     tabs: [
       { id: "suggestions", label: "Suggestions", count: open.length },
       { id: "queries", label: "Searches", count: null },
@@ -397,9 +416,12 @@ export function buildGettingFound(facts: GettingFoundFacts): GettingFoundView {
     parkedFrom: ordered.parkedFrom,
     history: [...queue.ignored, ...queue.done],
     asOf: facts.latestDate,
-    // Only when there is nothing to show. With findings on screen the checks
-    // are evidently running, and the note would be noise.
-    reachNote: open.length === 0 ? assessReach(facts.volume).headline : null,
+    // Kept whenever any check is blocked, not only when the list is empty. A
+    // short list is exactly when the operator is most likely to read it as the
+    // complete picture, and the checks that produced it are not the ones that
+    // stayed silent.
+    reachNote: reach.headline,
+    blockedChecks: reach.rules.filter((rule) => !rule.reachable),
     queries: facts.queries,
     pages: facts.pages,
   };

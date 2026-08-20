@@ -47,7 +47,13 @@ const facts: GettingFoundFacts = {
   queueSources: [],
   coverage: null,
   sessions: null,
-  volume: { bestPageImpressions: 40, bestPageClicks: 1, pagesReported: 48, windowDays: 28 },
+  volume: {
+    bestPage: { impressions: 40, clicks: 1 },
+    bestQueryImpressions: 12,
+    bestPageQueryImpressions: 9,
+    pagesReported: 48,
+    windowDays: 28,
+  },
 };
 
 function withFacts(overrides: Partial<GettingFoundFacts>): GettingFoundFacts {
@@ -180,10 +186,30 @@ describe("the four tiles the board shows", () => {
 });
 
 describe("the status line", () => {
-  it("says nothing needs you when the queue is clear", () => {
-    const view = buildGettingFound(withFacts({ comparison: READY }));
+  it("says nothing needs you only when every check can actually run", () => {
+    // "Nothing needs you" is a claim about what was looked at. It used to
+    // render in green directly above the sentence explaining that most checks
+    // were blind.
+    const view = buildGettingFound(
+      withFacts({
+        comparison: READY,
+        volume: {
+          bestPage: { impressions: 100_000, clicks: 5_000 },
+          bestQueryImpressions: 40_000,
+          bestPageQueryImpressions: 20_000,
+          pagesReported: 400,
+          windowDays: 28,
+        },
+      }),
+    );
     expect(view.status.text).toBe("Nothing needs you here");
     expect(view.status.tone).toBe("positive");
+  });
+
+  it("warns instead of clearing when checks cannot run", () => {
+    const view = buildGettingFound(withFacts({ comparison: READY }));
+    expect(view.status.text).toMatch(/checks cannot run yet/i);
+    expect(view.status.tone).toBe("warning");
   });
 
   it("names what is worth fixing, written as a consequence", () => {

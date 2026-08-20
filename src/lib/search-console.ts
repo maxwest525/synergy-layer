@@ -118,6 +118,15 @@ export type RuleWindows = {
  * a function so it is stated once and tested rather than re-derived by each
  * caller.
  */
+/**
+ * How many days of evidence the rules read.
+ *
+ * Lives here, beside `ruleWindows`, because both the server collector and the
+ * browser need it and a second copy drifts silently: a widened collection
+ * window would leave the screen saying "28 days" over a 56 day figure.
+ */
+export const RULE_WINDOW_DAYS = 28;
+
 export function ruleWindows(reportingDate: string, windowDays: number): RuleWindows {
   const currentStart = shiftIsoDate(reportingDate, -(windowDays - 1));
   const priorEnd = shiftIsoDate(currentStart, -1);

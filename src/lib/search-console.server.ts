@@ -10,6 +10,7 @@ import {
   normalizeInspection,
   normalizeOwnedUrl,
   ruleWindows,
+  RULE_WINDOW_DAYS,
 } from "./search-console";
 
 type Client = SupabaseClient<Database>;
@@ -405,6 +406,8 @@ type QueryBody = {
   aggregationType?: string;
 };
 
+export { RULE_WINDOW_DAYS };
+
 export type QueryRow = {
   keys?: string[];
   clicks: number;
@@ -694,7 +697,6 @@ const COMPARISON_HISTORY_DAYS = 56;
  * The thresholds were never wrong; the window was. Over 28 days the same
  * numbers are ordinary, so nothing here re-tunes them.
  */
-export const RULE_WINDOW_DAYS = 28;
 
 /** One provider query backfills the two complete 28-day comparison windows. */
 async function collectDailyTotalsHistory(

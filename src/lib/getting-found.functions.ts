@@ -9,7 +9,8 @@ import {
   type SearchListRow,
   type StoredSearchRow,
 } from "./getting-found";
-import { RULE_WINDOW_DAYS, type VolumeEvidence } from "./rule-reachability";
+import type { VolumeEvidence } from "./rule-reachability";
+import { RULE_WINDOW_DAYS } from "./search-console";
 
 /**
  * The reads the "Getting found on Google" page needs and the Command center
@@ -139,6 +140,7 @@ export const getGettingFoundExtras = createServerFn({ method: "POST" })
 
     const queryWindow = onCompleteDate(["query"]);
     const pageWindow = onCompleteDate(["page"]);
+    const pageQueryWindow = onCompleteDate(["page", "query"]);
     const pageRows = rowsOf(pageWindow?.payload);
 
     const observed = assertRead("Page observations", observedResult).data ?? [];
@@ -158,7 +160,14 @@ export const getGettingFoundExtras = createServerFn({ method: "POST" })
       latestDate: completeDate,
       queries: topRows(rowsOf(queryWindow?.payload)),
       pages: topRows(pageRows),
-      volume: volumeOf(pageRows, pageWindow !== null),
+      volume: volumeOf({
+        pages: pageWindow === null ? null : pageRows,
+        queries: queryWindow === null ? null : rowsOf(queryWindow.payload),
+        // The rules that read a page-and-search pair measure against that set,
+        // not against a page total: forty impressions spread over twelve
+        // searches clears a page floor of twenty-five and no search floor.
+        pageQueries: pageQueryWindow === null ? null : rowsOf(pageQueryWindow.payload),
+      }),
       // Refused, not guessed at, in two cases: no page window collected, and no
       // page read successfully. Assembling zeros out of an absent read is how a
       // healthy site gets told none of its pages are findable.
@@ -178,11 +187,18 @@ export const getGettingFoundExtras = createServerFn({ method: "POST" })
 
 /** Nothing collected. Null rather than zero: the site was never asked. */
 const NO_VOLUME: VolumeEvidence = {
-  bestPageImpressions: null,
-  bestPageClicks: null,
+  bestPage: null,
+  bestQueryImpressions: null,
+  bestPageQueryImpressions: null,
   pagesReported: 0,
   windowDays: RULE_WINDOW_DAYS,
 };
+
+/** The largest impression count in a row set, or null when it was not collected. */
+function bestImpressions(rows: readonly StoredSearchRow[] | null): number | null {
+  if (rows === null) return null;
+  return rows.reduce((best, row) => Math.max(best, countOf(row.impressions)), 0);
+}
 
 /**
  * What the busiest page produced in the window.
@@ -191,12 +207,30 @@ const NO_VOLUME: VolumeEvidence = {
  * checked against are per page: a rule needing two hundred impressions on one
  * page is not helped by two hundred spread across forty.
  */
-function volumeOf(rows: readonly StoredSearchRow[], collected: boolean): VolumeEvidence {
-  if (!collected) return NO_VOLUME;
+function volumeOf(input: {
+  readonly pages: readonly StoredSearchRow[] | null;
+  readonly queries: readonly StoredSearchRow[] | null;
+  readonly pageQueries: readonly StoredSearchRow[] | null;
+}): VolumeEvidence {
+  if (input.pages === null) return NO_VOLUME;
+
+  // One row, so the impressions and the clicks describe the same page.
+  // Independent maxima reported "your busiest page had 3 clicks" about a page
+  // that had none, because the clicks belonged to a smaller page.
+  const busiest = input.pages.reduce<StoredSearchRow | null>(
+    (best, row) =>
+      best === null || countOf(row.impressions) > countOf(best.impressions) ? row : best,
+    null,
+  );
+
   return {
-    bestPageImpressions: Math.max(0, ...rows.map((row) => countOf(row.impressions))),
-    bestPageClicks: Math.max(0, ...rows.map((row) => countOf(row.clicks))),
-    pagesReported: rows.length,
+    bestPage:
+      busiest === null
+        ? { impressions: 0, clicks: 0 }
+        : { impressions: countOf(busiest.impressions), clicks: countOf(busiest.clicks) },
+    bestQueryImpressions: bestImpressions(input.queries),
+    bestPageQueryImpressions: bestImpressions(input.pageQueries),
+    pagesReported: input.pages.length,
     windowDays: RULE_WINDOW_DAYS,
   };
 }

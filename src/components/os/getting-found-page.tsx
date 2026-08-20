@@ -5,6 +5,7 @@ import { Search, TriangleAlert } from "lucide-react";
 import { useGettingFound } from "./getting-found-facts";
 import { EmptyState } from "./primitives";
 import { actionFor } from "@/lib/command-center";
+import type { RuleReach } from "@/lib/rule-reachability";
 import type {
   GettingFoundTile,
   GettingFoundView,
@@ -131,19 +132,31 @@ function SuggestionRow({ item }: { item: QueueItem }) {
 function SuggestionList({ view }: { view: GettingFoundView }) {
   if (view.suggestions.length === 0) {
     return (
-      <EmptyState
-        title={view.reachNote === null ? "Nothing is waiting here" : "Nothing to show yet"}
-        // An empty list reads as "all clear". On a site whose busiest page is
-        // shown forty times a month most checks cannot run at all, and that is
-        // a different answer the operator deserves to hear.
-        description={
-          view.reachNote ?? "No open suggestion is filed under getting found on Google right now."
-        }
-      />
+      <div className="flex flex-col gap-3">
+        <EmptyState
+          title={view.reachNote === null ? "Nothing is waiting here" : "Nothing to show yet"}
+          // An empty list reads as "all clear". On a site whose busiest page is
+          // shown forty times a month most checks cannot run at all, and that is
+          // a different answer the operator deserves to hear.
+          description={
+            view.reachNote ?? "No open suggestion is filed under getting found on Google right now."
+          }
+        />
+        <BlockedChecks checks={view.blockedChecks} />
+      </div>
     );
   }
   return (
     <div className="flex flex-col gap-2.5">
+      {view.reachNote ? (
+        // Shown above a populated list too. A short list is exactly when it
+        // reads as the complete picture, and the checks that produced it are
+        // not the ones that stayed silent.
+        <div className="flex flex-col gap-2 rounded-[10px] border border-border bg-card px-4 py-3">
+          <p className="text-xs leading-snug text-muted-foreground">{view.reachNote}</p>
+          <BlockedChecks checks={view.blockedChecks} />
+        </div>
+      ) : null}
       {view.suggestions.map((item, index) => (
         <div key={item.id} className="flex flex-col gap-2.5">
           {index === view.parkedFrom ? (
@@ -154,6 +167,42 @@ function SuggestionList({ view }: { view: GettingFoundView }) {
           <SuggestionRow item={item} />
         </div>
       ))}
+    </div>
+  );
+}
+
+/**
+ * Each check that cannot run, and what it is waiting for.
+ *
+ * Rendered rather than summarised, because a count the operator cannot open is
+ * a count they have to take on trust. It is also what makes the registry
+ * checkable: four rules were measured against the wrong row set and nothing on
+ * screen would have shown it.
+ */
+function BlockedChecks({ checks }: { checks: readonly RuleReach[] }) {
+  const [open, setOpen] = useState(false);
+  if (checks.length === 0) return null;
+
+  return (
+    <div className="flex flex-col gap-2">
+      <button
+        type="button"
+        onClick={() => setOpen((was) => !was)}
+        aria-expanded={open}
+        className="self-start text-[13px] font-semibold text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+      >
+        {open ? "Hide" : "Show"} the {checks.length} checks that cannot run
+      </button>
+      {open ? (
+        <ul className="flex flex-col gap-px overflow-hidden rounded-[10px] border border-border">
+          {checks.map((check) => (
+            <li key={check.rule} className="flex flex-col gap-1 bg-card px-4 py-3">
+              <span className="text-[13px] font-semibold text-foreground">{check.label}</span>
+              <span className="text-xs leading-snug text-muted-foreground">{check.reason}</span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
     </div>
   );
 }

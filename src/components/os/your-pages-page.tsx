@@ -273,7 +273,7 @@ export function YourPagesPage() {
         {tab === "suggestions" ? (
           <QueueList
             items={view.suggestions}
-            empty="No open suggestion is filed under your pages right now."
+            empty="No open suggestion is filed under your pages right now. Some checks cannot run at this site's traffic yet: Getting found on Google lists which."
           />
         ) : null}
         {tab === "pages" ? <PageList view={view} /> : null}
