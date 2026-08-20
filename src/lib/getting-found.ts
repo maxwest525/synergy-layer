@@ -14,6 +14,11 @@
  *   is down, the opposite of every other tile here.
  */
 
+import {
+  bindingConstraint,
+  partitionByConstraint,
+  type ConstraintFacts,
+} from "./binding-constraint";
 import { buildQueue, compareQueueItems, type QueueSource } from "./suggestion-queue";
 import type { PeriodComparison } from "./search-console";
 
@@ -32,6 +37,11 @@ export type GettingFoundFacts = {
   readonly queries: readonly SearchListRow[];
   readonly pages: readonly SearchListRow[];
   readonly queueSources: readonly QueueSource[];
+  /**
+   * Site-level totals the constraint diagnosis reads. Null when there is not
+   * enough stored to attempt one.
+   */
+  readonly constraintFacts: ConstraintFacts | null;
 };
 
 export type TileDelta = {
@@ -66,10 +76,25 @@ export type Tab = {
   readonly count: number | null;
 };
 
+export type ConstraintBanner = {
+  /** What is actually holding the site back, in plain words. */
+  readonly reason: string;
+  /** How many open suggestions address it. */
+  readonly addressing: number;
+  /** How many are real but are not today's problem. Counted, never hidden. */
+  readonly parked: number;
+};
+
 export type GettingFoundView = {
   readonly tiles: readonly GettingFoundTile[];
   readonly status: GettingFoundStatus;
   readonly tabs: readonly Tab[];
+  /**
+   * The diagnosis that has to precede the ranking. Null when the stored rows
+   * cannot support one, in which case the queue keeps its own order rather than
+   * asserting a priority it cannot justify.
+   */
+  readonly constraint: ConstraintBanner | null;
 };
 
 const NO_PROPERTY =
@@ -243,5 +268,30 @@ export function buildGettingFound(facts: GettingFoundFacts): GettingFoundView {
       { id: "pages", label: "Pages", count: null },
       { id: "history", label: "History", count: handled },
     ],
+    constraint: constraintFor(facts, open),
+  };
+}
+
+/**
+ * The diagnosis, and how the open queue splits against it.
+ *
+ * Returns null rather than guessing when the facts are absent or inconclusive,
+ * because a banner asserting a priority we could not establish is the same
+ * arbitrary ranking the principle warns about, only louder.
+ */
+function constraintFor(
+  facts: GettingFoundFacts,
+  open: ReturnType<typeof buildQueue>["open"],
+): ConstraintBanner | null {
+  if (facts.constraintFacts === null) return null;
+
+  const diagnosis = bindingConstraint(facts.constraintFacts);
+  if (diagnosis.constraint === null) return null;
+
+  const split = partitionByConstraint(open, diagnosis.constraint, (item) => item.rule ?? "");
+  return {
+    reason: diagnosis.reason,
+    addressing: split.addressing.length,
+    parked: split.parked.length,
   };
 }

@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { CommandCenterFacts, Ga4Window } from "./command-center";
-import { categoryForChangeRequest, categoryForFinding } from "./finding-router";
+import { categoryForChangeRequest, categoryForFinding, ruleFromMetadata } from "./finding-router";
 import type { AuditSeverity, QueueSource } from "./suggestion-queue";
 
 /**
@@ -214,6 +214,9 @@ export const getCommandCenterFacts = createServerFn({ method: "POST" })
       storedState: row.state,
       fingerprint: row.issue_fingerprint,
       severity: null,
+      // Carried so the queue can say which constraint this addresses, not only
+      // how long it has been waiting.
+      rule: ruleFromMetadata(row.metadata),
       linkedChangeId: linkedRecommendationIds.has(row.id) ? row.id : null,
       createdAt: row.created_at,
       updatedAt: row.updated_at ?? row.created_at,

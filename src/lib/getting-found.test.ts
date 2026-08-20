@@ -38,6 +38,7 @@ const facts: GettingFoundFacts = {
   queries: [],
   pages: [],
   queueSources: [],
+  constraintFacts: null,
 };
 
 function withFacts(overrides: Partial<GettingFoundFacts>): GettingFoundFacts {
@@ -193,6 +194,62 @@ describe("the status line", () => {
     );
     expect(view.status.text).toBe("1 thing worth fixing");
     expect(view.status.tone).toBe("warning");
+  });
+});
+
+describe("the diagnosis that precedes the ranking", () => {
+  it("shows nothing when there are no facts to diagnose from", () => {
+    expect(buildGettingFound(withFacts({ comparison: READY })).constraint).toBeNull();
+  });
+
+  it("names visibility as the problem, and parks the click fixes", () => {
+    // 39 pages, none ever shown. Sorting title rewrites here would be exactly
+    // the error the research warns about.
+    const view = buildGettingFound(
+      withFacts({
+        comparison: READY,
+        constraintFacts: {
+          pagesKnown: 39,
+          pagesWithImpressions: 0,
+          impressions: 0,
+          clicks: 0,
+          sessions: null,
+          conversions: null,
+        },
+        queueSources: [
+          { ...source("indexed", 5), rule: "index_coverage_drift" },
+          { ...source("unseen", 5), rule: "zero_impression_page" },
+          { ...source("ctr", 5), rule: "weak_ctr_page" },
+          { ...source("striking", 5), rule: "striking_distance_query" },
+        ],
+      }),
+    );
+    expect(view.constraint?.reason).toContain("39");
+    expect(view.constraint?.addressing).toBe(2);
+    expect(view.constraint?.parked).toBe(2);
+  });
+
+  it("counts the parked ones rather than hiding them", () => {
+    const view = buildGettingFound(
+      withFacts({
+        comparison: READY,
+        constraintFacts: {
+          pagesKnown: 10,
+          pagesWithImpressions: 9,
+          impressions: 4000,
+          clicks: 6,
+          sessions: null,
+          conversions: null,
+        },
+        queueSources: [
+          { ...source("ctr", 5), rule: "weak_ctr_page" },
+          { ...source("unseen", 5), rule: "zero_impression_page" },
+        ],
+      }),
+    );
+    // Now the click is the constraint, so the pair flips.
+    expect(view.constraint?.addressing).toBe(1);
+    expect(view.constraint?.parked).toBe(1);
   });
 });
 
