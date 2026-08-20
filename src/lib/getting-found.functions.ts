@@ -2,12 +2,14 @@ import { createServerFn } from "@tanstack/react-start";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import {
+  countOf,
   countShownPages,
   topRows,
   type PageCoverage,
   type SearchListRow,
   type StoredSearchRow,
 } from "./getting-found";
+import { RULE_WINDOW_DAYS, type VolumeEvidence } from "./rule-reachability";
 
 /**
  * The reads the "Getting found on Google" page needs and the Command center
@@ -29,6 +31,11 @@ export type GettingFoundExtras = {
   readonly coverage: PageCoverage | null;
   /** Null when analytics is not connected, which is not the same as no visits. */
   readonly sessions: number | null;
+  /**
+   * What the busiest page actually produced, so the page can say which checks
+   * cannot run yet instead of rendering an empty list that reads as all clear.
+   */
+  readonly volume: VolumeEvidence;
 };
 
 /** The stored rows of one window snapshot, or none when the payload is not one. */
@@ -59,7 +66,14 @@ export const getGettingFoundExtras = createServerFn({ method: "POST" })
       null;
 
     if (property === null) {
-      return { latestDate: null, queries: [], pages: [], coverage: null, sessions: null };
+      return {
+        latestDate: null,
+        queries: [],
+        pages: [],
+        coverage: null,
+        sessions: null,
+        volume: NO_VOLUME,
+      };
     }
 
     const [windowResult, observedResult, ga4Result] = await Promise.all([
@@ -144,6 +158,7 @@ export const getGettingFoundExtras = createServerFn({ method: "POST" })
       latestDate: completeDate,
       queries: topRows(rowsOf(queryWindow?.payload)),
       pages: topRows(pageRows),
+      volume: volumeOf(pageRows, pageWindow !== null),
       // Refused, not guessed at, in two cases: no page window collected, and no
       // page read successfully. Assembling zeros out of an absent read is how a
       // healthy site gets told none of its pages are findable.
@@ -160,3 +175,28 @@ export const getGettingFoundExtras = createServerFn({ method: "POST" })
       sessions,
     };
   });
+
+/** Nothing collected. Null rather than zero: the site was never asked. */
+const NO_VOLUME: VolumeEvidence = {
+  bestPageImpressions: null,
+  bestPageClicks: null,
+  pagesReported: 0,
+  windowDays: RULE_WINDOW_DAYS,
+};
+
+/**
+ * What the busiest page produced in the window.
+ *
+ * The busiest page rather than the site total, because the thresholds these are
+ * checked against are per page: a rule needing two hundred impressions on one
+ * page is not helped by two hundred spread across forty.
+ */
+function volumeOf(rows: readonly StoredSearchRow[], collected: boolean): VolumeEvidence {
+  if (!collected) return NO_VOLUME;
+  return {
+    bestPageImpressions: Math.max(0, ...rows.map((row) => countOf(row.impressions))),
+    bestPageClicks: Math.max(0, ...rows.map((row) => countOf(row.clicks))),
+    pagesReported: rows.length,
+    windowDays: RULE_WINDOW_DAYS,
+  };
+}

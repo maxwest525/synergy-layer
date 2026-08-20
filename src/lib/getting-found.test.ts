@@ -47,6 +47,7 @@ const facts: GettingFoundFacts = {
   queueSources: [],
   coverage: null,
   sessions: null,
+  volume: { bestPageImpressions: 40, bestPageClicks: 1, pagesReported: 48, windowDays: 28 },
 };
 
 function withFacts(overrides: Partial<GettingFoundFacts>): GettingFoundFacts {

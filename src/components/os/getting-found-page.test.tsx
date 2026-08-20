@@ -53,6 +53,7 @@ function facts(overrides: Partial<GettingFoundFacts> = {}): GettingFoundFacts {
     queueSources: [],
     coverage: null,
     sessions: null,
+    volume: { bestPageImpressions: 40, bestPageClicks: 1, pagesReported: 48, windowDays: 28 },
     ...overrides,
   };
 }
@@ -206,5 +207,38 @@ describe("when the read fails", () => {
     });
     render(<GettingFoundPage />);
     expect(screen.getByText(/could not be read/)).toBeInTheDocument();
+  });
+});
+
+describe("an empty list that explains itself", () => {
+  it("says which checks cannot run, rather than that nothing needs you", () => {
+    // The old empty state read as an all clear on a site where most checks
+    // physically cannot fire.
+    show({ queueSources: [] });
+    expect(screen.getByText(/cannot run on this site yet/i)).toBeInTheDocument();
+    expect(screen.queryByText("Nothing is waiting here")).not.toBeInTheDocument();
+  });
+
+  it("names what the busiest page actually produced", () => {
+    show({ queueSources: [] });
+    expect(screen.getByText(/shown 40 times in 28 days/i)).toBeInTheDocument();
+  });
+
+  it("goes back to a plain all clear when every check can run", () => {
+    show({
+      queueSources: [],
+      volume: {
+        bestPageImpressions: 100_000,
+        bestPageClicks: 5_000,
+        pagesReported: 400,
+        windowDays: 28,
+      },
+    });
+    expect(screen.getByText("Nothing is waiting here")).toBeInTheDocument();
+  });
+
+  it("says nothing about reach once there are findings to show", () => {
+    show({ queueSources: [source("a")] });
+    expect(screen.queryByText(/cannot run on this site yet/i)).not.toBeInTheDocument();
   });
 });

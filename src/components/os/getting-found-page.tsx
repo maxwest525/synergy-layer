@@ -132,8 +132,13 @@ function SuggestionList({ view }: { view: GettingFoundView }) {
   if (view.suggestions.length === 0) {
     return (
       <EmptyState
-        title="Nothing is waiting here"
-        description="No open suggestion is filed under getting found on Google right now."
+        title={view.reachNote === null ? "Nothing is waiting here" : "Nothing to show yet"}
+        // An empty list reads as "all clear". On a site whose busiest page is
+        // shown forty times a month most checks cannot run at all, and that is
+        // a different answer the operator deserves to hear.
+        description={
+          view.reachNote ?? "No open suggestion is filed under getting found on Google right now."
+        }
       />
     );
   }

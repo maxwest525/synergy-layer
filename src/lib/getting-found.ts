@@ -25,6 +25,7 @@ import {
   type QueueItem,
   type QueueSource,
 } from "./suggestion-queue";
+import { assessReach, type VolumeEvidence } from "./rule-reachability";
 import type { PeriodComparison } from "./search-console";
 
 export type SearchListRow = {
@@ -112,6 +113,8 @@ export type GettingFoundFacts = {
   readonly coverage: PageCoverage | null;
   /** Null when analytics is not connected, which is not the same as no visits. */
   readonly sessions: number | null;
+  /** What the busiest page produced, so silence can explain itself. */
+  readonly volume: VolumeEvidence;
 };
 
 /**
@@ -205,6 +208,16 @@ export type GettingFoundView = {
   readonly queries: readonly SearchListRow[];
   /** The pages behind the totals, biggest first. */
   readonly pages: readonly SearchListRow[];
+  /**
+   * Why the suggestion list is empty, when it is empty for a reason other than
+   * the site being healthy.
+   *
+   * An empty list reads as "nothing needs you". On a site whose busiest page is
+   * shown forty times a month, most checks cannot run at all, and saying
+   * nothing needs you is the wrong answer to a question the operator did not
+   * realise they were asking.
+   */
+  readonly reachNote: string | null;
 };
 
 const NO_PROPERTY =
@@ -384,6 +397,9 @@ export function buildGettingFound(facts: GettingFoundFacts): GettingFoundView {
     parkedFrom: ordered.parkedFrom,
     history: [...queue.ignored, ...queue.done],
     asOf: facts.latestDate,
+    // Only when there is nothing to show. With findings on screen the checks
+    // are evidently running, and the note would be noise.
+    reachNote: open.length === 0 ? assessReach(facts.volume).headline : null,
     queries: facts.queries,
     pages: facts.pages,
   };
