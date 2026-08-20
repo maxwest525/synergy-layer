@@ -299,6 +299,39 @@ describe("defects an adversarial review found before this shipped", () => {
     expect(view.tiles.find((entry) => entry.label === "Fixes graded")?.value).toBe("0");
   });
 
+  it("grades a quiet 14 day window not_yet, and does not count it as graded", () => {
+    // Google's own recrawl timeline says this can take a few days to a few
+    // weeks, so silence at 14 days is not a verdict on the fix.
+    const [graded] = gradeOutcomes([
+      outcome({ windowDays: 14, daysSinceLive: 14, impressions: 0 }),
+    ]);
+    expect(graded?.verdict).toBe("not_yet");
+
+    const view = buildSiteHealth(
+      withFacts({
+        siteObservedAt: NOW,
+        outcomes: [outcome({ windowDays: 14, daysSinceLive: 14, impressions: 0 })],
+      }),
+    );
+    expect(view.tiles.find((entry) => entry.label === "Fixes graded")?.value).toBe("0");
+  });
+
+  it("sorts a not_yet reading after neutral and before too early", () => {
+    const view = buildSiteHealth(
+      withFacts({
+        siteObservedAt: NOW,
+        outcomes: [
+          outcome({ changeId: "too-early", windowDays: 14, daysSinceLive: 3 }),
+          outcome({ changeId: "neutral", impressions: 140, clicks: 0 }),
+          outcome({ changeId: "not-yet", windowDays: 14, daysSinceLive: 14, impressions: 0 }),
+        ],
+      }),
+    );
+    const ids = view.outcomes.map((entry) => entry.changeId);
+    expect(ids.indexOf("neutral")).toBeLessThan(ids.indexOf("not-yet"));
+    expect(ids.indexOf("not-yet")).toBeLessThan(ids.indexOf("too-early"));
+  });
+
   it("says the counts are a floor when a read hit its limit", () => {
     const view = buildSiteHealth(withFacts({ siteObservedAt: NOW, truncated: true }));
     expect(view.truncatedNote).toMatch(/floor rather than a total/i);
