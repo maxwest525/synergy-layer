@@ -461,6 +461,10 @@ export async function runPageAudit(
     }),
     unreadablePages,
     knownPages: urls,
+    // What the site itself says it wants indexed. A page disallowed by
+    // robots.txt and declared nowhere is a working configuration; one that is
+    // disallowed *and* declared is the two files contradicting each other.
+    declaredPages: [...new Set([...sitemapPages, ...reported])],
   };
 
   const { error: siteError } = await client.from("site_audit_snapshots").insert({

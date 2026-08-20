@@ -7,6 +7,26 @@ import { createGithubApi } from "./execution/execute.server";
 import { applyExactReplacements } from "./execution/source-change";
 import type { SiteCheckId, SiteFacts } from "./site-checks";
 import { evaluateSite } from "./site-checks";
+import { blockedPaths } from "./robots-rules";
+
+/**
+ * The declared pages robots.txt disallows, as paths.
+ *
+ * The finding's own text names only the first few, so the fix recomputes the
+ * full set from the same stored facts the finding was derived from.
+ */
+function blockedDeclaredPaths(facts: SiteFacts): string[] {
+  if (!facts.robotsBody) return [];
+  const paths = (facts.declaredPages ?? []).flatMap((page) => {
+    try {
+      const parsed = new URL(page);
+      return parsed.origin === facts.origin ? [`${parsed.pathname}${parsed.search}`] : [];
+    } catch {
+      return page.startsWith("/") ? [page] : [];
+    }
+  });
+  return [...blockedPaths(facts.robotsBody, [...new Set(paths)])];
+}
 
 type Client = SupabaseClient<Database>;
 
@@ -78,6 +98,9 @@ export async function prepareSiteFixProposal(
     check,
     robotsContent: source.content,
     sitemapUrl: facts.sitemapUrl ?? `${facts.origin}/sitemap.xml`,
+    // Recomputed from the stored facts rather than parsed back out of the
+    // finding's prose, which only ever names the first three.
+    blockedPaths: blockedDeclaredPaths(facts),
   });
   if ("error" in built) throw new Error(built.error);
 
