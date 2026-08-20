@@ -56,11 +56,15 @@ export const getCommandCenterFacts = createServerFn({ method: "POST" })
         .select("start_date, end_date, metrics")
         .eq("tenant_id", tenantId)
         .order("end_date", { ascending: false })
-        .limit(120),
+        // Each row carries the whole snapshot blob, so this stays tight. The
+        // comparison only ever uses the latest window and the one ending the day
+        // before it starts; snapshots are daily, so 60 rows always spans the 28
+        // days back to it, and spans further still when there are gaps.
+        .limit(60),
       db
         .from("change_requests")
         .select(
-          "id, title, state, target_url, proposal_type, recommendation_id, published_proof_at, created_at, updated_at",
+          "id, title, state, target_url, proposal_type, recommendation_id, published_proof_at, rolled_back_at, created_at, updated_at",
         )
         .eq("tenant_id", tenantId)
         .order("created_at", { ascending: false })
@@ -115,7 +119,12 @@ export const getCommandCenterFacts = createServerFn({ method: "POST" })
 
     const changes = assertRead("Change requests", changeResult).data ?? [];
 
-    const fixesLive = changes.filter((row) => row.published_proof_at !== null).length;
+    // Rolling a change back never clears `published_proof_at`, so proof alone
+    // would keep counting a fix that is no longer on the page. The tile says
+    // these are live now, so the count has to mean that.
+    const fixesLive = changes.filter(
+      (row) => row.published_proof_at !== null && row.rolled_back_at === null,
+    ).length;
     const pagesImproved = new Set(
       changes
         .filter((row) => row.state === "verified")

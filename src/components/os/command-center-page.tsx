@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
-import { Sparkles, X } from "lucide-react";
+import { CircleCheck, Sparkles, X } from "lucide-react";
 
-import { tileIcon } from "./category-icons";
+import { categoryIcon, tileIcon } from "./category-icons";
 import { useCommandCenter } from "./command-center-facts";
 import { EmptyState } from "./primitives";
 import type { Delta, SuggestedNextRow, Tile, TopCard, TopCardAction } from "@/lib/command-center";
@@ -99,10 +99,18 @@ function ActionLink({
   );
 }
 
+function CardIcon({ card }: { card: TopCard }) {
+  const Icon = categoryIcon(card.icon);
+  return <Icon className="h-[15px] w-[15px] shrink-0" strokeWidth={1.5} aria-hidden="true" />;
+}
+
 function SuggestionCard({ card }: { card: TopCard }) {
   return (
     <article className="flex flex-col gap-2.5 rounded-[10px] border border-border bg-card p-4">
-      <h3 className="text-sm font-bold text-foreground">{card.title}</h3>
+      <h3 className="flex items-center gap-2 text-sm font-bold text-foreground">
+        <CardIcon card={card} />
+        {card.title}
+      </h3>
       <p className="text-[10.5px] font-bold uppercase tracking-[0.1em] text-foreground">
         {card.kindLabel} · <span className={TONE_TEXT[card.tone]}>{card.urgencyLabel}</span>
       </p>
@@ -220,7 +228,8 @@ export function CommandCenterPage() {
 
       {view.suggestedNext.length > 0 ? (
         <div className="flex flex-col gap-2.5">
-          <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-primary">
+          <span className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.12em] text-primary">
+            <CircleCheck className="h-3 w-3" strokeWidth={1.6} aria-hidden="true" />
             Suggested next · Nothing changes without your approval
           </span>
           {view.suggestedNext.map((row) => (

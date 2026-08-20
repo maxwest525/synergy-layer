@@ -4,6 +4,7 @@ import { fileURLToPath, URL } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import { CATEGORIES, CATEGORY_NAV_CAP, navEntries } from "./categories";
+import { buildCommandCenter } from "./command-center";
 
 /**
  * The navigation contract.
@@ -36,6 +37,70 @@ describe("navigation contract", () => {
     for (const entry of navEntries()) {
       if (entry.to === "/") continue;
       expect(routeFiles).toContain(`'${entry.to}'`);
+    }
+  });
+
+  it("points every destination the Command center emits at a route that exists", () => {
+    // Five independent reviewers caught one dead link by reading the code. This
+    // asserts it instead, for every destination the view model can produce.
+    const routeFiles = read("../routeTree.gen.ts");
+    const view = buildCommandCenter({
+      now: "2026-08-20T12:00:00.000Z",
+      property: "trumoveinc.com",
+      search: null,
+      ga4: { connectionStatement: "not connected", windowDays: 28, snapshots: [] },
+      changes: { fixesLive: 0, pagesImproved: 0 },
+      audit: { hasRun: false, pagesNeedingFixes: 0 },
+      queueSources: [
+        {
+          id: "11111111-1111-1111-1111-111111111111",
+          kind: "change",
+          categoryId: "pages",
+          title: "A drafted fix",
+          targetUrl: null,
+          storedState: "proposed",
+          fingerprint: null,
+          severity: null,
+          linkedChangeId: null,
+          createdAt: "2026-08-01T00:00:00.000Z",
+          updatedAt: "2026-08-01T00:00:00.000Z",
+        },
+        {
+          id: "22222222-2222-2222-2222-222222222222",
+          kind: "recommendation",
+          categoryId: "search",
+          title: "A raised finding",
+          targetUrl: null,
+          storedState: "proposed",
+          fingerprint: null,
+          severity: null,
+          linkedChangeId: null,
+          createdAt: "2026-08-01T00:00:00.000Z",
+          updatedAt: "2026-08-01T00:00:00.000Z",
+        },
+        {
+          id: "audit:title",
+          kind: "audit",
+          categoryId: "pages",
+          title: "A page check",
+          targetUrl: null,
+          storedState: "proposed",
+          fingerprint: "audit:title",
+          severity: "critical",
+          linkedChangeId: null,
+          createdAt: "2026-08-01T00:00:00.000Z",
+          updatedAt: "2026-08-01T00:00:00.000Z",
+        },
+      ],
+    });
+
+    const destinations = [
+      ...view.suggestedNext.map((row) => row.to),
+      ...view.topCards.map((card) => card.action.to),
+    ];
+    expect(destinations.length).toBeGreaterThan(0);
+    for (const to of destinations) {
+      expect(routeFiles).toContain(`'${to}'`);
     }
   });
 

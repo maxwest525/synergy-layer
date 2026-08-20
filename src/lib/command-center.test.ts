@@ -370,12 +370,57 @@ describe("top cards", () => {
   });
 });
 
+describe("top bar status", () => {
+  it("says nothing is waiting when the queue is clear", () => {
+    expect(buildCommandCenter(facts).statusLine).toEqual({
+      text: "Nothing waiting on you",
+      tone: "positive",
+    });
+  });
+
+  it("never claims systems are normal, which nothing in this phase measures", () => {
+    expect(buildCommandCenter(facts).statusLine.text).not.toMatch(/systems/i);
+  });
+
+  it("counts what is waiting, and leads with the urgent share", () => {
+    const view = buildCommandCenter(
+      withFacts({
+        queueSources: [
+          queueSource({ id: "urgent", createdAt: daysBefore(30) }),
+          queueSource({ id: "calm", createdAt: daysBefore(1) }),
+        ],
+      }),
+    );
+    expect(view.statusLine).toEqual({
+      text: "1 of 2 waiting need fixing now",
+      tone: "danger",
+    });
+  });
+
+  it("stays at a warning when nothing is urgent yet", () => {
+    const view = buildCommandCenter(
+      withFacts({ queueSources: [queueSource({ id: "calm", createdAt: daysBefore(1) })] }),
+    );
+    expect(view.statusLine).toEqual({ text: "1 thing waiting on you", tone: "warning" });
+  });
+});
+
 describe("suggested next rows", () => {
   it("offers the first page audit with its cost written on the button", () => {
     const view = buildCommandCenter(facts);
     const row = view.suggestedNext.find((entry) => entry.id === "run-page-audit");
-    expect(row?.actionLabel).toBe("Run it · reads up to 100 pages");
+    expect(row?.actionLabel).toBe("Set it up · reads up to 100 pages");
     expect(row?.metered).toBe(true);
+  });
+
+  it("sends the audit row to the route Your pages currently owns", () => {
+    // `/your-pages` is the category's reserved slug, not a route that exists
+    // yet. Linking to it would be a dead link on the first thing a new
+    // workspace is told to do.
+    const row = buildCommandCenter(facts).suggestedNext.find(
+      (entry) => entry.id === "run-page-audit",
+    );
+    expect(row?.to).toBe("/pages");
   });
 
   it("stops offering the first audit once the audit has run", () => {

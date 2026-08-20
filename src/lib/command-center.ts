@@ -11,12 +11,13 @@
  * absent read is an absence, and the two never render alike.
  */
 
-import { CATEGORIES, type Category, type CategoryId } from "./categories";
+import { CATEGORIES, type Category, type CategoryIcon, type CategoryId } from "./categories";
 import type { PeriodComparison } from "./search-console";
 import {
   buildQueue,
   compareQueueItems,
   toneForUrgency,
+  type Queue,
   type QueueItem,
   type QueueSource,
   type UrgencyTone,
@@ -93,6 +94,8 @@ export type TopCardAction = {
 export type TopCard = {
   readonly id: string;
   readonly category: Category;
+  /** The spec puts an icon on every card title; this is its name. */
+  readonly icon: CategoryIcon;
   readonly title: string;
   readonly kindLabel: string;
   readonly urgencyLabel: string;
@@ -131,6 +134,8 @@ export type CommandCenterView = {
   readonly topCards: readonly TopCard[];
   readonly totalWaiting: number;
   readonly suggestedNext: readonly SuggestedNextRow[];
+  /** The top bar's right-hand status. */
+  readonly statusLine: StatusLine;
   /** Shown instead of the assist line when the whole queue is clear. */
   readonly emptyHeadline: string | null;
 };
@@ -315,6 +320,9 @@ function toTopCard(item: QueueItem): TopCard | null {
   return {
     id: item.id,
     category,
+    // The card wears its category's icon, so the same subject looks the same
+    // on the home page, in the rail and in the nav panel.
+    icon: category.icon,
     title: item.title,
     kindLabel: KIND_LABEL[item.kind],
     urgencyLabel: item.urgencyLabel,
@@ -327,6 +335,35 @@ function toTopCard(item: QueueItem): TopCard | null {
 
 function waitingPhrase(category: Category, count: number): string {
   return `${count} ${count === 1 ? category.waiting.one : category.waiting.many}`;
+}
+
+export type StatusLine = {
+  readonly text: string;
+  readonly tone: "positive" | "warning" | "danger";
+};
+
+/**
+ * The top bar's right-hand status.
+ *
+ * The board writes this as "All systems normal", but nothing in this phase reads
+ * system health, so that sentence would be a claim we cannot back. The slot is
+ * filled with what is actually known instead: how much is waiting on the
+ * operator, and how urgent the most urgent of it is.
+ */
+function statusLineFor(queue: Queue): StatusLine {
+  const open = queue.open;
+  if (open.length === 0) return { text: "Nothing waiting on you", tone: "positive" };
+  const urgent = open.filter((item) => item.urgency === "fix_now").length;
+  if (urgent > 0) {
+    return {
+      text: `${urgent} of ${open.length} waiting need fixing now`,
+      tone: "danger",
+    };
+  }
+  return {
+    text: open.length === 1 ? "1 thing waiting on you" : `${open.length} things waiting on you`,
+    tone: "warning",
+  };
 }
 
 /**
@@ -368,12 +405,19 @@ export function buildCommandCenter(facts: CommandCenterFacts): CommandCenterView
   const suggestedNext: SuggestedNextRow[] = [];
 
   if (!facts.audit.hasRun) {
+    // The audit control lives on whichever route Your pages currently points at,
+    // so this follows the category rather than hard-coding a slug whose page has
+    // not been built yet.
+    const pages = CATEGORIES.find((category) => category.id === "pages");
     suggestedNext.push({
       id: "run-page-audit",
       title: "Run the first page audit, because every page check is blind until it runs once",
       tone: "danger",
-      actionLabel: `Run it · ${PAGE_AUDIT_COST}`,
-      to: "/your-pages",
+      // The click that spends money happens on that page, against its own
+      // button; this row only takes the operator there, with the cost already
+      // stated so the price is never a surprise.
+      actionLabel: `Set it up · ${PAGE_AUDIT_COST}`,
+      to: pages?.to ?? "/",
       metered: true,
     });
   }
@@ -404,6 +448,7 @@ export function buildCommandCenter(facts: CommandCenterFacts): CommandCenterView
     topCards,
     totalWaiting: queue.open.length,
     suggestedNext,
+    statusLine: statusLineFor(queue),
     emptyHeadline: queue.open.length === 0 ? "Nothing needs you" : null,
   };
 }

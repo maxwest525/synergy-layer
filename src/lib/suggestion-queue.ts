@@ -139,12 +139,14 @@ function canIgnoreSource(source: QueueSource): boolean {
 }
 
 /**
- * Collapses repeats of the same finding.
+ * Collapses repeats of the same finding *within one queue state*.
  *
  * Duplicates are matched on `(kind, fingerprint)` so a recommendation and the
  * change request drafted from it are never merged, and the earliest row wins so
  * "waiting 14 days" keeps telling the truth. Rows without a fingerprint are
  * never collapsed, because nothing proves they are the same finding.
+ *
+ * Callers must group by queue state before calling this: see `buildQueue`.
  */
 export function dedupeSources(sources: readonly QueueSource[]): readonly QueueSource[] {
   const byFingerprint = new Map<string, QueueSource>();
@@ -200,18 +202,25 @@ function toItem(source: QueueSource, queueState: QueueState, now: string): Queue
  * claims that seven is all there is.
  */
 export function buildQueue(sources: readonly QueueSource[], now: string): Queue {
-  const open: QueueItem[] = [];
-  const ignored: QueueItem[] = [];
-  const done: QueueItem[] = [];
+  // Classify first, then dedupe inside each tab.
+  //
+  // The database only holds a fingerprint unique among *open* rows
+  // (`recommendations_open_issue_key` is a partial index excluding the closed
+  // states), so a finding that was handled in June and re-raised in August is
+  // two legitimate rows sharing one fingerprint. Deduping before classifying
+  // would let the old closed row swallow the live one, and the operator would
+  // see "Nothing needs you" with a proposed recommendation sitting in the table.
+  const buckets: Record<QueueState, QueueSource[]> = { open: [], ignored: [], done: [] };
 
-  for (const source of dedupeSources(sources)) {
+  for (const source of sources) {
     const queueState = queueStateFor(source);
     if (queueState === null) continue;
-    const item = toItem(source, queueState, now);
-    if (queueState === "open") open.push(item);
-    else if (queueState === "ignored") ignored.push(item);
-    else done.push(item);
+    buckets[queueState].push(source);
   }
+
+  const open = dedupeSources(buckets.open).map((source) => toItem(source, "open", now));
+  const ignored = dedupeSources(buckets.ignored).map((source) => toItem(source, "ignored", now));
+  const done = dedupeSources(buckets.done).map((source) => toItem(source, "done", now));
 
   const ranked = [...open].sort(compareQueueItems);
 

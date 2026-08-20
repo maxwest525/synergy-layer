@@ -148,6 +148,61 @@ describe("dedup", () => {
     expect(deduped[0]?.id).toBe("older");
   });
 
+  it("keeps a re-raised finding visible when an old handled one shares its fingerprint", () => {
+    // The unique index on `issue_fingerprint` is partial: it covers open rows
+    // only. A finding applied in June and re-raised in August is two real rows
+    // sharing one fingerprint, and the live one must still reach the operator.
+    const queue = buildQueue(
+      [
+        source({ id: "june", fingerprint: "f", storedState: "applied", createdAt: daysBefore(60) }),
+        source({
+          id: "august",
+          fingerprint: "f",
+          storedState: "proposed",
+          createdAt: daysBefore(2),
+        }),
+      ],
+      NOW,
+    );
+    expect(queue.open.map((item) => item.id)).toEqual(["august"]);
+    expect(queue.done.map((item) => item.id)).toEqual(["june"]);
+  });
+
+  it("keeps a re-raised finding visible after an earlier one was ignored", () => {
+    const queue = buildQueue(
+      [
+        source({ id: "old", fingerprint: "f", storedState: "rejected", createdAt: daysBefore(40) }),
+        source({ id: "new", fingerprint: "f", storedState: "proposed", createdAt: daysBefore(1) }),
+      ],
+      NOW,
+    );
+    expect(queue.open.map((item) => item.id)).toEqual(["new"]);
+    expect(queue.ignored.map((item) => item.id)).toEqual(["old"]);
+  });
+
+  it("does not let a closed row lend its age to the re-raised one", () => {
+    const queue = buildQueue(
+      [
+        source({ id: "old", fingerprint: "f", storedState: "rejected", createdAt: daysBefore(40) }),
+        source({ id: "new", fingerprint: "f", storedState: "proposed", createdAt: daysBefore(1) }),
+      ],
+      NOW,
+    );
+    expect(queue.open[0]?.urgencyLabel).toBe("waiting 1 day");
+    expect(queue.open[0]?.urgency).toBe("nice_to_have");
+  });
+
+  it("still collapses two open rows that share a fingerprint", () => {
+    const queue = buildQueue(
+      [
+        source({ id: "a", fingerprint: "f", createdAt: daysBefore(9) }),
+        source({ id: "b", fingerprint: "f", createdAt: daysBefore(2) }),
+      ],
+      NOW,
+    );
+    expect(queue.open.map((item) => item.id)).toEqual(["a"]);
+  });
+
   it("never collapses rows that have no fingerprint", () => {
     const deduped = dedupeSources([
       source({ id: "r1", fingerprint: null }),

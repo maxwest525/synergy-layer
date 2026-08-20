@@ -13,6 +13,7 @@ import {
   navEntries,
   type NavEntry,
 } from "@/lib/categories";
+import type { StatusLine } from "@/lib/command-center";
 import type { UrgencyTone } from "@/lib/suggestion-queue";
 import { getWorkspaceAccessState } from "@/lib/operator-session-gate";
 import { cn } from "@/lib/utils";
@@ -32,6 +33,12 @@ const TONE_TEXT: Record<UrgencyTone, string> = {
   danger: "text-destructive",
   warning: "text-warning",
   info: "text-info",
+};
+
+const STATUS_DOT: Record<StatusLine["tone"], string> = {
+  positive: "bg-primary",
+  warning: "bg-warning",
+  danger: "bg-destructive",
 };
 
 function activeFor(pathname: string, entry: NavEntry): boolean {
@@ -178,15 +185,30 @@ function TopBar({ pathname }: { pathname: string }) {
       </div>
 
       {/*
-        The palette this opens is the existing ⌘K command menu. "Ask Marky" is
-        phase-gated last, so this stays a search affordance until that phase
-        lands rather than promising a chat that does not exist yet.
+        The board puts "Search or ask Marky ⌘K" here, but the composer is
+        phase-gated last and no ⌘K handler is bound yet. Chrome that advertises
+        a shortcut which does nothing is worse than chrome that waits, so the
+        slot holds its shape and says plainly that it is not ready. The wording
+        and the shortcut arrive with the composer.
       */}
-      <div className="hidden w-[300px] items-center gap-2.5 rounded-full border border-input bg-secondary px-3.5 py-2 lg:flex">
-        <Search className="h-3.5 w-3.5 text-subtle" strokeWidth={1.6} aria-hidden="true" />
-        <span className="flex-1 text-[13px] text-subtle">Search</span>
-        <kbd className="text-[11px] text-subtle">⌘K</kbd>
+      <div
+        aria-hidden="true"
+        className="hidden w-[300px] items-center gap-2.5 rounded-full border border-input bg-secondary px-3.5 py-2 lg:flex"
+      >
+        <Search className="h-3.5 w-3.5 text-subtle" strokeWidth={1.6} />
+        <span className="flex-1 text-[13px] text-subtle">Search arrives with Ask Marky</span>
       </div>
+
+      {/* Nothing is claimed here until the read lands. */}
+      {view ? (
+        <span className="flex shrink-0 items-center gap-2 text-xs text-sidebar-foreground">
+          <span
+            aria-hidden="true"
+            className={cn("h-[7px] w-[7px] rounded-full", STATUS_DOT[view.statusLine.tone])}
+          />
+          {view.statusLine.text}
+        </span>
+      ) : null}
     </header>
   );
 }

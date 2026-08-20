@@ -31,6 +31,11 @@ export function useCommandCenter(): CommandCenterQuery {
     queryFn: () => loadFacts(),
     enabled: session.signedIn,
     retry: false,
+    // The shell reads this on every route, and the read walks the stored page
+    // audit, so it is the heaviest thing on a navigation. These are daily
+    // snapshots and an approval queue, not a live feed; two minutes of
+    // staleness costs the operator nothing and saves a round trip per hop.
+    staleTime: 120_000,
   });
 
   return {
