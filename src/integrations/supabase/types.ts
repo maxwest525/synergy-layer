@@ -2188,6 +2188,76 @@ export type Database = {
           },
         ]
       }
+      ga4_observations: {
+        Row: {
+          created_at: string
+          evidence: Json
+          id: string
+          issue_fingerprint: string
+          observation_fingerprint: string
+          period_end: string
+          period_start: string
+          property: string
+          recommendation_id: string | null
+          rule: string
+          snapshot_id: string
+          target: string
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          evidence?: Json
+          id?: string
+          issue_fingerprint: string
+          observation_fingerprint: string
+          period_end: string
+          period_start: string
+          property: string
+          recommendation_id?: string | null
+          rule: string
+          snapshot_id: string
+          target: string
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          evidence?: Json
+          id?: string
+          issue_fingerprint?: string
+          observation_fingerprint?: string
+          period_end?: string
+          period_start?: string
+          property?: string
+          recommendation_id?: string | null
+          rule?: string
+          snapshot_id?: string
+          target?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ga4_observations_recommendation_id_fkey"
+            columns: ["recommendation_id"]
+            isOneToOne: false
+            referencedRelation: "recommendations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ga4_observations_snapshot_id_fkey"
+            columns: ["snapshot_id"]
+            isOneToOne: false
+            referencedRelation: "ga4_snapshots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ga4_observations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ga4_snapshots: {
         Row: {
           collected_at: string

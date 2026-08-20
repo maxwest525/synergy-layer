@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { PageAuditCallout } from "@/components/os/page-audit-callout";
 import { OperatorRouteError } from "@/components/os/route-error";
 import {
   EmptyState,
@@ -95,6 +96,28 @@ function percentChange(value: number | null): string {
   return value === null ? "No prior-volume baseline" : signed(value, "%");
 }
 
+const ROW_PREVIEW_LIMIT = 7;
+
+/** Show-all toggle for long tables; renders nothing when the table is short. */
+function ShowAllToggle({
+  total,
+  expanded,
+  onToggle,
+  noun,
+}: {
+  total: number;
+  expanded: boolean;
+  onToggle: () => void;
+  noun: string;
+}) {
+  if (total <= ROW_PREVIEW_LIMIT) return null;
+  return (
+    <Button variant="ghost" size="sm" className="mt-1 text-xs" onClick={onToggle}>
+      {expanded ? "Show fewer" : `Show all ${total} ${noun}`}
+    </Button>
+  );
+}
+
 function RowTable({
   rows,
   label,
@@ -104,6 +127,7 @@ function RowTable({
   label: string;
   emptyTitle: string;
 }) {
+  const [expanded, setExpanded] = useState(false);
   if (rows.length === 0) {
     return (
       <EmptyState
@@ -136,7 +160,7 @@ function RowTable({
           </tr>
         </thead>
         <tbody>
-          {rows.map((row) => (
+          {(expanded ? rows : rows.slice(0, ROW_PREVIEW_LIMIT)).map((row) => (
             <tr key={row.keys.join(" | ")} className="border-b border-border/40 last:border-b-0">
               <td className="py-2 pr-4 text-foreground">
                 {row.keys.length > 1 ? (
@@ -164,6 +188,12 @@ function RowTable({
           ))}
         </tbody>
       </table>
+      <ShowAllToggle
+        total={rows.length}
+        expanded={expanded}
+        onToggle={() => setExpanded((value) => !value)}
+        noun="rows"
+      />
     </div>
   );
 }
@@ -249,6 +279,7 @@ function SearchWorkspacePage() {
 
   const latest = data.dailyTotals[0];
   const ownedRoot = defaultOwnedUrl(data.property?.siteUrl ?? null);
+  const [showAllDays, setShowAllDays] = useState(false);
   const [inspectionUrl, setInspectionUrl] = useState(ownedRoot);
   const [sitemapUrl, setSitemapUrl] = useState(
     data.sitemaps[0]?.path ?? `${ownedRoot.replace(/\/$/, "")}/sitemap.xml`,
@@ -370,6 +401,8 @@ function SearchWorkspacePage() {
               No traffic estimate, score, or recommendation is derived from this evidence.
             </p>
           </GlassCard>
+
+          <PageAuditCallout />
 
           <SectionCard
             id="overview"
@@ -516,7 +549,10 @@ function SearchWorkspacePage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {data.dailyTotals.map((day) => (
+                  {(showAllDays
+                    ? data.dailyTotals
+                    : data.dailyTotals.slice(0, ROW_PREVIEW_LIMIT)
+                  ).map((day) => (
                     <tr key={day.date} className="border-b border-border/40 last:border-b-0">
                       <td className="py-2 pr-4 text-foreground">{day.date}</td>
                       <td className="py-2 pr-4 text-right tabular-nums text-foreground">
@@ -538,6 +574,12 @@ function SearchWorkspacePage() {
                   ))}
                 </tbody>
               </table>
+              <ShowAllToggle
+                total={data.dailyTotals.length}
+                expanded={showAllDays}
+                onToggle={() => setShowAllDays((value) => !value)}
+                noun="days"
+              />
             </div>
           </SectionCard>
 

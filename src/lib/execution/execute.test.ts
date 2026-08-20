@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import { GOVERNED_BRANCH, GOVERNED_FILE, GOVERNED_PROJECT_ID, GOVERNED_REPO } from "./allowlist";
-import { applyExactReplacements, parseFieldChanges, verifyRenderedPage } from "./source-change";
+import {
+  applyExactReplacements,
+  extractMetaDescription,
+  parseFieldChanges,
+  verifyRenderedPage,
+} from "./source-change";
 import {
   checkPublishedPage,
   executeSourceChange,
@@ -95,6 +100,7 @@ function makeGithub(
 function makeRenderer(page: {
   title: string | null;
   heading: string | null;
+  metaDescription?: string | null;
   finalUrl?: string;
 }): RenderedVerifier {
   return {
@@ -103,10 +109,20 @@ function makeRenderer(page: {
       finalUrl: page.finalUrl ?? url,
       title: page.title,
       heading: page.heading,
+      metaDescription: page.metaDescription ?? null,
       renderedBy: "TestRenderer",
     }),
   };
 }
+
+const metaChanges = parseFieldChanges([
+  {
+    field: "meta_description",
+    label: "Meta description",
+    before: "Old corporate relocation description.",
+    after: "Employee relocation movers with dedicated coordinators and guaranteed dates.",
+  },
+]);
 
 describe("applyExactReplacements", () => {
   it("applies both approved values exactly once", () => {
@@ -254,16 +270,70 @@ describe("buildRenderedScrapeRequest", () => {
   });
 });
 
+describe("extractMetaDescription", () => {
+  it("reads the description meta tag in either attribute order", () => {
+    expect(
+      extractMetaDescription('<head><meta name="description" content="Movers you trust."></head>'),
+    ).toBe("Movers you trust.");
+    expect(extractMetaDescription("<meta content='Movers you trust.' name='DESCRIPTION' />")).toBe(
+      "Movers you trust.",
+    );
+  });
+
+  it("decodes entities and ignores other meta tags", () => {
+    const html =
+      '<meta property="og:description" content="wrong"><meta name="description" content="Moving &amp; storage">';
+    expect(extractMetaDescription(html)).toBe("Moving & storage");
+  });
+
+  it("returns null when the tag is absent or empty", () => {
+    expect(extractMetaDescription("<title>x</title>")).toBeNull();
+    expect(extractMetaDescription('<meta name="description" content="">')).toBeNull();
+  });
+});
+
 describe("verifyRenderedPage", () => {
   it("only passes on an exact match of both values", () => {
     const page = {
       finalUrl: "https://trumoveinc.com/services/corporate-relocation",
       title: "Employee Relocation Movers | TruMove",
       heading: "Employee Relocation Moving Services",
+      metaDescription: null,
       renderedBy: "TestRenderer",
     };
     expect(verifyRenderedPage(page, changes).ok).toBe(true);
     expect(verifyRenderedPage({ ...page, title: "Old" }, changes).ok).toBe(false);
+  });
+
+  it("proves a meta description change without requiring a title or heading", () => {
+    const page = {
+      finalUrl: "https://trumoveinc.com/services/corporate-relocation",
+      title: null,
+      heading: null,
+      metaDescription: "Employee relocation movers with dedicated coordinators and guaranteed dates.",
+      renderedBy: "TestRenderer",
+    };
+    const proof = verifyRenderedPage(page, metaChanges);
+    expect(proof.ok).toBe(true);
+    expect(proof.foundDescription).toBe(page.metaDescription);
+    expect(verifyRenderedPage({ ...page, metaDescription: "Old wording" }, metaChanges).ok).toBe(
+      false,
+    );
+  });
+
+  it("treats a missing meta description as unproven, not as a failure of the change", () => {
+    const proof = verifyRenderedPage(
+      {
+        finalUrl: "https://trumoveinc.com/services/corporate-relocation",
+        title: "TruMove, AI-Powered Moving Made Simple",
+        heading: "Corporate Relocation",
+        metaDescription: null,
+        renderedBy: "TestRenderer",
+      },
+      metaChanges,
+    );
+    expect(proof.ok).toBe(false);
+    expect(proof.reason).toContain("no meta description");
   });
 
   it("treats an unrendered shell as unproven, not as a failure of the change", () => {
@@ -272,6 +342,7 @@ describe("verifyRenderedPage", () => {
         finalUrl: "https://trumoveinc.com/services/corporate-relocation",
         title: "TruMove, AI-Powered Moving Made Simple",
         heading: null,
+        metaDescription: null,
         renderedBy: "TestRenderer",
       },
       changes,
@@ -325,6 +396,30 @@ describe("checkPublishedPage", () => {
     expect(outcome.message).toContain("measurement follow-up needs a retry");
     expect(saved.map((row) => row["kind"])).toEqual(["applied"]);
     expect(attempts.at(-1)?.detail).toMatchObject({ measurementFollowupWarning: warning });
+  });
+
+  it("marks a meta description change applied when the rendered page serves it", async () => {
+    const { store, saved } = makeStore(
+      makeRequest({
+        commitSha: "new-sha",
+        changes: metaChanges,
+        filePath: "src/components/seo/SeoHead.tsx",
+      }),
+    );
+    const outcome = await checkPublishedPage({
+      store,
+      renderer: makeRenderer({
+        title: null,
+        heading: null,
+        metaDescription:
+          "Employee relocation movers with dedicated coordinators and guaranteed dates.",
+      }),
+      requestId: "x",
+      actorId: "operator",
+    });
+    expect(outcome.status).toBe("verified");
+    expect(outcome.message).toContain("meta description");
+    expect(saved.map((row) => row["kind"])).toEqual(["applied"]);
   });
 
   it("stays pending and does not mark applied when the page is unchanged", async () => {

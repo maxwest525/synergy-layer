@@ -112,8 +112,10 @@ export type PublishedProof = {
   ok: boolean;
   expectedTitle: string | null;
   expectedHeading: string | null;
+  expectedDescription: string | null;
   foundTitle: string | null;
   foundHeading: string | null;
+  foundDescription: string | null;
   renderedBy: string;
   finalUrl: string;
   reason: string;
@@ -128,6 +130,7 @@ export type RenderedPage = {
   finalUrl: string;
   title: string | null;
   heading: string | null;
+  metaDescription: string | null;
   renderedBy: string;
 };
 
@@ -159,6 +162,18 @@ export function extractFirstHeading(html: string): string | null {
   return text ? text : null;
 }
 
+/** The description meta tag's content, whichever order its attributes appear in. */
+export function extractMetaDescription(html: string): string | null {
+  for (const tag of html.match(/<meta\b[^>]*>/gi) ?? []) {
+    const name = /\bname\s*=\s*("([^"]*)"|'([^']*)')/i.exec(tag);
+    if ((name?.[2] ?? name?.[3])?.trim().toLowerCase() !== "description") continue;
+    const content = /\bcontent\s*=\s*("([^"]*)"|'([^']*)')/i.exec(tag);
+    const text = content ? normalize(content[2] ?? content[3] ?? "") : null;
+    return text ? text : null;
+  }
+  return null;
+}
+
 /** First markdown H1 (`# text`), used when a renderer returns markdown only. */
 export function extractMarkdownHeading(markdown: string): string | null {
   const match = /^[ \t]*#[ \t]+(.+)$/m.exec(markdown);
@@ -168,20 +183,48 @@ export function extractMarkdownHeading(markdown: string): string | null {
 
 /**
  * A commit is not a live page, and a rendered page is the only thing that can
- * show what a visitor actually receives. Only an exact match of both approved
- * values counts as proof.
+ * show what a visitor actually receives. Only an exact match of every approved
+ * value counts as proof: both wording values for the title/H1 lane, the meta
+ * description for the page metadata lane.
  */
 export function verifyRenderedPage(page: RenderedPage, changes: FieldChange[]): PublishedProof {
   const expectedTitle = changes.find((c) => c.field === "seo_title")?.after ?? null;
   const expectedHeading = changes.find((c) => c.field === "page_heading")?.after ?? null;
+  const expectedDescription = changes.find((c) => c.field === "meta_description")?.after ?? null;
   const base = {
     expectedTitle,
     expectedHeading,
+    expectedDescription,
     foundTitle: page.title,
     foundHeading: page.heading,
+    foundDescription: page.metaDescription,
     renderedBy: page.renderedBy,
     finalUrl: page.finalUrl,
   };
+
+  if (expectedDescription) {
+    if (!page.metaDescription) {
+      return {
+        ...base,
+        ok: false,
+        reason:
+          "The rendered page returned no meta description. That is an unrendered application shell, not proof either way.",
+      };
+    }
+    if (page.metaDescription === normalize(expectedDescription)) {
+      return {
+        ...base,
+        ok: true,
+        reason: `The rendered page at ${page.finalUrl} serves the exact approved meta description, as rendered by ${page.renderedBy}.`,
+      };
+    }
+    return {
+      ...base,
+      ok: false,
+      reason:
+        "The rendered page does not yet serve the approved meta description. The commit may exist while the site publish or sync is still pending.",
+    };
+  }
 
   if (!expectedTitle || !expectedHeading) {
     return {

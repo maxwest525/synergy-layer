@@ -150,7 +150,7 @@ export const proposeFixFromFinding = createServerFn({ method: "POST" })
   .handler(async ({ data, context }): Promise<FindingFixResult> => {
     const { assertOperator } = await import("./os-admin.server");
     const { requireTenantId } = await import("./tenant.server");
-    const { deriveFixTarget } = await import("./finding-fix-target");
+    const { deriveFixTarget, proposalKindForRule } = await import("./finding-fix-target");
     await assertOperator(context.supabase, context.userId);
     const tenantId = await requireTenantId(context.supabase);
     const client = context.supabase;
@@ -192,30 +192,43 @@ export const proposeFixFromFinding = createServerFn({ method: "POST" })
     const fixTarget = deriveFixTarget(rule, target, pageQueryRows);
     if (!fixTarget.ok) throw new Error(fixTarget.reason);
 
-    const { prepareTitleH1Proposal } = await import("./title-h1-proposals.server");
-    const { serviceRpc } = await import("./title-h1-proposals.functions");
-    const proposal = await prepareTitleH1Proposal(client, tenantId, fixTarget.url, {
-      wordingMode: "gemini",
-    });
-    const result = await serviceRpc("create_title_h1_proposal", {
-      _tenant_id: tenantId,
-      _actor: context.userId,
-      _idempotency_key: `finding:${data.recommendationId}`,
-      _target_url: proposal.targetUrl,
-      _title: proposal.title,
-      _changes: proposal.changes,
-      _rationale: proposal.rationale,
-      _evidence: proposal.evidence,
-      _evidence_summary: proposal.evidenceSummary,
-      _evidence_limitations: proposal.evidenceLimitations,
-      _risk_note: proposal.riskNote,
-      _generation_context: proposal.generationContext,
-      _source_repo: proposal.sourceRepo,
-      _source_branch: proposal.sourceBranch,
-      _source_file: proposal.sourceFile,
-      _source_project_id: proposal.sourceProjectId,
-      _source_revision_before: proposal.sourceRevisionBefore,
-    });
+    let result: FindingFixResult;
+    if (proposalKindForRule(rule) === "page_metadata") {
+      const { preparePageMetadataProposal } = await import("./page-metadata-proposals.server");
+      const { fileGovernedProposal } = await import("./audit-fixes.server");
+      const proposal = await preparePageMetadataProposal(client, tenantId, fixTarget.url);
+      result = await fileGovernedProposal({
+        tenantId,
+        actorId: context.userId,
+        idempotencyKey: `finding:${data.recommendationId}`,
+        proposal,
+      });
+    } else {
+      const { prepareTitleH1Proposal } = await import("./title-h1-proposals.server");
+      const { serviceRpc } = await import("./title-h1-proposals.functions");
+      const proposal = await prepareTitleH1Proposal(client, tenantId, fixTarget.url, {
+        wordingMode: "gemini",
+      });
+      result = await serviceRpc("create_title_h1_proposal", {
+        _tenant_id: tenantId,
+        _actor: context.userId,
+        _idempotency_key: `finding:${data.recommendationId}`,
+        _target_url: proposal.targetUrl,
+        _title: proposal.title,
+        _changes: proposal.changes,
+        _rationale: proposal.rationale,
+        _evidence: proposal.evidence,
+        _evidence_summary: proposal.evidenceSummary,
+        _evidence_limitations: proposal.evidenceLimitations,
+        _risk_note: proposal.riskNote,
+        _generation_context: proposal.generationContext,
+        _source_repo: proposal.sourceRepo,
+        _source_branch: proposal.sourceBranch,
+        _source_file: proposal.sourceFile,
+        _source_project_id: proposal.sourceProjectId,
+        _source_revision_before: proposal.sourceRevisionBefore,
+      });
+    }
 
     // Link the change request back to the finding that motivated it. The
     // column exists for exactly this; only fill it while it is still empty.

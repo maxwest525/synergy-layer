@@ -31,17 +31,33 @@ export const definition: ModuleDefinition = {
         window: "28 days through yesterday",
       },
     },
+    {
+      key: "ga4.rules",
+      name: "GA4 Rule Engine",
+      kind: "internal_module",
+      category: "Analysis",
+      description:
+        "Evaluates stored GA4 snapshots and files evidence-backed observations. Zero rows is a valid no-change outcome.",
+      integrationState: "real",
+      operations: [
+        { name: "rules.evaluate", description: "Score stored snapshots against typed thresholds." },
+      ],
+      config: { mutating: false, rulesEvaluated: 4 },
+    },
   ],
   workflows: [
     {
       key: "ga4-daily-observe",
       name: "GA4 Daily Traffic Observation",
       description:
-        "Reads the bound GA4 property once per day and stores an immutable snapshot. A failed read is recorded as a failure, never as zero traffic.",
+        "Reads the bound GA4 property once per day, stores an immutable snapshot, and files evidence-backed recommendations. A failed read is recorded as a failure, never as zero traffic.",
       triggerKind: "schedule",
       graph: {
-        nodes: [{ key: "collect", kind: "capability", ref: "cap.ga4" }],
-        edges: [],
+        nodes: [
+          { key: "collect", kind: "capability", ref: "cap.ga4" },
+          { key: "evaluate", kind: "capability", ref: "ga4.rules" },
+        ],
+        edges: [{ from: "collect", to: "evaluate" }],
       },
     },
   ],

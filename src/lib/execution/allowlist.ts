@@ -51,7 +51,6 @@ export function changeKindForFile(filePath: string | null | undefined): Governed
   return null;
 }
 
-
 export type GovernedTarget = {
   repo: string;
   branch: string;
@@ -102,7 +101,6 @@ export function checkSourceTarget(input: {
     },
   };
 }
-
 
 /** The public origin a rendered verification may read. */
 export function checkTargetUrl(url: string | null): ExecutionResult<string> {
