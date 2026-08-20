@@ -77,3 +77,57 @@ describe("the matching rules Google actually applies", () => {
     }
   });
 });
+
+describe("defects an adversarial review found before this shipped", () => {
+  it("does not let a group whose name is a substring of the crawler hijack the file", () => {
+    // "googlebot".includes("bot") was true, so this file blocked every page on
+    // the site and the audit reported a fabricated critical finding naming all
+    // of them.
+    const body = "User-agent: *\nDisallow: /wp-admin/\n\nUser-agent: bot\nDisallow: /";
+    expect(isRobotsPathAllowed(body, "/pricing", AGENT)).toBe(true);
+    expect(isRobotsPathAllowed(body, "/wp-admin/edit", AGENT)).toBe(false);
+  });
+
+  it("does not let a rule-less courtesy group delete the wildcard group's rules", () => {
+    // Crawl-delay-only groups are common. This one silently disabled every
+    // Disallow on the file.
+    const body = "User-agent: *\nDisallow: /private/\n\nUser-agent: bot\nCrawl-delay: 10";
+    expect(isRobotsPathAllowed(body, "/private/secret", AGENT)).toBe(false);
+  });
+
+  it("still lets a hyphenated crawler inherit its family group", () => {
+    const body = "User-agent: *\nDisallow: /\n\nUser-agent: Googlebot\nAllow: /";
+    expect(isRobotsPathAllowed(body, "/anything", "Googlebot-News")).toBe(true);
+    expect(isRobotsPathAllowed(body, "/anything", "Bingbot")).toBe(false);
+  });
+
+  it("answers a wildcard-heavy rule immediately instead of backtracking forever", () => {
+    // Compiled to `.*` this took 40 seconds at 30 characters, doubling every
+    // two more, on a body re-read from storage on every audit.
+    const body = `User-agent: *\nDisallow: /${"*a".repeat(40)}b`;
+    const started = performance.now();
+    expect(isRobotsPathAllowed(body, `/${"a".repeat(60)}`, AGENT)).toBe(true);
+    expect(performance.now() - started).toBeLessThan(100);
+  });
+
+  it("blocks only the homepage when that is what the rule says", () => {
+    // `Disallow: /$` is the standard idiom. Measuring rule length with the
+    // anchor stripped made it lose to `Allow: /` and the homepage read as
+    // crawlable.
+    const body = "User-agent: *\nAllow: /\nDisallow: /$";
+    expect(isRobotsPathAllowed(body, "/", AGENT)).toBe(false);
+    expect(isRobotsPathAllowed(body, "/about", AGENT)).toBe(true);
+  });
+
+  it("does not end-anchor a rule whose wildcard already absorbs the tail", () => {
+    const body = "User-agent: *\nDisallow: /a*$";
+    expect(isRobotsPathAllowed(body, "/axyz", AGENT)).toBe(false);
+    expect(isRobotsPathAllowed(body, "/b", AGENT)).toBe(true);
+  });
+
+  it("matches a rule against the query string, as Google does", () => {
+    const body = "User-agent: *\nDisallow: /*?";
+    expect(isRobotsPathAllowed(body, "/page?utm=1", AGENT)).toBe(false);
+    expect(isRobotsPathAllowed(body, "/page", AGENT)).toBe(true);
+  });
+});

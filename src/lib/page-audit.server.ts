@@ -335,10 +335,15 @@ export async function readPageAudit(client: Client, tenantId: string): Promise<P
  * file means unknown, and the audit reads the page rather than inventing a
  * block that robots.txt never stated.
  */
-function crawlablePath(url: string, robotsBody: string | null): boolean {
+function crawlablePath(url: string, robotsBody: string | null, origin: string): boolean {
   if (robotsBody === null) return true;
   try {
     const parsed = new URL(url);
+    // A `sc-domain:` property spans every subdomain, and Search Console reports
+    // pages from all of them. Only this origin's robots.txt was fetched, so a
+    // page on another host is read rather than skipped on a rule that was never
+    // written for it.
+    if (parsed.origin !== origin) return true;
     return isRobotsPathAllowed(robotsBody, `${parsed.pathname}${parsed.search}`);
   } catch {
     return true;
@@ -389,7 +394,7 @@ export async function runPageAudit(
     // Firecrawl is metered. A page robots.txt disallows is one Google will
     // never read, so paying to render it buys nothing. It is still recorded,
     // with the reason, so the page does not quietly vanish from the audit.
-    if (!crawlablePath(url, documents.robotsBody)) {
+    if (!crawlablePath(url, documents.robotsBody, origin)) {
       rows.push({
         tenant_id: tenantId,
         property,

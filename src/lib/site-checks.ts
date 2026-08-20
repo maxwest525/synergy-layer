@@ -115,18 +115,24 @@ export function pagesMissingFromSitemap(input: {
 }
 
 /**
- * The path part of every page address the audit knows about.
+ * The path part of every page address the audit knows about, on this host only.
  *
  * robots.txt rules are written against paths, so an address that will not parse
  * is dropped rather than guessed at: reporting a page as blocked on a path we
  * invented would be worse than not reporting it.
+ *
+ * A `sc-domain:` property spans every subdomain, and each host serves its own
+ * robots.txt. Only the origin's own file was read, so pages on another host are
+ * dropped rather than judged by a rule that never applied to them.
  */
-function pathsOf(pages: readonly string[]): string[] {
+function pathsOf(pages: readonly string[], origin: string): string[] {
   const paths = pages.map((page) => {
     try {
       const parsed = new URL(page);
+      if (parsed.origin !== origin) return null;
       return `${parsed.pathname}${parsed.search}`;
     } catch {
+      // A bare path can only have come from this origin.
       return page.startsWith("/") ? page : null;
     }
   });
@@ -166,7 +172,7 @@ export function evaluateSite(facts: SiteFacts): SiteFinding[] {
   } else if (facts.robotsBody) {
     // Not the whole site, but some of it. Named paths rather than a count, so
     // the operator can open the file and see the rule that did it.
-    const blocked = blockedPaths(facts.robotsBody, pathsOf(facts.knownPages ?? []));
+    const blocked = blockedPaths(facts.robotsBody, pathsOf(facts.knownPages ?? [], facts.origin));
     if (blocked.length > 0) {
       findings.push({
         check: "robots_blocks_pages",

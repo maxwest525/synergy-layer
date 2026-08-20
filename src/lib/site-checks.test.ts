@@ -110,6 +110,19 @@ describe("evaluateSite", () => {
     expect(blocked?.fixableByChangeKind).toBeNull();
   });
 
+  it("does not judge another host's pages by this host's robots file", () => {
+    // An `sc-domain:` property spans every subdomain, and each host serves its
+    // own robots.txt. Only the origin's was read.
+    const findings = evaluateSite({
+      ...base,
+      robotsBody: "User-agent: *\nDisallow: /blog/\nSitemap: https://example.com/sitemap.xml",
+      knownPages: ["https://blog.example.com/blog/launch", "https://example.com/blog/launch"],
+    });
+    const blocked = findings.find((finding) => finding.check === "robots_blocks_pages");
+    expect(blocked?.label).toContain("1");
+    expect(blocked?.detail).not.toContain("blog.example.com");
+  });
+
   it("does not raise a partial block when every known page is crawlable", () => {
     const findings = evaluateSite({
       ...base,
