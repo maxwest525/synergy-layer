@@ -121,11 +121,32 @@ const URGENCY_TONE: Record<UrgencyRank, UrgencyTone> = {
 };
 
 /**
- * Rank drives colour: Fix now red, Worth doing yellow, Nice to have blue, per
- * the palette the spec assigns.
+ * Rank drives colour on a queue card: Fix now red, Worth doing yellow, Nice to
+ * have blue, per the palette the spec assigns.
  */
 export function toneForUrgency(urgency: UrgencyRank): UrgencyTone {
   return URGENCY_TONE[urgency];
+}
+
+/**
+ * The nav badge runs a different scale from the queue card, and the boards show
+ * both: badges beside a category are only ever green, yellow or red, while the
+ * rank pill inside a card is red, yellow or blue.
+ *
+ * They are answering different questions. The pill says how this one suggestion
+ * ranks; the badge says whether this category needs you. A category holding
+ * nothing but nice-to-haves does not need you, so it reads green.
+ */
+export type NavTone = "positive" | "warning" | "danger";
+
+const NAV_TONE: Record<UrgencyRank, NavTone> = {
+  fix_now: "danger",
+  worth_doing: "warning",
+  nice_to_have: "positive",
+};
+
+export function navToneForUrgency(urgency: UrgencyRank): NavTone {
+  return NAV_TONE[urgency];
 }
 
 /** A rejected change request is terminal, so restoring it is not offered. */

@@ -14,7 +14,7 @@ import {
   type NavEntry,
 } from "@/lib/categories";
 import type { StatusLine } from "@/lib/command-center";
-import type { UrgencyTone } from "@/lib/suggestion-queue";
+import type { NavTone } from "@/lib/suggestion-queue";
 import { getWorkspaceAccessState } from "@/lib/operator-session-gate";
 import { cn } from "@/lib/utils";
 
@@ -29,10 +29,11 @@ import { cn } from "@/lib/utils";
  * badge beside a category and the queue behind it are always the same number.
  */
 
-const TONE_TEXT: Record<UrgencyTone, string> = {
-  danger: "text-destructive",
+/** Nav badges run green / yellow / red, as the boards paint them. */
+const TONE_TEXT: Record<NavTone, string> = {
+  positive: "text-primary",
   warning: "text-warning",
-  info: "text-info",
+  danger: "text-destructive",
 };
 
 const STATUS_DOT: Record<StatusLine["tone"], string> = {
@@ -78,7 +79,7 @@ function IconRail({ pathname }: { pathname: string }) {
   );
 }
 
-function WaitingBadge({ count, tone }: { count: number; tone: UrgencyTone | null }) {
+function WaitingBadge({ count, tone }: { count: number; tone: NavTone | null }) {
   if (count === 0 || tone === null) return null;
   return (
     <span className={cn("ml-auto text-xs font-bold tabular-nums", TONE_TEXT[tone])}>{count}</span>

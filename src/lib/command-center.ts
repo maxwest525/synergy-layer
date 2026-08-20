@@ -16,7 +16,9 @@ import type { PeriodComparison } from "./search-console";
 import {
   buildQueue,
   compareQueueItems,
+  navToneForUrgency,
   toneForUrgency,
+  type NavTone,
   type Queue,
   type QueueItem,
   type QueueSource,
@@ -25,6 +27,14 @@ import {
 
 const DAY_MS = 86_400_000;
 const TOP_CARDS = 3;
+/**
+ * What the audit actually does, on the button.
+ *
+ * Firecrawl is self-hosted here, so this is not a per-call vendor charge and is
+ * not worded as one. It stays behind an explicit click regardless: reading a
+ * hundred pages is a real action against the operator's own site and their own
+ * server, and it should never happen because someone opened a page.
+ */
 const PAGE_AUDIT_COST = "reads up to 100 pages";
 
 export type Ga4Window = {
@@ -54,6 +64,15 @@ export type CommandCenterFacts = {
   readonly audit: {
     readonly hasRun: boolean;
     readonly pagesNeedingFixes: number;
+  };
+  /**
+   * What the top bar's status is allowed to claim. Both are counts of stored
+   * rows: connections whose last verification failed, and measurement runs that
+   * ended in failure.
+   */
+  readonly health: {
+    readonly brokenConnections: number;
+    readonly failedRuns: number;
   };
   readonly queueSources: readonly QueueSource[];
 };
@@ -108,14 +127,18 @@ export type TopCard = {
 export type CategoryRow = {
   readonly category: Category;
   readonly waiting: number;
-  /** Null when nothing is waiting, so a quiet category shows no badge. */
-  readonly tone: UrgencyTone | null;
+  /**
+   * The nav badge's colour: green, yellow or red, never the card's blue. Null
+   * when nothing is waiting, so a quiet category shows no badge at all.
+   */
+  readonly tone: NavTone | null;
 };
 
 export type SuggestedNextRow = {
   readonly id: string;
   readonly title: string;
-  readonly tone: UrgencyTone;
+  /** The board dots these rows green, yellow or red, like the nav badges. */
+  readonly tone: NavTone;
   readonly actionLabel: string;
   readonly to: string;
   /**
@@ -343,27 +366,34 @@ export type StatusLine = {
 };
 
 /**
- * The top bar's right-hand status.
+ * The top bar's right-hand status, as the boards write it.
  *
- * The board writes this as "All systems normal", but nothing in this phase reads
- * system health, so that sentence would be a claim we cannot back. The slot is
- * filled with what is actually known instead: how much is waiting on the
- * operator, and how urgent the most urgent of it is.
+ * "All systems normal" is a claim about the plumbing, not about the queue, so it
+ * is said only when the plumbing really is fine: no connection whose last
+ * verification failed, and no measurement run that ended in failure. When
+ * something is wrong the slot names it instead, because a status light that only
+ * ever reads green is not a status light.
+ *
+ * How much is waiting is deliberately not repeated here: the assist line and the
+ * nav badges already carry it.
  */
-function statusLineFor(queue: Queue): StatusLine {
-  const open = queue.open;
-  if (open.length === 0) return { text: "Nothing waiting on you", tone: "positive" };
-  const urgent = open.filter((item) => item.urgency === "fix_now").length;
-  if (urgent > 0) {
+function statusLineFor(health: CommandCenterFacts["health"]): StatusLine {
+  if (health.brokenConnections > 0) {
     return {
-      text: `${urgent} of ${open.length} waiting need fixing now`,
+      text:
+        health.brokenConnections === 1
+          ? "1 connection needs attention"
+          : `${health.brokenConnections} connections need attention`,
       tone: "danger",
     };
   }
-  return {
-    text: open.length === 1 ? "1 thing waiting on you" : `${open.length} things waiting on you`,
-    tone: "warning",
-  };
+  if (health.failedRuns > 0) {
+    return {
+      text: health.failedRuns === 1 ? "1 run failed" : `${health.failedRuns} runs failed`,
+      tone: "warning",
+    };
+  }
+  return { text: "All systems normal", tone: "positive" };
 }
 
 /**
@@ -389,7 +419,7 @@ export function buildCommandCenter(facts: CommandCenterFacts): CommandCenterView
     return {
       category,
       waiting: items.length,
-      tone: mostUrgent ? toneForUrgency(mostUrgent.urgency) : null,
+      tone: mostUrgent ? navToneForUrgency(mostUrgent.urgency) : null,
     };
   });
 
@@ -427,7 +457,7 @@ export function buildCommandCenter(facts: CommandCenterFacts): CommandCenterView
     suggestedNext.push({
       id: `category-${row.category.id}`,
       title: `${waitingPhrase(row.category, row.waiting)} in ${row.category.title}`,
-      tone: row.tone ?? "info",
+      tone: row.tone ?? "positive",
       actionLabel: "Go through them",
       to: row.category.to,
       metered: false,
@@ -448,7 +478,7 @@ export function buildCommandCenter(facts: CommandCenterFacts): CommandCenterView
     topCards,
     totalWaiting: queue.open.length,
     suggestedNext,
-    statusLine: statusLineFor(queue),
+    statusLine: statusLineFor(facts.health),
     emptyHeadline: queue.open.length === 0 ? "Nothing needs you" : null,
   };
 }

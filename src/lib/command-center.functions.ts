@@ -40,42 +40,57 @@ export const getCommandCenterFacts = createServerFn({ method: "POST" })
       propertyResult.data?.find((row) => row.selected) ?? propertyResult.data?.[0] ?? null;
     const property = selectedProperty?.site_url ?? null;
 
-    const [snapshotResult, ga4Result, changeResult, recommendationResult] = await Promise.all([
-      property === null
-        ? Promise.resolve(null)
-        : db
-            .from("search_console_snapshots")
-            .select("kind, period_end_pt, totals, collected_at")
-            .eq("tenant_id", tenantId)
-            .eq("property", property)
-            .eq("kind", "property_totals")
-            .order("period_end_pt", { ascending: false })
-            .limit(400),
-      db
-        .from("ga4_snapshots")
-        .select("start_date, end_date, metrics")
-        .eq("tenant_id", tenantId)
-        .order("end_date", { ascending: false })
-        // Each row carries the whole snapshot blob, so this stays tight. The
-        // comparison only ever uses the latest window and the one ending the day
-        // before it starts; snapshots are daily, so 60 rows always spans the 28
-        // days back to it, and spans further still when there are gaps.
-        .limit(60),
-      db
-        .from("change_requests")
-        .select(
-          "id, title, state, target_url, proposal_type, recommendation_id, published_proof_at, rolled_back_at, created_at, updated_at",
-        )
-        .eq("tenant_id", tenantId)
-        .order("created_at", { ascending: false })
-        .limit(500),
-      db
-        .from("recommendations")
-        .select("id, title, state, source_module, issue_fingerprint, created_at, updated_at")
-        .eq("tenant_id", tenantId)
-        .order("created_at", { ascending: false })
-        .limit(500),
-    ]);
+    const [snapshotResult, ga4Result, changeResult, recommendationResult, systemResult, runResult] =
+      await Promise.all([
+        property === null
+          ? Promise.resolve(null)
+          : db
+              .from("search_console_snapshots")
+              .select("kind, period_end_pt, totals, collected_at")
+              .eq("tenant_id", tenantId)
+              .eq("property", property)
+              .eq("kind", "property_totals")
+              .order("period_end_pt", { ascending: false })
+              .limit(400),
+        db
+          .from("ga4_snapshots")
+          .select("start_date, end_date, metrics")
+          .eq("tenant_id", tenantId)
+          .order("end_date", { ascending: false })
+          // Each row carries the whole snapshot blob, so this stays tight. The
+          // comparison only ever uses the latest window and the one ending the day
+          // before it starts; snapshots are daily, so 60 rows always spans the 28
+          // days back to it, and spans further still when there are gaps.
+          .limit(60),
+        db
+          .from("change_requests")
+          .select(
+            "id, title, state, target_url, proposal_type, recommendation_id, published_proof_at, rolled_back_at, created_at, updated_at",
+          )
+          .eq("tenant_id", tenantId)
+          .order("created_at", { ascending: false })
+          .limit(500),
+        db
+          .from("recommendations")
+          .select("id, title, state, source_module, issue_fingerprint, created_at, updated_at")
+          .eq("tenant_id", tenantId)
+          .order("created_at", { ascending: false })
+          .limit(500),
+        // The two reads behind "All systems normal". Only rows the operator can
+        // see in the tool estate count, so a hidden system never turns the light
+        // red.
+        db
+          .from("tool_systems")
+          .select("verification_state")
+          .eq("tenant_id", tenantId)
+          .eq("visible_in_aoos", true),
+        db
+          .from("measurement_runs")
+          .select("status, started_at")
+          .eq("tenant_id", tenantId)
+          .order("started_at", { ascending: false })
+          .limit(50),
+      ]);
 
     // --- Getting found on Google -------------------------------------------
 
@@ -136,6 +151,16 @@ export const getCommandCenterFacts = createServerFn({ method: "POST" })
     const pagesNeedingFixes = new Set(
       audit.findings.flatMap((finding) => finding.pages.map((page) => page.url)),
     ).size;
+
+    // --- What the status light is allowed to say ----------------------------
+
+    const brokenConnections = (assertRead("Tool systems", systemResult).data ?? []).filter(
+      (row) => row.verification_state === "failed",
+    ).length;
+
+    const failedRuns = (assertRead("Measurement runs", runResult).data ?? []).filter(
+      (row) => row.status === "failed",
+    ).length;
 
     // --- The queue ----------------------------------------------------------
 
@@ -202,6 +227,7 @@ export const getCommandCenterFacts = createServerFn({ method: "POST" })
       },
       changes: { fixesLive, pagesImproved },
       audit: { hasRun: audit.lastObservedAt !== null, pagesNeedingFixes },
+      health: { brokenConnections, failedRuns },
       queueSources: [...changeSources, ...recommendationSources, ...auditSources],
     };
   });

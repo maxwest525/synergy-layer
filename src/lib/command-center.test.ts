@@ -16,6 +16,7 @@ const facts: CommandCenterFacts = {
   ga4: { connectionStatement: "GA4 is connected.", windowDays: 28, snapshots: [] },
   changes: { fixesLive: 0, pagesImproved: 0 },
   audit: { hasRun: false, pagesNeedingFixes: 0 },
+  health: { brokenConnections: 0, failedRuns: 0 },
   queueSources: [],
 };
 
@@ -307,6 +308,33 @@ describe("waiting counts and the assist line", () => {
     expect(search?.tone).toBe("danger");
   });
 
+  it("reads green when a category holds nothing but nice-to-haves", () => {
+    // The boards only ever paint a nav badge green, yellow or red. Blue belongs
+    // to the rank pill inside a card, which answers a different question.
+    const view = buildCommandCenter(
+      withFacts({
+        queueSources: [queueSource({ id: "calm", categoryId: "search", createdAt: daysBefore(1) })],
+      }),
+    );
+    const search = view.categories.find((row) => row.category.id === "search");
+    expect(search?.tone).toBe("positive");
+  });
+
+  it("never paints a nav badge with the card's blue", () => {
+    const view = buildCommandCenter(
+      withFacts({
+        queueSources: [
+          queueSource({ id: "a", categoryId: "search", createdAt: daysBefore(1) }),
+          queueSource({ id: "b", categoryId: "pages", createdAt: daysBefore(5) }),
+          queueSource({ id: "c", categoryId: "visitors", createdAt: daysBefore(30) }),
+        ],
+      }),
+    );
+    for (const row of view.categories) {
+      if (row.tone !== null) expect(["positive", "warning", "danger"]).toContain(row.tone);
+    }
+  });
+
   it("writes the assist line in plain words with real counts", () => {
     const view = buildCommandCenter(
       withFacts({
@@ -371,37 +399,37 @@ describe("top cards", () => {
 });
 
 describe("top bar status", () => {
-  it("says nothing is waiting when the queue is clear", () => {
+  it("says all systems are normal only when the stored health rows agree", () => {
     expect(buildCommandCenter(facts).statusLine).toEqual({
-      text: "Nothing waiting on you",
+      text: "All systems normal",
       tone: "positive",
     });
   });
 
-  it("never claims systems are normal, which nothing in this phase measures", () => {
-    expect(buildCommandCenter(facts).statusLine.text).not.toMatch(/systems/i);
+  it("names a broken connection rather than staying green", () => {
+    const view = buildCommandCenter(withFacts({ health: { brokenConnections: 1, failedRuns: 0 } }));
+    expect(view.statusLine).toEqual({ text: "1 connection needs attention", tone: "danger" });
   });
 
-  it("counts what is waiting, and leads with the urgent share", () => {
+  it("names failed runs when every connection verifies", () => {
+    const view = buildCommandCenter(withFacts({ health: { brokenConnections: 0, failedRuns: 3 } }));
+    expect(view.statusLine).toEqual({ text: "3 runs failed", tone: "warning" });
+  });
+
+  it("leads with the broken connection when both are wrong", () => {
+    const view = buildCommandCenter(withFacts({ health: { brokenConnections: 2, failedRuns: 5 } }));
+    expect(view.statusLine).toEqual({ text: "2 connections need attention", tone: "danger" });
+  });
+
+  it("does not turn red just because the queue is busy", () => {
+    // The status light is about the plumbing. What is waiting is already
+    // carried by the assist line and the nav badges.
     const view = buildCommandCenter(
       withFacts({
-        queueSources: [
-          queueSource({ id: "urgent", createdAt: daysBefore(30) }),
-          queueSource({ id: "calm", createdAt: daysBefore(1) }),
-        ],
+        queueSources: [queueSource({ id: "urgent", createdAt: daysBefore(30) })],
       }),
     );
-    expect(view.statusLine).toEqual({
-      text: "1 of 2 waiting need fixing now",
-      tone: "danger",
-    });
-  });
-
-  it("stays at a warning when nothing is urgent yet", () => {
-    const view = buildCommandCenter(
-      withFacts({ queueSources: [queueSource({ id: "calm", createdAt: daysBefore(1) })] }),
-    );
-    expect(view.statusLine).toEqual({ text: "1 thing waiting on you", tone: "warning" });
+    expect(view.statusLine.tone).toBe("positive");
   });
 });
 
