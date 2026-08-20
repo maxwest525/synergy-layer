@@ -1,0 +1,13 @@
+{
+  "artboards": [
+    { "file": "Home.dc.html", "x": 0, "y": 0, "w": 1280, "h": 1150, "title": "Command center — the app tells you where to go" },
+    { "file": "Main.dc.html", "x": 1380, "y": 0, "w": 1280, "h": 1560, "title": "Category page — Getting found on Google" }
+  ],
+  "annotations": [
+    { "id": "note-home", "x": 0, "y": -150, "w": 340, "text": "HOME = the nav. One card per category with the one number that matters, better/worse arrow, and how many suggestions wait. The alerts on top are the AI speaking first — you never have to notice a problem yourself." },
+    { "id": "note-queue", "x": 1300, "y": -150, "w": 340, "text": "Every category page has this same skeleton: plain-words title, status light, 3-5 numbers, then the suggestion queue. Max 7 suggestions per week, ranked Fix now / Worth doing / Nice to have." },
+    { "id": "note-verbs", "x": 2560, "y": 620, "w": 300, "text": "Every card, same 3 buttons, same order, always visible: Approve (green), Regenerate (redo the wording), Ignore (stop suggesting this). Delete hides in the \"...\" menu. Nothing touches your site until you hit Approve." },
+    { "id": "note-receipt", "x": 2560, "y": 1080, "w": 300, "text": "Handled cards collapse to a receipt line and the app checks the fix actually went live. Done tab keeps every receipt." }
+  ],
+  "launch": { "view": "canvas" }
+}
