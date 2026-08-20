@@ -156,10 +156,12 @@ function SuggestionList({ view }: { view: GettingFoundView }) {
 function SearchList({
   rows,
   unit,
+  heading,
   emptyReason,
 }: {
   rows: readonly SearchListRow[];
   unit: string;
+  heading: string;
   emptyReason: string;
 }) {
   if (rows.length === 0) {
@@ -205,7 +207,7 @@ const NOT_COLLECTED =
 
 export function GettingFoundPage() {
   const { view, isPending, error } = useGettingFound();
-  const [tab, setTab] = useState<TabId>("overview");
+  const [tab, setTab] = useState<TabId>("suggestions");
 
   if (error) {
     return (
@@ -234,6 +236,16 @@ export function GettingFoundPage() {
           </h1>
           <p className="text-[13px] text-muted-foreground">
             Whether people can find you in search, and what to fix so more of them do.
+          </p>
+          {/*
+            A stored window shown without its date is shown as current. When a
+            collection run has not completed, this says so rather than leaving
+            the numbers undated.
+          */}
+          <p className="text-xs text-subtle">
+            {view.asOf === null
+              ? "No complete window is stored yet, so the lists below are empty."
+              : `Search numbers cover the 28 days ending ${view.asOf}.`}
           </p>
         </div>
         <div className="flex items-center gap-2.5">
@@ -298,13 +310,22 @@ export function GettingFoundPage() {
         aria-labelledby={`getting-found-tab-${tab}`}
         tabIndex={-1}
       >
-        {tab === "overview" ? <SuggestionList view={view} /> : null}
         {tab === "suggestions" ? <SuggestionList view={view} /> : null}
         {tab === "queries" ? (
-          <SearchList rows={view.queries} unit="searches" emptyReason={NOT_COLLECTED} />
+          <SearchList
+            rows={view.queries}
+            unit="searches"
+            heading="What people searched for"
+            emptyReason={NOT_COLLECTED}
+          />
         ) : null}
         {tab === "pages" ? (
-          <SearchList rows={view.pages} unit="pages" emptyReason={NOT_COLLECTED} />
+          <SearchList
+            rows={view.pages}
+            unit="pages"
+            heading="Your page"
+            emptyReason={NOT_COLLECTED}
+          />
         ) : null}
         {tab === "history" ? <HistoryList view={view} /> : null}
       </div>

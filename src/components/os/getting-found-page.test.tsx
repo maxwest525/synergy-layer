@@ -51,7 +51,8 @@ function facts(overrides: Partial<GettingFoundFacts> = {}): GettingFoundFacts {
     queries: [],
     pages: [],
     queueSources: [],
-    constraintFacts: null,
+    coverage: null,
+    sessions: null,
     ...overrides,
   };
 }
@@ -132,18 +133,11 @@ describe("the honesty invariant, on screen", () => {
 });
 
 describe("leading with the diagnosis", () => {
-  const unseen = {
-    pagesKnown: 39,
-    pagesWithImpressions: 0,
-    impressions: 0,
-    clicks: 0,
-    sessions: null,
-    conversions: null,
-  };
+  const unseen = { pagesKnown: 39, pagesWithImpressions: 0 };
 
   it("states what is holding the site back before ranking anything", () => {
     show({
-      constraintFacts: unseen,
+      coverage: unseen,
       queueSources: [source("a", "weak_ctr_page"), source("b", "zero_impression_page")],
     });
     expect(screen.getByText(/What is actually holding you back/i)).toBeInTheDocument();
@@ -152,7 +146,7 @@ describe("leading with the diagnosis", () => {
 
   it("parks the rest below a divider instead of hiding them", () => {
     show({
-      constraintFacts: unseen,
+      coverage: unseen,
       queueSources: [source("a", "weak_ctr_page"), source("b", "zero_impression_page")],
     });
     // Once in the banner's count, once as the divider above the parked group.

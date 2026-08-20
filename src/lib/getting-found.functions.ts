@@ -1,8 +1,13 @@
 import { createServerFn } from "@tanstack/react-start";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import type { ConstraintFacts } from "./binding-constraint";
-import { countOf, topRows, type SearchListRow, type StoredSearchRow } from "./getting-found";
+import {
+  countShownPages,
+  topRows,
+  type PageCoverage,
+  type SearchListRow,
+  type StoredSearchRow,
+} from "./getting-found";
 
 /**
  * The reads the "Getting found on Google" page needs and the Command center
@@ -20,8 +25,10 @@ export type GettingFoundExtras = {
   readonly latestDate: string | null;
   readonly queries: readonly SearchListRow[];
   readonly pages: readonly SearchListRow[];
-  /** Null when too little is stored to attempt a diagnosis. */
-  readonly constraintFacts: ConstraintFacts | null;
+  /** Null when the window that would answer it has not been collected. */
+  readonly coverage: PageCoverage | null;
+  /** Null when analytics is not connected, which is not the same as no visits. */
+  readonly sessions: number | null;
 };
 
 /** The stored rows of one window snapshot, or none when the payload is not one. */
@@ -52,7 +59,7 @@ export const getGettingFoundExtras = createServerFn({ method: "POST" })
       null;
 
     if (property === null) {
-      return { latestDate: null, queries: [], pages: [], constraintFacts: null };
+      return { latestDate: null, queries: [], pages: [], coverage: null, sessions: null };
     }
 
     const [windowResult, observedResult, ga4Result] = await Promise.all([
@@ -73,7 +80,12 @@ export const getGettingFoundExtras = createServerFn({ method: "POST" })
         .from("page_metadata_observations")
         .select("url")
         .eq("tenant_id", tenantId)
-        .eq("property", property),
+        .eq("property", property)
+        // A page the audit could not read is not a page we know about. Rows
+        // stored with a reason - unrenderable, or disallowed by robots.txt -
+        // would otherwise inflate the denominator and make a site of public
+        // pages plus blocked admin pages diagnose as unreachable.
+        .is("error", null),
       db
         .from("ga4_snapshots")
         .select("end_date, metrics")
@@ -84,34 +96,41 @@ export const getGettingFoundExtras = createServerFn({ method: "POST" })
 
     const windows = assertRead("Search Console window snapshots", windowResult).data ?? [];
 
-    /** The newest snapshot written for one dimension set. */
-    const newestFor = (dimensions: string[]) =>
+    const matches = (row: (typeof windows)[number], dimensions: string[]) =>
+      Array.isArray(row.dimensions) &&
+      row.dimensions.length === dimensions.length &&
+      dimensions.every((name, index) => row.dimensions[index] === name);
+
+    /**
+     * The newest collection that wrote both dimension sets.
+     *
+     * Taking each newest independently would pair an August list of search
+     * terms with a July list of pages when a collection run failed partway,
+     * and nothing on screen would say the two covered different months.
+     */
+    const completeDate =
       windows.find(
         (row) =>
-          Array.isArray(row.dimensions) &&
-          row.dimensions.length === dimensions.length &&
-          dimensions.every((name, index) => row.dimensions[index] === name),
-      ) ?? null;
+          matches(row, ["query"]) &&
+          windows.some(
+            (other) => other.period_end_pt === row.period_end_pt && matches(other, ["page"]),
+          ),
+      )?.period_end_pt ?? null;
 
-    const queryWindow = newestFor(["query"]);
-    const pageWindow = newestFor(["page"]);
+    const onCompleteDate = (dimensions: string[]) =>
+      completeDate === null
+        ? null
+        : (windows.find((row) => row.period_end_pt === completeDate && matches(row, dimensions)) ??
+          null);
+
+    const queryWindow = onCompleteDate(["query"]);
+    const pageWindow = onCompleteDate(["page"]);
     const pageRows = rowsOf(pageWindow?.payload);
 
-    const latestDate =
-      (queryWindow?.period_end_pt as string | undefined) ??
-      (pageWindow?.period_end_pt as string | undefined) ??
-      null;
-
     const observed = assertRead("Page observations", observedResult).data ?? [];
-    const pagesKnown = new Set(
+    const readable = new Set(
       observed.map((row) => row.url).filter((url): url is string => typeof url === "string"),
-    ).size;
-
-    const pagesWithImpressions = pageRows.filter((row) => countOf(row.impressions) > 0).length;
-
-    const totals = (pageWindow?.totals ?? {}) as Record<string, unknown>;
-    const impressions = countOf(totals["impressions"]);
-    const clicks = countOf(totals["clicks"]);
+    );
 
     const ga4Metrics = (assertRead("Analytics snapshots", ga4Result).data?.[0]?.metrics ??
       null) as Record<string, unknown> | null;
@@ -122,23 +141,22 @@ export const getGettingFoundExtras = createServerFn({ method: "POST" })
       typeof rawSessions === "number" && Number.isFinite(rawSessions) ? rawSessions : null;
 
     return {
-      latestDate,
+      latestDate: completeDate,
       queries: topRows(rowsOf(queryWindow?.payload)),
       pages: topRows(pageRows),
-      // Without a page audit there is no denominator, so the diagnosis is
-      // refused rather than run against a count of zero known pages.
-      constraintFacts:
-        pagesKnown === 0
+      // Refused, not guessed at, in two cases: no page window collected, and no
+      // page read successfully. Assembling zeros out of an absent read is how a
+      // healthy site gets told none of its pages are findable.
+      coverage:
+        pageWindow === null || readable.size === 0
           ? null
           : {
-              pagesKnown,
-              pagesWithImpressions,
-              impressions,
-              clicks,
-              sessions,
-              // Nothing in the estate measures a conversion yet. Null says that;
-              // zero would claim we looked and found none.
-              conversions: null,
+              pagesKnown: readable.size,
+              // Counted only among pages the audit actually read, so the share
+              // this feeds is a share: a site with more pages in Search Console
+              // than the audit's own limit cannot push it above one.
+              pagesWithImpressions: countShownPages(pageRows, readable),
             },
+      sessions,
     };
   });
