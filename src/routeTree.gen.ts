@@ -31,7 +31,6 @@ import { Route as NotesRouteImport } from './routes/notes'
 import { Route as OpenaiAdsRouteImport } from './routes/openai-ads'
 import { Route as OpenseoRouteImport } from './routes/openseo'
 import { Route as OperatorsRouteImport } from './routes/operators'
-import { Route as PagesRouteImport } from './routes/pages'
 import { Route as RecommendationsRouteImport } from './routes/recommendations'
 import { Route as RoadmapRouteImport } from './routes/roadmap'
 import { Route as SchedulerRouteImport } from './routes/scheduler'
@@ -59,6 +58,8 @@ import { Route as ChangesIdRouteImport } from './routes/changes.$id'
 import { Route as KnowledgeIndexRouteImport } from './routes/knowledge.index'
 import { Route as KnowledgeIdRouteImport } from './routes/knowledge.$id'
 import { Route as KnowledgeManualRouteImport } from './routes/knowledge.manual'
+import { Route as PagesIndexRouteImport } from './routes/pages.index'
+import { Route as PagesToolsRouteImport } from './routes/pages.tools'
 import { Route as RecommendationsIndexRouteImport } from './routes/recommendations.index'
 import { Route as RecommendationsIdRouteImport } from './routes/recommendations.$id'
 import { Route as SchedulerIndexRouteImport } from './routes/scheduler.index'
@@ -187,11 +188,6 @@ const OpenseoRoute = OpenseoRouteImport.update({
 const OperatorsRoute = OperatorsRouteImport.update({
   id: '/operators',
   path: '/operators',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PagesRoute = PagesRouteImport.update({
-  id: '/pages',
-  path: '/pages',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RecommendationsRoute = RecommendationsRouteImport.update({
@@ -331,6 +327,16 @@ const KnowledgeManualRoute = KnowledgeManualRouteImport.update({
   path: '/manual',
   getParentRoute: () => KnowledgeRoute,
 } as any)
+const PagesIndexRoute = PagesIndexRouteImport.update({
+  id: '/pages/',
+  path: '/pages/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PagesToolsRoute = PagesToolsRouteImport.update({
+  id: '/pages/tools',
+  path: '/pages/tools',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RecommendationsIndexRoute = RecommendationsIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -457,7 +463,6 @@ export interface FileRoutesByFullPath {
   '/openai-ads': typeof OpenaiAdsRoute
   '/openseo': typeof OpenseoRoute
   '/operators': typeof OperatorsRoute
-  '/pages': typeof PagesRoute
   '/recommendations': typeof RecommendationsRouteWithChildren
   '/roadmap': typeof RoadmapRoute
   '/scheduler': typeof SchedulerRouteWithChildren
@@ -479,6 +484,7 @@ export interface FileRoutesByFullPath {
   '/changes/$id': typeof ChangesIdRoute
   '/knowledge/$id': typeof KnowledgeIdRoute
   '/knowledge/manual': typeof KnowledgeManualRoute
+  '/pages/tools': typeof PagesToolsRoute
   '/recommendations/$id': typeof RecommendationsIdRoute
   '/scheduler/$id': typeof SchedulerIdRoute
   '/search/tools': typeof SearchToolsRoute
@@ -490,6 +496,7 @@ export interface FileRoutesByFullPath {
   '/capabilities/': typeof CapabilitiesIndexRoute
   '/changes/': typeof ChangesIndexRoute
   '/knowledge/': typeof KnowledgeIndexRoute
+  '/pages/': typeof PagesIndexRoute
   '/recommendations/': typeof RecommendationsIndexRoute
   '/scheduler/': typeof SchedulerIndexRoute
   '/search/': typeof SearchIndexRoute
@@ -524,7 +531,6 @@ export interface FileRoutesByTo {
   '/openai-ads': typeof OpenaiAdsRoute
   '/openseo': typeof OpenseoRoute
   '/operators': typeof OperatorsRoute
-  '/pages': typeof PagesRoute
   '/roadmap': typeof RoadmapRoute
   '/spend': typeof SpendRoute
   '/studio': typeof StudioRoute
@@ -541,6 +547,7 @@ export interface FileRoutesByTo {
   '/changes/$id': typeof ChangesIdRoute
   '/knowledge/$id': typeof KnowledgeIdRoute
   '/knowledge/manual': typeof KnowledgeManualRoute
+  '/pages/tools': typeof PagesToolsRoute
   '/recommendations/$id': typeof RecommendationsIdRoute
   '/scheduler/$id': typeof SchedulerIdRoute
   '/search/tools': typeof SearchToolsRoute
@@ -552,6 +559,7 @@ export interface FileRoutesByTo {
   '/capabilities': typeof CapabilitiesIndexRoute
   '/changes': typeof ChangesIndexRoute
   '/knowledge': typeof KnowledgeIndexRoute
+  '/pages': typeof PagesIndexRoute
   '/recommendations': typeof RecommendationsIndexRoute
   '/scheduler': typeof SchedulerIndexRoute
   '/search': typeof SearchIndexRoute
@@ -591,7 +599,6 @@ export interface FileRoutesById {
   '/openai-ads': typeof OpenaiAdsRoute
   '/openseo': typeof OpenseoRoute
   '/operators': typeof OperatorsRoute
-  '/pages': typeof PagesRoute
   '/recommendations': typeof RecommendationsRouteWithChildren
   '/roadmap': typeof RoadmapRoute
   '/scheduler': typeof SchedulerRouteWithChildren
@@ -613,6 +620,7 @@ export interface FileRoutesById {
   '/changes/$id': typeof ChangesIdRoute
   '/knowledge/$id': typeof KnowledgeIdRoute
   '/knowledge/manual': typeof KnowledgeManualRoute
+  '/pages/tools': typeof PagesToolsRoute
   '/recommendations/$id': typeof RecommendationsIdRoute
   '/scheduler/$id': typeof SchedulerIdRoute
   '/search/tools': typeof SearchToolsRoute
@@ -624,6 +632,7 @@ export interface FileRoutesById {
   '/capabilities/': typeof CapabilitiesIndexRoute
   '/changes/': typeof ChangesIndexRoute
   '/knowledge/': typeof KnowledgeIndexRoute
+  '/pages/': typeof PagesIndexRoute
   '/recommendations/': typeof RecommendationsIndexRoute
   '/scheduler/': typeof SchedulerIndexRoute
   '/search/': typeof SearchIndexRoute
@@ -664,7 +673,6 @@ export interface FileRouteTypes {
     | '/openai-ads'
     | '/openseo'
     | '/operators'
-    | '/pages'
     | '/recommendations'
     | '/roadmap'
     | '/scheduler'
@@ -686,6 +694,7 @@ export interface FileRouteTypes {
     | '/changes/$id'
     | '/knowledge/$id'
     | '/knowledge/manual'
+    | '/pages/tools'
     | '/recommendations/$id'
     | '/scheduler/$id'
     | '/search/tools'
@@ -697,6 +706,7 @@ export interface FileRouteTypes {
     | '/capabilities/'
     | '/changes/'
     | '/knowledge/'
+    | '/pages/'
     | '/recommendations/'
     | '/scheduler/'
     | '/search/'
@@ -731,7 +741,6 @@ export interface FileRouteTypes {
     | '/openai-ads'
     | '/openseo'
     | '/operators'
-    | '/pages'
     | '/roadmap'
     | '/spend'
     | '/studio'
@@ -748,6 +757,7 @@ export interface FileRouteTypes {
     | '/changes/$id'
     | '/knowledge/$id'
     | '/knowledge/manual'
+    | '/pages/tools'
     | '/recommendations/$id'
     | '/scheduler/$id'
     | '/search/tools'
@@ -759,6 +769,7 @@ export interface FileRouteTypes {
     | '/capabilities'
     | '/changes'
     | '/knowledge'
+    | '/pages'
     | '/recommendations'
     | '/scheduler'
     | '/search'
@@ -797,7 +808,6 @@ export interface FileRouteTypes {
     | '/openai-ads'
     | '/openseo'
     | '/operators'
-    | '/pages'
     | '/recommendations'
     | '/roadmap'
     | '/scheduler'
@@ -819,6 +829,7 @@ export interface FileRouteTypes {
     | '/changes/$id'
     | '/knowledge/$id'
     | '/knowledge/manual'
+    | '/pages/tools'
     | '/recommendations/$id'
     | '/scheduler/$id'
     | '/search/tools'
@@ -830,6 +841,7 @@ export interface FileRouteTypes {
     | '/capabilities/'
     | '/changes/'
     | '/knowledge/'
+    | '/pages/'
     | '/recommendations/'
     | '/scheduler/'
     | '/search/'
@@ -869,7 +881,6 @@ export interface RootRouteChildren {
   OpenaiAdsRoute: typeof OpenaiAdsRoute
   OpenseoRoute: typeof OpenseoRoute
   OperatorsRoute: typeof OperatorsRoute
-  PagesRoute: typeof PagesRoute
   RecommendationsRoute: typeof RecommendationsRouteWithChildren
   RoadmapRoute: typeof RoadmapRoute
   SchedulerRoute: typeof SchedulerRouteWithChildren
@@ -884,9 +895,11 @@ export interface RootRouteChildren {
   ApiAgentChatRoute: typeof ApiAgentChatRoute
   ApiStudioChatRoute: typeof ApiStudioChatRoute
   ChangesIdRoute: typeof ChangesIdRoute
+  PagesToolsRoute: typeof PagesToolsRoute
   SearchToolsRoute: typeof SearchToolsRoute
   AdsIndexRoute: typeof AdsIndexRoute
   ChangesIndexRoute: typeof ChangesIndexRoute
+  PagesIndexRoute: typeof PagesIndexRoute
   SearchIndexRoute: typeof SearchIndexRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -1051,13 +1064,6 @@ declare module '@tanstack/react-router' {
       path: '/operators'
       fullPath: '/operators'
       preLoaderRoute: typeof OperatorsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/pages': {
-      id: '/pages'
-      path: '/pages'
-      fullPath: '/pages'
-      preLoaderRoute: typeof PagesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/recommendations': {
@@ -1248,6 +1254,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/knowledge/manual'
       preLoaderRoute: typeof KnowledgeManualRouteImport
       parentRoute: typeof KnowledgeRoute
+    }
+    '/pages/': {
+      id: '/pages/'
+      path: '/pages'
+      fullPath: '/pages/'
+      preLoaderRoute: typeof PagesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pages/tools': {
+      id: '/pages/tools'
+      path: '/pages/tools'
+      fullPath: '/pages/tools'
+      preLoaderRoute: typeof PagesToolsRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/recommendations/': {
       id: '/recommendations/'
@@ -1544,7 +1564,6 @@ const rootRouteChildren: RootRouteChildren = {
   OpenaiAdsRoute: OpenaiAdsRoute,
   OpenseoRoute: OpenseoRoute,
   OperatorsRoute: OperatorsRoute,
-  PagesRoute: PagesRoute,
   RecommendationsRoute: RecommendationsRouteWithChildren,
   RoadmapRoute: RoadmapRoute,
   SchedulerRoute: SchedulerRouteWithChildren,
@@ -1560,9 +1579,11 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAgentChatRoute: ApiAgentChatRoute,
   ApiStudioChatRoute: ApiStudioChatRoute,
   ChangesIdRoute: ChangesIdRoute,
+  PagesToolsRoute: PagesToolsRoute,
   SearchToolsRoute: SearchToolsRoute,
   AdsIndexRoute: AdsIndexRoute,
   ChangesIndexRoute: ChangesIndexRoute,
+  PagesIndexRoute: PagesIndexRoute,
   SearchIndexRoute: SearchIndexRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,

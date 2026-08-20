@@ -130,7 +130,7 @@ const workspaces: readonly Workspace[] = [
     group: "evidence",
   },
   {
-    to: "/pages",
+    to: "/pages/tools",
     label: "Site pages",
     icon: FileDiff,
     hint: "Every page, its numbers, and its edit",

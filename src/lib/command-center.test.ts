@@ -441,14 +441,15 @@ describe("suggested next rows", () => {
     expect(row?.metered).toBe(true);
   });
 
-  it("sends the audit row to the route Your pages currently owns", () => {
-    // `/your-pages` is the category's reserved slug, not a route that exists
-    // yet. Linking to it would be a dead link on the first thing a new
-    // workspace is told to do.
+  it("sends the audit row to the route that owns the audit button", () => {
+    // The category page at /pages has no audit control: only the workspace
+    // behind it imports PageAuditPanel. This row is the first thing a new
+    // workspace is told to do, so landing it on a page without the button
+    // makes the instruction dead on arrival.
     const row = buildCommandCenter(facts).suggestedNext.find(
       (entry) => entry.id === "run-page-audit",
     );
-    expect(row?.to).toBe("/pages");
+    expect(row?.to).toBe("/pages/tools");
   });
 
   it("stops offering the first audit once the audit has run", () => {

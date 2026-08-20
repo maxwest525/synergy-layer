@@ -20,7 +20,7 @@ import type { SitePage } from "@/lib/site-pages.functions";
 import { listSitePages } from "@/lib/site-pages.functions";
 import { proposeAuditFix } from "@/lib/audit-proposals.functions";
 
-export const Route = createFileRoute("/pages")({
+export const Route = createFileRoute("/pages/tools")({
   ssr: false,
   errorComponent: OperatorRouteError,
   head: () => ({
