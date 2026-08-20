@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -27,7 +27,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { SearchRow } from "@/lib/search.functions";
 import { getSearchWorkspace } from "@/lib/search.functions";
-import { getSearchFindings } from "@/lib/search-findings.functions";
+import { getSearchFindings, proposeFixFromFinding } from "@/lib/search-findings.functions";
 import {
   inspectSearchConsoleUrl,
   runSearchConsoleObservation,
@@ -203,12 +203,23 @@ const RULE_LABEL: Record<string, string> = {
 
 const OPEN_FINDING_STATES = new Set(["draft", "proposed", "under_review", "observed", "scheduled"]);
 
+/** Rules whose fix is a wording change the title/H1 proposal lane can draft. */
+const DRAFTABLE_RULES = new Set([
+  "weak_ctr_page",
+  "striking_distance_query",
+  "position_loss",
+  "query_coverage_gap",
+  "possible_query_overlap",
+]);
+
 function SearchWorkspacePage() {
   // Both reads are protected server functions, so they go through useServerFn
   // and the client middleware that attaches the operator bearer token.
   const loadTenantContext = useServerFn(getTenantContext);
   const loadWorkspace = useServerFn(getSearchWorkspace);
   const loadFindings = useServerFn(getSearchFindings);
+  const draftFix = useServerFn(proposeFixFromFinding);
+  const navigate = useNavigate();
   const collectEvidence = useServerFn(runSearchConsoleObservation);
   const inspectUrl = useServerFn(inspectSearchConsoleUrl);
   const submitSitemap = useServerFn(submitSearchConsoleSitemap);
@@ -289,6 +300,16 @@ function SearchWorkspacePage() {
       setPendingSitemap(null);
       refreshWorkspace();
     },
+  });
+
+  const draftMutation = useMutation({
+    mutationFn: (recommendationId: string) =>
+      draftFix({ data: { recommendationId, idempotencyKey: crypto.randomUUID() } }),
+    onSuccess: (result) => {
+      toast.success("Draft proposal created. Review and approve it on the change page.");
+      void navigate({ to: "/changes/$id", params: { id: result.changeRequest.id } });
+    },
+    onError: (error: Error) => toast.error(error.message),
   });
 
   const busy =
@@ -627,6 +648,18 @@ function SearchWorkspacePage() {
                               >
                                 Review
                               </Link>
+                            </Button>
+                          ) : null}
+                          {finding.recommendationId && DRAFTABLE_RULES.has(finding.rule) ? (
+                            <Button
+                              type="button"
+                              size="sm"
+                              disabled={draftMutation.isPending}
+                              onClick={() =>
+                                draftMutation.mutate(finding.recommendationId as string)
+                              }
+                            >
+                              {draftMutation.isPending ? "Drafting…" : "Draft the fix"}
                             </Button>
                           ) : null}
                         </div>
