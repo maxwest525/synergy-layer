@@ -30,3 +30,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Git worktrees of this repo live here. Their node_modules symlinks back to
+# the root, so committing or scanning them doubles everything.
+.claude/worktrees/

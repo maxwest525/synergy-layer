@@ -49,6 +49,12 @@ export type QueueSource = {
    * redraft is possible: only the title/H1 lane has one.
    */
   readonly proposalType?: string | null;
+  /**
+   * The rule that raised this, from `recommendations.metadata.rule`. It is what
+   * lets the queue say which constraint an item addresses, rather than only how
+   * long it has been waiting.
+   */
+  readonly rule?: string | null;
   readonly createdAt: string;
   readonly updatedAt: string;
 };
