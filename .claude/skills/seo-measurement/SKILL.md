@@ -39,8 +39,7 @@ them; documentation moves.
 **Query data is anonymized away below a threshold.** Anonymized queries are
 those *"not issued by more than a few dozen users over a two-to-three month
 period"*. They are omitted from tables, included in chart totals, **and omitted
-whenever a filter is applied**. *"As a result, not all queries beyond anonymized
-queries will be shown."* On a low-traffic property almost every query is
+whenever a filter is applied**. On a low-traffic property almost every query is
 under this threshold, so query-dimension data is largely absent rather than
 merely thin. Prefer page-dimension data as the unit of measurement. Non-query,
 non-URL dimensions do not have this problem: *"For requests that don't involve
@@ -52,7 +51,8 @@ data"* — one more reason page-dimension beats query-dimension here.
 wording; the "few dozen users" definition itself is no longer stated here)
 
 **Not every row is stored.** *"Due to internal limitations, Search Console
-stores top data rows and not all data rows."* A page reading zero may never have
+stores top data rows and not all data rows. As a result, not all queries
+beyond anonymized queries will be shown."* A page reading zero may never have
 been stored. Treat a missing page as unknown, never as a measured zero.
 
 **Data lags two to three days.** Never measure a window that has not finalized.
