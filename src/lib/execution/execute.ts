@@ -345,6 +345,7 @@ export async function checkPublishedPage(input: {
   }
 
   const proof = verifyRenderedPage(page, request.changes);
+  const provenValues = proof.expectedDescription ? "meta description" : "title and H1";
   if (!proof.ok) {
     await record({
       kind: "publish_check",
@@ -353,6 +354,7 @@ export async function checkPublishedPage(input: {
       detail: {
         foundTitle: proof.foundTitle,
         foundHeading: proof.foundHeading,
+        foundDescription: proof.foundDescription,
         renderedBy: proof.renderedBy,
       },
     });
@@ -364,7 +366,7 @@ export async function checkPublishedPage(input: {
   if (!request.publishedProofAt) {
     const result = await input.store.applyRenderedProof({
       id: request.id,
-      notes: `Rendered page at ${proof.finalUrl} served the approved title and H1, as rendered by ${proof.renderedBy}.`,
+      notes: `Rendered page at ${proof.finalUrl} served the approved ${provenValues}, as rendered by ${proof.renderedBy}.`,
       revision: request.commitSha,
       proof,
     });
@@ -379,6 +381,7 @@ export async function checkPublishedPage(input: {
     detail: {
       foundTitle: proof.foundTitle,
       foundHeading: proof.foundHeading,
+      foundDescription: proof.foundDescription,
       renderedBy: proof.renderedBy,
       appliedNow: changed,
       ...(warning ? { measurementFollowupWarning: warning } : {}),
@@ -387,8 +390,8 @@ export async function checkPublishedPage(input: {
   return {
     status: "verified",
     message: warning
-      ? `The rendered public page serves the approved title and H1. The change is applied, but measurement follow-up needs a retry: ${warning}`
-      : "The rendered public page serves the approved title and H1. The post-change Search Console window starts now. Outcome is not verified until finalized data arrives.",
+      ? `The rendered public page serves the approved ${provenValues}. The change is applied, but measurement follow-up needs a retry: ${warning}`
+      : `The rendered public page serves the approved ${provenValues}. The post-change Search Console window starts now. Outcome is not verified until finalized data arrives.`,
     proof,
     ...(warning ? { warning } : {}),
   };

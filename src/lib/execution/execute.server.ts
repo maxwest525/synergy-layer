@@ -13,6 +13,7 @@ import {
   extractDocumentTitle,
   extractFirstHeading,
   extractMarkdownHeading,
+  extractMetaDescription,
   parseFieldChanges,
 } from "./source-change";
 
@@ -327,6 +328,7 @@ export function createRenderedVerifier(): RenderedVerifier | null {
         finalUrl: parsed.data?.metadata?.sourceURL ?? parsed.data?.metadata?.url ?? url,
         title: extractDocumentTitle(html) ?? (metaTitle ? metaTitle : null),
         heading: extractFirstHeading(html) ?? extractMarkdownHeading(markdown),
+        metaDescription: extractMetaDescription(html),
         renderedBy: "Firecrawl",
       };
     },

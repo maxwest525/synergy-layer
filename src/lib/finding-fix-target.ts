@@ -26,6 +26,17 @@ const QUERY_TARGET_RULES = new Set([
 export type FixTarget =
   { ok: true; url: string; query: string | null } | { ok: false; reason: string };
 
+export type FixProposalKind = "title_h1" | "page_metadata";
+
+/**
+ * Which governed proposal lane drafts the fix for a rule finding. Weak
+ * click-through is a snippet problem, so it drafts a meta description; every
+ * other rule stays on the title/H1 lane.
+ */
+export function proposalKindForRule(rule: string): FixProposalKind {
+  return rule === "weak_ctr_page" ? "page_metadata" : "title_h1";
+}
+
 export function deriveFixTarget(
   rule: string,
   target: string,

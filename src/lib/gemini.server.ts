@@ -1,3 +1,4 @@
+import { validatePageMetadataWording, type PageMetadataWording } from "./page-metadata-proposals";
 import { validateTitleH1Wording, type TitleH1Wording } from "./title-h1-proposals";
 
 export const GEMINI_API_ORIGIN = "https://generativelanguage.googleapis.com";
@@ -26,12 +27,45 @@ const RESPONSE_JSON_SCHEMA = {
   required: ["seoTitle", "h1", "rationale"],
 } as const;
 
-export async function generateTitleH1Wording(input: {
+const METADATA_RESPONSE_JSON_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    metaDescription: {
+      type: "string",
+      description: "The proposed meta description wording.",
+    },
+    rationale: {
+      type: "string",
+      description: "A concise evidence-grounded rationale for the wording.",
+    },
+  },
+  required: ["metaDescription", "rationale"],
+} as const;
+
+type WordingRequest = {
   apiKey: string;
   model: string;
   prompt: string;
   fetcher?: Fetcher;
-}): Promise<TitleH1Wording> {
+};
+
+export async function generateTitleH1Wording(input: WordingRequest): Promise<TitleH1Wording> {
+  return validateTitleH1Wording(await generateStructuredWording(input, RESPONSE_JSON_SCHEMA));
+}
+
+export async function generatePageMetadataWording(
+  input: WordingRequest,
+): Promise<PageMetadataWording> {
+  return validatePageMetadataWording(
+    await generateStructuredWording(input, METADATA_RESPONSE_JSON_SCHEMA),
+  );
+}
+
+async function generateStructuredWording(
+  input: WordingRequest,
+  responseJsonSchema: Record<string, unknown>,
+): Promise<unknown> {
   if (!input.apiKey.trim()) throw new Error("GEMINI_API_KEY is not configured.");
   const model = input.model.trim() || DEFAULT_GEMINI_GENERATION_MODEL;
 
@@ -50,7 +84,7 @@ export async function generateTitleH1Wording(input: {
         contents: [{ role: "user", parts: [{ text: input.prompt }] }],
         generationConfig: {
           responseMimeType: "application/json",
-          responseJsonSchema: RESPONSE_JSON_SCHEMA,
+          responseJsonSchema,
         },
       }),
     });
@@ -90,5 +124,5 @@ export async function generateTitleH1Wording(input: {
   } catch {
     throw new Error("Gemini returned malformed structured JSON; no proposal was created.");
   }
-  return validateTitleH1Wording(parsed);
+  return parsed;
 }

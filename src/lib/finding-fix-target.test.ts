@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { deriveFixTarget } from "./finding-fix-target";
+import { deriveFixTarget, proposalKindForRule } from "./finding-fix-target";
 
 const row = (page: string, query: string, impressions: number) => ({
   keys: [page, query],
@@ -39,5 +39,24 @@ describe("deriveFixTarget", () => {
   it("rejects non-URL targets and unknown rules", () => {
     expect(deriveFixTarget("weak_ctr_page", "not-a-url", []).ok).toBe(false);
     expect(deriveFixTarget("mystery_rule", "https://site.com/a", []).ok).toBe(false);
+  });
+});
+
+describe("proposalKindForRule", () => {
+  it("routes the weak click-through finding to the metadata lane", () => {
+    expect(proposalKindForRule("weak_ctr_page")).toBe("page_metadata");
+  });
+
+  it("keeps every other rule on the title/H1 lane", () => {
+    for (const rule of [
+      "visibility_gain",
+      "zero_impression_page",
+      "striking_distance_query",
+      "position_loss",
+      "query_coverage_gap",
+      "mystery_rule",
+    ]) {
+      expect(proposalKindForRule(rule)).toBe("title_h1");
+    }
   });
 });

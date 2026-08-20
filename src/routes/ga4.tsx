@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
+import { useState } from "react";
 import { toast } from "sonner";
 
 import {
@@ -15,11 +16,9 @@ import {
 } from "@/components/os/primitives";
 import { OperatorRouteError } from "@/components/os/route-error";
 import { Button } from "@/components/ui/button";
-import {
-  getMeasurementState,
-  refreshGa4,
-  type Ga4MetricValue,
-} from "@/lib/measurement.functions";
+import { getGa4Findings } from "@/lib/ga4-findings.functions";
+import { getMeasurementState, refreshGa4, type Ga4MetricValue } from "@/lib/measurement.functions";
+import { getTenantContext } from "@/lib/tenant.functions";
 
 export const Route = createFileRoute("/ga4")({
   ssr: false,
@@ -57,8 +56,19 @@ function metricNumber(metrics: Record<string, Ga4MetricValue>, key: string): num
   return typeof value === "number" ? value : 0;
 }
 
+const RULE_LABEL: Record<string, string> = {
+  page_traffic_loss: "Traffic loss",
+  page_traffic_gain: "Traffic gain",
+  event_disappeared: "Event stopped",
+  zero_engagement_page: "No engagement",
+};
+
+const OPEN_FINDING_STATES = new Set(["draft", "proposed", "under_review", "observed", "scheduled"]);
+
 function Ga4Page() {
   const loadState = useServerFn(getMeasurementState);
+  const loadTenantContext = useServerFn(getTenantContext);
+  const loadFindings = useServerFn(getGa4Findings);
   const refreshAnalytics = useServerFn(refreshGa4);
   const queryClient = useQueryClient();
 
@@ -67,6 +77,21 @@ function Ga4Page() {
     queryFn: () => loadState(),
     retry: false,
   });
+
+  // Tenant scoped key: a workspace switch can never serve the previous
+  // client's GA4 findings from cache.
+  const tenant = useSuspenseQuery({
+    queryKey: ["tenant-context"],
+    queryFn: () => loadTenantContext(),
+    retry: false,
+  });
+  const activeTenantId = tenant.data.activeTenantId;
+  const findings = useSuspenseQuery({
+    queryKey: ["ga4-findings", activeTenantId],
+    queryFn: () => loadFindings(),
+    retry: false,
+  });
+  const [findingFilter, setFindingFilter] = useState<string>("all");
 
   const ga4 = data.ga4;
   const diagnostics = ga4.diagnostics;
@@ -149,7 +174,10 @@ function Ga4Page() {
           >
             {refresh.isPending ? "Reading GA4" : "Refresh GA4"}
           </Button>
-          <Link to="/measurement" className="text-sm text-primary underline-offset-4 hover:underline">
+          <Link
+            to="/measurement"
+            className="text-sm text-primary underline-offset-4 hover:underline"
+          >
             Back to Site health
           </Link>
         </div>
@@ -231,6 +259,108 @@ function Ga4Page() {
             title="No snapshot stored"
             description="GA4 counts as connected only after a real read stores a snapshot. Select Refresh GA4 above, or wait for the daily run."
           />
+        )}
+      </GlassCard>
+
+      <GlassCard className="p-5">
+        <h2 className="text-sm font-semibold text-foreground">Rule findings</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          What the nightly rules concluded from the stored snapshots: pages and events that need
+          attention, each linked to its card in the Recommendation Queue.
+        </p>
+
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <MetricTile
+            label="Open findings"
+            value={String(
+              findings.data.findings.filter(
+                (finding) =>
+                  finding.recommendationState === null ||
+                  OPEN_FINDING_STATES.has(finding.recommendationState),
+              ).length,
+            )}
+            hint="Awaiting a decision"
+          />
+          <MetricTile
+            label="Stored findings"
+            value={String(findings.data.findings.length)}
+            hint="Most recent 200"
+          />
+        </div>
+
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            aria-pressed={findingFilter === "all"}
+            className={findingFilter === "all" ? "border-primary/60 text-primary" : undefined}
+            onClick={() => setFindingFilter("all")}
+          >
+            All ({findings.data.findings.length})
+          </Button>
+          {Object.entries(findings.data.countsByRule).map(([rule, count]) => (
+            <Button
+              key={rule}
+              type="button"
+              size="sm"
+              variant="outline"
+              aria-pressed={findingFilter === rule}
+              className={findingFilter === rule ? "border-primary/60 text-primary" : undefined}
+              onClick={() => setFindingFilter(rule)}
+            >
+              {RULE_LABEL[rule] ?? rule} ({count})
+            </Button>
+          ))}
+        </div>
+
+        {findings.data.findings.length === 0 ? (
+          <p className="mt-4 text-sm text-muted-foreground">
+            No findings stored yet. They appear after the nightly observation runs over collected
+            evidence.
+          </p>
+        ) : (
+          <ul className="mt-4 space-y-2">
+            {findings.data.findings
+              .filter((finding) => findingFilter === "all" || finding.rule === findingFilter)
+              .slice(0, 30)
+              .map((finding) => (
+                <li
+                  key={finding.id}
+                  className="rounded-lg border border-border/60 bg-background/30 px-3 py-2"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-foreground">
+                        {finding.recommendationTitle ?? finding.target}
+                      </p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        {RULE_LABEL[finding.rule] ?? finding.rule} · observed {finding.periodEnd}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      {finding.recommendationState ? (
+                        <StatePill
+                          label={finding.recommendationState.replace(/_/g, " ")}
+                          tone={
+                            OPEN_FINDING_STATES.has(finding.recommendationState)
+                              ? "warning"
+                              : "neutral"
+                          }
+                        />
+                      ) : null}
+                      {finding.recommendationId ? (
+                        <Button asChild size="sm" variant="outline">
+                          <Link to="/recommendations/$id" params={{ id: finding.recommendationId }}>
+                            Review
+                          </Link>
+                        </Button>
+                      ) : null}
+                    </div>
+                  </div>
+                </li>
+              ))}
+          </ul>
         )}
       </GlassCard>
 

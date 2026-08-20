@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   DEFAULT_GEMINI_GENERATION_MODEL,
   GEMINI_API_ORIGIN,
+  generatePageMetadataWording,
   generateTitleH1Wording,
 } from "./gemini.server";
 
@@ -73,6 +74,83 @@ describe("direct Gemini structured output", () => {
         fetcher,
       }),
     ).rejects.toThrow(/structured JSON/i);
+  });
+
+  it("requests meta description wording with its own strict JSON schema", async () => {
+    const metaDescription =
+      "Employee relocation movers with dedicated coordinators, transparent corporate pricing, and guaranteed move dates from TruMove.";
+    const fetcher = vi.fn(
+      async (_url: string | URL | Request, _init?: RequestInit) =>
+        new Response(
+          JSON.stringify({
+            candidates: [
+              {
+                content: {
+                  parts: [
+                    {
+                      text: JSON.stringify({
+                        metaDescription,
+                        rationale: "Uses the query language already observed for this page.",
+                      }),
+                    },
+                  ],
+                },
+              },
+            ],
+          }),
+          { status: 200 },
+        ),
+    );
+
+    const result = await generatePageMetadataWording({
+      apiKey: "test-key",
+      model: "gemini-test",
+      prompt: "draft wording only",
+      fetcher,
+    });
+
+    expect(result.metaDescription).toBe(metaDescription);
+    const [, init] = fetcher.mock.calls[0]!;
+    const body = JSON.parse(String(init?.body));
+    expect(body.generationConfig.responseMimeType).toBe("application/json");
+    expect(body.generationConfig.responseJsonSchema.required).toEqual([
+      "metaDescription",
+      "rationale",
+    ]);
+  });
+
+  it("refuses a meta description outside the published bounds", async () => {
+    const fetcher = vi.fn(
+      async (_url: string | URL | Request, _init?: RequestInit) =>
+        new Response(
+          JSON.stringify({
+            candidates: [
+              {
+                content: {
+                  parts: [
+                    {
+                      text: JSON.stringify({
+                        metaDescription: "Too short to serve as a meta description.",
+                        rationale: "Short.",
+                      }),
+                    },
+                  ],
+                },
+              },
+            ],
+          }),
+          { status: 200 },
+        ),
+    );
+
+    await expect(
+      generatePageMetadataWording({
+        apiKey: "test-key",
+        model: "gemini-test",
+        prompt: "draft",
+        fetcher,
+      }),
+    ).rejects.toThrow(/shorter than 70/);
   });
 
   it("uses the current stable production model when no model override is configured", async () => {

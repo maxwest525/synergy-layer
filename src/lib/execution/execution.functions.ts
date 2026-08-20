@@ -3,8 +3,9 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { parseUuidInput } from "../server-input";
 import {
+  changeKindForFile,
   GOVERNED_BRANCH,
-  GOVERNED_FILE,
+  GOVERNED_FILES,
   GOVERNED_ORIGIN,
   GOVERNED_PROJECT_ID,
   GOVERNED_REPO,
@@ -62,7 +63,7 @@ export type ExecutionStateView = {
   attempts: ExecutionAttemptView[];
 };
 
-function buildReadiness(input: {
+export function buildReadiness(input: {
   executorCredentialPresent: boolean;
   rendererCredentialPresent: boolean;
   repo: string | null;
@@ -78,7 +79,7 @@ function buildReadiness(input: {
     input.repo === GOVERNED_REPO &&
     input.branch === GOVERNED_BRANCH &&
     input.projectId === GOVERNED_PROJECT_ID;
-  const fileOk = input.filePath === GOVERNED_FILE;
+  const changeKind = changeKindForFile(input.filePath);
   let originOk = false;
   try {
     originOk = new URL(input.targetUrl ?? "").origin === GOVERNED_ORIGIN;
@@ -126,10 +127,10 @@ function buildReadiness(input: {
     },
     {
       label: "Exact source file",
-      state: fileOk ? "stored" : "blocked",
-      detail: fileOk
-        ? `One allowlisted file will be edited: ${GOVERNED_FILE}.`
-        : `This executor is allowlisted to ${GOVERNED_FILE}. The request records ${input.filePath ?? "no file"}.`,
+      state: changeKind ? "stored" : "blocked",
+      detail: changeKind
+        ? `One allowlisted file will be edited: ${input.filePath} (change kind ${changeKind}).`
+        : `No governed change kind owns ${input.filePath ?? "no file"}. The executor may only write ${GOVERNED_FILES.join(", ")}.`,
     },
     {
       label: "Base revision recorded",

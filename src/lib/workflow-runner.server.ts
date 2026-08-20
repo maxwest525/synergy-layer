@@ -546,13 +546,41 @@ async function runSearchConsoleNode(client: Client, ref: string): Promise<NodeOu
 
 /**
  * GA4 nodes run one real Data API inventory read per tenant with a bound
- * property. A provider failure fails the node; it is never stored as zero.
+ * property, or evaluate the stored snapshots with the rule engine. A provider
+ * failure fails the node; it is never stored as zero.
  */
 async function runGa4Node(client: Client, ref: string): Promise<NodeOutcome | null> {
-  if (ref !== "cap.ga4") return null;
+  if (ref !== "cap.ga4" && ref !== "ga4.rules") return null;
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { runGa4DailyObservation } = await import("./measurement/ga4.server");
   void client;
+
+  if (ref === "ga4.rules") {
+    const { runGa4DailyRules } = await import("./ga4-rules.server");
+    try {
+      // Rules run over stored snapshots only; no second API call.
+      const result = await runGa4DailyRules(supabaseAdmin);
+      if (result.attempted === 0) {
+        return {
+          ok: true,
+          output: { noChange: true, reason: "No tenant has a GA4 property bound." },
+        };
+      }
+      if (result.succeeded === 0) {
+        return {
+          ok: false,
+          error: result.results
+            .map((entry) => entry.error)
+            .filter(Boolean)
+            .join(" | "),
+        };
+      }
+      return { ok: true, output: { ...result } };
+    } catch (error) {
+      return { ok: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  }
+
+  const { runGa4DailyObservation } = await import("./measurement/ga4.server");
   try {
     const result = await runGa4DailyObservation(supabaseAdmin);
     if (result.attempted === 0) {
@@ -564,7 +592,10 @@ async function runGa4Node(client: Client, ref: string): Promise<NodeOutcome | nu
     if (result.succeeded === 0) {
       return {
         ok: false,
-        error: result.results.map((entry) => entry.error).filter(Boolean).join(" | "),
+        error: result.results
+          .map((entry) => entry.error)
+          .filter(Boolean)
+          .join(" | "),
       };
     }
     return { ok: true, output: { ...result } };
