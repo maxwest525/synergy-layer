@@ -87,13 +87,13 @@ describe("evaluateSite", () => {
     expect(blocked?.severity).toBe("critical");
   });
 
-  it("reports the pages a partial robots block hides", () => {
+  it("reports the declared pages a partial robots block hides", () => {
     // The gap this closes: `robotsBlocksEverything` only ever matched a bare
     // `Disallow: /`, so a robots.txt hiding a whole section read as healthy.
     const findings = evaluateSite({
       ...base,
       robotsBody: "User-agent: *\nDisallow: /services/\nSitemap: https://example.com/sitemap.xml",
-      knownPages: [
+      declaredPages: [
         "https://example.com/",
         "https://example.com/services/packing",
         "https://example.com/services/storage",
@@ -105,9 +105,20 @@ describe("evaluateSite", () => {
     expect(blocked?.label).toContain("2");
     expect(blocked?.detail).toContain("/services/packing");
     expect(blocked?.detail).not.toContain("/about");
-    // Manual: removing the rule and dropping the pages from the sitemap are
-    // both correct fixes, and they are opposites.
-    expect(blocked?.fixableByChangeKind).toBeNull();
+    // Fixable, because the sitemap already said which way to resolve it.
+    expect(blocked?.fixableByChangeKind).toBe("site.crawl_directives");
+  });
+
+  it("says nothing about a blocked page the site never asked to have indexed", () => {
+    // Disallowed and declared nowhere is a working configuration: an admin
+    // screen, a cart, a search results page. Reporting it would be noise.
+    const findings = evaluateSite({
+      ...base,
+      robotsBody: "User-agent: *\nDisallow: /wp-admin/\nSitemap: https://example.com/sitemap.xml",
+      knownPages: ["https://example.com/wp-admin/edit"],
+      declaredPages: ["https://example.com/about"],
+    });
+    expect(findings.map((finding) => finding.check)).not.toContain("robots_blocks_pages");
   });
 
   it("does not judge another host's pages by this host's robots file", () => {
@@ -116,7 +127,7 @@ describe("evaluateSite", () => {
     const findings = evaluateSite({
       ...base,
       robotsBody: "User-agent: *\nDisallow: /blog/\nSitemap: https://example.com/sitemap.xml",
-      knownPages: ["https://blog.example.com/blog/launch", "https://example.com/blog/launch"],
+      declaredPages: ["https://blog.example.com/blog/launch", "https://example.com/blog/launch"],
     });
     const blocked = findings.find((finding) => finding.check === "robots_blocks_pages");
     expect(blocked?.label).toContain("1");
@@ -127,7 +138,7 @@ describe("evaluateSite", () => {
     const findings = evaluateSite({
       ...base,
       robotsBody: "User-agent: *\nDisallow: /wp-admin/\nSitemap: https://example.com/sitemap.xml",
-      knownPages: ["https://example.com/", "https://example.com/about"],
+      declaredPages: ["https://example.com/", "https://example.com/about"],
     });
     expect(findings.map((finding) => finding.check)).not.toContain("robots_blocks_pages");
   });
@@ -146,7 +157,7 @@ describe("evaluateSite", () => {
     const findings = evaluateSite({
       ...base,
       robotsBody: "User-agent: *\nDisallow: /",
-      knownPages: ["https://example.com/about"],
+      declaredPages: ["https://example.com/about"],
     });
     const checks = findings.map((finding) => finding.check);
     expect(checks).toContain("robots_blocks_site");

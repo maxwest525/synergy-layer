@@ -11,6 +11,7 @@ import type { GovernedChangeKind } from "./execution/allowlist";
 import { GOVERNED_CHANGE_KINDS } from "./execution/allowlist";
 import type { FieldChange } from "./execution/source-change";
 import type { CheckId } from "./page-checks";
+import { isRobotsPathAllowed } from "./robots-rules";
 import type { SiteCheckId } from "./site-checks";
 
 export type AuditFixTarget = {
@@ -55,10 +56,10 @@ export const PAGE_CHECK_FIX: Record<CheckId, AuditFixTarget | null> = {
 export const SITE_CHECK_FIX: Record<SiteCheckId, AuditFixTarget | null> = {
   robots_missing: null,
   robots_blocks_site: crawl,
-  // Manual on purpose. Removing the Disallow is only right if the pages were
-  // meant to be public; the other correct fix is dropping them from the
-  // sitemap. Nothing read tells us which the owner intended.
-  robots_blocks_pages: null,
+  // Fixable, because the site already answered which way. The finding only
+  // fires for pages the sitemap declares, so the owner has already said they
+  // want them indexed; removing the rule that contradicts that is the fix.
+  robots_blocks_pages: crawl,
   sitemap_missing: null,
   sitemap_unreachable: null,
   sitemap_empty: null,
@@ -90,6 +91,10 @@ export function buildCrawlDirectiveFix(input: {
   check: SiteCheckId;
   robotsContent: string;
   sitemapUrl: string | null;
+  /** Paths the sitemap declares that robots.txt disallows. */
+  blockedPaths?: readonly string[];
+  /** The crawler the finding was measured for, so the fix matches it. */
+  userAgent?: string;
 }): CrawlDirectiveFix | { error: string } {
   const content = input.robotsContent;
 
@@ -136,5 +141,126 @@ export function buildCrawlDirectiveFix(input: {
     };
   }
 
+  if (input.check === "robots_blocks_pages") {
+    return buildUnblockFix(content, input.blockedPaths ?? [], input.userAgent);
+  }
+
   return { error: "That finding has no governed crawl directive fix yet." };
+}
+
+/**
+ * Remove the one rule that is hiding the pages the sitemap declares.
+ *
+ * Deliberately narrow. It edits only when a single `Disallow` line accounts for
+ * every blocked page, because that is the case where the owner\'s intent is not
+ * in doubt: they listed the pages for indexing and one stray rule contradicts
+ * it. When several rules are involved the edit stops being one obvious
+ * correction and becomes a judgement about which pages were meant to be
+ * private, so it refuses and says which rules are in play.
+ *
+ * The line is replaced with a bare `Disallow:`, which is valid and means "allow
+ * everything", rather than deleted. Deleting a line shifts everything below it,
+ * and the executor matches on an exact literal occurring exactly once.
+ */
+function buildUnblockFix(
+  content: string,
+  blocked: readonly string[],
+  userAgent = "Googlebot",
+): CrawlDirectiveFix | { error: string } {
+  if (blocked.length === 0) {
+    return { error: "No blocked page addresses were carried with this finding." };
+  }
+
+  // The finding read the live robots.txt; this reads the governed file in the
+  // repository. They drift, so what is actually blocked is re-established here
+  // rather than assumed from the finding.
+  const stillBlocked = blocked.filter((path) => !isRobotsPathAllowed(content, path, userAgent));
+  if (stillBlocked.length === 0) {
+    return {
+      error:
+        "The robots.txt in the governed source does not block these pages, so there is nothing to change. The live file the audit read may be out of date with the repository.",
+    };
+  }
+
+  const culprits = blockingRules(content, stillBlocked, userAgent);
+  if (culprits.length === 0) {
+    return {
+      error:
+        "No single Disallow line accounts for these pages on its own, so there is nothing unambiguous to remove.",
+    };
+  }
+  if (culprits.length > 1) {
+    return {
+      error: `${culprits.length} separate rules block these pages (${culprits.join(", ")}). Removing them one at a time is a decision about which pages should stay private, so it is not proposed automatically.`,
+    };
+  }
+
+  const rule = culprits[0]!;
+  const without = emptyRule(content, rule);
+  const remaining = stillBlocked.filter((path) => !isRobotsPathAllowed(without, path, userAgent));
+  if (remaining.length > 0) {
+    return {
+      error: `Removing ${rule} would still leave ${remaining.length} of these pages blocked by another rule, so it is not the whole fix and is not proposed on its own.`,
+    };
+  }
+
+  const line = lineFor(content, rule);
+  if (!line) return { error: `The rule ${rule} could not be located as a single line to replace.` };
+
+  const count = stillBlocked.length;
+  return {
+    title: "Stop robots.txt blocking pages your sitemap lists",
+    rationale: `Your sitemap asks Google to index ${count} ${count === 1 ? "page" : "pages"} that robots.txt disallows, so Google is told to index what it is not allowed to read. Removing ${rule} resolves the contradiction in favour of what the sitemap already declares.`,
+    changes: [
+      {
+        field: "robots_txt",
+        label: `robots.txt rule ${rule}`,
+        before: line,
+        // Emptied rather than deleted: a bare Disallow is valid and means allow
+        // everything, and the executor matches an exact literal occurring
+        // exactly once, so removing the line would shift every line under it.
+        after: "Disallow:",
+      },
+    ],
+  };
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function ruleLinePattern(rule: string, flags: string): RegExp {
+  return new RegExp(`^[ \\t]*Disallow:[ \\t]*${escapeRegExp(rule)}[ \\t]*$`, flags);
+}
+
+function lineFor(content: string, rule: string): string | null {
+  return ruleLinePattern(rule, "im").exec(content)?.[0] ?? null;
+}
+
+function emptyRule(content: string, rule: string): string {
+  return content.replace(ruleLinePattern(rule, "gim"), "Disallow:");
+}
+
+/**
+ * Which `Disallow` rules are actually doing the blocking.
+ *
+ * Established by emptying one rule at a time and re-asking the matcher, rather
+ * than by reasoning about the rule text. Precedence, wildcards, anchors and
+ * user-agent groups are then handled by the one implementation that already
+ * knows them, and an `Allow` carve-out that makes a rule irrelevant correctly
+ * keeps it off this list.
+ */
+function blockingRules(content: string, blocked: readonly string[], userAgent: string): string[] {
+  const rules = [
+    ...new Set(
+      [...content.matchAll(/^[ \t]*Disallow:[ \t]*(\S+)[ \t]*$/gim)].flatMap((match) =>
+        match[1] ? [match[1]] : [],
+      ),
+    ),
+  ];
+  return rules.filter((rule) => {
+    const without = emptyRule(content, rule);
+    // This rule matters if emptying it frees any page that was blocked.
+    return blocked.some((path) => isRobotsPathAllowed(without, path, userAgent));
+  });
 }

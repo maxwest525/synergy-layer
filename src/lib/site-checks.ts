@@ -40,6 +40,18 @@ export type SiteFacts = {
    * against them one by one rather than only for a site-wide block.
    */
   knownPages?: string[];
+  /**
+   * The pages the site itself declares it wants indexed: everything the sitemap
+   * lists, plus anything Search Console has already reported.
+   *
+   * This is what makes a robots.txt block actionable rather than ambiguous. A
+   * page that is disallowed and declared nowhere is a working configuration -
+   * an admin screen, a cart, a search results page - and nothing to report. A
+   * page that is disallowed *and* declared is the owner contradicting
+   * themselves in two files, which is the state Google reports as "Indexed,
+   * though blocked by robots.txt".
+   */
+  declaredPages?: string[];
 };
 
 export type SiteFinding = {
@@ -170,19 +182,22 @@ export function evaluateSite(facts: SiteFacts): SiteFinding[] {
       fixableByChangeKind: "site.crawl_directives",
     });
   } else if (facts.robotsBody) {
-    // Not the whole site, but some of it. Named paths rather than a count, so
+    // Not the whole site, but some of it. Only pages the site declares it wants
+    // indexed are reported: a page that is disallowed and declared nowhere is a
+    // working configuration, not a defect. Named paths rather than a count, so
     // the operator can open the file and see the rule that did it.
-    const blocked = blockedPaths(facts.robotsBody, pathsOf(facts.knownPages ?? [], facts.origin));
+    const blocked = blockedPaths(
+      facts.robotsBody,
+      pathsOf(facts.declaredPages ?? [], facts.origin),
+    );
     if (blocked.length > 0) {
       findings.push({
         check: "robots_blocks_pages",
-        label: `Robots file blocks ${blocked.length} of your pages`,
+        label: `Robots file blocks ${blocked.length} pages you asked Google to index`,
         severity: "critical",
-        instruction: `Decide what these ${blocked.length} pages are for: remove the robots.txt rule that disallows them, or drop them from the sitemap if they are meant to stay private.`,
-        detail: `Google is not allowed to read ${sample([...blocked])}.`,
-        // Manual: the two correct fixes are opposites, and only the owner knows
-        // which of them they meant.
-        fixableByChangeKind: null,
+        instruction: `Remove the robots.txt rule disallowing ${blocked.length} pages your sitemap lists. Google cannot index what it is told not to read.`,
+        detail: `Your sitemap asks Google to index ${sample([...blocked])}, and robots.txt tells it not to read them.`,
+        fixableByChangeKind: "site.crawl_directives",
       });
     }
   }
