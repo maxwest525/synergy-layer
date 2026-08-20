@@ -1,5 +1,16 @@
 export const MEASUREMENT_TIME_ZONE = "America/Los_Angeles";
-export const MEASUREMENT_WINDOWS = [0, 7, 14, 28] as const;
+/**
+ * Every window the measurement pipeline can store.
+ *
+ * 0 is the before picture taken at approval. 14, 28, 56 and 90 are the windows
+ * the research grounds and `outcome-verdict.ts` grades. 7 is kept because rows
+ * already carry it and deleting stored evidence to tidy a list is not a trade
+ * worth making; nothing creates new ones.
+ */
+export const MEASUREMENT_WINDOWS = [0, 7, 14, 28, 56, 90] as const;
+
+/** The windows a newly approved change is measured on. */
+export const OUTCOME_WINDOWS = [14, 28, 56, 90] as const;
 export type MeasurementWindowDays = (typeof MEASUREMENT_WINDOWS)[number];
 
 export const SOURCE_ROLES = {
@@ -52,7 +63,10 @@ export function approvalBaselineWindow(approvedAt: string): DateWindow {
   };
 }
 
-export function outcomeWindow(liveAt: string, windowDays: 7 | 14 | 28): DateWindow {
+export function outcomeWindow(
+  liveAt: string,
+  windowDays: Exclude<MeasurementWindowDays, 0>,
+): DateWindow {
   const firstFullDay = addCalendarDays(ptDate(liveAt), 1);
   return {
     windowDays,

@@ -3,6 +3,7 @@ import { createSign } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database } from "@/integrations/supabase/types";
+import type { MeasurementWindowDays } from "../change-measurement";
 import { ga4Window, readGa4EnvPresence, type Ga4CredentialKind } from "./ga4";
 
 type AdminClient = SupabaseClient<Database>;
@@ -409,7 +410,7 @@ export async function runGa4PageWindow(
     targetUrl: string;
     startDate: string;
     endDate: string;
-    windowDays: 0 | 7 | 14 | 28;
+    windowDays: MeasurementWindowDays;
   },
 ) {
   const { data: run, error: runError } = await admin

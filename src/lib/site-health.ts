@@ -294,16 +294,14 @@ function statusFor(
 }
 
 /**
- * The windows the measurement pipeline can actually write.
+ * The windows the measurement pipeline can write.
  *
- * `change_measurement_windows.window_days` carries `CHECK (window_days IN
- * (0, 7, 14, 28))`, so 56 and 90 cannot be stored however well the research
- * derives them. Listing them as windows this grades would advertise something
- * that will never happen; they are named separately, as derived but not yet
- * collected, until a migration widens the constraint and the lifecycle function
- * inserts them.
+ * All four grounded windows are storable since the migration that widened
+ * `change_measurement_windows.window_days` and taught the lifecycle trigger to
+ * cut 56 and 90 day windows. 0 remains the approval baseline and 7 remains
+ * accepted so rows already stored stay valid, though nothing creates new ones.
  */
-export const STORABLE_WINDOWS = [0, 7, 14, 28] as const;
+export const STORABLE_WINDOWS = [0, 7, 14, 28, 56, 90] as const;
 
 const GRADED_AND_STORABLE = GROUNDED_WINDOWS.filter((window) =>
   (STORABLE_WINDOWS as readonly number[]).includes(window),

@@ -305,15 +305,23 @@ describe("defects an adversarial review found before this shipped", () => {
     expect(buildSiteHealth(withFacts({ siteObservedAt: NOW })).truncatedNote).toBeNull();
   });
 
-  it("does not advertise grading windows the database cannot store", () => {
-    // change_measurement_windows carries CHECK (window_days IN (0,7,14,28)),
-    // so 56 and 90 can never arrive however well the research derives them.
+  it("names every grounded window, now that all four can be stored", () => {
+    // The CHECK constraint used to stop at 28, so 56 and 90 could never arrive
+    // however well the research derived them. The migration widened it and
+    // taught the lifecycle trigger to cut them.
     const view = buildSiteHealth(
       withFacts({ siteObservedAt: NOW, outcomes: [outcome({ windowDays: 7 })] }),
     );
-    expect(view.ungradedNote).toContain("14 and 28");
-    expect(view.ungradedNote).toMatch(/nothing collects them yet/i);
-    expect(STORABLE_WINDOWS).toEqual([0, 7, 14, 28]);
+    expect(view.ungradedNote).toContain("14 and 28 and 56 and 90");
+    expect(view.ungradedNote).not.toMatch(/nothing collects them yet/i);
+    expect(STORABLE_WINDOWS).toEqual([0, 7, 14, 28, 56, 90]);
+  });
+
+  it("grades a 90 day reading, which the database could not previously hold", () => {
+    const [graded] = gradeOutcomes([
+      outcome({ windowDays: 90, daysSinceLive: 95, impressions: 900, clicks: 30 }),
+    ]);
+    expect(graded?.verdict).toBe("success");
   });
 
   it("reads the current speed score, not a superseded one", () => {
