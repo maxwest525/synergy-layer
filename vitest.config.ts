@@ -14,6 +14,10 @@ export default defineConfig({
     // cleanup and matchers from `vitest.setup.ts`.
     environment: "node",
     setupFiles: ["./vitest.setup.ts"],
+    // A git worktree of this repo lives under `.claude/worktrees/`, so without
+    // this every suite is collected twice and the reported count is double the
+    // real one.
+    exclude: ["**/node_modules/**", "**/dist/**", ".output/**", ".claude/**"],
     testTimeout: 15_000,
   },
 });
