@@ -58,16 +58,25 @@ describe("the 14 day window asks only whether Google indexed it", () => {
     expect(verdict.reason).toMatch(/index/i);
   });
 
-  it("fails when Google never showed it", () => {
-    const verdict = outcomeVerdict(reading({ windowDays: 14, impressions: 0 }));
-    expect(verdict.verdict).toBe("failure");
-    expect(verdict.reason).toMatch(/index/i);
-  });
-
   it("does not judge clicks this early", () => {
     // Asking for clicks at 14 days would fail pages that are working.
     const verdict = outcomeVerdict(reading({ windowDays: 14, impressions: 200, clicks: 0 }));
     expect(verdict.verdict).toBe("success");
+  });
+});
+
+describe("two weeks is inside Google's own reprocessing time", () => {
+  // "Crawling can take anywhere from a few days to a few weeks."
+  // https://developers.google.com/search/docs/crawling-indexing/ask-google-to-recrawl
+  it("reports not yet, never failure, when a 14 day window has no impressions", () => {
+    const graded = outcomeVerdict(reading({ windowDays: 14, daysSinceLive: 14, impressions: 0 }));
+    expect(graded.verdict).toBe("not_yet");
+    expect(graded.reason).toContain("weeks");
+  });
+  it("still reports success when the page has appeared", () => {
+    expect(
+      outcomeVerdict(reading({ windowDays: 14, daysSinceLive: 14, impressions: 3 })).verdict,
+    ).toBe("success");
   });
 });
 

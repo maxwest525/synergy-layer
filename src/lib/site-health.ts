@@ -201,6 +201,7 @@ function tilesFor(facts: SiteHealthFacts, graded: readonly GradedOutcome[]): Til
     (outcome) =>
       outcome.verdict !== null &&
       outcome.verdict !== "too_early" &&
+      outcome.verdict !== "not_yet" &&
       outcome.verdict !== "unmeasurable",
   );
   const worked = judged.filter((outcome) => outcome.verdict === "success").length;
@@ -355,9 +356,10 @@ export function buildSiteHealth(facts: SiteHealthFacts): SiteHealthView {
 const VERDICT_ORDER: Record<string, number> = {
   failure: 0,
   neutral: 1,
-  too_early: 2,
-  success: 3,
-  unmeasurable: 4,
+  not_yet: 2,
+  too_early: 3,
+  success: 4,
+  unmeasurable: 5,
 };
 
 function verdictRank(outcome: GradedOutcome): number {

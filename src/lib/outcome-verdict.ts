@@ -38,7 +38,8 @@ export const GROUNDED_WINDOWS = [14, 28, 56, 90] as const;
 
 export type GroundedWindow = (typeof GROUNDED_WINDOWS)[number];
 
-export type OutcomeVerdict = "success" | "neutral" | "failure" | "too_early" | "unmeasurable";
+export type OutcomeVerdict =
+  "success" | "neutral" | "failure" | "not_yet" | "too_early" | "unmeasurable";
 
 export type OutcomeReading = {
   readonly windowDays: number;
@@ -102,8 +103,11 @@ export function outcomeVerdict(reading: OutcomeReading): OutcomeAssessment {
     };
   }
 
-  // 14 days asks one question only: did Google index it. Asking about clicks
-  // this early would fail pages that are working exactly as intended.
+  // 14 days asks one question only: has Google seen it yet. Asking about
+  // clicks this early would fail pages that are working exactly as intended.
+  // The honest negative answer at 14 days is *not yet*, not failure: Google's
+  // own recrawl timeline says this can take a few days to a few weeks.
+  // https://developers.google.com/search/docs/crawling-indexing/ask-google-to-recrawl
   if (reading.windowDays === 14) {
     return reading.impressions > 0
       ? {
@@ -111,9 +115,9 @@ export function outcomeVerdict(reading: OutcomeReading): OutcomeAssessment {
           reason: `Google has indexed this page and shown it ${reading.impressions} times. That is all this first check asks.`,
         }
       : {
-          verdict: "failure",
+          verdict: "not_yet",
           reason:
-            "Google has not shown this page once in two weeks, so it is probably not indexed. That is a technical problem, not a wording one.",
+            "Google has not shown this page yet. Google's own timeline says recrawling alone can take a few days to a few weeks, so two quiet weeks is normal, not a failure. Keep waiting.",
         };
   }
 
