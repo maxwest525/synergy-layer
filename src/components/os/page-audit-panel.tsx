@@ -194,8 +194,8 @@ export function PageAuditPanel() {
       )}
 
       <p className="text-xs text-muted-foreground">
-        Every finding comes from the rendered live page, not from a guess. Fixes go through the usual
-        review queue in{" "}
+        Every finding comes from the rendered live page, not from a guess. Fixes go through the
+        usual review queue in{" "}
         <Link to="/changes" className="text-primary hover:underline">
           page changes
         </Link>

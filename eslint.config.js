@@ -6,7 +6,13 @@ import reactRefresh from "eslint-plugin-react-refresh";
 import tseslint from "typescript-eslint";
 
 export default tseslint.config(
-  { ignores: ["dist", ".output", ".vinxi", "src/integrations/supabase/types.ts"] },
+  // `.claude/worktrees/*` holds git worktrees of this same repo, each with a
+  // node_modules symlink back here. Without this, `eslint .` follows that
+  // symlink and lints every dependency, which is where thousands of phantom
+  // errors come from.
+  {
+    ignores: ["dist", ".output", ".vinxi", ".claude", "src/integrations/supabase/types.ts"],
+  },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ["**/*.{ts,tsx}"],

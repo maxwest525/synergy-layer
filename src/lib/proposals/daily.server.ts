@@ -212,9 +212,7 @@ export async function runProposalJobForTenant(
         last_state: "failed",
         last_error: failure,
         last_created_count: 0,
-        ...(pause
-          ? { paused: true, paused_reason: failure, paused_at: now.toISOString() }
-          : {}),
+        ...(pause ? { paused: true, paused_reason: failure, paused_at: now.toISOString() } : {}),
       });
       return {
         tenantId,

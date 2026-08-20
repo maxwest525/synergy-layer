@@ -4,7 +4,12 @@ import { selectProposalCandidates } from "./candidates";
 
 const rows = [
   { keys: ["https://trumoveinc.com/", "tru moves"], clicks: 0, impressions: 10, position: 8 },
-  { keys: ["https://trumoveinc.com/movers", "long distance movers"], clicks: 1, impressions: 40, position: 12 },
+  {
+    keys: ["https://trumoveinc.com/movers", "long distance movers"],
+    clicks: 1,
+    impressions: 40,
+    position: 12,
+  },
   { keys: ["https://competitor.com/x", "movers"], clicks: 0, impressions: 900, position: 3 },
 ];
 

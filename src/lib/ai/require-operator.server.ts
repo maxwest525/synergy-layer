@@ -9,9 +9,7 @@ export type OperatorIdentity = { userId: string; token: string };
  * verify the bearer token the browser sends the same way it does: claims are
  * checked against the auth server, never trusted from the payload.
  */
-export async function requireOperatorFromRequest(
-  request: Request,
-): Promise<OperatorIdentity> {
+export async function requireOperatorFromRequest(request: Request): Promise<OperatorIdentity> {
   const authHeader = request.headers.get("authorization");
   if (!authHeader?.startsWith("Bearer ")) {
     throw new Response("Unauthorized", { status: 401 });

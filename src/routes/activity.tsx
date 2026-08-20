@@ -161,9 +161,7 @@ function ActivityPage() {
 
       {data.orphanSuggestions.length > 0 ? (
         <GlassCard className="p-5">
-          <h2 className="text-sm font-medium text-foreground">
-            Suggestions with no change yet
-          </h2>
+          <h2 className="text-sm font-medium text-foreground">Suggestions with no change yet</h2>
           <p className="mt-1 text-sm text-primary">
             Turn one of these into a concrete page change so it can be approved and deployed.
           </p>

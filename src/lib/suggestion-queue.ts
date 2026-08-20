@@ -44,6 +44,11 @@ export type QueueSource = {
   readonly severity: AuditSeverity | null;
   /** Set when a change request was already drafted from this recommendation. */
   readonly linkedChangeId: string | null;
+  /**
+   * `change_requests.proposal_type`, on change rows only. It decides whether a
+   * redraft is possible: only the title/H1 lane has one.
+   */
+  readonly proposalType?: string | null;
   readonly createdAt: string;
   readonly updatedAt: string;
 };
@@ -55,6 +60,8 @@ export type QueueItem = QueueSource & {
   readonly tone: UrgencyTone;
   readonly canRestore: boolean;
   readonly canIgnore: boolean;
+  /** False when no redraft path exists for this row, so the verb is not offered. */
+  readonly canRegenerate: boolean;
 };
 
 export type Queue = {
@@ -121,11 +128,32 @@ const URGENCY_TONE: Record<UrgencyRank, UrgencyTone> = {
 };
 
 /**
- * Rank drives colour: Fix now red, Worth doing yellow, Nice to have blue, per
- * the palette the spec assigns.
+ * Rank drives colour on a queue card: Fix now red, Worth doing yellow, Nice to
+ * have blue, per the palette the spec assigns.
  */
 export function toneForUrgency(urgency: UrgencyRank): UrgencyTone {
   return URGENCY_TONE[urgency];
+}
+
+/**
+ * The nav badge runs a different scale from the queue card, and the boards show
+ * both: badges beside a category are only ever green, yellow or red, while the
+ * rank pill inside a card is red, yellow or blue.
+ *
+ * They are answering different questions. The pill says how this one suggestion
+ * ranks; the badge says whether this category needs you. A category holding
+ * nothing but nice-to-haves does not need you, so it reads green.
+ */
+export type NavTone = "positive" | "warning" | "danger";
+
+const NAV_TONE: Record<UrgencyRank, NavTone> = {
+  fix_now: "danger",
+  worth_doing: "warning",
+  nice_to_have: "positive",
+};
+
+export function navToneForUrgency(urgency: UrgencyRank): NavTone {
+  return NAV_TONE[urgency];
 }
 
 /** A rejected change request is terminal, so restoring it is not offered. */
@@ -136,6 +164,22 @@ function canRestoreSource(source: QueueSource): boolean {
 /** Ignoring needs somewhere to store the suppression. Audit findings have none yet. */
 function canIgnoreSource(source: QueueSource): boolean {
   return source.kind !== "audit";
+}
+
+/**
+ * Whether the wording can be redrafted in place.
+ *
+ * Only `regenerateTitleH1Proposal` exists, and it accepts a title/H1 change
+ * request that is still `proposed`; approval freezes the wording, and the
+ * page-metadata lane has no redraft path at all. Offering the verb anywhere else
+ * would be a button that always fails, so it is reported as unavailable instead.
+ */
+function canRegenerateSource(source: QueueSource): boolean {
+  return (
+    source.kind === "change" &&
+    source.proposalType === "title_h1" &&
+    source.storedState === "proposed"
+  );
 }
 
 /**
@@ -192,6 +236,7 @@ function toItem(source: QueueSource, queueState: QueueState, now: string): Queue
     tone: toneForUrgency(urgency),
     canRestore: canRestoreSource(source),
     canIgnore: canIgnoreSource(source),
+    canRegenerate: canRegenerateSource(source),
   };
 }
 

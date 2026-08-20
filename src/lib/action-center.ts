@@ -34,7 +34,6 @@ export const ACTION_CENTER_MEASUREMENT_LANE = {
   hint: "Live and being measured. Nothing is asked of you until the window closes.",
 } as const satisfies { key: ActionCenterLane; label: string; hint: string };
 
-
 /**
  * A failed observation is a system health problem, not a marketing decision.
  * It is shown in its own strip so the decision lanes stay decisions.
@@ -49,7 +48,6 @@ export function isSystemFailure(item: {
   }
   return (item.metadata as Record<string, unknown>)["category"] === "failure";
 }
-
 
 export type ActionCenterFieldChange = {
   field: string;

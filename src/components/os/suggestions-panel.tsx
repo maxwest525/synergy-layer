@@ -205,9 +205,7 @@ export function SuggestionsPanel({ collapsed = false }: { collapsed?: boolean })
       ]);
     },
     onError: (error: unknown) => {
-      toast.error(
-        error instanceof Error ? error.message : "The decisions could not be recorded.",
-      );
+      toast.error(error instanceof Error ? error.message : "The decisions could not be recorded.");
     },
   });
 
@@ -332,9 +330,7 @@ export function SuggestionsPanel({ collapsed = false }: { collapsed?: boolean })
                 onNavigate={() => setOpen(false)}
                 selectable={selectable}
                 selected={selectable && Boolean(selected[item.id])}
-                onSelectedChange={(next) =>
-                  setSelected((prev) => ({ ...prev, [item.id]: next }))
-                }
+                onSelectedChange={(next) => setSelected((prev) => ({ ...prev, [item.id]: next }))}
                 note={notes[item.id] ?? ""}
                 onNoteChange={(next) => setNotes((prev) => ({ ...prev, [item.id]: next }))}
                 busy={busy}

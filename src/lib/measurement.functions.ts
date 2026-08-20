@@ -101,49 +101,49 @@ export const getMeasurementState = createServerFn({ method: "POST" })
 
     const [roles, assets, runs, snapshots, ga4Rows, selectedProperty, ga4Schedule] =
       await Promise.all([
-      context.supabase.from("user_roles").select("role").eq("user_id", context.userId),
-      context.supabase
-        .from("assets")
-        .select("external_ref")
-        .eq("tenant_id", tenantId)
-        .eq("kind", "website"),
-      context.supabase
-        .from("measurement_runs")
-        .select(
-          "id, provider, target, strategy, status, error, http_status, started_at, finished_at, duration_ms, quota",
-        )
-        .eq("tenant_id", tenantId)
-        .order("started_at", { ascending: false })
-        .limit(50),
-      context.supabase
-        .from("pagespeed_snapshots")
-        .select("*")
-        .eq("tenant_id", tenantId)
-        .order("collected_at", { ascending: false })
-        .limit(25),
-      context.supabase
-        .from("ga4_snapshots")
-        .select("id, property, start_date, end_date, metrics, collected_at")
-        .eq("tenant_id", tenantId)
-        .order("collected_at", { ascending: false })
-        .limit(25),
-      context.supabase
-        .from("search_console_properties")
-        .select("site_url")
-        .eq("tenant_id", tenantId)
-        .eq("selected", true)
-        .maybeSingle(),
-      context.supabase
-        .from("schedules")
-        .select(
-          "key, name, cron, enabled, health, last_state, last_run_at, last_duration_ms, next_run_at, failure_count",
-        )
-        .eq("key", "ga4-daily-observe")
-        .eq("tenant_id", tenantId)
-        .order("updated_at", { ascending: false })
-        .limit(1)
-        .maybeSingle(),
-    ]);
+        context.supabase.from("user_roles").select("role").eq("user_id", context.userId),
+        context.supabase
+          .from("assets")
+          .select("external_ref")
+          .eq("tenant_id", tenantId)
+          .eq("kind", "website"),
+        context.supabase
+          .from("measurement_runs")
+          .select(
+            "id, provider, target, strategy, status, error, http_status, started_at, finished_at, duration_ms, quota",
+          )
+          .eq("tenant_id", tenantId)
+          .order("started_at", { ascending: false })
+          .limit(50),
+        context.supabase
+          .from("pagespeed_snapshots")
+          .select("*")
+          .eq("tenant_id", tenantId)
+          .order("collected_at", { ascending: false })
+          .limit(25),
+        context.supabase
+          .from("ga4_snapshots")
+          .select("id, property, start_date, end_date, metrics, collected_at")
+          .eq("tenant_id", tenantId)
+          .order("collected_at", { ascending: false })
+          .limit(25),
+        context.supabase
+          .from("search_console_properties")
+          .select("site_url")
+          .eq("tenant_id", tenantId)
+          .eq("selected", true)
+          .maybeSingle(),
+        context.supabase
+          .from("schedules")
+          .select(
+            "key, name, cron, enabled, health, last_state, last_run_at, last_duration_ms, next_run_at, failure_count",
+          )
+          .eq("key", "ga4-daily-observe")
+          .eq("tenant_id", tenantId)
+          .order("updated_at", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+      ]);
 
     // A failed read must never read as "nothing measured yet".
     for (const [label, result] of [

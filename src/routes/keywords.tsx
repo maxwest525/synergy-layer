@@ -96,9 +96,7 @@ function KeywordReviewPage() {
 
   const candidates = useMemo(
     () =>
-      filter === "all"
-        ? allCandidates
-        : allCandidates.filter((row) => row.review_state === filter),
+      filter === "all" ? allCandidates : allCandidates.filter((row) => row.review_state === filter),
     [allCandidates, filter],
   );
 

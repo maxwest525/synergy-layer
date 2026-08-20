@@ -320,9 +320,9 @@ export function extractPageFacts(html: string, markdown: string, pageUrl: string
           const type = record["@type"];
           if (typeof type === "string") jsonLdTypes.push(type);
           if (Array.isArray(type)) {
-            type.filter((entry): entry is string => typeof entry === "string").forEach((entry) =>
-              jsonLdTypes.push(entry),
-            );
+            type
+              .filter((entry): entry is string => typeof entry === "string")
+              .forEach((entry) => jsonLdTypes.push(entry));
           }
           if (Array.isArray(record["@graph"])) walk(record["@graph"]);
         }

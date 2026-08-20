@@ -36,10 +36,10 @@ export const Route = createFileRoute("/api/public/hooks/propose-from-evidence")(
           const result = await runProposalJob(supabaseAdmin);
           return Response.json({ ok: true, ...result });
         } catch (error) {
-          return new Response(
-            JSON.stringify({ ok: false, error: (error as Error).message }),
-            { status: 500, headers: { "Content-Type": "application/json" } },
-          );
+          return new Response(JSON.stringify({ ok: false, error: (error as Error).message }), {
+            status: 500,
+            headers: { "Content-Type": "application/json" },
+          });
         }
       },
     },

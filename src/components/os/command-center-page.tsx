@@ -5,7 +5,7 @@ import { categoryIcon, tileIcon } from "./category-icons";
 import { useCommandCenter } from "./command-center-facts";
 import { EmptyState } from "./primitives";
 import type { Delta, SuggestedNextRow, Tile, TopCard, TopCardAction } from "@/lib/command-center";
-import type { UrgencyTone } from "@/lib/suggestion-queue";
+import type { NavTone, UrgencyTone } from "@/lib/suggestion-queue";
 import { cn } from "@/lib/utils";
 
 /**
@@ -16,16 +16,18 @@ import { cn } from "@/lib/utils";
  * has not been measured yet" and never as a zero that looks like a measurement.
  */
 
+/** The rank pill inside a card keeps the spec's red / yellow / blue. */
 const TONE_TEXT: Record<UrgencyTone, string> = {
   danger: "text-destructive",
   warning: "text-warning",
   info: "text-info",
 };
 
-const TONE_DOT: Record<UrgencyTone, string> = {
-  danger: "bg-destructive",
+/** Suggested-next dots run green / yellow / red, like the nav badges. */
+const TONE_DOT: Record<NavTone, string> = {
+  positive: "bg-primary",
   warning: "bg-warning",
-  info: "bg-info",
+  danger: "bg-destructive",
 };
 
 function DeltaLabel({ delta }: { delta: Delta }) {

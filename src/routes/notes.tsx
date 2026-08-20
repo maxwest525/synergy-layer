@@ -5,7 +5,13 @@ import { ExternalLink, Pin, PinOff, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
-import { EmptyState, GlassCard, PageHeader, PageStack, formatWhen } from "@/components/os/primitives";
+import {
+  EmptyState,
+  GlassCard,
+  PageHeader,
+  PageStack,
+  formatWhen,
+} from "@/components/os/primitives";
 import { OperatorRouteError } from "@/components/os/route-error";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,7 +54,10 @@ function NotesPage() {
   const [body, setBody] = useState("");
   const [linkedUrl, setLinkedUrl] = useState("");
 
-  const notesQuery = useQuery({ queryKey: ["operator-notes"], queryFn: () => list({ data: undefined }) });
+  const notesQuery = useQuery({
+    queryKey: ["operator-notes"],
+    queryFn: () => list({ data: undefined }),
+  });
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["operator-notes"] });
 
   const createMutation = useMutation({
@@ -175,7 +184,12 @@ function NoteCard({
           placeholder="Untitled note"
         />
         <div className="flex shrink-0 items-center gap-1">
-          <Button variant="ghost" size="icon" onClick={onTogglePin} aria-label={note.pinned ? "Unpin note" : "Pin note"}>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onTogglePin}
+            aria-label={note.pinned ? "Unpin note" : "Pin note"}
+          >
             {note.pinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
           </Button>
           <Button variant="ghost" size="icon" onClick={onDelete} aria-label="Delete note">

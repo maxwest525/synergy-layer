@@ -46,7 +46,9 @@ export const proposeAuditFix = createServerFn({ method: "POST" })
       });
     }
 
-    const target = data.check ? fixTargetForPageCheck(data.check) : { changeKind: "service.title_h1" as const };
+    const target = data.check
+      ? fixTargetForPageCheck(data.check)
+      : { changeKind: "service.title_h1" as const };
     if (!target || !data.targetUrl) {
       throw new Error("That finding has no governed fix yet, so it stays a manual fix.");
     }

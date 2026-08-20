@@ -7,7 +7,12 @@ import type { TaxonomyGroupKey } from "./os-taxonomy";
 export type NextActionFacts = {
   property: { siteUrl: string; lastObservedAt: string | null } | null;
   gsc: { snapshots: number; latestDate: string | null; totalsDays: number };
-  ga4: { snapshots: number; latestAt: string | null; lastError: string | null; configured: boolean };
+  ga4: {
+    snapshots: number;
+    latestAt: string | null;
+    lastError: string | null;
+    configured: boolean;
+  };
   pagespeed: { attempts: number; failures: number; snapshots: number; latestError: string | null };
   umami: { snapshots: number; latestAt: string | null };
   keywords: { tracked: number; pendingCandidates: number };
@@ -21,7 +26,13 @@ export type NextActionFacts = {
     latestProposedId: string | null;
   };
   inbox: { pendingApproval: number; needsAttention: number };
-  runs: { total: number; failed: number; queued: number; awaitingApproval: number; latestFailure: string | null };
+  runs: {
+    total: number;
+    failed: number;
+    queued: number;
+    awaitingApproval: number;
+    latestFailure: string | null;
+  };
   workflows: { registered: number; scheduled: number };
   recommendations: { proposed: number; observed: number };
   systems: { total: number; proven: number; configuredOnly: number; broken: number };
@@ -398,8 +409,7 @@ export function buildMissingReasons(facts: NextActionFacts): MissingReason[] {
       id: "missing-changes",
       group: "decisions",
       label: "No page changes proposed",
-      reason:
-        "No change request has ever been created, so the approval loop has not started once.",
+      reason: "No change request has ever been created, so the approval loop has not started once.",
       instruction: "Propose the first page change from stored search evidence.",
       to: "/changes",
       actionLabel: "Propose a change",
@@ -472,7 +482,8 @@ export function buildMissingReasons(facts: NextActionFacts): MissingReason[] {
       id: "missing-schedules",
       group: "run_work",
       label: "No active schedules",
-      reason: "No schedule is active, so evidence only appears when someone runs a workflow by hand.",
+      reason:
+        "No schedule is active, so evidence only appears when someone runs a workflow by hand.",
       instruction: "Turn on a daily schedule now.",
       to: "/scheduler",
       actionLabel: "Set a schedule",

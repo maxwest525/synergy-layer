@@ -286,9 +286,6 @@ function MeasurementPage() {
 
       <UmamiPanel />
 
-
-
-
       <GlassCard className="p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-sm font-semibold text-foreground">Run PageSpeed</h2>
@@ -459,10 +456,7 @@ function MeasurementPage() {
           {ga4Mutation.isPending ? "Refreshing GA4" : "Refresh GA4"}
         </Button>
 
-        <Link
-          to="/ga4"
-          className="ml-3 text-sm text-primary underline-offset-4 hover:underline"
-        >
+        <Link to="/ga4" className="ml-3 text-sm text-primary underline-offset-4 hover:underline">
           Open the GA4 page
         </Link>
 

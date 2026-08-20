@@ -83,7 +83,11 @@ export async function observeUmami(
   if (runError) throw new UmamiFailure("api_error", `Could not open a run: ${runError.message}`);
   const runId = run.id;
 
-  const close = async (status: "succeeded" | "failed", error: string | null, http: number | null) => {
+  const close = async (
+    status: "succeeded" | "failed",
+    error: string | null,
+    http: number | null,
+  ) => {
     await admin
       .from("measurement_runs")
       .update({
@@ -123,7 +127,12 @@ export async function observeUmami(
     };
 
     const rows = [
-      { metric: "stats" as const, totals: stats, payload: { stats }, count: Object.keys(stats).length },
+      {
+        metric: "stats" as const,
+        totals: stats,
+        payload: { stats },
+        count: Object.keys(stats).length,
+      },
       { metric: "pageviews" as const, totals: {}, payload: { series }, count: series.length },
       { metric: "pages" as const, totals: {}, payload: { rows: pages }, count: pages.length },
       {

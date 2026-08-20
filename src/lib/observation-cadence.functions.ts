@@ -105,29 +105,31 @@ export const getObservationCadences = createServerFn({ method: "POST" })
     const runRows = (runs.data ?? []) as (RunRow & { provider: string })[];
 
     const ga4Metrics = (ga4.data?.[0]?.metrics ?? null) as Record<string, unknown> | null;
-    const stored: Record<CadenceSourceKey, { count: number; at: string | null; rows: number | null }> =
-      {
-        gsc: {
-          count: gsc.count ?? 0,
-          at: gsc.data?.[0]?.collected_at ?? null,
-          rows: numberFrom(gsc.data?.[0]?.returned_row_count),
-        },
-        ga4: {
-          count: ga4.count ?? 0,
-          at: ga4.data?.[0]?.collected_at ?? null,
-          rows: numberFrom(ga4Metrics?.["rowCount"]),
-        },
-        umami: {
-          count: umami.count ?? 0,
-          at: umami.data?.[0]?.collected_at ?? null,
-          rows: numberFrom(umami.data?.[0]?.returned_row_count),
-        },
-        pagespeed: {
-          count: pagespeed.count ?? 0,
-          at: pagespeed.data?.[0]?.collected_at ?? null,
-          rows: pagespeed.count ? 1 : null,
-        },
-      };
+    const stored: Record<
+      CadenceSourceKey,
+      { count: number; at: string | null; rows: number | null }
+    > = {
+      gsc: {
+        count: gsc.count ?? 0,
+        at: gsc.data?.[0]?.collected_at ?? null,
+        rows: numberFrom(gsc.data?.[0]?.returned_row_count),
+      },
+      ga4: {
+        count: ga4.count ?? 0,
+        at: ga4.data?.[0]?.collected_at ?? null,
+        rows: numberFrom(ga4Metrics?.["rowCount"]),
+      },
+      umami: {
+        count: umami.count ?? 0,
+        at: umami.data?.[0]?.collected_at ?? null,
+        rows: numberFrom(umami.data?.[0]?.returned_row_count),
+      },
+      pagespeed: {
+        count: pagespeed.count ?? 0,
+        at: pagespeed.data?.[0]?.collected_at ?? null,
+        rows: pagespeed.count ? 1 : null,
+      },
+    };
 
     const cadences = OBSERVATION_SOURCES.map((source) => {
       const schedule = scheduleByKey.get(source.scheduleKey) ?? null;
@@ -219,7 +221,6 @@ export const setObservationCadence = createServerFn({ method: "POST" })
       assertCadenceMayEnable(source, count ?? 0);
     }
 
-
     const { data: existing, error: readError } = await supabaseAdmin
       .from("schedules")
       .select("id")
@@ -244,7 +245,9 @@ export const setObservationCadence = createServerFn({ method: "POST" })
         .maybeSingle();
       if (workflowError) throw new Error(`Could not read the workflow: ${workflowError.message}`);
       if (!workflow) {
-        throw new Error(`No workflow named "${source.scheduleKey}" exists, so the cadence cannot run.`);
+        throw new Error(
+          `No workflow named "${source.scheduleKey}" exists, so the cadence cannot run.`,
+        );
       }
 
       const { error } = await supabaseAdmin.from("schedules").insert({

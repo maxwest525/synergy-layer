@@ -22,7 +22,6 @@ export const COVERAGE_TONE: Record<CoverageStatus, Tone> = {
   not_evaluated: "neutral",
 };
 
-
 export type CoverageEvaluation = {
   status: Exclude<CoverageStatus, "not_evaluated">;
   summary: string;

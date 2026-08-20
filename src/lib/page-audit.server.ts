@@ -1,7 +1,13 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database } from "@/integrations/supabase/types";
-import { extractPageFacts, evaluatePages, groupFindings, buildAuditHeadline, type PageFacts } from "./page-checks";
+import {
+  extractPageFacts,
+  evaluatePages,
+  groupFindings,
+  buildAuditHeadline,
+  type PageFacts,
+} from "./page-checks";
 import {
   buildAuditInstruction,
   findDuplicateWording,
@@ -22,7 +28,10 @@ import {
 const FIRECRAWL_URL = "https://api.firecrawl.dev/v2/scrape";
 
 /** Renders one live page and returns its raw HTML and text. Throws with the real reason. */
-async function scrapePage(url: string, key: string): Promise<{ html: string; markdown: string; finalUrl: string }> {
+async function scrapePage(
+  url: string,
+  key: string,
+): Promise<{ html: string; markdown: string; finalUrl: string }> {
   const response = await fetch(FIRECRAWL_URL, {
     method: "POST",
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
@@ -268,8 +277,7 @@ export async function readPageAudit(client: Client, tenantId: string): Promise<P
       duplicates: [],
       findings: [],
       siteFindings: [],
-      siteInstruction:
-        "Select a Search Console property before running the technical site checks.",
+      siteInstruction: "Select a Search Console property before running the technical site checks.",
       siteObservedAt: null,
       instruction: "Select a Search Console property before auditing your pages.",
     };
@@ -371,7 +379,9 @@ export async function runPageAudit(
         title: facts.title,
         h1: facts.h1s[0] ?? null,
         rendered_by: "Firecrawl",
-        details: JSON.parse(JSON.stringify(facts)) as Database["public"]["Tables"]["page_metadata_observations"]["Row"]["details"],
+        details: JSON.parse(
+          JSON.stringify(facts),
+        ) as Database["public"]["Tables"]["page_metadata_observations"]["Row"]["details"],
         error: null,
         observed_at: observedAt,
         requested_by: actorId,
@@ -415,7 +425,9 @@ export async function runPageAudit(
     tenant_id: tenantId,
     property,
     origin,
-    facts: JSON.parse(JSON.stringify(siteFacts)) as Database["public"]["Tables"]["site_audit_snapshots"]["Insert"]["facts"],
+    facts: JSON.parse(
+      JSON.stringify(siteFacts),
+    ) as Database["public"]["Tables"]["site_audit_snapshots"]["Insert"]["facts"],
     observed_at: observedAt,
     requested_by: actorId,
   });

@@ -40,8 +40,15 @@ function optionalNum(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
-function readRows(payload: unknown): { url: string; clicks: number; impressions: number; ctr: number | null; position: number | null }[] {
-  const rows = payload && typeof payload === "object" ? (payload as Record<string, unknown>)["rows"] : null;
+function readRows(payload: unknown): {
+  url: string;
+  clicks: number;
+  impressions: number;
+  ctr: number | null;
+  position: number | null;
+}[] {
+  const rows =
+    payload && typeof payload === "object" ? (payload as Record<string, unknown>)["rows"] : null;
   if (!Array.isArray(rows)) return [];
   return rows
     .map((entry) => {

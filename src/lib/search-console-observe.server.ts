@@ -145,7 +145,6 @@ export async function observeSearchConsole(client: Client): Promise<ObserveResul
       actions: [{ kind: "open" }],
     });
 
-
     return {
       ok: false,
       property: null,
