@@ -283,7 +283,7 @@ const navSections: readonly NavSection[] = [
       "/search",
       "/keywords",
       "/competitors",
-      "/measurement",
+      "/measurement/tools",
       "/ga4",
       "/ads",
       "/authority",

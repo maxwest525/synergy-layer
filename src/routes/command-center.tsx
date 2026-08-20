@@ -59,7 +59,7 @@ function QuickAction({
   count,
   outcome,
 }: {
-  to: "/" | "/competitors" | "/ads" | "/workflows" | "/essentials" | "/measurement";
+  to: "/" | "/competitors" | "/ads" | "/workflows" | "/essentials" | "/measurement/tools";
   hash?: string;
   label: string;
   count?: number;
@@ -156,7 +156,7 @@ function CommandCenterPage() {
             outcome="18 individual essentials with a plain-language coverage status each. Navigation only, not an issue count."
           />
           <QuickAction
-            to="/measurement"
+            to="/measurement/tools"
             label="Run PageSpeed on an owned page"
             outcome="One click makes one PageSpeed Insights request. Provider cost $0, Google quota limited."
           />

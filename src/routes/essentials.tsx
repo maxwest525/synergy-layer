@@ -73,7 +73,8 @@ type Action =
         | "/capabilities/systems"
         | "/ads"
         | "/recommendations"
-        | "/measurement";
+        | "/measurement"
+        | "/measurement/tools";
     }
   | { label: string; to: "/changes/$id"; params: { id: string } }
   | { label: string; to: "/capabilities/systems/$key"; params: { key: string } };
@@ -447,7 +448,7 @@ function EssentialsPage() {
       status: pagespeed.status,
       evidence: pagespeed.evidence,
       gap: pagespeed.gap,
-      action: { label: "Open Measurement", to: "/measurement" as const },
+      action: { label: "Open Measurement", to: "/measurement/tools" as const },
     },
     {
       id: "guidance",

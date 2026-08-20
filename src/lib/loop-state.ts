@@ -100,7 +100,7 @@ const STAGE_BUILDERS: Record<TaxonomyGroupKey, (facts: NextActionFacts) => LoopS
       label: "Speed measured",
       count: facts.pagespeed.snapshots,
       unit: "measurement",
-      to: "/measurement",
+      to: "/measurement/tools",
     },
     {
       key: "candidates",

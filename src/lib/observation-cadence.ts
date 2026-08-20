@@ -51,7 +51,7 @@ export const OBSERVATION_SOURCES: readonly CadenceSource[] = [
     defaultCron: "45 16 * * *",
     provider: "umami",
     storeLabel: "Umami snapshots",
-    proveHref: "/measurement",
+    proveHref: "/measurement/tools",
   },
   {
     key: "pagespeed",
@@ -60,7 +60,7 @@ export const OBSERVATION_SOURCES: readonly CadenceSource[] = [
     defaultCron: "15 17 * * *",
     provider: "pagespeed",
     storeLabel: "PageSpeed snapshots",
-    proveHref: "/measurement",
+    proveHref: "/measurement/tools",
   },
 ] as const;
 
