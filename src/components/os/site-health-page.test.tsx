@@ -30,6 +30,8 @@ function outcome(overrides: Partial<StoredOutcome> = {}): StoredOutcome {
     impressions: 400,
     clicks: 6,
     measurable: true,
+    readingStatus: "complete" as const,
+    coverage: null,
     ...overrides,
   };
 }
@@ -211,6 +213,25 @@ describe("what the page is allowed to do", () => {
       "href",
       "/measurement/tools",
     );
+  });
+});
+
+describe("landing on a tab from a link", () => {
+  it("opens the tab the route asked for", () => {
+    // "Wait for the measurement window, then read the outcome" used to arrive
+    // on Suggestions, which usually says nothing is waiting.
+    useSiteHealth.mockReturnValue({
+      view: buildSiteHealth(facts({ outcomes: [outcome()] })),
+      isPending: false,
+      error: null,
+    });
+    render(<SiteHealthPage initialTab="outcomes" />);
+    expect(screen.getByText("It worked")).toBeInTheDocument();
+  });
+
+  it("still defaults to suggestions when the route asked for nothing", () => {
+    show({ outcomes: [outcome()] });
+    expect(screen.queryByText("It worked")).not.toBeInTheDocument();
   });
 });
 

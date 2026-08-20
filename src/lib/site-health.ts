@@ -41,6 +41,16 @@ export type StoredOutcome = {
    * when the window was never collected. Not the same as a measured zero.
    */
   readonly measurable: boolean;
+  /**
+   * What the stored observation said about its own completeness.
+   *
+   * A `partial` reading covers only the days Search Console actually returned,
+   * so its totals under-count by however many are missing. Grading one produces
+   * a failure out of a gap, which is the thing this whole module refuses to do.
+   */
+  readonly readingStatus: "complete" | "partial" | "empty";
+  /** Days the window asked for against days actually stored. Null when unknown. */
+  readonly coverage: { readonly expectedDays: number; readonly observedDays: number } | null;
 };
 
 export type GradedOutcome = StoredOutcome & {
@@ -51,12 +61,19 @@ export type GradedOutcome = StoredOutcome & {
 
 export type SpeedReading = {
   readonly url: string;
+  /** Mobile and desktop are separate readings of the same address. */
+  readonly strategy: string;
   readonly performanceScore: number | null;
   readonly collectedAt: string;
 };
 
 export type SiteHealthFacts = {
   readonly now: string;
+  /**
+   * True when a read hit its own row limit, so the counts below are a floor
+   * rather than a total. Silence here would present a truncation as a total.
+   */
+  readonly truncated?: boolean;
   readonly property: string | null;
   readonly siteFindings: readonly SiteFinding[];
   readonly siteObservedAt: string | null;
@@ -96,6 +113,8 @@ export type SiteHealthView = {
    * derives is visible rather than quietly dropped.
    */
   readonly ungradedNote: string | null;
+  /** Set when a read hit its limit, so a truncation is never shown as a total. */
+  readonly truncatedNote: string | null;
 };
 
 const NOT_CHECKED =
@@ -111,12 +130,22 @@ const NOT_CHECKED =
  * rather than deleted, and it is labelled rather than graded, because a verdict
  * from a window we cannot justify is worse than no verdict.
  */
-function ungradedReason(windowDays: number): string | null {
-  if (windowDays === 0) {
+function ungradedReason(outcome: StoredOutcome): string | null {
+  if (outcome.windowDays === 0) {
     return "Taken at approval, as the before picture. There is nothing to grade yet.";
   }
-  if (!(GROUNDED_WINDOWS as readonly number[]).includes(windowDays)) {
-    return `Taken at ${windowDays} days. Nothing derives a ${windowDays} day window, so this reading is kept but not graded.`;
+  if (!(GROUNDED_WINDOWS as readonly number[]).includes(outcome.windowDays)) {
+    return `Taken at ${outcome.windowDays} days. Nothing derives a ${outcome.windowDays} day window, so this reading is kept but not graded.`;
+  }
+  if (outcome.readingStatus === "partial") {
+    // The totals cover only the days Search Console returned. Judging them
+    // would turn a reporting gap into a verdict, and the measurement code
+    // already records the rule: do not infer from the gap.
+    const covered =
+      outcome.coverage === null
+        ? "Search Console did not report every day in this window"
+        : `Only ${outcome.coverage.observedDays} of ${outcome.coverage.expectedDays} days were reported`;
+    return `${covered}, so these totals are short by an unknown amount. The reading is kept but not graded.`;
   }
   return null;
 }
@@ -124,7 +153,7 @@ function ungradedReason(windowDays: number): string | null {
 /** Grade every stored reading, or say why one is not graded. */
 export function gradeOutcomes(outcomes: readonly StoredOutcome[]): GradedOutcome[] {
   return outcomes.map((outcome) => {
-    const ungraded = ungradedReason(outcome.windowDays);
+    const ungraded = ungradedReason(outcome);
     if (ungraded !== null) return { ...outcome, verdict: null, reason: ungraded };
     const assessment = outcomeVerdict({
       windowDays: outcome.windowDays,
@@ -139,11 +168,24 @@ export function gradeOutcomes(outcomes: readonly StoredOutcome[]): GradedOutcome
 
 const SEVERITY_ORDER: Record<Severity, number> = { critical: 0, warning: 1, advice: 2 };
 
-/** The worst score across every page speed was read for, or null when none was. */
-function worstSpeed(speed: readonly SpeedReading[]): SpeedReading | null {
-  const scored = speed.filter((reading) => reading.performanceScore !== null);
-  if (scored.length === 0) return null;
-  return scored.reduce((worst, reading) =>
+/**
+ * The worst score among the current readings, or null when none was stored.
+ *
+ * Superseded readings are dropped first. Reducing over the raw rows reported a
+ * page that scored 18 three months ago and 91 today as the site's worst page,
+ * which is a stale number presented as a current one.
+ */
+export function worstSpeed(speed: readonly SpeedReading[]): SpeedReading | null {
+  const newest = new Map<string, SpeedReading>();
+  for (const reading of speed) {
+    if (reading.performanceScore === null) continue;
+    const key = `${reading.url}\u0000${reading.strategy}`;
+    const seen = newest.get(key);
+    if (!seen || reading.collectedAt > seen.collectedAt) newest.set(key, reading);
+  }
+  const current = [...newest.values()];
+  if (current.length === 0) return null;
+  return current.reduce((worst, reading) =>
     (reading.performanceScore ?? 100) < (worst.performanceScore ?? 100) ? reading : worst,
   );
 }
@@ -152,7 +194,15 @@ function tilesFor(facts: SiteHealthFacts, graded: readonly GradedOutcome[]): Til
   const checked = facts.siteObservedAt !== null;
   const critical = facts.siteFindings.filter((finding) => finding.severity === "critical").length;
   const slowest = worstSpeed(facts.speed);
-  const judged = graded.filter((outcome) => outcome.verdict !== null);
+  // A reading that says "too early" or "cannot be measured" is not a grade. The
+  // tile used to count them, so it claimed two fixes had been live long enough
+  // to measure directly above two cards saying neither had.
+  const judged = graded.filter(
+    (outcome) =>
+      outcome.verdict !== null &&
+      outcome.verdict !== "too_early" &&
+      outcome.verdict !== "unmeasurable",
+  );
   const worked = judged.filter((outcome) => outcome.verdict === "success").length;
 
   return [
@@ -171,14 +221,19 @@ function tilesFor(facts: SiteHealthFacts, graded: readonly GradedOutcome[]): Til
     {
       label: "Slowest page",
       value: slowest === null ? null : String(slowest.performanceScore),
-      explanation: "Google's own speed score for your worst page, out of 100.",
+      explanation:
+        slowest === null
+          ? "Google's own speed score for your worst page, out of 100."
+          : `Google's own score for ${slowest.url}, out of 100, read on ${slowest.collectedAt.slice(0, 10)}.`,
       missingReason:
         slowest === null ? "No speed reading has been stored, so there is no score to show." : null,
     },
     {
       label: "Fixes graded",
       value: String(judged.length),
-      explanation: "Approved changes that have been live long enough to be measured.",
+      explanation: facts.truncated
+        ? "Approved changes that have been live long enough to be measured, among the most recent read."
+        : "Approved changes that have been live long enough to be measured.",
       missingReason: null,
     },
     {
@@ -211,6 +266,17 @@ function statusFor(
       tone: "danger",
     };
   }
+  if (facts.siteFindings.length > 0) {
+    // Not critical, but not nothing. "Google can read your site" beside a tile
+    // reading "Crawl problems: 3" is the badge contradicting the number.
+    return {
+      text:
+        facts.siteFindings.length === 1
+          ? "1 crawl problem worth fixing"
+          : `${facts.siteFindings.length} crawl problems worth fixing`,
+      tone: "warning",
+    };
+  }
   const failed = graded.filter((outcome) => outcome.verdict === "failure").length;
   if (failed > 0) {
     return {
@@ -227,15 +293,34 @@ function statusFor(
   return { text: "Google can read your site", tone: "positive" };
 }
 
+/**
+ * The windows the measurement pipeline can actually write.
+ *
+ * `change_measurement_windows.window_days` carries `CHECK (window_days IN
+ * (0, 7, 14, 28))`, so 56 and 90 cannot be stored however well the research
+ * derives them. Listing them as windows this grades would advertise something
+ * that will never happen; they are named separately, as derived but not yet
+ * collected, until a migration widens the constraint and the lifecycle function
+ * inserts them.
+ */
+export const STORABLE_WINDOWS = [0, 7, 14, 28] as const;
+
+const GRADED_AND_STORABLE = GROUNDED_WINDOWS.filter((window) =>
+  (STORABLE_WINDOWS as readonly number[]).includes(window),
+);
+const DERIVED_NOT_COLLECTED = GROUNDED_WINDOWS.filter(
+  (window) => !(STORABLE_WINDOWS as readonly number[]).includes(window),
+);
+
 function ungradedNoteFor(graded: readonly GradedOutcome[]): string | null {
-  const ungrounded = graded.filter(
-    (outcome) => outcome.verdict === null && outcome.windowDays !== 0,
-  );
-  if (ungrounded.length === 0) return null;
-  const windows = [...new Set(ungrounded.map((outcome) => outcome.windowDays))].sort(
-    (a, b) => a - b,
-  );
-  return `${ungrounded.length} ${ungrounded.length === 1 ? "reading is" : "readings are"} stored at ${windows.join(" and ")} days and not graded. The windows this grades are ${GROUNDED_WINDOWS.join(", ")}, each of which the research derives.`;
+  const ungraded = graded.filter((outcome) => outcome.verdict === null && outcome.windowDays !== 0);
+  if (ungraded.length === 0) return null;
+  const windows = [...new Set(ungraded.map((outcome) => outcome.windowDays))].sort((a, b) => a - b);
+  const notCollected =
+    DERIVED_NOT_COLLECTED.length === 0
+      ? ""
+      : ` ${DERIVED_NOT_COLLECTED.join(" and ")} are derived too, but nothing collects them yet.`;
+  return `${ungraded.length} ${ungraded.length === 1 ? "reading is" : "readings are"} stored at ${windows.join(" and ")} days and not graded. The windows this grades are ${GRADED_AND_STORABLE.join(" and ")}.${notCollected}`;
 }
 
 export function buildSiteHealth(facts: SiteHealthFacts): SiteHealthView {
@@ -263,6 +348,9 @@ export function buildSiteHealth(facts: SiteHealthFacts): SiteHealthView {
     history: [...queue.ignored, ...queue.done],
     asOf: facts.siteObservedAt,
     ungradedNote: ungradedNoteFor(graded),
+    truncatedNote: facts.truncated
+      ? "More changes are stored than were read for this page, so the counts above are a floor rather than a total."
+      : null,
   };
 }
 

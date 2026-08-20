@@ -143,6 +143,11 @@ function ActivityPage() {
                     <Link to="/changes/$id" params={{ id: thread.id }}>
                       {thread.actionLabel}
                     </Link>
+                  ) : thread.actionTo === "/measurement" ? (
+                    // The outcome lives on a tab, so the link says which one.
+                    <Link to="/measurement" search={{ tab: "outcomes" as const }}>
+                      {thread.actionLabel}
+                    </Link>
                   ) : (
                     <Link to={thread.actionTo}>{thread.actionLabel}</Link>
                   )}

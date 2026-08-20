@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import {
   buildSiteHealth,
   gradeOutcomes,
+  STORABLE_WINDOWS,
+  worstSpeed,
   type SiteHealthFacts,
   type StoredOutcome,
 } from "./site-health";
@@ -21,6 +23,8 @@ function outcome(overrides: Partial<StoredOutcome> = {}): StoredOutcome {
     impressions: 400,
     clicks: 6,
     measurable: true,
+    readingStatus: "complete" as const,
+    coverage: null,
     ...overrides,
   };
 }
@@ -185,8 +189,8 @@ describe("the honesty invariant", () => {
       withFacts({
         siteObservedAt: NOW,
         speed: [
-          { url: "/a", performanceScore: null, collectedAt: NOW },
-          { url: "/b", performanceScore: 41, collectedAt: NOW },
+          { url: "/a", strategy: "mobile", performanceScore: null, collectedAt: NOW },
+          { url: "/b", strategy: "mobile", performanceScore: 41, collectedAt: NOW },
         ],
       }),
     );
@@ -231,5 +235,124 @@ describe("naming the window nothing derives, on screen", () => {
       withFacts({ siteObservedAt: NOW, outcomes: [outcome({ windowDays: 0 })] }),
     );
     expect(view.ungradedNote).toBeNull();
+  });
+});
+
+describe("defects an adversarial review found before this shipped", () => {
+  it("grades a closed window instead of calling every reading too early", () => {
+    // daysSinceLive was measured from live_at to the window's own end date.
+    // period_end_pt is a Pacific calendar date derived from live_at, so the
+    // difference always floored to one day short and every reading on every
+    // tenant graded "too early", forever. The whole feature was unreachable.
+    const [graded] = gradeOutcomes([
+      outcome({ windowDays: 28, daysSinceLive: 28, impressions: 5000, clicks: 400 }),
+    ]);
+    expect(graded?.verdict).toBe("success");
+  });
+
+  it("keeps a partial reading rather than grading its short totals", () => {
+    // A partial reading sums only the days Search Console returned. Grading it
+    // turned a reporting gap into a failure, which is the one thing the
+    // measurement code says explicitly not to do.
+    const [graded] = gradeOutcomes([
+      outcome({
+        readingStatus: "partial",
+        coverage: { expectedDays: 28, observedDays: 10 },
+        impressions: 90,
+        clicks: 2,
+      }),
+    ]);
+    expect(graded?.verdict).toBeNull();
+    expect(graded?.reason).toContain("10 of 28 days");
+  });
+
+  it("does not invent a not-indexed failure out of a reporting gap", () => {
+    const [graded] = gradeOutcomes([
+      outcome({ windowDays: 14, readingStatus: "partial", impressions: 0, clicks: 0 }),
+    ]);
+    expect(graded?.verdict).toBeNull();
+    expect(graded?.reason).not.toMatch(/not indexed/i);
+  });
+
+  it("does not count a reading it could not grade as a graded fix", () => {
+    // "Fixes graded: 2" sat directly above two cards saying neither had been
+    // live long enough.
+    const view = buildSiteHealth(
+      withFacts({
+        siteObservedAt: NOW,
+        outcomes: [
+          outcome({ windowDays: 14, daysSinceLive: 3 }),
+          outcome({ windowDays: 28, daysSinceLive: 3 }),
+        ],
+      }),
+    );
+    expect(view.tiles.find((entry) => entry.label === "Fixes graded")?.value).toBe("0");
+    const worked = view.tiles.find((entry) => entry.label === "Fixes that worked");
+    expect(worked?.value).toBeNull();
+    expect(worked?.missingReason).toMatch(/nothing has been live long enough/i);
+  });
+
+  it("does not count an unmeasurable reading as graded either", () => {
+    const view = buildSiteHealth(
+      withFacts({ siteObservedAt: NOW, outcomes: [outcome({ measurable: false })] }),
+    );
+    expect(view.tiles.find((entry) => entry.label === "Fixes graded")?.value).toBe("0");
+  });
+
+  it("says the counts are a floor when a read hit its limit", () => {
+    const view = buildSiteHealth(withFacts({ siteObservedAt: NOW, truncated: true }));
+    expect(view.truncatedNote).toMatch(/floor rather than a total/i);
+    expect(buildSiteHealth(withFacts({ siteObservedAt: NOW })).truncatedNote).toBeNull();
+  });
+
+  it("does not advertise grading windows the database cannot store", () => {
+    // change_measurement_windows carries CHECK (window_days IN (0,7,14,28)),
+    // so 56 and 90 can never arrive however well the research derives them.
+    const view = buildSiteHealth(
+      withFacts({ siteObservedAt: NOW, outcomes: [outcome({ windowDays: 7 })] }),
+    );
+    expect(view.ungradedNote).toContain("14 and 28");
+    expect(view.ungradedNote).toMatch(/nothing collects them yet/i);
+    expect(STORABLE_WINDOWS).toEqual([0, 7, 14, 28]);
+  });
+
+  it("reads the current speed score, not a superseded one", () => {
+    // Reducing over the raw rows reported a page that scored 18 in June and 91
+    // today as the site's worst page.
+    const worst = worstSpeed([
+      { url: "/slow", strategy: "mobile", performanceScore: 18, collectedAt: "2026-06-01" },
+      { url: "/slow", strategy: "mobile", performanceScore: 91, collectedAt: "2026-08-20" },
+      { url: "/fast", strategy: "mobile", performanceScore: 88, collectedAt: "2026-08-20" },
+    ]);
+    expect(worst?.performanceScore).toBe(88);
+    expect(worst?.url).toBe("/fast");
+  });
+
+  it("keeps mobile and desktop as separate readings of one address", () => {
+    const worst = worstSpeed([
+      { url: "/a", strategy: "mobile", performanceScore: 40, collectedAt: "2026-08-20" },
+      { url: "/a", strategy: "desktop", performanceScore: 95, collectedAt: "2026-08-20" },
+    ]);
+    expect(worst?.performanceScore).toBe(40);
+  });
+
+  it("names the page and the day behind the slowest score", () => {
+    const view = buildSiteHealth(
+      withFacts({
+        siteObservedAt: NOW,
+        speed: [{ url: "/a", strategy: "mobile", performanceScore: 41, collectedAt: "2026-08-19" }],
+      }),
+    );
+    const tile = view.tiles.find((entry) => entry.label === "Slowest page");
+    expect(tile?.explanation).toContain("/a");
+    expect(tile?.explanation).toContain("2026-08-19");
+  });
+
+  it("does not say Google can read the site while crawl problems are open", () => {
+    const view = buildSiteHealth(
+      withFacts({ siteObservedAt: NOW, siteFindings: [crawl({ severity: "advice" })] }),
+    );
+    expect(view.status.text).not.toMatch(/can read your site/i);
+    expect(view.status.tone).toBe("warning");
   });
 });

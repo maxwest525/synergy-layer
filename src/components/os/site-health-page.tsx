@@ -163,9 +163,12 @@ function QueueList({ items, empty }: { items: readonly QueueItem[]; empty: strin
   );
 }
 
-export function SiteHealthPage() {
+export function SiteHealthPage({ initialTab }: { initialTab?: TabId } = {}) {
   const { view, isPending, error } = useSiteHealth();
-  const [tab, setTab] = useState<TabId>("suggestions");
+  // Taken from the route so a link can land on a tab. Without it, "wait for the
+  // measurement window, then read the outcome" arrived on Suggestions, which
+  // typically says nothing is waiting.
+  const [tab, setTab] = useState<TabId>(initialTab ?? "suggestions");
 
   if (error) {
     return (
@@ -269,6 +272,12 @@ export function SiteHealthPage() {
             />
           ) : (
             <div className="flex flex-col gap-2.5">
+              {view.truncatedNote ? (
+                <p className="flex items-start gap-2 text-xs leading-snug text-muted-foreground">
+                  <Info className="mt-0.5 h-3 w-3 shrink-0" strokeWidth={1.6} aria-hidden="true" />
+                  {view.truncatedNote}
+                </p>
+              ) : null}
               {view.ungradedNote ? (
                 // Named rather than dropped: a window nothing derives is worth
                 // seeing, and hiding the reading would hide the problem.
