@@ -87,6 +87,59 @@ describe("evaluateSite", () => {
     expect(blocked?.severity).toBe("critical");
   });
 
+  it("reports the pages a partial robots block hides", () => {
+    // The gap this closes: `robotsBlocksEverything` only ever matched a bare
+    // `Disallow: /`, so a robots.txt hiding a whole section read as healthy.
+    const findings = evaluateSite({
+      ...base,
+      robotsBody: "User-agent: *\nDisallow: /services/\nSitemap: https://example.com/sitemap.xml",
+      knownPages: [
+        "https://example.com/",
+        "https://example.com/services/packing",
+        "https://example.com/services/storage",
+        "https://example.com/about",
+      ],
+    });
+    const blocked = findings.find((finding) => finding.check === "robots_blocks_pages");
+    expect(blocked?.severity).toBe("critical");
+    expect(blocked?.label).toContain("2");
+    expect(blocked?.detail).toContain("/services/packing");
+    expect(blocked?.detail).not.toContain("/about");
+    // Manual: removing the rule and dropping the pages from the sitemap are
+    // both correct fixes, and they are opposites.
+    expect(blocked?.fixableByChangeKind).toBeNull();
+  });
+
+  it("does not raise a partial block when every known page is crawlable", () => {
+    const findings = evaluateSite({
+      ...base,
+      robotsBody: "User-agent: *\nDisallow: /wp-admin/\nSitemap: https://example.com/sitemap.xml",
+      knownPages: ["https://example.com/", "https://example.com/about"],
+    });
+    expect(findings.map((finding) => finding.check)).not.toContain("robots_blocks_pages");
+  });
+
+  it("says nothing about blocked pages when it knows of no pages", () => {
+    // Silence is the honest answer here. Claiming zero blocked pages when the
+    // audit has read no pages would be a number with nothing behind it.
+    const findings = evaluateSite({
+      ...base,
+      robotsBody: "User-agent: *\nDisallow: /services/\nSitemap: https://example.com/sitemap.xml",
+    });
+    expect(findings.map((finding) => finding.check)).not.toContain("robots_blocks_pages");
+  });
+
+  it("reports the whole site block instead of counting pages when both apply", () => {
+    const findings = evaluateSite({
+      ...base,
+      robotsBody: "User-agent: *\nDisallow: /",
+      knownPages: ["https://example.com/about"],
+    });
+    const checks = findings.map((finding) => finding.check);
+    expect(checks).toContain("robots_blocks_site");
+    expect(checks).not.toContain("robots_blocks_pages");
+  });
+
   it("reports an empty sitemap and coverage gaps", () => {
     const findings = evaluateSite({
       ...base,

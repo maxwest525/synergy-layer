@@ -55,6 +55,10 @@ export const PAGE_CHECK_FIX: Record<CheckId, AuditFixTarget | null> = {
 export const SITE_CHECK_FIX: Record<SiteCheckId, AuditFixTarget | null> = {
   robots_missing: null,
   robots_blocks_site: crawl,
+  // Manual on purpose. Removing the Disallow is only right if the pages were
+  // meant to be public; the other correct fix is dropping them from the
+  // sitemap. Nothing read tells us which the owner intended.
+  robots_blocks_pages: null,
   sitemap_missing: null,
   sitemap_unreachable: null,
   sitemap_empty: null,
