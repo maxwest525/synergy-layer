@@ -16,7 +16,9 @@ export const getCoverage = createServerFn({ method: "GET" })
 
     const concerns = await db
       .from("essential_concerns")
-      .select("id, key, phase, task, description, priority, origin, evidence_source, owner_name, target_date")
+      .select(
+        "id, key, phase, task, description, priority, origin, evidence_source, owner_name, target_date",
+      )
       .eq("tenant_id", tenantId)
       .is("retired_at", null)
       .order("sort_order", { ascending: true });
@@ -27,8 +29,7 @@ export const getCoverage = createServerFn({ method: "GET" })
       .select("concern_id, status, summary, limitation, evaluated_at")
       .eq("tenant_id", tenantId)
       .order("evaluated_at", { ascending: false });
-    if (evaluations.error)
-      throw new Error(`Coverage evaluations: ${evaluations.error.message}`);
+    if (evaluations.error) throw new Error(`Coverage evaluations: ${evaluations.error.message}`);
 
     const latest = new Map<string, CoverageEvaluation>();
     for (const row of evaluations.data ?? []) {
@@ -65,25 +66,31 @@ export const getCoverage = createServerFn({ method: "GET" })
  */
 export const setConcernOwnership = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: { concernId: string; ownerName: string | null; targetDate: string | null }) => {
-    const concernId = typeof data?.concernId === "string" ? data.concernId.trim() : "";
-    if (!concernId) throw new Error("A concern id is required.");
-    const ownerName =
-      typeof data.ownerName === "string" && data.ownerName.trim() ? data.ownerName.trim().slice(0, 120) : null;
-    const targetDate =
-      typeof data.targetDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(data.targetDate)
-        ? data.targetDate
-        : null;
-    return { concernId, ownerName, targetDate };
-  })
-  .handler(async ({ context, data }): Promise<{ ownerName: string | null; targetDate: string | null }> => {
-    const result = await context.supabase.rpc("set_concern_ownership", {
-      p_concern_id: data.concernId,
-      // The routine normalises an empty owner to null; the date column accepts null.
-      p_owner_name: data.ownerName ?? "",
-      p_target_date: data.targetDate as unknown as string,
-    });
-    if (result.error) throw new Error(`Concern ownership: ${result.error.message}`);
-    const row = result.data as { owner_name: string | null; target_date: string | null } | null;
-    return { ownerName: row?.owner_name ?? null, targetDate: row?.target_date ?? null };
-  });
+  .inputValidator(
+    (data: { concernId: string; ownerName: string | null; targetDate: string | null }) => {
+      const concernId = typeof data?.concernId === "string" ? data.concernId.trim() : "";
+      if (!concernId) throw new Error("A concern id is required.");
+      const ownerName =
+        typeof data.ownerName === "string" && data.ownerName.trim()
+          ? data.ownerName.trim().slice(0, 120)
+          : null;
+      const targetDate =
+        typeof data.targetDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(data.targetDate)
+          ? data.targetDate
+          : null;
+      return { concernId, ownerName, targetDate };
+    },
+  )
+  .handler(
+    async ({ context, data }): Promise<{ ownerName: string | null; targetDate: string | null }> => {
+      const result = await context.supabase.rpc("set_concern_ownership", {
+        p_concern_id: data.concernId,
+        // The routine normalises an empty owner to null; the date column accepts null.
+        p_owner_name: data.ownerName ?? "",
+        p_target_date: data.targetDate as unknown as string,
+      });
+      if (result.error) throw new Error(`Concern ownership: ${result.error.message}`);
+      const row = result.data as { owner_name: string | null; target_date: string | null } | null;
+      return { ownerName: row?.owner_name ?? null, targetDate: row?.target_date ?? null };
+    },
+  );

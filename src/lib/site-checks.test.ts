@@ -45,8 +45,7 @@ describe("declaredSitemapsFrom", () => {
 
 describe("sitemapLocations", () => {
   it("reads page addresses and recognises an index", () => {
-    const xml =
-      "<sitemapindex><sitemap><loc>https://a.com/one.xml</loc></sitemap></sitemapindex>";
+    const xml = "<sitemapindex><sitemap><loc>https://a.com/one.xml</loc></sitemap></sitemapindex>";
     expect(sitemapLocations(xml)).toEqual(["https://a.com/one.xml"]);
     expect(isSitemapIndex(xml)).toBe(true);
   });

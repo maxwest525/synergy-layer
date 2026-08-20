@@ -78,7 +78,9 @@ async function gateway<T>(path: string, init?: RequestInit): Promise<T> {
         `Search Console request failed after ${attempt} attempt${attempt === 1 ? "" : "s"}: ${String(error)}`,
       );
       if (attempt === TRANSIENT_ATTEMPTS) break;
-      await new Promise((resolve) => setTimeout(resolve, TRANSIENT_BASE_DELAY_MS * 2 ** (attempt - 1)));
+      await new Promise((resolve) =>
+        setTimeout(resolve, TRANSIENT_BASE_DELAY_MS * 2 ** (attempt - 1)),
+      );
       continue;
     }
 
@@ -98,9 +100,10 @@ async function gateway<T>(path: string, init?: RequestInit): Promise<T> {
       lastFailure = failure;
       if (attempt === TRANSIENT_ATTEMPTS) break;
       const retryAfter = Number(response.headers.get("retry-after"));
-      const delay = Number.isFinite(retryAfter) && retryAfter > 0
-        ? retryAfter * 1000
-        : TRANSIENT_BASE_DELAY_MS * 2 ** (attempt - 1);
+      const delay =
+        Number.isFinite(retryAfter) && retryAfter > 0
+          ? retryAfter * 1000
+          : TRANSIENT_BASE_DELAY_MS * 2 ** (attempt - 1);
       await new Promise((resolve) => setTimeout(resolve, delay));
       continue;
     }
@@ -122,7 +125,6 @@ async function gateway<T>(path: string, init?: RequestInit): Promise<T> {
     new SearchConsoleFailure("transient", "Search Console request failed for an unknown reason.")
   );
 }
-
 
 export function checksum(value: unknown): string {
   return createHash("sha256").update(JSON.stringify(value)).digest("hex").slice(0, 32);
@@ -614,7 +616,6 @@ export async function backfillPageQueryGaps(
 
 const COMPARISON_HISTORY_DAYS = 56;
 
-
 /** One provider query backfills the two complete 28-day comparison windows. */
 async function collectDailyTotalsHistory(
   client: Client,
@@ -806,8 +807,6 @@ export async function collectDaily(client: Client, property: string): Promise<Co
       }),
     );
   }
-
-
 
   const pageQuery = await collectPageQuery(client, property, reportingDate);
   if (pageQuery.created && pageQuery.snapshotId) snapshotIds.push(pageQuery.snapshotId);

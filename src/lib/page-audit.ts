@@ -82,9 +82,7 @@ function groupField(
 }
 
 /** Every headline or tab title reused on more than one observed page. */
-export function findDuplicateWording(
-  observations: PageMetadataObservation[],
-): DuplicateGroup[] {
+export function findDuplicateWording(observations: PageMetadataObservation[]): DuplicateGroup[] {
   return [...groupField(observations, "h1"), ...groupField(observations, "title")].sort(
     (a, b) => b.urls.length - a.urls.length || a.value.localeCompare(b.value),
   );
@@ -103,9 +101,6 @@ export function buildAuditInstruction(input: {
     return `No repeated wording across ${input.observedPages} read pages. Nothing to fix here.`;
   }
   const label = worst.field === "h1" ? "headline" : "tab title";
-  const pageCount = input.duplicates.reduce(
-    (total, group) => total + group.urls.length,
-    0,
-  );
+  const pageCount = input.duplicates.reduce((total, group) => total + group.urls.length, 0);
   return `${pageCount} pages share wording with another page. Start with the ${label} "${worst.value}" used on ${worst.urls.length} pages, then propose a distinct title and H1 for each.`;
 }

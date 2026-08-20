@@ -28,7 +28,9 @@ describe("on page checks", () => {
 
   it("reports missing descriptions, thin titles, images and content", () => {
     const facts = extractPageFacts(HTML, "some words here", "https://a.test/one");
-    const checks = evaluatePages([{ url: "https://a.test/one", facts }]).map((issue) => issue.check);
+    const checks = evaluatePages([{ url: "https://a.test/one", facts }]).map(
+      (issue) => issue.check,
+    );
     expect(checks).toContain("description_missing");
     expect(checks).toContain("title_too_short");
     expect(checks).toContain("image_alt_missing");

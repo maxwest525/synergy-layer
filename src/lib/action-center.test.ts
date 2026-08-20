@@ -22,7 +22,6 @@ describe("Action Center change request lifecycle", () => {
       "in_progress",
       "needs_attention",
     ]);
-
   });
 
   it("keeps a legacy completed approval visible until execution is finished", () => {
@@ -45,7 +44,6 @@ describe("Action Center change request lifecycle", () => {
   it("moves applied work out of the action lanes and into measurement", () => {
     expect(actionCenterLane("needs_attention", { ...change, state: "applied" })).toBe("fyi");
   });
-
 
   it("distinguishes a committed approval from one that still needs execution", () => {
     expect(actionCenterStage({ ...change, source_commit_sha: "abc123" })).toBe(

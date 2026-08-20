@@ -5,10 +5,7 @@ import { toast } from "sonner";
 
 import { GlassCard, StatePill, formatWhen } from "@/components/os/primitives";
 import { Button } from "@/components/ui/button";
-import {
-  getObservationCadences,
-  setObservationCadence,
-} from "@/lib/observation-cadence.functions";
+import { getObservationCadences, setObservationCadence } from "@/lib/observation-cadence.functions";
 import { formatDuration, type CadenceStatus } from "@/lib/observation-cadence";
 
 function Fact({ label, value, tone }: { label: string; value: string; tone?: "danger" }) {
@@ -55,9 +52,7 @@ function CadenceCard({
         <Fact
           label="Rows returned"
           value={
-            cadence.lastRunRowCount === null
-              ? "Not recorded"
-              : `${cadence.lastRunRowCount} row(s)`
+            cadence.lastRunRowCount === null ? "Not recorded" : `${cadence.lastRunRowCount} row(s)`
           }
         />
         <Fact

@@ -8,10 +8,7 @@ import type { Database } from "@/integrations/supabase/types";
  */
 
 export type CheckRule =
-  | "possible_query_overlap"
-  | "zero_impression_page"
-  | "query_coverage_gap"
-  | "index_coverage_drift";
+  "possible_query_overlap" | "zero_impression_page" | "query_coverage_gap" | "index_coverage_drift";
 
 export type ObservationDraft = {
   rule: CheckRule;
@@ -114,19 +111,7 @@ function normalizeText(value: string): string {
   return value.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, " ");
 }
 
-const STOPWORDS = new Set([
-  "a",
-  "an",
-  "and",
-  "for",
-  "in",
-  "is",
-  "of",
-  "on",
-  "the",
-  "to",
-  "with",
-]);
+const STOPWORDS = new Set(["a", "an", "and", "for", "in", "is", "of", "on", "the", "to", "with"]);
 
 /**
  * Queries a page ranks for (striking range) whose meaningful words never

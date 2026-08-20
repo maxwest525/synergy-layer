@@ -34,7 +34,6 @@ import {
 import { getEssentials } from "@/lib/essentials.functions";
 import { getTenantContext } from "@/lib/tenant.functions";
 
-
 export const Route = createFileRoute("/essentials")({
   // Operator-only status screen: without the operator bearer token a server
   // render is empty and the client immediately replaces it.
@@ -151,7 +150,6 @@ function Group({ title, concerns }: { title: string; concerns: Concern[] }) {
   );
 }
 
-
 const COVERAGE_ORDER: CoverageStatus[] = [
   "broken",
   "unproven",
@@ -246,9 +244,7 @@ function CoverageSection({
   return (
     <section className="space-y-4">
       <div className="flex flex-wrap items-baseline justify-between gap-3">
-        <h2 className="text-sm font-semibold tracking-tight text-foreground">
-          Coverage framework
-        </h2>
+        <h2 className="text-sm font-semibold tracking-tight text-foreground">Coverage framework</h2>
         <p className="text-xs text-muted-foreground">
           {concerns.length} concern(s) across {phases.length} phase(s)
         </p>
@@ -344,7 +340,6 @@ function EssentialsPage() {
     queryFn: () => loadCoverage(),
     retry: false,
   });
-
 
   const gsc = data.gsc;
   const system = (key: string) => data.systems[key] ?? null;
@@ -589,7 +584,6 @@ function EssentialsPage() {
       <Group title="Off-page and authority" concerns={authorityGroup} />
       <Group title="Measurement and paid" concerns={measurement} />
       <CoverageSection concerns={coverage.data.concerns} />
-
     </div>
   );
 }

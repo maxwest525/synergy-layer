@@ -69,8 +69,18 @@ const STATUS_LANES: readonly { key: RoadmapStatus; label: string; hint: string; 
     tone: "warning",
   },
   { key: "in_progress", label: "In progress", hint: "Being built right now.", tone: "info" },
-  { key: "shipped", label: "Shipped", hint: "Done and live. Kept as build history.", tone: "positive" },
-  { key: "parked", label: "Parked", hint: "Deliberately on hold. Nothing is lost.", tone: "neutral" },
+  {
+    key: "shipped",
+    label: "Shipped",
+    hint: "Done and live. Kept as build history.",
+    tone: "positive",
+  },
+  {
+    key: "parked",
+    label: "Parked",
+    hint: "Deliberately on hold. Nothing is lost.",
+    tone: "neutral",
+  },
 ];
 
 const PRIORITY_LABEL: Record<RoadmapPriority, string> = {
@@ -282,8 +292,7 @@ function RoadmapPage() {
       toast.error(error instanceof Error ? error.message : "Could not post that note"),
   });
 
-  const busy =
-    updateMutation.isPending || deleteMutation.isPending || commentMutation.isPending;
+  const busy = updateMutation.isPending || deleteMutation.isPending || commentMutation.isPending;
 
   const lanes = useMemo(() => {
     const items = roadmapQuery.data ?? [];
@@ -334,7 +343,10 @@ function RoadmapPage() {
             aria-label="Roadmap item detail"
           />
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <Select value={priority} onValueChange={(value) => setPriority(value as RoadmapPriority)}>
+            <Select
+              value={priority}
+              onValueChange={(value) => setPriority(value as RoadmapPriority)}
+            >
               <SelectTrigger className="w-full sm:w-40" aria-label="Priority">
                 <SelectValue />
               </SelectTrigger>

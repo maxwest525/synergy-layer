@@ -69,7 +69,10 @@ export const getNextActionFacts = createServerFn({ method: "GET" })
         .eq("provider", "pagespeed")
         .order("started_at", { ascending: false })
         .limit(200),
-      db.from("pagespeed_snapshots").select("id", { count: "exact", head: true }).eq("tenant_id", tenantId),
+      db
+        .from("pagespeed_snapshots")
+        .select("id", { count: "exact", head: true })
+        .eq("tenant_id", tenantId),
       db
         .from("umami_snapshots")
         .select("collected_at")
@@ -86,7 +89,10 @@ export const getNextActionFacts = createServerFn({ method: "GET" })
         .select("id", { count: "exact", head: true })
         .eq("tenant_id", tenantId)
         .eq("review_state", "pending"),
-      db.from("tracked_competitors").select("id", { count: "exact", head: true }).eq("tenant_id", tenantId),
+      db
+        .from("tracked_competitors")
+        .select("id", { count: "exact", head: true })
+        .eq("tenant_id", tenantId),
       db
         .from("competitor_candidates")
         .select("id", { count: "exact", head: true })
@@ -179,18 +185,21 @@ export const getNextActionFacts = createServerFn({ method: "GET" })
     const systemRows = systems.data ?? [];
 
     const proven = systemRows.filter(
-      (row) => row.aoos_connection_state === "callable" && row.implemented_state !== "not_implemented",
+      (row) =>
+        row.aoos_connection_state === "callable" && row.implemented_state !== "not_implemented",
     ).length;
     const configuredOnly = systemRows.filter(
       (row) =>
         row.aoos_connection_state !== "callable" &&
-        (row.credential_state === "configured" || row.credential_state === "encrypted_not_enumerated"),
+        (row.credential_state === "configured" ||
+          row.credential_state === "encrypted_not_enumerated"),
     ).length;
     const broken = systemRows.filter((row) => row.verification_state === "failed").length;
 
     const latestConcernStatus = new Map<string, string>();
     for (const row of concernEvaluations.data ?? []) {
-      if (!latestConcernStatus.has(row.concern_id)) latestConcernStatus.set(row.concern_id, row.status);
+      if (!latestConcernStatus.has(row.concern_id))
+        latestConcernStatus.set(row.concern_id, row.status);
     }
     const todayIso = new Date().toISOString().slice(0, 10);
     const concernRows = concerns.data ?? [];

@@ -1,10 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  TAXONOMY_GROUPS,
-  WORKSPACE_GROUP,
-  taxonomyGroupForPath,
-} from "./os-taxonomy";
+import { TAXONOMY_GROUPS, WORKSPACE_GROUP, taxonomyGroupForPath } from "./os-taxonomy";
 
 describe("os taxonomy", () => {
   it("orders the groups as the day-to-day loop, system health last", () => {

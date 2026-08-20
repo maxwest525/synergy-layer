@@ -93,7 +93,6 @@ export type AdsOverview = {
   pendingCount: number;
 };
 
-
 function asRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
 }
@@ -165,7 +164,6 @@ export const getAdsOverview = createServerFn({ method: "POST" })
       links,
       creatives,
     ]) {
-
       if (result.error) throw new Error(`Ads overview read failed: ${result.error.message}`);
     }
 

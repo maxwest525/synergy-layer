@@ -71,10 +71,7 @@ function ApprovalsPage() {
       ) : (
         <div className="space-y-4">
           <div className="flex items-center gap-2">
-            <StatePill
-              label={`${data.changes.length} waiting on your decision`}
-              tone="warning"
-            />
+            <StatePill label={`${data.changes.length} waiting on your decision`} tone="warning" />
             <span className="text-xs text-muted-foreground">Oldest first</span>
           </div>
           <ul className="space-y-4">
@@ -91,8 +88,7 @@ function ApprovalsPage() {
         <GlassCard className="p-5">
           <h2 className="text-sm font-semibold text-foreground">Other decisions waiting</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            These queues are decided on their own screen because approving them does different
-            work.
+            These queues are decided on their own screen because approving them does different work.
           </p>
           <ul className="mt-4 space-y-2">
             {data.otherQueues.map((queue) => (
@@ -129,9 +125,7 @@ function ApprovalCard({ row }: { row: PendingApprovalRow }) {
   const decide = useMutation({
     mutationFn: async (decision: "approve" | "reject") => {
       const payload = { id: row.id, notes: notes.trim() === "" ? null : notes.trim() };
-      return decision === "approve"
-        ? approve({ data: payload })
-        : reject({ data: payload });
+      return decision === "approve" ? approve({ data: payload }) : reject({ data: payload });
     },
     onSuccess: async (_result, decision) => {
       toast.success(

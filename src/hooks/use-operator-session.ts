@@ -1,10 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { supabase } from "@/integrations/supabase/client";
-import {
-  getInitialOperatorSession,
-  readStoredOperatorEmail,
-} from "@/lib/operator-session-gate";
+import { getInitialOperatorSession, readStoredOperatorEmail } from "@/lib/operator-session-gate";
 
 export type OperatorSession = {
   ready: boolean;

@@ -6,7 +6,6 @@ import {
   CalendarClock,
   CheckCheck,
   ChevronDown,
-
   Gauge,
   Inbox,
   LayoutDashboard,
@@ -58,41 +57,195 @@ type WorkspaceGroup = { title: string; definition: string; items: readonly Works
 const workspaces: readonly Workspace[] = [
   { to: "/", label: "Today", icon: Inbox, hint: "What needs your yes or no", group: "decisions" },
   { to: "/ask", label: "Ask", icon: Sparkles, hint: "Ask the agent anything", group: "decisions" },
-  { to: "/essentials", label: "Coverage", icon: ListChecks, hint: "What is covered and what is missing", group: "evidence" },
+  {
+    to: "/essentials",
+    label: "Coverage",
+    icon: ListChecks,
+    hint: "What is covered and what is missing",
+    group: "evidence",
+  },
 
-  { to: "/approvals", label: "Approvals", icon: CheckCheck, hint: "Approve or reject with a note", group: "decisions" },
-  { to: "/changes", label: "Page changes", icon: FileDiff, hint: "Edits proposed to the site", group: "decisions" },
-  { to: "/keywords", label: "Keywords", icon: Tags, hint: "Terms worth winning", group: "decisions" },
-  { to: "/competitors", label: "Competitors", icon: Swords, hint: "Who we rank against", group: "decisions" },
-  { to: "/recommendations", label: "Observations", icon: Lightbulb, hint: "Things the system noticed", group: "decisions" },
-  { to: "/studio", label: "Studio", icon: BrainCircuit, hint: "Think out loud, no tools", group: "decisions" },
-  { to: "/roadmap", label: "Roadmap", icon: ListChecks, hint: "What we are building next", group: "decisions" },
-  { to: "/notes", label: "Notes", icon: NotebookPen, hint: "Your private notes pad", group: "decisions" },
+  {
+    to: "/approvals",
+    label: "Approvals",
+    icon: CheckCheck,
+    hint: "Approve or reject with a note",
+    group: "decisions",
+  },
+  {
+    to: "/changes",
+    label: "Page changes",
+    icon: FileDiff,
+    hint: "Edits proposed to the site",
+    group: "decisions",
+  },
+  {
+    to: "/keywords",
+    label: "Keywords",
+    icon: Tags,
+    hint: "Terms worth winning",
+    group: "decisions",
+  },
+  {
+    to: "/competitors",
+    label: "Competitors",
+    icon: Swords,
+    hint: "Who we rank against",
+    group: "decisions",
+  },
+  {
+    to: "/recommendations",
+    label: "Observations",
+    icon: Lightbulb,
+    hint: "Things the system noticed",
+    group: "decisions",
+  },
+  {
+    to: "/studio",
+    label: "Studio",
+    icon: BrainCircuit,
+    hint: "Think out loud, no tools",
+    group: "decisions",
+  },
+  {
+    to: "/roadmap",
+    label: "Roadmap",
+    icon: ListChecks,
+    hint: "What we are building next",
+    group: "decisions",
+  },
+  {
+    to: "/notes",
+    label: "Notes",
+    icon: NotebookPen,
+    hint: "Your private notes pad",
+    group: "decisions",
+  },
 
-
-  { to: "/command-center", label: "Evidence", icon: LayoutDashboard, hint: "Every stored fact, by source", group: "evidence" },
-  { to: "/pages", label: "Site pages", icon: FileDiff, hint: "Every page, its numbers, and its edit", group: "evidence" },
-  { to: "/search", label: "Search results", icon: Search, hint: "What Google reports", group: "evidence" },
-  { to: "/measurement", label: "Site health", icon: Gauge, hint: "Speed and traffic", group: "evidence" },
+  {
+    to: "/command-center",
+    label: "Evidence",
+    icon: LayoutDashboard,
+    hint: "Every stored fact, by source",
+    group: "evidence",
+  },
+  {
+    to: "/pages",
+    label: "Site pages",
+    icon: FileDiff,
+    hint: "Every page, its numbers, and its edit",
+    group: "evidence",
+  },
+  {
+    to: "/search",
+    label: "Search results",
+    icon: Search,
+    hint: "What Google reports",
+    group: "evidence",
+  },
+  {
+    to: "/measurement",
+    label: "Site health",
+    icon: Gauge,
+    hint: "Speed and traffic",
+    group: "evidence",
+  },
   { to: "/ga4", label: "Analytics", icon: Gauge, hint: "GA4 property reads", group: "evidence" },
-  { to: "/ads", label: "Competitor ads", icon: KeyRound, hint: "Ads they are running now", group: "evidence" },
-  { to: "/authority", label: "Trust gaps", icon: ShieldCheck, hint: "Missing proof on pages", group: "evidence" },
+  {
+    to: "/ads",
+    label: "Competitor ads",
+    icon: KeyRound,
+    hint: "Ads they are running now",
+    group: "evidence",
+  },
+  {
+    to: "/authority",
+    label: "Trust gaps",
+    icon: ShieldCheck,
+    hint: "Missing proof on pages",
+    group: "evidence",
+  },
   { to: "/assets", label: "Assets", icon: Boxes, hint: "Everything we own", group: "evidence" },
-  { to: "/knowledge", label: "Knowledge", icon: Radar, hint: "What the OS knows", group: "evidence" },
+  {
+    to: "/knowledge",
+    label: "Knowledge",
+    icon: Radar,
+    hint: "What the OS knows",
+    group: "evidence",
+  },
 
-  { to: "/workflows", label: "Work", icon: Workflow, hint: "Runs, schedules, executions", group: "run_work" },
-  { to: "/activity", label: "Activity", icon: Activity, hint: "Suggestion to deployment, end to end", group: "run_work" },
-  { to: "/scheduler", label: "Schedule", icon: CalendarClock, hint: "When work runs", group: "run_work" },
-  { to: "/seo-runs", label: "SEO runs", icon: RouteIcon, hint: "Governed page changes", group: "run_work" },
-  { to: "/openseo", label: "SEO tools", icon: Radar, hint: "Manual, one-off tool calls", group: "run_work" },
-  { to: "/openai-ads", label: "OpenAI Ads", icon: Megaphone, hint: "Pixel instrumentation", group: "run_work" },
+  {
+    to: "/workflows",
+    label: "Work",
+    icon: Workflow,
+    hint: "Runs, schedules, executions",
+    group: "run_work",
+  },
+  {
+    to: "/activity",
+    label: "Activity",
+    icon: Activity,
+    hint: "Suggestion to deployment, end to end",
+    group: "run_work",
+  },
+  {
+    to: "/scheduler",
+    label: "Schedule",
+    icon: CalendarClock,
+    hint: "When work runs",
+    group: "run_work",
+  },
+  {
+    to: "/seo-runs",
+    label: "SEO runs",
+    icon: RouteIcon,
+    hint: "Governed page changes",
+    group: "run_work",
+  },
+  {
+    to: "/openseo",
+    label: "SEO tools",
+    icon: Radar,
+    hint: "Manual, one-off tool calls",
+    group: "run_work",
+  },
+  {
+    to: "/openai-ads",
+    label: "OpenAI Ads",
+    icon: Megaphone,
+    hint: "Pixel instrumentation",
+    group: "run_work",
+  },
   { to: "/agents", label: "Agents", icon: Activity, hint: "Who does the work", group: "run_work" },
 
-  { to: "/capabilities", label: "Setup", icon: Plug, hint: "Connections, costs, access", group: "system_health" },
-  { to: "/gaps", label: "Connection gaps", icon: Plug, hint: "Every operation, wired or not", group: "system_health" },
-  { to: "/spend", label: "Data costs", icon: DollarSign, hint: "What data sources cost", group: "system_health" },
-  { to: "/operators", label: "People", icon: Users, hint: "Who has access", group: "system_health" },
-
+  {
+    to: "/capabilities",
+    label: "Setup",
+    icon: Plug,
+    hint: "Connections, costs, access",
+    group: "system_health",
+  },
+  {
+    to: "/gaps",
+    label: "Connection gaps",
+    icon: Plug,
+    hint: "Every operation, wired or not",
+    group: "system_health",
+  },
+  {
+    to: "/spend",
+    label: "Data costs",
+    icon: DollarSign,
+    hint: "What data sources cost",
+    group: "system_health",
+  },
+  {
+    to: "/operators",
+    label: "People",
+    icon: Users,
+    hint: "Who has access",
+    group: "system_health",
+  },
 ] as const;
 
 /**
@@ -119,7 +272,10 @@ const navSections: readonly NavSection[] = [
   // Suggestions and page changes are the propose to approve to execute path.
   // They sit under Today so the acting half of the system is visible from
   // every screen instead of being buried inside the SEO coverage map.
-  { primary: workspaceAt("/"), children: workspacesAt(["/approvals", "/recommendations", "/changes", "/roadmap", "/notes"]) },
+  {
+    primary: workspaceAt("/"),
+    children: workspacesAt(["/approvals", "/recommendations", "/changes", "/roadmap", "/notes"]),
+  },
 
   {
     primary: workspaceAt("/command-center"),
@@ -137,13 +293,19 @@ const navSections: readonly NavSection[] = [
   },
   {
     primary: workspaceAt("/workflows"),
-    children: workspacesAt(["/activity", "/scheduler", "/seo-runs", "/openseo", "/openai-ads", "/agents"]),
+    children: workspacesAt([
+      "/activity",
+      "/scheduler",
+      "/seo-runs",
+      "/openseo",
+      "/openai-ads",
+      "/agents",
+    ]),
   },
   {
     primary: workspaceAt("/capabilities"),
     children: workspacesAt(["/gaps", "/spend", "/operators"]),
   },
-
 
   // Ask and Coverage are side surfaces, not stages of the daily loop, so they
   // sit below it. Nothing is hidden; they are simply out of the way.
@@ -151,12 +313,7 @@ const navSections: readonly NavSection[] = [
   { primary: workspaceAt("/essentials"), children: [] },
 ];
 
-
 const allWorkspaces = workspaces;
-
-
-
-
 
 function isActive(pathname: string, to: string): boolean {
   return to === "/" ? pathname === "/" : pathname.startsWith(to);
@@ -194,7 +351,8 @@ export function breadcrumbsForPath(pathname: string): readonly Crumb[] {
   const crumbs: Crumb[] = [{ label: "Today", to: "/" }];
 
   const section = navSections.find(
-    (entry) => entry.primary.to === workspace.to || entry.children.some((c) => c.to === workspace.to),
+    (entry) =>
+      entry.primary.to === workspace.to || entry.children.some((c) => c.to === workspace.to),
   );
   if (section && section.primary.to !== workspace.to && section.primary.to !== "/") {
     crumbs.push({ label: section.primary.label, to: section.primary.to });
@@ -204,7 +362,10 @@ export function breadcrumbsForPath(pathname: string): readonly Crumb[] {
     crumbs.push({ label: workspace.label, to: workspace.to });
   }
 
-  const rest = pathname.slice(workspace.to === "/" ? 1 : workspace.to.length).split("/").filter(Boolean);
+  const rest = pathname
+    .slice(workspace.to === "/" ? 1 : workspace.to.length)
+    .split("/")
+    .filter(Boolean);
   for (const segment of rest) {
     crumbs.push({ label: readableSegment(segment) });
   }
@@ -246,7 +407,6 @@ function Breadcrumbs({ pathname }: { pathname: string }) {
     </nav>
   );
 }
-
 
 function NavRow({
   workspace,
@@ -415,8 +575,6 @@ function NavList({
     </div>
   );
 }
-
-
 
 function BrandMark() {
   return (
@@ -605,7 +763,6 @@ export function Shell({ children }: { children: ReactNode }) {
           <main className="mx-auto w-full max-w-[84rem] flex-1 px-5 py-6 md:px-8 md:py-8">
             {accessState === "ready" ? <Breadcrumbs pathname={pathname} /> : null}
             {accessState === "loading" || accessState === "signed-out" ? (
-
               <div className="rounded-2xl border border-border/60 px-4 py-6" role="status">
                 <p className="text-sm text-muted-foreground">
                   {/* Before hydration the browser session is unknown, so the

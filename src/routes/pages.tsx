@@ -6,7 +6,13 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { PageAuditPanel } from "@/components/os/page-audit-panel";
-import { EmptyState, GlassCard, PageHeader, PageStack, StatePill } from "@/components/os/primitives";
+import {
+  EmptyState,
+  GlassCard,
+  PageHeader,
+  PageStack,
+  StatePill,
+} from "@/components/os/primitives";
 import { OperatorRouteError } from "@/components/os/route-error";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -97,7 +103,9 @@ function SitePagesRoute() {
         }
       />
 
-      <GlassCard className="p-4 text-sm text-muted-foreground">{data?.instruction ?? "Loading the page list..."}</GlassCard>
+      <GlassCard className="p-4 text-sm text-muted-foreground">
+        {data?.instruction ?? "Loading the page list..."}
+      </GlassCard>
 
       <PageAuditPanel />
 
@@ -171,8 +179,8 @@ function SitePagesRoute() {
                 sandbox="allow-same-origin allow-scripts allow-popups"
               />
               <p className="text-xs text-muted-foreground">
-                This is the live page as visitors see it. If it stays blank, the site blocks embedding, so
-                use Open page instead.
+                This is the live page as visitors see it. If it stays blank, the site blocks
+                embedding, so use Open page instead.
               </p>
             </>
           ) : (

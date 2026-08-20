@@ -4,12 +4,7 @@ import React from "react";
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 /** The composer's two optional modes. Each one changes how the agent answers. */
@@ -58,7 +53,6 @@ function ModeToggle({
     </Tooltip>
   );
 }
-
 
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 
@@ -180,7 +174,6 @@ export function PromptInputBox({
 
         <div className="mt-1 flex items-center justify-between gap-3 px-1">
           <div className="flex items-center gap-3">
-
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
@@ -213,7 +206,7 @@ export function PromptInputBox({
               tooltip="Let the agent search the web alongside stored evidence"
               onClick={() => setMode((current) => (current === "search" ? null : "search"))}
             />
-            
+
             <ModeToggle
               active={mode === "think"}
               label="Think"
@@ -243,9 +236,7 @@ export function PromptInputBox({
                   )}
                 </Button>
               </TooltipTrigger>
-              <TooltipContent side="top">
-                {isLoading ? "Stop the answer" : "Send"}
-              </TooltipContent>
+              <TooltipContent side="top">{isLoading ? "Stop the answer" : "Send"}</TooltipContent>
             </Tooltip>
           </div>
         </div>

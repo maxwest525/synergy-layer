@@ -11,6 +11,7 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "test": "vitest run",
+    "typecheck": "tsc --noEmit",
     "knowledge:ingest": "tsx scripts/ingest-governed-knowledge.ts"
   },
   "dependencies": {

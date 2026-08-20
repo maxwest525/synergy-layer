@@ -25,6 +25,12 @@ jobs:
       - run: npm ci --no-audit --no-fund
       - name: Lint
         run: npm run lint
+      # tsconfig is strict (noUncheckedIndexedAccess, exactOptionalPropertyTypes,
+      # noPropertyAccessFromIndexSignature) but nothing was ever running it:
+      # `vite build` does not typecheck, so type errors could reach main freely.
+      - name: Typecheck
+        if: always()
+        run: npm run typecheck
       - name: Test
         if: always()
         run: npm test

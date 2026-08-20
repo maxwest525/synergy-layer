@@ -20,7 +20,10 @@ export const definition: ModuleDefinition = {
       operations: [
         { name: "heartbeat", description: "Check the instance answers before any read." },
         { name: "websites.list", description: "List the properties the credentials can read." },
-        { name: "stats.read", description: "Read totals for a window: pageviews, visitors, visits." },
+        {
+          name: "stats.read",
+          description: "Read totals for a window: pageviews, visitors, visits.",
+        },
         { name: "pageviews.read", description: "Read the daily pageview and session series." },
         { name: "metrics.read", description: "Read top pages and referrers for a window." },
       ],

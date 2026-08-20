@@ -86,7 +86,10 @@ export const createNote = createServerFn({ method: "POST" })
 export const updateNote = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((raw: unknown) =>
-    noteInput.partial().extend({ id: z.string().uuid(), pinned: z.boolean().optional() }).parse(raw),
+    noteInput
+      .partial()
+      .extend({ id: z.string().uuid(), pinned: z.boolean().optional() })
+      .parse(raw),
   )
   .handler(async ({ context, data }): Promise<OperatorNote> => {
     const patch: {

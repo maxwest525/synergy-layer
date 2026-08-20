@@ -235,7 +235,8 @@ export const CONNECTION_SURFACES: SurfaceConnection[] = [
       op({
         id: "dfs.onpage",
         operation: "OnPage API",
-        purpose: "Full technical crawl: status codes, redirects, duplicate content, broken links, page weight.",
+        purpose:
+          "Full technical crawl: status codes, redirects, duplicate content, broken links, page weight.",
         status: "not_built",
         gap: "Not built. Technical crawl evidence currently comes only from single page scrapes, so site wide redirect chains and broken links are never seen.",
       }),
@@ -674,7 +675,9 @@ export function gapRoadmapDraft(surface: SurfaceConnection, entry: SurfaceOperat
       `What it gives us: ${entry.purpose}`,
       `What is missing: ${entry.gap ?? "unspecified"}`,
       entry.evidence ? `Existing code: ${entry.evidence}` : null,
-      entry.mutates ? "This operation writes at the provider, so it needs the approval path." : null,
+      entry.mutates
+        ? "This operation writes at the provider, so it needs the approval path."
+        : null,
     ]
       .filter(Boolean)
       .join("\n"),

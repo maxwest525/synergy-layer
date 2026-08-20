@@ -30,7 +30,10 @@ describe("deriveStatus", () => {
 
 describe("emptyStateCopy", () => {
   it("names the run that would prove an unproven provider", () => {
-    const copy = emptyStateCopy(deriveStatus({ configured: true, storedEvidence: 0 }), "GA4 daily read");
+    const copy = emptyStateCopy(
+      deriveStatus({ configured: true, storedEvidence: 0 }),
+      "GA4 daily read",
+    );
     expect(copy).toContain("GA4 daily read");
   });
 });

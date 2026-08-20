@@ -10,13 +10,7 @@ import { TAXONOMY_GROUPS } from "@/lib/os-taxonomy";
  * Why the screens are empty. Every line names a stored reason, so a zero is
  * never presented as a measurement and an empty list never looks like a bug.
  */
-export function WhatsMissing({
-  missing,
-  loops,
-}: {
-  missing: MissingReason[];
-  loops: LoopState[];
-}) {
+export function WhatsMissing({ missing, loops }: { missing: MissingReason[]; loops: LoopState[] }) {
   const stalled = loops.filter((loop) => loop.stalledStageKey).length;
 
   return (
@@ -29,8 +23,8 @@ export function WhatsMissing({
         />
       </div>
       <p className="mt-2 max-w-[70ch] text-sm text-muted-foreground">
-        Each line is an instruction: what is missing, the stored reason it is missing, and the
-        one step that fixes it. Nothing here is an estimate.
+        Each line is an instruction: what is missing, the stored reason it is missing, and the one
+        step that fixes it. Nothing here is an estimate.
       </p>
 
       {missing.length === 0 ? (

@@ -54,7 +54,9 @@ export async function buildEvidenceTools(identity: { userId: string; token: stri
         const limit = Math.min(Math.max(Math.round(days) || 28, 1), 180);
         const { data, error } = await ctx.db
           .from("search_console_snapshots")
-          .select("id, property, kind, dimensions, period_start_pt, period_end_pt, totals, returned_row_count, collected_at")
+          .select(
+            "id, property, kind, dimensions, period_start_pt, period_end_pt, totals, returned_row_count, collected_at",
+          )
           .eq("tenant_id", ctx.tenantId)
           .order("period_end_pt", { ascending: false })
           .limit(limit);
@@ -74,7 +76,9 @@ export async function buildEvidenceTools(identity: { userId: string; token: stri
         if (!ctx.tenantId) return NO_TENANT;
         const { data, error } = await ctx.db
           .from("search_console_snapshots")
-          .select("id, property, kind, dimensions, period_start_pt, period_end_pt, totals, payload, collected_at")
+          .select(
+            "id, property, kind, dimensions, period_start_pt, period_end_pt, totals, payload, collected_at",
+          )
           .eq("tenant_id", ctx.tenantId)
           .eq("kind", kind)
           .order("period_end_pt", { ascending: false })
@@ -86,7 +90,9 @@ export async function buildEvidenceTools(identity: { userId: string; token: stri
 
     listKeywords: tool({
       description: "Keyword candidates stored for the workspace, with their review state.",
-      inputSchema: z.object({ reviewState: z.string().describe("A review state filter, or 'all'") }),
+      inputSchema: z.object({
+        reviewState: z.string().describe("A review state filter, or 'all'"),
+      }),
       execute: async ({ reviewState }) => {
         if (!ctx.tenantId) return NO_TENANT;
         let query = ctx.db
@@ -100,7 +106,6 @@ export async function buildEvidenceTools(identity: { userId: string; token: stri
         return { rowCount: data.length, rows: data };
       },
     }),
-
 
     listCompetitors: tool({
       description: "Competitors tracked or proposed for the workspace.",
@@ -137,7 +142,8 @@ export async function buildEvidenceTools(identity: { userId: string; token: stri
     }),
 
     listExecutions: tool({
-      description: "Execution receipts for change requests: what actually ran against the site repository.",
+      description:
+        "Execution receipts for change requests: what actually ran against the site repository.",
       inputSchema: z.object({}),
       execute: async () => {
         if (!ctx.tenantId) return NO_TENANT;
@@ -152,7 +158,8 @@ export async function buildEvidenceTools(identity: { userId: string; token: stri
     }),
 
     listWorkflowRuns: tool({
-      description: "Recent workflow runs with their state, so failures can be named rather than guessed.",
+      description:
+        "Recent workflow runs with their state, so failures can be named rather than guessed.",
       inputSchema: z.object({ state: z.string().describe("A run state filter, or 'all'") }),
       execute: async ({ state }) => {
         if (!ctx.tenantId) return NO_TENANT;
@@ -162,7 +169,14 @@ export async function buildEvidenceTools(identity: { userId: string; token: stri
           .eq("tenant_id", ctx.tenantId)
           .order("started_at", { ascending: false })
           .limit(50);
-        const runStates = ["queued", "running", "awaiting_approval", "succeeded", "failed", "cancelled"] as const;
+        const runStates = [
+          "queued",
+          "running",
+          "awaiting_approval",
+          "succeeded",
+          "failed",
+          "cancelled",
+        ] as const;
         const match = runStates.find((candidate) => candidate === state);
         if (match) query = query.eq("state", match);
 
@@ -180,7 +194,9 @@ export async function buildEvidenceTools(identity: { userId: string; token: stri
         if (!ctx.tenantId) return NO_TENANT;
         const { data, error } = await ctx.db
           .from("tenant_connections")
-          .select("id, provider, capability_key, health, integration_state, last_checked_at, config")
+          .select(
+            "id, provider, capability_key, health, integration_state, last_checked_at, config",
+          )
           .eq("tenant_id", ctx.tenantId)
           .limit(50);
         if (error) return { error: error.message };
@@ -212,7 +228,9 @@ export async function buildEvidenceTools(identity: { userId: string; token: stri
         changeType: z.string().describe("For example title, h1, or schema"),
         proposed: z.string().describe("The exact proposed value"),
         rationale: z.string().describe("Why this change follows from the evidence"),
-        evidenceRowIds: z.array(z.string()).describe("Row ids of the stored evidence this rests on"),
+        evidenceRowIds: z
+          .array(z.string())
+          .describe("Row ids of the stored evidence this rests on"),
         limitations: z.string().describe("What this evidence cannot tell us"),
       }),
       execute: async (draft) => ({

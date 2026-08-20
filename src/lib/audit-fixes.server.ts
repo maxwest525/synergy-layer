@@ -2,11 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database } from "@/integrations/supabase/types";
 import { buildCrawlDirectiveFix, fixTargetForSiteCheck } from "./audit-fixes";
-import {
-  GOVERNED_BRANCH,
-  GOVERNED_PROJECT_ID,
-  GOVERNED_REPO,
-} from "./execution/allowlist";
+import { GOVERNED_BRANCH, GOVERNED_PROJECT_ID, GOVERNED_REPO } from "./execution/allowlist";
 import { createGithubApi } from "./execution/execute.server";
 import { applyExactReplacements } from "./execution/source-change";
 import type { SiteCheckId, SiteFacts } from "./site-checks";

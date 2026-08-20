@@ -272,7 +272,9 @@ export const listActivityFeed = createServerFn({ method: "GET" }).handler(
       for (const cycle of cycles) {
         if (cycle.change_request_id !== change.id) continue;
         const windows = windowsByCycle.get(cycle.id) ?? [];
-        const next = [...windows].sort((a, b) => a.availableAfter.localeCompare(b.availableAfter))[0];
+        const next = [...windows].sort((a, b) =>
+          a.availableAfter.localeCompare(b.availableAfter),
+        )[0];
         events.push({
           id: `cycle-${cycle.id}`,
           stage: "measured",

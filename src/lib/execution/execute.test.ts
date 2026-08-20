@@ -310,7 +310,8 @@ describe("verifyRenderedPage", () => {
       finalUrl: "https://trumoveinc.com/services/corporate-relocation",
       title: null,
       heading: null,
-      metaDescription: "Employee relocation movers with dedicated coordinators and guaranteed dates.",
+      metaDescription:
+        "Employee relocation movers with dedicated coordinators and guaranteed dates.",
       renderedBy: "TestRenderer",
     };
     const proof = verifyRenderedPage(page, metaChanges);

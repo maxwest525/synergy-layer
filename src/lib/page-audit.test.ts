@@ -30,7 +30,10 @@ describe("page wording audit", () => {
       observation("https://a.test/three", "Three", "Corporate relocation"),
     ]);
     expect(duplicates).toHaveLength(1);
-    expect(duplicates[0]).toMatchObject({ field: "h1", urls: ["https://a.test/one", "https://a.test/two"] });
+    expect(duplicates[0]).toMatchObject({
+      field: "h1",
+      urls: ["https://a.test/one", "https://a.test/two"],
+    });
   });
 
   it("ignores missing wording instead of grouping it", () => {
@@ -60,8 +63,8 @@ describe("page wording audit", () => {
     expect(buildAuditInstruction({ observedPages: 3, failedPages: 0, duplicates })).toContain(
       "Same headline",
     );
-    expect(
-      buildAuditInstruction({ observedPages: 0, failedPages: 0, duplicates: [] }),
-    ).toContain("Run the page wording audit");
+    expect(buildAuditInstruction({ observedPages: 0, failedPages: 0, duplicates: [] })).toContain(
+      "Run the page wording audit",
+    );
   });
 });

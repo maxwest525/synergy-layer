@@ -7,11 +7,7 @@ export class UmamiFailure extends Error {
   readonly reason: "not_configured" | "authorization" | "unreachable" | "api_error";
   readonly httpStatus: number | null;
 
-  constructor(
-    reason: UmamiFailure["reason"],
-    message: string,
-    httpStatus: number | null = null,
-  ) {
+  constructor(reason: UmamiFailure["reason"], message: string, httpStatus: number | null = null) {
     super(message);
     this.name = "UmamiFailure";
     this.reason = reason;
@@ -67,7 +63,10 @@ export async function umamiAuthHeaders(): Promise<AuthHeaders> {
   const username = process.env["UMAMI_USERNAME"];
   const password = process.env["UMAMI_PASSWORD"];
   if (!username || !password) {
-    throw new UmamiFailure("not_configured", "No Umami token, API key, or username and password are set.");
+    throw new UmamiFailure(
+      "not_configured",
+      "No Umami token, API key, or username and password are set.",
+    );
   }
 
   let response: Response;
