@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { CommandCenterFacts, Ga4Window } from "./command-center";
-import type { CategoryId } from "./categories";
+import { categoryForChangeRequest, categoryForFinding } from "./finding-router";
 import type { AuditSeverity, QueueSource } from "./suggestion-queue";
 
 /**
@@ -72,7 +72,9 @@ export const getCommandCenterFacts = createServerFn({ method: "POST" })
           .limit(500),
         db
           .from("recommendations")
-          .select("id, title, state, source_module, issue_fingerprint, created_at, updated_at")
+          .select(
+            "id, title, state, source_module, metadata, issue_fingerprint, created_at, updated_at",
+          )
           .eq("tenant_id", tenantId)
           .order("created_at", { ascending: false })
           .limit(500),
@@ -174,16 +176,31 @@ export const getCommandCenterFacts = createServerFn({ method: "POST" })
         .filter((id): id is string => typeof id === "string" && id.length > 0),
     );
 
+    // Where each finding belongs, decided by its stored rule where one exists.
+    const categoryByRecommendationId = new Map(
+      recommendations.map(
+        (row) => [row.id, categoryForFinding(row.source_module, row.metadata)] as const,
+      ),
+    );
+
     const changeSources: QueueSource[] = changes.map((row) => ({
       id: row.id,
       kind: "change",
-      categoryId: categoryForProposalType(row.proposal_type),
+      // A fix drafted from a finding stays with that finding rather than moving
+      // to Your pages the moment it is drafted.
+      categoryId: categoryForChangeRequest(
+        row.proposal_type,
+        row.recommendation_id === null
+          ? null
+          : (categoryByRecommendationId.get(row.recommendation_id) ?? null),
+      ),
       title: row.title,
       targetUrl: row.target_url,
       storedState: row.state,
       fingerprint: null,
       severity: null,
       linkedChangeId: null,
+      proposalType: row.proposal_type,
       createdAt: row.created_at,
       updatedAt: row.updated_at ?? row.created_at,
     }));
@@ -191,7 +208,7 @@ export const getCommandCenterFacts = createServerFn({ method: "POST" })
     const recommendationSources: QueueSource[] = recommendations.map((row) => ({
       id: row.id,
       kind: "recommendation",
-      categoryId: categoryForSourceModule(row.source_module),
+      categoryId: categoryByRecommendationId.get(row.id) ?? "pages",
       title: row.title,
       targetUrl: null,
       storedState: row.state,
@@ -201,6 +218,8 @@ export const getCommandCenterFacts = createServerFn({ method: "POST" })
       createdAt: row.created_at,
       updatedAt: row.updated_at ?? row.created_at,
     }));
+
+    const observedAt = audit.lastObservedAt ?? new Date().toISOString();
 
     const auditSources: QueueSource[] = audit.findings.map((finding) => ({
       id: `audit:${finding.check}`,
@@ -212,8 +231,26 @@ export const getCommandCenterFacts = createServerFn({ method: "POST" })
       fingerprint: `audit:${finding.check}`,
       severity: finding.severity as AuditSeverity,
       linkedChangeId: null,
-      createdAt: audit.lastObservedAt ?? new Date().toISOString(),
-      updatedAt: audit.lastObservedAt ?? new Date().toISOString(),
+      createdAt: observedAt,
+      updatedAt: observedAt,
+    }));
+
+    // Site-wide checks — robots.txt, the sitemap, unreadable pages. These were
+    // already computed and already on screen inside the page-audit panel, but
+    // they never reached the queue the operator actually works from, so a
+    // sitemap listing pages Google has indexed none of said nothing out loud.
+    const siteSources: QueueSource[] = audit.siteFindings.map((finding) => ({
+      id: `site:${finding.check}`,
+      kind: "audit",
+      categoryId: "health",
+      title: finding.label,
+      targetUrl: null,
+      storedState: "proposed",
+      fingerprint: `site:${finding.check}`,
+      severity: finding.severity as AuditSeverity,
+      linkedChangeId: null,
+      createdAt: audit.siteObservedAt ?? observedAt,
+      updatedAt: audit.siteObservedAt ?? observedAt,
     }));
 
     return {
@@ -228,7 +265,7 @@ export const getCommandCenterFacts = createServerFn({ method: "POST" })
       changes: { fixesLive, pagesImproved },
       audit: { hasRun: audit.lastObservedAt !== null, pagesNeedingFixes },
       health: { brokenConnections, failedRuns },
-      queueSources: [...changeSources, ...recommendationSources, ...auditSources],
+      queueSources: [...changeSources, ...recommendationSources, ...auditSources, ...siteSources],
     };
   });
 
@@ -238,34 +275,4 @@ function numberOrZero(value: unknown): number {
 
 function numberOrNull(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
-}
-
-/**
- * Which category owns a change request. `proposal_type` is the stored
- * discriminator, so this is a reading of the row rather than a guess.
- */
-function categoryForProposalType(proposalType: string | null): CategoryId {
-  return proposalType === "site.crawl_directives" ? "health" : "pages";
-}
-
-/**
- * Which category raised a recommendation. `source_module` is the stored
- * writer's own name; anything unrecognised lands in Your pages, which is where
- * page-level work belongs, rather than being dropped.
- */
-function categoryForSourceModule(sourceModule: string | null): CategoryId {
-  switch (sourceModule) {
-    case "search-console":
-      return "search";
-    case "ga4":
-      return "visitors";
-    case "competitor-intelligence":
-    case "dataforseo":
-    case "ads.advertiser_resolution":
-      return "competition";
-    case "workflows":
-      return "connections";
-    default:
-      return "pages";
-  }
 }
