@@ -442,9 +442,9 @@ export function buildCommandCenter(facts: CommandCenterFacts): CommandCenterView
   const suggestedNext: SuggestedNextRow[] = [];
 
   if (!facts.audit.hasRun) {
-    // The audit control lives on whichever route Your pages currently points at,
-    // so this follows the category rather than hard-coding a slug whose page has
-    // not been built yet.
+    // The audit control lives on the Your pages *workspace*, not on the
+    // category page in front of it: only that route imports PageAuditPanel.
+    // Derived from the category so the row follows it if the route moves again.
     const pages = CATEGORIES.find((category) => category.id === "pages");
     suggestedNext.push({
       id: "run-page-audit",
@@ -454,7 +454,7 @@ export function buildCommandCenter(facts: CommandCenterFacts): CommandCenterView
       // button; this row only takes the operator there, with the cost already
       // stated so the price is never a surprise.
       actionLabel: `Set it up · ${PAGE_AUDIT_COST}`,
-      to: pages?.to ?? "/",
+      to: pages ? `${pages.to}/tools` : "/",
       metered: true,
     });
   }

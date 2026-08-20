@@ -74,6 +74,7 @@ function facts(overrides: Partial<YourPagesFacts> = {}): YourPagesFacts {
     property: "trumoveinc.com",
     pages: [],
     findings: [],
+    auditedUrls: [],
     queueSources: [],
     observedPages: 0,
     failedPages: 0,
@@ -137,7 +138,12 @@ describe("the page list, which is the point of this page", () => {
   ];
 
   it("lists a page with its own defects, not a defect with its pages", async () => {
-    show({ pages, findings, lastObservedAt: NOW });
+    show({
+      pages,
+      findings,
+      lastObservedAt: NOW,
+      auditedUrls: ["/seen-and-broken", "/never-seen"],
+    });
     await userEvent.click(screen.getByRole("tab", { name: /Pages/ }));
     expect(screen.getByText("/seen-and-broken")).toBeInTheDocument();
     expect(screen.getAllByText("Missing title").length).toBe(2);
@@ -149,6 +155,7 @@ describe("the page list, which is the point of this page", () => {
       pages,
       findings,
       lastObservedAt: NOW,
+      auditedUrls: ["/seen-and-broken", "/never-seen"],
       coverage: { pagesKnown: 39, pagesWithImpressions: 1 },
     });
     await userEvent.click(screen.getByRole("tab", { name: /Pages/ }));
@@ -166,6 +173,7 @@ describe("the page list, which is the point of this page", () => {
       pages,
       findings,
       lastObservedAt: NOW,
+      auditedUrls: ["/seen-and-broken", "/never-seen"],
       coverage: { pagesKnown: 39, pagesWithImpressions: 1 },
     });
     await userEvent.click(screen.getByRole("tab", { name: /Pages/ }));
@@ -180,14 +188,46 @@ describe("the page list, which is the point of this page", () => {
 });
 
 describe("what the page is allowed to do", () => {
-  it("offers no verb that writes", () => {
+  it("offers no verb that writes, on any tab", async () => {
+    // This assertion used to run on the default tab only, against an empty
+    // queue, so it reached four header controls and none of the rows it was
+    // nominally guarding.
+    const queued = (id: string, kind: "change" | "recommendation" | "audit", state: string) => ({
+      id,
+      kind,
+      categoryId: "pages" as const,
+      title: `A ${kind}`,
+      targetUrl: "/a",
+      storedState: state,
+      fingerprint: null,
+      severity: null,
+      linkedChangeId: null,
+      createdAt: NOW,
+      updatedAt: NOW,
+    });
     show({
       lastObservedAt: NOW,
-      pages: [page("/a", { changeId: "chg-1", changeState: "proposed" })],
+      auditedUrls: ["/a"],
+      pages: [page("/a", { impressions: 9, changeId: "chg-1", changeState: "proposed" })],
+      queueSources: [
+        queued("c", "change", "proposed"),
+        queued("r", "recommendation", "proposed"),
+        queued("a", "audit", "proposed"),
+        queued("done", "change", "applied"),
+      ],
     });
-    for (const control of [...screen.getAllByRole("tab"), ...screen.getAllByRole("link")]) {
-      expect(control.textContent ?? "").not.toMatch(/approve|apply|publish|ignore/i);
+
+    let checked = 0;
+    for (const name of [/Suggestions/, /Pages/, /History/]) {
+      await userEvent.click(screen.getByRole("tab", { name }));
+      const controls = [...screen.getAllByRole("tab"), ...screen.getAllByRole("link")];
+      for (const control of controls) {
+        expect(control.textContent ?? "").not.toMatch(/approve|apply|publish|ignore/i);
+      }
+      checked += controls.length;
     }
+    // Proof the loop reached real rows rather than only the header again.
+    expect(checked).toBeGreaterThan(15);
   });
 
   it("routes an existing fix to the review screen that records the decision", async () => {

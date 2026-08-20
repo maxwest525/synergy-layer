@@ -70,6 +70,7 @@ export function useYourPages(): YourPagesQuery {
       property: extras.data.property,
       pages: extras.data.pages,
       findings: extras.data.findings,
+      auditedUrls: extras.data.auditedUrls,
       queueSources: facts.queueSources.filter((source) => source.categoryId === CATEGORY_ID),
       observedPages: extras.data.observedPages,
       failedPages: extras.data.failedPages,

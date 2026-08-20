@@ -68,10 +68,16 @@ function PageCard({ row }: { row: PageRow }) {
         <span className="min-w-0 truncate text-[13px] font-semibold text-foreground">
           {row.url}
         </span>
-        <span className="shrink-0 text-xs tabular-nums text-subtle">
-          {row.impressions.toLocaleString("en-US")} shown · {row.clicks.toLocaleString("en-US")}{" "}
-          clicked
-        </span>
+        {row.reported ? (
+          <span className="shrink-0 text-xs tabular-nums text-subtle">
+            {row.impressions.toLocaleString("en-US")} shown · {row.clicks.toLocaleString("en-US")}{" "}
+            clicked
+          </span>
+        ) : (
+          // Absent, not zero. Google did not report this page in the window, so
+          // there is no count to show and a nought would read as one.
+          <span className="shrink-0 text-xs text-subtle">not in Google&rsquo;s report</span>
+        )}
       </div>
       {/* Why this page sits here, so the order is never something to just trust. */}
       <p className="text-xs leading-snug text-muted-foreground">{row.reason}</p>
@@ -196,6 +202,11 @@ export function YourPagesPage() {
           <p className="text-[13px] text-muted-foreground">
             Every page on your site, what is wrong with it, and the fix waiting for you.
           </p>
+          {view.property ? (
+            // Named, so a read describing a different property than the one the
+            // operator has in mind is visible rather than silent.
+            <p className="text-xs text-subtle">Showing {view.property}.</p>
+          ) : null}
           <p className="text-xs text-subtle">
             {view.asOf === null
               ? "The page audit has not run yet, so nothing below has been read from your pages."

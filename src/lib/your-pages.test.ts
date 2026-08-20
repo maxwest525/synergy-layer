@@ -63,6 +63,7 @@ const base: YourPagesFacts = {
   property: "trumoveinc.com",
   pages: [],
   findings: [],
+  auditedUrls: [],
   queueSources: [],
   observedPages: 0,
   failedPages: 0,
@@ -137,6 +138,9 @@ describe("which page is worth opening first", () => {
     finding({ pages: [{ url: "/seen-and-broken", detail: "no title" }] }),
     finding({ pages: [{ url: "/never-seen", detail: "no title" }] }),
   ];
+  // Every page here has been read. Ordering by what is wrong only means
+  // anything once the audit has actually looked.
+  const read = ["/seen-and-broken", "/never-seen", "/working"];
 
   it("puts pages Google has never shown first when being found is the problem", () => {
     // A title rewrite cannot help a page that is not being found at all.
@@ -144,6 +148,7 @@ describe("which page is worth opening first", () => {
       withFacts({
         pages,
         findings,
+        auditedUrls: read,
         comparison: READY,
         coverage: { pagesKnown: 39, pagesWithImpressions: 2 },
       }),
@@ -157,6 +162,7 @@ describe("which page is worth opening first", () => {
       withFacts({
         pages,
         findings,
+        auditedUrls: read,
         comparison: READY,
         coverage: { pagesKnown: 10, pagesWithImpressions: 9 },
       }),
@@ -172,6 +178,7 @@ describe("which page is worth opening first", () => {
       withFacts({
         pages,
         findings,
+        auditedUrls: read,
         comparison: READY,
         coverage: { pagesKnown: 39, pagesWithImpressions: 2 },
       }),
@@ -180,6 +187,7 @@ describe("which page is worth opening first", () => {
       withFacts({
         pages,
         findings,
+        auditedUrls: read,
         comparison: READY,
         coverage: { pagesKnown: 10, pagesWithImpressions: 9 },
       }),
@@ -188,7 +196,7 @@ describe("which page is worth opening first", () => {
   });
 
   it("falls back to worst defect first when no diagnosis backs an order", () => {
-    const view = buildYourPages(withFacts({ pages, findings }));
+    const view = buildYourPages(withFacts({ pages, findings, auditedUrls: read }));
     expect(view.ordering).toBeNull();
     expect(view.rows[0]?.worst).toBe("critical");
     // The clean page sorts last rather than being dropped.
@@ -200,6 +208,7 @@ describe("which page is worth opening first", () => {
       withFacts({
         pages,
         findings,
+        auditedUrls: read,
         comparison: READY,
         coverage: { pagesKnown: 39, pagesWithImpressions: 2 },
       }),
@@ -270,7 +279,9 @@ describe("the status line, written as a consequence", () => {
   });
 
   it("says nothing needs you when nothing does", () => {
-    const view = buildYourPages(withFacts({ lastObservedAt: NOW, pages: [page("/a")] }));
+    const view = buildYourPages(
+      withFacts({ lastObservedAt: NOW, pages: [page("/a")], auditedUrls: ["/a"] }),
+    );
     expect(view.status).toEqual({ text: "Nothing needs you here", tone: "positive" });
   });
 });
@@ -300,5 +311,144 @@ describe("the tabs", () => {
     expect(tabs["pages"]).toBe(2);
     expect(tabs["suggestions"]).toBe(1);
     expect(tabs["history"]).toBe(1);
+  });
+});
+
+describe("defects an adversarial review found before this shipped", () => {
+  it("still shows a stored finding on a page Search Console did not report", () => {
+    // The rows used to come only from the search window, so a finding on a page
+    // outside it vanished and the page printed a green all-clear beside it. The
+    // audit deliberately reads pages the window does not contain.
+    const view = buildYourPages(
+      withFacts({
+        lastObservedAt: NOW,
+        observedPages: 4,
+        pages: [page("/home", { impressions: 40 })],
+        auditedUrls: ["/home", "/services", "/contact"],
+        findings: [
+          finding({
+            pages: [
+              { url: "/services", detail: "no title" },
+              { url: "/contact", detail: "no title" },
+            ],
+          }),
+        ],
+      }),
+    );
+    expect(view.rows.map((row) => row.url).sort()).toEqual(["/contact", "/home", "/services"]);
+    expect(view.status.tone).toBe("danger");
+    expect(view.tiles.find((tile) => tile.label === "Pages with something wrong")?.value).toBe("2");
+  });
+
+  it("says an unreported page has no counts rather than printing zeros", () => {
+    const view = buildYourPages(
+      withFacts({
+        lastObservedAt: NOW,
+        pages: [],
+        auditedUrls: ["/services"],
+        findings: [finding({ pages: [{ url: "/services", detail: "no title" }] })],
+      }),
+    );
+    const row = view.rows.find((entry) => entry.url === "/services");
+    expect(row?.reported).toBe(false);
+    expect(row?.reason).toMatch(/did not report this page/i);
+  });
+
+  it("never calls a page the audit has not read clean", () => {
+    // The audit stops at its own page limit; the window does not. Past that
+    // limit every page used to be declared "nothing is wrong with this page".
+    const view = buildYourPages(
+      withFacts({
+        lastObservedAt: NOW,
+        observedPages: 1,
+        pages: [page("/audited", { impressions: 10 }), page("/beyond-cap", { impressions: 10 })],
+        auditedUrls: ["/audited"],
+      }),
+    );
+    const beyond = view.rows.find((row) => row.url === "/beyond-cap");
+    expect(beyond?.audited).toBe(false);
+    expect(beyond?.reason).toMatch(/has not read this page yet/i);
+    expect(beyond?.reason).not.toMatch(/nothing is wrong/i);
+  });
+
+  it("refuses an all-clear while pages remain unread", () => {
+    const view = buildYourPages(
+      withFacts({
+        lastObservedAt: NOW,
+        pages: [page("/a", { impressions: 10 })],
+        auditedUrls: [],
+      }),
+    );
+    expect(view.status.text).toMatch(/never read/i);
+    expect(view.status.tone).not.toBe("positive");
+  });
+
+  it("refuses an all-clear before the audit has ever run", () => {
+    const view = buildYourPages(
+      withFacts({ pages: [page("/a", { impressions: 4000, clicks: 3 })] }),
+    );
+    expect(view.status.text).toBe("Nothing has been read yet");
+  });
+
+  it("ranks by the impression count it quotes, not just by alphabet", () => {
+    // The click branch printed "shown 500000 times" beside a key that ignored
+    // impressions, so a page shown once outranked it on alphabetical order.
+    const view = buildYourPages(
+      withFacts({
+        lastObservedAt: NOW,
+        comparison: READY,
+        coverage: { pagesKnown: 10, pagesWithImpressions: 9 },
+        pages: [
+          page("/apple-tiny", { impressions: 1, clicks: 0 }),
+          page("/zebra-huge", { impressions: 500_000, clicks: 0 }),
+        ],
+        auditedUrls: ["/apple-tiny", "/zebra-huge"],
+      }),
+    );
+    expect(view.rows[0]?.url).toBe("/zebra-huge");
+  });
+
+  it("keeps severity in the order when nothing has been shown", () => {
+    const view = buildYourPages(
+      withFacts({
+        lastObservedAt: NOW,
+        comparison: READY,
+        coverage: { pagesKnown: 39, pagesWithImpressions: 0 },
+        pages: [page("/a-clean"), page("/z-critical")],
+        auditedUrls: ["/a-clean", "/z-critical"],
+        findings: [finding({ pages: [{ url: "/z-critical", detail: "no title" }] })],
+      }),
+    );
+    expect(view.rows[0]?.url).toBe("/z-critical");
+  });
+
+  it("does not flatten every busy page into one tie", () => {
+    const view = buildYourPages(
+      withFacts({
+        lastObservedAt: NOW,
+        pages: [page("/a-1000", { impressions: 1000 }), page("/z-5m", { impressions: 5_000_000 })],
+        auditedUrls: ["/a-1000", "/z-5m"],
+        findings: [
+          finding({
+            pages: [
+              { url: "/a-1000", detail: "no title" },
+              { url: "/z-5m", detail: "no title" },
+            ],
+          }),
+        ],
+      }),
+    );
+    expect(view.rows[0]?.url).toBe("/z-5m");
+  });
+
+  it("reports no fixes counted rather than zero when no property is selected", () => {
+    const view = buildYourPages(withFacts({ fixesLive: null }));
+    const tile = view.tiles.find((entry) => entry.label === "Fixes live now");
+    expect(tile?.value).toBeNull();
+    expect(tile?.missingReason).toMatch(/no property is selected/i);
+  });
+
+  it("names the property the rows belong to", () => {
+    expect(buildYourPages(withFacts({})).property).toBe("trumoveinc.com");
   });
 });

@@ -53,6 +53,14 @@ export type PageEvidence = {
 };
 
 export type PageRow = PageEvidence & {
+  /**
+   * False when Search Console did not report this page in the window. Its
+   * counts are then absent, not zero, and the card says so rather than
+   * printing a nought the operator would read as a measurement.
+   */
+  readonly reported: boolean;
+  /** False when the page audit has never read this page. */
+  readonly audited: boolean;
   readonly defects: readonly PageDefect[];
   /** The worst severity on this page, or null when nothing is wrong with it. */
   readonly worst: Severity | null;
@@ -67,13 +75,22 @@ export type YourPagesFacts = {
   readonly pages: readonly PageEvidence[];
   /** The audit's findings, grouped by check as the rules produce them. */
   readonly findings: readonly CheckFinding[];
+  /**
+   * Every page address the audit has actually read.
+   *
+   * Needed because "no defects" and "never looked" are different states, and
+   * the audit stops at its own page limit while the window does not. Without
+   * this, page 101 of a large site is declared clean.
+   */
+  readonly auditedUrls: readonly string[];
   readonly queueSources: readonly QueueSource[];
   /** How many pages the audit read, and how many it could not. */
   readonly observedPages: number;
   readonly failedPages: number;
   readonly lastObservedAt: string | null;
   /** Changes that are live on the site now. */
-  readonly fixesLive: number;
+  /** Null when no property is selected, so nothing was counted. */
+  readonly fixesLive: number | null;
   readonly comparison: PeriodComparison;
   readonly coverage: PageCoverage | null;
   readonly sessions: number | null;
@@ -108,6 +125,8 @@ export type YourPagesView = {
   readonly history: readonly QueueItem[];
   /** The last time the audit read the site, written for display. */
   readonly asOf: string | null;
+  /** Which property these rows belong to, so a cross-property read is visible. */
+  readonly property: string | null;
 };
 
 const NOT_AUDITED = "The page audit has not run yet, so nothing has been read from your pages.";
@@ -182,41 +201,69 @@ function constraintFor(facts: YourPagesFacts): Constraint | null {
  *
  * Lower sorts first. The reason is carried alongside the number so the page can
  * say it out loud rather than presenting an order the operator has to trust.
+ *
+ * Two states are kept apart throughout. A page with no defects is only clean if
+ * the audit actually read it; a page it has never opened is unknown, and saying
+ * "nothing is wrong with this page" about it would be an assertion nothing
+ * backs. The audit stops at its own page limit while the window does not, so on
+ * any site past that limit this is the common case, not the edge one.
  */
 function rank(
   page: PageEvidence,
   defects: readonly PageDefect[],
   constraint: Constraint | null,
+  state: { readonly reported: boolean; readonly audited: boolean },
 ): { readonly key: number; readonly reason: string } {
   const worst = worstOf(defects);
   const severity = worst === null ? 3 : SEVERITY_ORDER[worst];
+  // Bounded 0..1, so it refines an ordering without ever crossing a band.
+  const reach = Math.min(9, Math.log10(page.impressions + 1)) / 10;
+
+  if (!state.reported) {
+    return {
+      key: 100 + severity,
+      reason: state.audited
+        ? "Google did not report this page at all in this window, so there is nothing to say about how it is doing."
+        : "Google did not report this page in this window, and the audit has not read it either.",
+    };
+  }
+
+  if (!state.audited) {
+    // Sorted below anything with a known defect and above anything known clean:
+    // it is the work that has not been looked at yet.
+    return {
+      key: 50 - reach,
+      reason: `Shown ${page.impressions} times. The audit has not read this page yet, so nothing is known about what is on it.`,
+    };
+  }
 
   if (constraint === "reachability") {
     // Nothing downstream matters while the page cannot be found. A page Google
     // has never shown is the work, however clean its wording is.
     if (page.impressions === 0) {
       return {
-        key: 0,
+        key: 0 + severity / 10,
         reason: "Google has never shown this page, so nothing on it can be working yet.",
       };
     }
     return {
-      key: 10 + severity,
+      key: 10 + severity / 10 - reach,
       reason: `Google is showing this page ${page.impressions} times, so it is already past the problem holding the rest back.`,
     };
   }
 
   if (constraint === "click") {
     // Being seen and passed over. The pages with the most impressions and the
-    // least to show for them are where wording actually moves something.
+    // least to show for them are where wording actually moves something, so the
+    // impression count has to be in the key, not only in the sentence.
     if (page.impressions > 0 && page.clicks === 0) {
       return {
-        key: 0 + severity / 10,
+        key: 0 + severity / 100 - reach,
         reason: `Shown ${page.impressions} times and clicked none. This is the wording people are reading and passing over.`,
       };
     }
     return {
-      key: 10 - Math.min(9, Math.log10(page.impressions + 1)) + severity / 10,
+      key: 10 + severity / 100 - reach,
       reason:
         page.impressions === 0
           ? "Google has not shown this page, so its wording is not what is costing you clicks."
@@ -226,10 +273,10 @@ function rank(
 
   // No diagnosis. Worst defect first, and among equals the page most people see.
   return {
-    key: severity * 1000 - Math.min(999, page.impressions),
+    key: severity * 10 - reach,
     reason:
       worst === null
-        ? "Nothing is wrong with this page."
+        ? `Nothing is wrong with this page, and Google showed it ${page.impressions} times.`
         : `${defects.length} ${defects.length === 1 ? "thing" : "things"} to fix, and Google showed it ${page.impressions} times.`,
   };
 }
@@ -244,9 +291,8 @@ function orderingStatement(constraint: Constraint | null): string | null {
   return null;
 }
 
-function tilesFor(facts: YourPagesFacts, rows: readonly PageRow[]): Tile[] {
+function tilesFor(facts: YourPagesFacts, rows: readonly PageRow[], defectCount: number): Tile[] {
   const audited = facts.lastObservedAt !== null;
-  const withDefects = rows.filter((row) => row.defects.length > 0).length;
   const neverShown = facts.pages.filter((page) => page.impressions === 0).length;
 
   return [
@@ -258,7 +304,10 @@ function tilesFor(facts: YourPagesFacts, rows: readonly PageRow[]): Tile[] {
     },
     {
       label: "Pages with something wrong",
-      value: audited ? String(withDefects) : null,
+      // Counted from the findings themselves, not from the rendered rows. A
+      // stored finding on a page Search Console did not report in this window
+      // is still a stored finding, and counting rows made it vanish into a nought.
+      value: audited ? String(defectCount) : null,
       explanation: "Pages where at least one check found a real defect.",
       missingReason: audited ? null : NOT_AUDITED,
     },
@@ -270,9 +319,12 @@ function tilesFor(facts: YourPagesFacts, rows: readonly PageRow[]): Tile[] {
     },
     {
       label: "Fixes live now",
-      value: String(facts.fixesLive),
+      value: facts.fixesLive === null ? null : String(facts.fixesLive),
       explanation: "Changes you approved that are on the site and have not been rolled back.",
-      missingReason: null,
+      missingReason:
+        facts.fixesLive === null
+          ? "No property is selected, so no change requests were counted."
+          : null,
     },
     {
       label: "Never shown by Google",
@@ -286,7 +338,12 @@ function tilesFor(facts: YourPagesFacts, rows: readonly PageRow[]): Tile[] {
   ];
 }
 
-function statusFor(rows: readonly PageRow[], open: readonly QueueItem[]): YourPagesView["status"] {
+function statusFor(
+  facts: YourPagesFacts,
+  rows: readonly PageRow[],
+  open: readonly QueueItem[],
+  defectCount: number,
+): YourPagesView["status"] {
   const critical = rows.filter((row) => row.worst === "critical").length;
   if (critical > 0) {
     return {
@@ -300,9 +357,21 @@ function statusFor(rows: readonly PageRow[], open: readonly QueueItem[]): YourPa
       tone: "warning",
     };
   }
-  const withDefects = rows.filter((row) => row.defects.length > 0).length;
-  if (withDefects > 0) {
-    return { text: `${withDefects} pages worth tidying`, tone: "warning" };
+  if (defectCount > 0) {
+    return { text: `${defectCount} pages worth tidying`, tone: "warning" };
+  }
+
+  // "Nothing needs you" is a claim about what was looked at. Saying it over
+  // pages the audit has never opened would be an all-clear nothing backs.
+  const unread = rows.filter((row) => !row.audited).length;
+  if (facts.lastObservedAt === null) {
+    return { text: "Nothing has been read yet", tone: "warning" };
+  }
+  if (unread > 0) {
+    return {
+      text: unread === 1 ? "1 page never read" : `${unread} pages never read`,
+      tone: "warning",
+    };
   }
   return { text: "Nothing needs you here", tone: "positive" };
 }
@@ -312,13 +381,32 @@ export function buildYourPages(facts: YourPagesFacts): YourPagesView {
   const open = [...queue.open].sort(compareQueueItems);
   const defects = defectsByPage(facts.findings);
   const constraint = constraintFor(facts);
+  const audited = new Set(facts.auditedUrls);
 
-  const rows = facts.pages
-    .map((page) => {
-      const own = defects.get(page.url) ?? [];
-      const ranked = rank(page, own, constraint);
+  const reported = new Map(facts.pages.map((page) => [page.url, page]));
+  // The union, so a stored finding on a page Search Console did not report is
+  // still shown. Rendering only the reported pages made those findings vanish
+  // and printed an all-clear beside them.
+  const urls = [...new Set([...reported.keys(), ...defects.keys()])];
+
+  const rows = urls
+    .map((url) => {
+      const page = reported.get(url);
+      const own = defects.get(url) ?? [];
+      const state = { reported: page !== undefined, audited: audited.has(url) };
+      const evidence: PageEvidence = page ?? {
+        url,
+        clicks: 0,
+        impressions: 0,
+        ctr: null,
+        position: null,
+        changeId: null,
+        changeState: null,
+      };
+      const ranked = rank(evidence, own, constraint, state);
       return {
-        ...page,
+        ...evidence,
+        ...state,
         defects: own,
         worst: worstOf(own),
         reason: ranked.reason,
@@ -330,8 +418,8 @@ export function buildYourPages(facts: YourPagesFacts): YourPagesView {
     .map(({ __key: _unused, ...row }) => row);
 
   return {
-    status: statusFor(rows, open),
-    tiles: tilesFor(facts, rows),
+    status: statusFor(facts, rows, open, defects.size),
+    tiles: tilesFor(facts, rows, defects.size),
     tabs: [
       { id: "suggestions", label: "Suggestions", count: open.length },
       { id: "pages", label: "Pages", count: rows.length },
@@ -342,5 +430,6 @@ export function buildYourPages(facts: YourPagesFacts): YourPagesView {
     suggestions: open,
     history: [...queue.ignored, ...queue.done],
     asOf: facts.lastObservedAt,
+    property: facts.property,
   };
 }
