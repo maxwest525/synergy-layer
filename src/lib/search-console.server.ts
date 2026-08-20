@@ -5,7 +5,12 @@ import { requireTenantId } from "./tenant.server";
 import type { Database } from "@/integrations/supabase/types";
 import { logActivity } from "./os.server";
 import { readSearchConsoleCredentialPresence } from "./search-console-connection";
-import { materializeDailyTotals, normalizeInspection, normalizeOwnedUrl } from "./search-console";
+import {
+  materializeDailyTotals,
+  normalizeInspection,
+  normalizeOwnedUrl,
+  ruleWindows,
+} from "./search-console";
 
 type Client = SupabaseClient<Database>;
 
@@ -438,7 +443,7 @@ export async function latestFinalDate(property: string): Promise<string | null> 
 
 type SnapshotInput = {
   property: string;
-  kind: "property_totals" | "dimensional_rows" | "page_query";
+  kind: "property_totals" | "dimensional_rows" | "page_query" | "dimensional_rows_window";
   dimensions: string[];
   searchType?: string;
   aggregationType: string;
@@ -534,6 +539,66 @@ const PAGE_QUERY_MAX_REQUESTS = 5;
  * date already collected is a successful no-change run: no duplicate is written.
  * Zero rows is a successful empty collection.
  */
+/** The snapshot kind holding rule-window aggregates, distinct from the daily rows. */
+export const RULE_WINDOW_KIND = "dimensional_rows_window";
+
+/**
+ * Collects the aggregate the rules actually judge on: one read per dimension
+ * over the whole window, not one read per day.
+ *
+ * Google aggregates server-side when a request spans several days, so a single
+ * query over 28 days returns each query and page once with its totals for the
+ * period. That is a different number from summing 28 daily snapshots, and it is
+ * the correct one: daily rows are independently thresholded and truncated by
+ * Google, so summing them under-counts.
+ *
+ * Stored under its own `kind` so the existing daily readers, the period
+ * comparison, and every stored observation fingerprint are untouched.
+ */
+async function collectWindowRows(
+  client: Client,
+  property: string,
+  reportingDate: string,
+): Promise<string[]> {
+  const windowStart = ruleWindows(reportingDate, RULE_WINDOW_DAYS).current.start;
+  const ids: string[] = [];
+
+  for (const dimensions of [["query"], ["page"], ["page", "query"]]) {
+    const response = await query(property, {
+      startDate: windowStart,
+      endDate: reportingDate,
+      dimensions,
+      rowLimit: 5000,
+    });
+    const rows = response.rows ?? [];
+    const impressions = rows.reduce((sum, row) => sum + (row.impressions ?? 0), 0);
+    const clicks = rows.reduce((sum, row) => sum + (row.clicks ?? 0), 0);
+
+    ids.push(
+      await persistSnapshot(client, {
+        property,
+        kind: RULE_WINDOW_KIND,
+        dimensions,
+        aggregationType: "auto",
+        responseAggregationType: response.responseAggregationType ?? null,
+        rowLimit: 5000,
+        paginatedRequestCount: 1,
+        periodStart: windowStart,
+        periodEnd: reportingDate,
+        rows,
+        totals: {
+          clicks,
+          impressions,
+          ctr: impressions > 0 ? clicks / impressions : null,
+          position: null,
+        },
+      }),
+    );
+  }
+
+  return ids;
+}
+
 export async function collectPageQuery(
   client: Client,
   property: string,
@@ -615,6 +680,21 @@ export async function backfillPageQueryGaps(
 }
 
 const COMPARISON_HISTORY_DAYS = 56;
+
+/**
+ * The window the rules judge on.
+ *
+ * Every dimensional read above is a single finalized day, which is the right
+ * grain for the daily-totals series the period comparison needs. It is the wrong
+ * grain for a rule: `weakCtr` wants 200 impressions on one page and
+ * `strikingDistance` wants 50 on one query, and this property's best finalized
+ * day is 18 impressions across the whole site. Judged a day at a time, those
+ * rules can never fire, which is exactly what has been happening.
+ *
+ * The thresholds were never wrong; the window was. Over 28 days the same
+ * numbers are ordinary, so nothing here re-tunes them.
+ */
+export const RULE_WINDOW_DAYS = 28;
 
 /** One provider query backfills the two complete 28-day comparison windows. */
 async function collectDailyTotalsHistory(
@@ -810,6 +890,8 @@ export async function collectDaily(client: Client, property: string): Promise<Co
 
   const pageQuery = await collectPageQuery(client, property, reportingDate);
   if (pageQuery.created && pageQuery.snapshotId) snapshotIds.push(pageQuery.snapshotId);
+
+  snapshotIds.push(...(await collectWindowRows(client, property, reportingDate)));
 
   const sitemaps = await gateway<{ sitemap?: unknown[] }>(
     `/webmasters/v3/sites/${encodeURIComponent(property)}/sitemaps`,

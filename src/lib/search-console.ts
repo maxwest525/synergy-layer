@@ -101,6 +101,32 @@ export function normalizeInspection(payload: unknown): NormalizedInspection {
   };
 }
 
+export type RuleWindows = {
+  readonly current: { readonly start: string; readonly end: string };
+  readonly prior: { readonly start: string; readonly end: string };
+};
+
+/**
+ * The two windows a rule compares.
+ *
+ * They must not overlap. Two 28-day windows a week apart share 21 days, so any
+ * difference between them is mostly the same data compared with itself, and a
+ * rule reading that would report a change that did not happen. The prior window
+ * therefore ends the day before the current one begins.
+ *
+ * This is the same rule the analytics comparison already enforces, kept here as
+ * a function so it is stated once and tested rather than re-derived by each
+ * caller.
+ */
+export function ruleWindows(reportingDate: string, windowDays: number): RuleWindows {
+  const currentStart = shiftIsoDate(reportingDate, -(windowDays - 1));
+  const priorEnd = shiftIsoDate(currentStart, -1);
+  return {
+    current: { start: currentStart, end: reportingDate },
+    prior: { start: shiftIsoDate(priorEnd, -(windowDays - 1)), end: priorEnd },
+  };
+}
+
 function shiftIsoDate(isoDate: string, days: number): string {
   const date = new Date(`${isoDate}T00:00:00Z`);
   if (Number.isNaN(date.getTime())) throw new Error(`Invalid calendar date: ${isoDate}`);

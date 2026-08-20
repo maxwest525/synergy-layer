@@ -12,7 +12,14 @@ import {
   type InspectionFacts,
   type PageMetaFacts,
 } from "./search-console-rule-checks";
-import { SearchConsoleFailure, checksum, shiftDate, type QueryRow } from "./search-console.server";
+import {
+  RULE_WINDOW_DAYS,
+  RULE_WINDOW_KIND,
+  SearchConsoleFailure,
+  checksum,
+  shiftDate,
+  type QueryRow,
+} from "./search-console.server";
 
 type Client = SupabaseClient<Database>;
 
@@ -60,9 +67,20 @@ function rowsOf(snapshot: SnapshotRow | undefined): QueryRow[] {
   return payload.rows ?? [];
 }
 
+/**
+ * The snapshot for one dimension, from the rule window rather than a single day.
+ *
+ * The `kind` check is load-bearing: a daily snapshot and a window snapshot share
+ * a `period_end_pt` and carry identical `dimensions`, so without it this would
+ * return whichever the database happened to hand back first, and the rules would
+ * silently judge one day again.
+ */
 function pick(snapshots: SnapshotRow[], dimension: string): SnapshotRow | undefined {
   return snapshots.find(
-    (snapshot) => snapshot.dimensions.length === 1 && snapshot.dimensions[0] === dimension,
+    (snapshot) =>
+      snapshot.kind === RULE_WINDOW_KIND &&
+      snapshot.dimensions.length === 1 &&
+      snapshot.dimensions[0] === dimension,
   );
 }
 
@@ -224,7 +242,11 @@ export async function evaluateSnapshots(
   property: string,
   reportingDate: string,
 ): Promise<RuleRunResult> {
-  const priorDate = shiftDate(reportingDate, -SEARCH_CONSOLE_THRESHOLDS.comparisonWindowDays);
+  // The prior window must not overlap the current one. Two 28-day windows a
+  // week apart share 21 days, so diffing them manufactures a change out of a
+  // seven-day shift — the same trap the analytics comparison already refuses.
+  // The honest comparison is the window that ends the day before this one starts.
+  const priorDate = shiftDate(reportingDate, -RULE_WINDOW_DAYS);
 
   const { data: currentRows, error: currentError } = await client
     .from("search_console_snapshots")
