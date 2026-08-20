@@ -74,7 +74,7 @@ export function PageAuditCallout() {
       <p className="text-xs text-muted-foreground">
         Page audit last ran {formatWhen(data.lastObservedAt)} · {data.observedPages} pages read ·{" "}
         <Link to="/pages" className="text-primary hover:underline">
-          findings on Site pages
+          findings on Your pages
         </Link>
       </p>
       {runButton}

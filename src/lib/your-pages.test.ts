@@ -1,0 +1,304 @@
+import { describe, expect, it } from "vitest";
+
+import {
+  buildYourPages,
+  defectsByPage,
+  type PageEvidence,
+  type YourPagesFacts,
+} from "./your-pages";
+import type { CheckFinding } from "./page-checks";
+import type { PeriodComparison } from "./search-console";
+
+const NOW = "2026-08-20T12:00:00.000Z";
+
+const READY: PeriodComparison = {
+  status: "ready",
+  windowDays: 28,
+  previous: {
+    startDate: "2026-06-25",
+    endDate: "2026-07-22",
+    clicks: 28,
+    impressions: 561,
+    ctr: 0.049,
+    position: 12.4,
+  },
+  current: {
+    startDate: "2026-07-23",
+    endDate: "2026-08-19",
+    clicks: 23,
+    impressions: 612,
+    ctr: 0.038,
+    position: 12.1,
+  },
+  change: { clicksPercent: -17.86, impressionsPercent: 9.09, ctrPoints: -1.1, position: -0.3 },
+};
+
+function page(url: string, overrides: Partial<PageEvidence> = {}): PageEvidence {
+  return {
+    url,
+    clicks: 0,
+    impressions: 0,
+    ctr: null,
+    position: null,
+    changeId: null,
+    changeState: null,
+    ...overrides,
+  };
+}
+
+function finding(overrides: Partial<CheckFinding> = {}): CheckFinding {
+  return {
+    check: "title_missing",
+    label: "Missing title",
+    severity: "critical",
+    instruction: "Give the page a title.",
+    fixableByWordingProposal: true,
+    pages: [],
+    ...overrides,
+  } as CheckFinding;
+}
+
+const base: YourPagesFacts = {
+  now: NOW,
+  property: "trumoveinc.com",
+  pages: [],
+  findings: [],
+  queueSources: [],
+  observedPages: 0,
+  failedPages: 0,
+  lastObservedAt: null,
+  fixesLive: 0,
+  comparison: { status: "insufficient", availableDays: 0, requiredDays: 56, latestDate: null },
+  coverage: null,
+  sessions: null,
+};
+
+function withFacts(overrides: Partial<YourPagesFacts>): YourPagesFacts {
+  return { ...base, ...overrides };
+}
+
+describe("inverting the grouping the rules produce", () => {
+  it("turns one finding listing many pages into many pages listing their defects", () => {
+    // The rules answer "how many pages have a missing title". The operator is
+    // asking "what is wrong with /services/packing".
+    const byPage = defectsByPage([
+      finding({
+        check: "title_missing",
+        pages: [
+          { url: "/a", detail: "no title tag" },
+          { url: "/b", detail: "no title tag" },
+        ],
+      }),
+      finding({
+        check: "h1_missing",
+        label: "Missing H1",
+        severity: "warning",
+        pages: [{ url: "/a", detail: "no h1" }],
+      }),
+    ]);
+    expect(byPage.get("/a")?.map((defect) => defect.check)).toEqual([
+      "title_missing",
+      "h1_missing",
+    ]);
+    expect(byPage.get("/b")?.map((defect) => defect.check)).toEqual(["title_missing"]);
+  });
+
+  it("puts the worst defect on a page first", () => {
+    const byPage = defectsByPage([
+      finding({ check: "thin_content", severity: "advice", pages: [{ url: "/a", detail: "x" }] }),
+      finding({
+        check: "title_missing",
+        severity: "critical",
+        pages: [{ url: "/a", detail: "y" }],
+      }),
+    ]);
+    expect(byPage.get("/a")?.[0]?.check).toBe("title_missing");
+  });
+
+  it("carries what the check actually saw, not a generic label", () => {
+    const byPage = defectsByPage([
+      finding({ pages: [{ url: "/a", detail: "title is 4 characters" }] }),
+    ]);
+    expect(byPage.get("/a")?.[0]?.detail).toBe("title is 4 characters");
+  });
+
+  it("says nothing about a page with nothing wrong", () => {
+    expect(defectsByPage([]).get("/a")).toBeUndefined();
+  });
+});
+
+describe("which page is worth opening first", () => {
+  const pages = [
+    page("/seen-and-broken", { impressions: 400, clicks: 0 }),
+    page("/never-seen", { impressions: 0, clicks: 0 }),
+    page("/working", { impressions: 900, clicks: 60 }),
+  ];
+  const findings = [
+    finding({ pages: [{ url: "/seen-and-broken", detail: "no title" }] }),
+    finding({ pages: [{ url: "/never-seen", detail: "no title" }] }),
+  ];
+
+  it("puts pages Google has never shown first when being found is the problem", () => {
+    // A title rewrite cannot help a page that is not being found at all.
+    const view = buildYourPages(
+      withFacts({
+        pages,
+        findings,
+        comparison: READY,
+        coverage: { pagesKnown: 39, pagesWithImpressions: 2 },
+      }),
+    );
+    expect(view.rows[0]?.url).toBe("/never-seen");
+    expect(view.ordering).toMatch(/never shown/i);
+  });
+
+  it("puts pages people see and pass over first when the click is the problem", () => {
+    const view = buildYourPages(
+      withFacts({
+        pages,
+        findings,
+        comparison: READY,
+        coverage: { pagesKnown: 10, pagesWithImpressions: 9 },
+      }),
+    );
+    expect(view.rows[0]?.url).toBe("/seen-and-broken");
+    expect(view.ordering).toMatch(/see and do not click/i);
+  });
+
+  it("flips the order between the two diagnoses, on identical pages", () => {
+    // This is the whole point: the same defect on the same page is worth
+    // different amounts depending on what is actually holding the site back.
+    const reachability = buildYourPages(
+      withFacts({
+        pages,
+        findings,
+        comparison: READY,
+        coverage: { pagesKnown: 39, pagesWithImpressions: 2 },
+      }),
+    );
+    const click = buildYourPages(
+      withFacts({
+        pages,
+        findings,
+        comparison: READY,
+        coverage: { pagesKnown: 10, pagesWithImpressions: 9 },
+      }),
+    );
+    expect(reachability.rows[0]?.url).not.toBe(click.rows[0]?.url);
+  });
+
+  it("falls back to worst defect first when no diagnosis backs an order", () => {
+    const view = buildYourPages(withFacts({ pages, findings }));
+    expect(view.ordering).toBeNull();
+    expect(view.rows[0]?.worst).toBe("critical");
+    // The clean page sorts last rather than being dropped.
+    expect(view.rows.map((row) => row.url)).toContain("/working");
+  });
+
+  it("says why each page sits where it does", () => {
+    const view = buildYourPages(
+      withFacts({
+        pages,
+        findings,
+        comparison: READY,
+        coverage: { pagesKnown: 39, pagesWithImpressions: 2 },
+      }),
+    );
+    for (const row of view.rows) expect(row.reason.length).toBeGreaterThan(20);
+    expect(view.rows[0]?.reason).toMatch(/never shown/i);
+  });
+
+  it("orders identically named pages predictably rather than by chance", () => {
+    const view = buildYourPages(withFacts({ pages: [page("/b"), page("/a")], findings: [] }));
+    expect(view.rows.map((row) => row.url)).toEqual(["/a", "/b"]);
+  });
+});
+
+describe("the honesty invariant", () => {
+  it("says the audit has not run rather than reporting zero pages read", () => {
+    const view = buildYourPages(withFacts({ pages: [page("/a", { impressions: 5 })] }));
+    const read = view.tiles.find((tile) => tile.label === "Pages read");
+    expect(read?.value).toBeNull();
+    expect(read?.missingReason).toMatch(/has not run/i);
+  });
+
+  it("reports a real zero once the audit has run", () => {
+    const view = buildYourPages(
+      withFacts({ lastObservedAt: NOW, observedPages: 12, failedPages: 0 }),
+    );
+    expect(view.tiles.find((tile) => tile.label === "Pages that would not open")?.value).toBe("0");
+  });
+
+  it("will not count pages Google has never shown when it has reported none", () => {
+    const view = buildYourPages(withFacts({ lastObservedAt: NOW, pages: [] }));
+    const tile = view.tiles.find((tile) => tile.label === "Never shown by Google");
+    expect(tile?.value).toBeNull();
+    expect(tile?.missingReason).toMatch(/reported no pages/i);
+  });
+
+  it("counts a page with a stored zero impressions as never shown", () => {
+    const view = buildYourPages(
+      withFacts({ lastObservedAt: NOW, pages: [page("/a"), page("/b", { impressions: 3 })] }),
+    );
+    expect(view.tiles.find((tile) => tile.label === "Never shown by Google")?.value).toBe("1");
+  });
+
+  it("refuses to order by a constraint it could not establish", () => {
+    // Coverage present but the comparison is not ready, and the reverse.
+    expect(
+      buildYourPages(withFacts({ coverage: { pagesKnown: 39, pagesWithImpressions: 0 } })).ordering,
+    ).toBeNull();
+    expect(buildYourPages(withFacts({ comparison: READY })).ordering).toBeNull();
+  });
+
+  it("dates the audit rather than presenting a stale read as current", () => {
+    expect(buildYourPages(withFacts({ lastObservedAt: NOW })).asOf).toBe(NOW);
+    expect(buildYourPages(withFacts({})).asOf).toBeNull();
+  });
+});
+
+describe("the status line, written as a consequence", () => {
+  it("leads with pages that are badly broken", () => {
+    const view = buildYourPages(
+      withFacts({
+        pages: [page("/a")],
+        findings: [finding({ pages: [{ url: "/a", detail: "no title" }] })],
+      }),
+    );
+    expect(view.status.tone).toBe("danger");
+    expect(view.status.text).toMatch(/badly broken/i);
+  });
+
+  it("says nothing needs you when nothing does", () => {
+    const view = buildYourPages(withFacts({ lastObservedAt: NOW, pages: [page("/a")] }));
+    expect(view.status).toEqual({ text: "Nothing needs you here", tone: "positive" });
+  });
+});
+
+describe("the tabs", () => {
+  it("counts the pages and the queue separately", () => {
+    const source = {
+      id: "a",
+      kind: "recommendation" as const,
+      categoryId: "pages" as const,
+      title: "A finding",
+      targetUrl: null,
+      storedState: "proposed",
+      fingerprint: null,
+      severity: null,
+      linkedChangeId: null,
+      createdAt: NOW,
+      updatedAt: NOW,
+    };
+    const view = buildYourPages(
+      withFacts({
+        pages: [page("/a"), page("/b")],
+        queueSources: [source, { ...source, id: "done", storedState: "applied" }],
+      }),
+    );
+    const tabs = Object.fromEntries(view.tabs.map((tab) => [tab.id, tab.count]));
+    expect(tabs["pages"]).toBe(2);
+    expect(tabs["suggestions"]).toBe(1);
+    expect(tabs["history"]).toBe(1);
+  });
+});
