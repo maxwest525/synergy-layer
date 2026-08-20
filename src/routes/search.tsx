@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { PageAuditCallout } from "@/components/os/page-audit-callout";
 import { OperatorRouteError } from "@/components/os/route-error";
 import {
   EmptyState,
@@ -370,6 +371,8 @@ function SearchWorkspacePage() {
               No traffic estimate, score, or recommendation is derived from this evidence.
             </p>
           </GlassCard>
+
+          <PageAuditCallout />
 
           <SectionCard
             id="overview"
