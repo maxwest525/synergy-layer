@@ -5,6 +5,7 @@ import type { Database } from "@/integrations/supabase/types";
 import { logActivity } from "./os.server";
 import { observationRecommendationRecord } from "./observation-record";
 import { SearchConsoleFailure, checksum, type QueryRow } from "./search-console.server";
+import { confidenceInCount, confidenceInCountChange, type Confidence } from "./confidence";
 
 type Client = SupabaseClient<Database>;
 
@@ -89,7 +90,12 @@ type Finding = {
   snapshotId: string | null;
   priorSnapshotId: string | null;
   businessImpact: Database["public"]["Enums"]["impact_level"];
-  confidence: number;
+  /**
+   * Derived from the counts the rule actually saw, never a literal. Every one
+   * of these used to be a bare `0.7`, so a click drop from 400 to 100 and one
+   * from 8 to 6 both reached the operator looking equally certain.
+   */
+  confidence: Confidence;
   suggestedAction: Record<string, unknown>;
 };
 
@@ -183,7 +189,7 @@ export function evaluateSeoRules(
         snapshotId: pageId,
         priorSnapshotId: priorPageId,
         businessImpact: before.clicks >= 100 ? "high" : "medium",
-        confidence: 0.75,
+        confidence: confidenceInCountChange(before.clicks, now.clicks),
         suggestedAction: { kind: "review", area: "page_traffic_decline", target: page },
       });
     }
@@ -209,7 +215,7 @@ export function evaluateSeoRules(
         snapshotId: pageId,
         priorSnapshotId: priorPageId,
         businessImpact: "medium",
-        confidence: 0.7,
+        confidence: confidenceInCountChange(before.impressions, now.impressions),
         suggestedAction: { kind: "review", area: "page_visibility_decline", target: page },
       });
     }
@@ -233,7 +239,7 @@ export function evaluateSeoRules(
         snapshotId: pageId,
         priorSnapshotId: priorPageId,
         businessImpact: "medium",
-        confidence: 0.65,
+        confidence: confidenceInCount(now.impressions, t.highImpressionLowCtr.minImpressions),
         suggestedAction: { kind: "review", area: "title_and_meta_relevance", target: page },
       });
     }
@@ -254,7 +260,7 @@ export function evaluateSeoRules(
         snapshotId: pageId,
         priorSnapshotId: priorPageId,
         businessImpact: "medium",
-        confidence: 0.6,
+        confidence: confidenceInCount(now.impressions, t.zeroClickPage.minImpressions),
         suggestedAction: { kind: "review", area: "zero_click_page", target: page },
       });
     }
@@ -282,7 +288,7 @@ export function evaluateSeoRules(
         snapshotId: pageId,
         priorSnapshotId: priorPageId,
         businessImpact: "medium",
-        confidence: 0.6,
+        confidence: confidenceInCountChange(before.impressions, now.impressions),
         suggestedAction: { kind: "review", area: "period_change", target: page },
       });
     }
@@ -310,7 +316,7 @@ export function evaluateSeoRules(
         snapshotId: pageId,
         priorSnapshotId: priorPageId,
         businessImpact: "medium",
-        confidence: 0.6,
+        confidence: confidenceInCountChange(before.impressions, now.impressions),
         suggestedAction: { kind: "review", area: "reinforce_trending_page", target: page },
       });
     }
@@ -342,7 +348,7 @@ export function evaluateSeoRules(
         snapshotId: queryId,
         priorSnapshotId: priorQueryId,
         businessImpact: "high",
-        confidence: 0.7,
+        confidence: confidenceInCount(now.impressions, t.decliningPosition.minImpressions),
         suggestedAction: { kind: "review", area: "ranking_loss", target: term },
       });
     }
@@ -397,7 +403,7 @@ export function evaluateSeoRules(
         snapshotId: overlapSnapshot.id,
         priorSnapshotId: priorOverlapSnapshot?.id ?? null,
         businessImpact: "low",
-        confidence: 0.55,
+        confidence: confidenceInCount(impressions, t.queryOverlap.minTotalImpressions),
         suggestedAction: { kind: "review", area: "possible_query_overlap", target: term },
       });
     }
@@ -498,7 +504,14 @@ export function evaluateCompetitorRules(evidence: CompetitorEvidence | null): Fi
       snapshotId: null,
       priorSnapshotId: null,
       businessImpact: profile.serpShare >= 0.5 ? "high" : "medium",
-      confidence: profile.confidence,
+      // This one is not a count at all: it is the heuristic classifier's own
+      // score for "is this domain really a competitor". It is carried through
+      // verbatim, with that named, rather than dressed up as a measurement.
+      confidence: {
+        value: profile.confidence,
+        band: profile.confidence >= 0.75 ? "high" : profile.confidence >= 0.4 ? "medium" : "low",
+        reason: `Domain classification is heuristic. ${profile.domain} scored ${profile.confidence} as a competitor across ${evidence.serpsAnalysed} observed SERPs, so this is a ranking rival on observed queries, not a confirmed business competitor.`,
+      },
       suggestedAction: {
         kind: "review_competitor_evidence",
         domain: profile.domain,
@@ -528,7 +541,7 @@ export function evaluateCompetitorRules(evidence: CompetitorEvidence | null): Fi
       snapshotId: null,
       priorSnapshotId: null,
       businessImpact: absentShare >= 0.6 ? "high" : "medium",
-      confidence: 0.8,
+      confidence: confidenceInCount(evidence.ownedAbsentSerps.length, absence.minAbsentSerps),
       suggestedAction: {
         kind: "review_coverage_gap",
         note: "Decide which absent queries deserve a page before anything is produced.",
@@ -679,7 +692,10 @@ export async function runSeoValidation(
       comparisonSnapshotId: finding.priorSnapshotId,
       workflowRunId,
       assetId,
-      confidence: finding.confidence,
+      confidence: finding.confidence.value,
+      // Stored beside the number so the operator can see what it rests on
+      // rather than being asked to trust a bare decimal.
+      confidenceReason: finding.confidence.reason,
       suggestedAction: finding.suggestedAction,
       rule: finding.rule,
       thresholds: SEO_VALIDATION_THRESHOLDS,
@@ -701,7 +717,7 @@ export async function runSeoValidation(
         .update(
           observationRecommendationRecord({
             description: finding.description,
-            confidence: finding.confidence,
+            confidence: finding.confidence.value,
             run_id: workflowRunId,
             metadata: evidence as never,
           }),
@@ -723,8 +739,8 @@ export async function runSeoValidation(
             traffic_impact: finding.businessImpact,
             time_saved_minutes: 0,
             risk: "none",
-            confidence: finding.confidence,
-            reasoning: `Rule ${finding.rule} over finalized Search Console snapshots for ${reportingDate} (Pacific), compared against ${comparisonDate ?? "no prior period"}.`,
+            confidence: finding.confidence.value,
+            reasoning: `Rule ${finding.rule} over finalized Search Console snapshots for ${reportingDate} (Pacific), compared against ${comparisonDate ?? "no prior period"}. ${finding.confidence.reason}`,
             suggested_action: finding.suggestedAction as never,
             issue_fingerprint: issueFingerprint,
             run_id: workflowRunId,
