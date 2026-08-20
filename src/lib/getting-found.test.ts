@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { buildGettingFound, type GettingFoundFacts } from "./getting-found";
+import {
+  buildGettingFound,
+  countOf,
+  LIST_LIMIT,
+  topRows,
+  type GettingFoundFacts,
+} from "./getting-found";
 import type { PeriodComparison } from "./search-console";
 
 const READY: PeriodComparison = {
@@ -253,6 +259,92 @@ describe("the diagnosis that precedes the ranking", () => {
   });
 });
 
+describe("the suggestion list the page renders", () => {
+  it("puts what addresses the constraint first, and parks the rest below", () => {
+    const view = buildGettingFound(
+      withFacts({
+        comparison: READY,
+        constraintFacts: {
+          pagesKnown: 39,
+          pagesWithImpressions: 0,
+          impressions: 0,
+          clicks: 0,
+          sessions: null,
+          conversions: null,
+        },
+        queueSources: [
+          { ...source("ctr", 5), rule: "weak_ctr_page" },
+          { ...source("unseen", 5), rule: "zero_impression_page" },
+        ],
+      }),
+    );
+    expect(view.suggestions.map((item) => item.id)).toEqual(["unseen", "ctr"]);
+    expect(view.parkedFrom).toBe(1);
+  });
+
+  it("parks nothing out of sight: every open item is still in the list", () => {
+    const view = buildGettingFound(
+      withFacts({
+        comparison: READY,
+        constraintFacts: {
+          pagesKnown: 39,
+          pagesWithImpressions: 0,
+          impressions: 0,
+          clicks: 0,
+          sessions: null,
+          conversions: null,
+        },
+        queueSources: [
+          { ...source("ctr", 5), rule: "weak_ctr_page" },
+          { ...source("unseen", 5), rule: "zero_impression_page" },
+          { ...source("striking", 5), rule: "striking_distance_query" },
+        ],
+      }),
+    );
+    expect(view.suggestions).toHaveLength(3);
+    expect(view.suggestions.map((item) => item.id).sort()).toEqual(["ctr", "striking", "unseen"]);
+  });
+
+  it("draws no divider when there is no diagnosis to justify one", () => {
+    const view = buildGettingFound(
+      withFacts({ comparison: READY, queueSources: [source("a", 30), source("b", 5)] }),
+    );
+    expect(view.parkedFrom).toBeNull();
+    expect(view.suggestions).toHaveLength(2);
+  });
+
+  it("draws no divider when every suggestion falls on the same side of it", () => {
+    // A divider with nothing below it explains nothing.
+    const view = buildGettingFound(
+      withFacts({
+        comparison: READY,
+        constraintFacts: {
+          pagesKnown: 39,
+          pagesWithImpressions: 0,
+          impressions: 0,
+          clicks: 0,
+          sessions: null,
+          conversions: null,
+        },
+        queueSources: [{ ...source("unseen", 5), rule: "zero_impression_page" }],
+      }),
+    );
+    expect(view.parkedFrom).toBeNull();
+    expect(view.suggestions).toHaveLength(1);
+  });
+
+  it("keeps decided items in history rather than dropping them", () => {
+    const view = buildGettingFound(
+      withFacts({
+        comparison: READY,
+        queueSources: [source("a", 5), source("done", 5, "applied"), source("gone", 5, "rejected")],
+      }),
+    );
+    expect(view.suggestions.map((item) => item.id)).toEqual(["a"]);
+    expect(view.history.map((item) => item.id).sort()).toEqual(["done", "gone"]);
+  });
+});
+
 describe("the tab strip", () => {
   it("carries the counts the board shows", () => {
     const view = buildGettingFound(
@@ -284,3 +376,49 @@ function source(id: string, ageDays: number, storedState = "proposed") {
     updatedAt: created,
   };
 }
+
+describe("the search term and page lists", () => {
+  it("puts the biggest contributors first", () => {
+    const rows = topRows([
+      { keys: ["cheap movers"], clicks: 3 },
+      { keys: ["movers near me"], clicks: 41 },
+      { keys: ["packing service"], clicks: 12 },
+    ]);
+    expect(rows.map((row) => row.label)).toEqual([
+      "movers near me",
+      "packing service",
+      "cheap movers",
+    ]);
+  });
+
+  it("keeps a stored zero, because a term shown and never clicked is a fact", () => {
+    expect(topRows([{ keys: ["storage quote"], clicks: 0 }])).toEqual([
+      { label: "storage quote", clicks: 0 },
+    ]);
+  });
+
+  it("drops a row Google withheld the term for rather than showing a blank line", () => {
+    // Search Console omits the key on rare queries. An unlabelled row would
+    // read as a search nobody typed.
+    expect(
+      topRows([{ clicks: 9 }, { keys: [""], clicks: 4 }, { keys: ["real"], clicks: 1 }]),
+    ).toEqual([{ label: "real", clicks: 1 }]);
+  });
+
+  it("treats a missing click count as zero, not as a reason to drop the row", () => {
+    expect(topRows([{ keys: ["a"] }])).toEqual([{ label: "a", clicks: 0 }]);
+    expect(countOf(undefined)).toBe(0);
+    expect(countOf(Number.NaN)).toBe(0);
+    expect(countOf(7)).toBe(7);
+  });
+
+  it("cuts the list at the limit instead of rendering every stored row", () => {
+    const many = Array.from({ length: LIST_LIMIT + 10 }, (_unused, index) => ({
+      keys: [`term ${index}`],
+      clicks: index,
+    }));
+    expect(topRows(many)).toHaveLength(LIST_LIMIT);
+    // The cut keeps the biggest, not the first stored.
+    expect(topRows(many)[0]?.clicks).toBe(LIST_LIMIT + 9);
+  });
+});

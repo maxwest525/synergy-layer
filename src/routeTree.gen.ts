@@ -35,7 +35,6 @@ import { Route as PagesRouteImport } from './routes/pages'
 import { Route as RecommendationsRouteImport } from './routes/recommendations'
 import { Route as RoadmapRouteImport } from './routes/roadmap'
 import { Route as SchedulerRouteImport } from './routes/scheduler'
-import { Route as SearchRouteImport } from './routes/search'
 import { Route as SeoRunsRouteImport } from './routes/seo-runs'
 import { Route as SpendRouteImport } from './routes/spend'
 import { Route as StudioRouteImport } from './routes/studio'
@@ -64,6 +63,8 @@ import { Route as RecommendationsIndexRouteImport } from './routes/recommendatio
 import { Route as RecommendationsIdRouteImport } from './routes/recommendations.$id'
 import { Route as SchedulerIndexRouteImport } from './routes/scheduler.index'
 import { Route as SchedulerIdRouteImport } from './routes/scheduler.$id'
+import { Route as SearchIndexRouteImport } from './routes/search.index'
+import { Route as SearchToolsRouteImport } from './routes/search.tools'
 import { Route as SeoRunsIndexRouteImport } from './routes/seo-runs.index'
 import { Route as SeoRunsIdRouteImport } from './routes/seo-runs.$id'
 import { Route as WorkflowsIndexRouteImport } from './routes/workflows.index'
@@ -208,11 +209,6 @@ const SchedulerRoute = SchedulerRouteImport.update({
   path: '/scheduler',
   getParentRoute: () => rootRouteImport,
 } as any)
-const SearchRoute = SearchRouteImport.update({
-  id: '/search',
-  path: '/search',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const SeoRunsRoute = SeoRunsRouteImport.update({
   id: '/seo-runs',
   path: '/seo-runs',
@@ -355,6 +351,16 @@ const SchedulerIdRoute = SchedulerIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => SchedulerRoute,
 } as any)
+const SearchIndexRoute = SearchIndexRouteImport.update({
+  id: '/search/',
+  path: '/search/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SearchToolsRoute = SearchToolsRouteImport.update({
+  id: '/search/tools',
+  path: '/search/tools',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SeoRunsIndexRoute = SeoRunsIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -455,7 +461,6 @@ export interface FileRoutesByFullPath {
   '/recommendations': typeof RecommendationsRouteWithChildren
   '/roadmap': typeof RoadmapRoute
   '/scheduler': typeof SchedulerRouteWithChildren
-  '/search': typeof SearchRoute
   '/seo-runs': typeof SeoRunsRouteWithChildren
   '/spend': typeof SpendRoute
   '/studio': typeof StudioRoute
@@ -476,6 +481,7 @@ export interface FileRoutesByFullPath {
   '/knowledge/manual': typeof KnowledgeManualRoute
   '/recommendations/$id': typeof RecommendationsIdRoute
   '/scheduler/$id': typeof SchedulerIdRoute
+  '/search/tools': typeof SearchToolsRoute
   '/seo-runs/$id': typeof SeoRunsIdRoute
   '/workflows/$id': typeof WorkflowsIdRoute
   '/ads/': typeof AdsIndexRoute
@@ -486,6 +492,7 @@ export interface FileRoutesByFullPath {
   '/knowledge/': typeof KnowledgeIndexRoute
   '/recommendations/': typeof RecommendationsIndexRoute
   '/scheduler/': typeof SchedulerIndexRoute
+  '/search/': typeof SearchIndexRoute
   '/seo-runs/': typeof SeoRunsIndexRoute
   '/workflows/': typeof WorkflowsIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
@@ -519,7 +526,6 @@ export interface FileRoutesByTo {
   '/operators': typeof OperatorsRoute
   '/pages': typeof PagesRoute
   '/roadmap': typeof RoadmapRoute
-  '/search': typeof SearchRoute
   '/spend': typeof SpendRoute
   '/studio': typeof StudioRoute
   '/today': typeof TodayRoute
@@ -537,6 +543,7 @@ export interface FileRoutesByTo {
   '/knowledge/manual': typeof KnowledgeManualRoute
   '/recommendations/$id': typeof RecommendationsIdRoute
   '/scheduler/$id': typeof SchedulerIdRoute
+  '/search/tools': typeof SearchToolsRoute
   '/seo-runs/$id': typeof SeoRunsIdRoute
   '/workflows/$id': typeof WorkflowsIdRoute
   '/ads': typeof AdsIndexRoute
@@ -547,6 +554,7 @@ export interface FileRoutesByTo {
   '/knowledge': typeof KnowledgeIndexRoute
   '/recommendations': typeof RecommendationsIndexRoute
   '/scheduler': typeof SchedulerIndexRoute
+  '/search': typeof SearchIndexRoute
   '/seo-runs': typeof SeoRunsIndexRoute
   '/workflows': typeof WorkflowsIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
@@ -587,7 +595,6 @@ export interface FileRoutesById {
   '/recommendations': typeof RecommendationsRouteWithChildren
   '/roadmap': typeof RoadmapRoute
   '/scheduler': typeof SchedulerRouteWithChildren
-  '/search': typeof SearchRoute
   '/seo-runs': typeof SeoRunsRouteWithChildren
   '/spend': typeof SpendRoute
   '/studio': typeof StudioRoute
@@ -608,6 +615,7 @@ export interface FileRoutesById {
   '/knowledge/manual': typeof KnowledgeManualRoute
   '/recommendations/$id': typeof RecommendationsIdRoute
   '/scheduler/$id': typeof SchedulerIdRoute
+  '/search/tools': typeof SearchToolsRoute
   '/seo-runs/$id': typeof SeoRunsIdRoute
   '/workflows/$id': typeof WorkflowsIdRoute
   '/ads/': typeof AdsIndexRoute
@@ -618,6 +626,7 @@ export interface FileRoutesById {
   '/knowledge/': typeof KnowledgeIndexRoute
   '/recommendations/': typeof RecommendationsIndexRoute
   '/scheduler/': typeof SchedulerIndexRoute
+  '/search/': typeof SearchIndexRoute
   '/seo-runs/': typeof SeoRunsIndexRoute
   '/workflows/': typeof WorkflowsIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
@@ -659,7 +668,6 @@ export interface FileRouteTypes {
     | '/recommendations'
     | '/roadmap'
     | '/scheduler'
-    | '/search'
     | '/seo-runs'
     | '/spend'
     | '/studio'
@@ -680,6 +688,7 @@ export interface FileRouteTypes {
     | '/knowledge/manual'
     | '/recommendations/$id'
     | '/scheduler/$id'
+    | '/search/tools'
     | '/seo-runs/$id'
     | '/workflows/$id'
     | '/ads/'
@@ -690,6 +699,7 @@ export interface FileRouteTypes {
     | '/knowledge/'
     | '/recommendations/'
     | '/scheduler/'
+    | '/search/'
     | '/seo-runs/'
     | '/workflows/'
     | '/.lovable/oauth/consent'
@@ -723,7 +733,6 @@ export interface FileRouteTypes {
     | '/operators'
     | '/pages'
     | '/roadmap'
-    | '/search'
     | '/spend'
     | '/studio'
     | '/today'
@@ -741,6 +750,7 @@ export interface FileRouteTypes {
     | '/knowledge/manual'
     | '/recommendations/$id'
     | '/scheduler/$id'
+    | '/search/tools'
     | '/seo-runs/$id'
     | '/workflows/$id'
     | '/ads'
@@ -751,6 +761,7 @@ export interface FileRouteTypes {
     | '/knowledge'
     | '/recommendations'
     | '/scheduler'
+    | '/search'
     | '/seo-runs'
     | '/workflows'
     | '/.lovable/oauth/consent'
@@ -790,7 +801,6 @@ export interface FileRouteTypes {
     | '/recommendations'
     | '/roadmap'
     | '/scheduler'
-    | '/search'
     | '/seo-runs'
     | '/spend'
     | '/studio'
@@ -811,6 +821,7 @@ export interface FileRouteTypes {
     | '/knowledge/manual'
     | '/recommendations/$id'
     | '/scheduler/$id'
+    | '/search/tools'
     | '/seo-runs/$id'
     | '/workflows/$id'
     | '/ads/'
@@ -821,6 +832,7 @@ export interface FileRouteTypes {
     | '/knowledge/'
     | '/recommendations/'
     | '/scheduler/'
+    | '/search/'
     | '/seo-runs/'
     | '/workflows/'
     | '/.lovable/oauth/consent'
@@ -861,7 +873,6 @@ export interface RootRouteChildren {
   RecommendationsRoute: typeof RecommendationsRouteWithChildren
   RoadmapRoute: typeof RoadmapRoute
   SchedulerRoute: typeof SchedulerRouteWithChildren
-  SearchRoute: typeof SearchRoute
   SeoRunsRoute: typeof SeoRunsRouteWithChildren
   SpendRoute: typeof SpendRoute
   StudioRoute: typeof StudioRoute
@@ -873,8 +884,10 @@ export interface RootRouteChildren {
   ApiAgentChatRoute: typeof ApiAgentChatRoute
   ApiStudioChatRoute: typeof ApiStudioChatRoute
   ChangesIdRoute: typeof ChangesIdRoute
+  SearchToolsRoute: typeof SearchToolsRoute
   AdsIndexRoute: typeof AdsIndexRoute
   ChangesIndexRoute: typeof ChangesIndexRoute
+  SearchIndexRoute: typeof SearchIndexRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
   ApiPublicHooksDataforseoPostbackRoute: typeof ApiPublicHooksDataforseoPostbackRoute
@@ -1066,13 +1079,6 @@ declare module '@tanstack/react-router' {
       path: '/scheduler'
       fullPath: '/scheduler'
       preLoaderRoute: typeof SchedulerRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/search': {
-      id: '/search'
-      path: '/search'
-      fullPath: '/search'
-      preLoaderRoute: typeof SearchRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/seo-runs': {
@@ -1270,6 +1276,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/scheduler/$id'
       preLoaderRoute: typeof SchedulerIdRouteImport
       parentRoute: typeof SchedulerRoute
+    }
+    '/search/': {
+      id: '/search/'
+      path: '/search'
+      fullPath: '/search/'
+      preLoaderRoute: typeof SearchIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/search/tools': {
+      id: '/search/tools'
+      path: '/search/tools'
+      fullPath: '/search/tools'
+      preLoaderRoute: typeof SearchToolsRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/seo-runs/': {
       id: '/seo-runs/'
@@ -1528,7 +1548,6 @@ const rootRouteChildren: RootRouteChildren = {
   RecommendationsRoute: RecommendationsRouteWithChildren,
   RoadmapRoute: RoadmapRoute,
   SchedulerRoute: SchedulerRouteWithChildren,
-  SearchRoute: SearchRoute,
   SeoRunsRoute: SeoRunsRouteWithChildren,
   SpendRoute: SpendRoute,
   StudioRoute: StudioRoute,
@@ -1541,8 +1560,10 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAgentChatRoute: ApiAgentChatRoute,
   ApiStudioChatRoute: ApiStudioChatRoute,
   ChangesIdRoute: ChangesIdRoute,
+  SearchToolsRoute: SearchToolsRoute,
   AdsIndexRoute: AdsIndexRoute,
   ChangesIndexRoute: ChangesIndexRoute,
+  SearchIndexRoute: SearchIndexRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
   ApiPublicHooksDataforseoPostbackRoute: ApiPublicHooksDataforseoPostbackRoute,

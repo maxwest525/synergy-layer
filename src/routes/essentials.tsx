@@ -67,6 +67,7 @@ type Action =
       label: string;
       to:
         | "/search"
+        | "/search/tools"
         | "/keywords"
         | "/competitors"
         | "/capabilities/systems"
@@ -363,7 +364,7 @@ function EssentialsPage() {
         ? `AOOS currently collects the selected property ${data.property.siteUrl}. ${data.propertyCount} property record(s) are stored, and nothing outside them is observed.`
         : systemGap(system("api.search_console"), "Search Console"),
 
-      action: { label: "Open Search evidence", to: "/search" },
+      action: { label: "Open Search evidence", to: "/search/tools" },
     },
     {
       id: "gsc-metrics",
@@ -371,7 +372,7 @@ function EssentialsPage() {
       status: evidenceStatus(gsc.snapshotCount, gsc.totalsDays >= 28),
       evidence: `${gsc.snapshotCount} stored snapshot(s). Latest finalized date ${gsc.latestDate ?? "none"}, collected ${formatWhen(gsc.collectedAt)}: ${gsc.latestClicks} clicks and ${gsc.latestImpressions} impressions, ${gsc.pageRows} page row(s) and ${gsc.queryRows} query row(s).`,
       gap: `Only ${gsc.totalsDays} finalized day(s) of totals are stored, and the site returns very few rows, so trends and comparisons are not reliable yet.`,
-      action: { label: "Open Search evidence", to: "/search" },
+      action: { label: "Open Search evidence", to: "/search/tools" },
     },
     {
       id: "indexing",
@@ -379,7 +380,7 @@ function EssentialsPage() {
       status: indexingStatus(gsc.sitemapCount, false),
       evidence: `${gsc.sitemapCount} sitemap record(s) observed on ${gsc.latestDate ?? "no finalized date"}. No page-level index status is stored.`,
       gap: "URL Inspection is not wired, so AOOS cannot say whether a specific page is indexed.",
-      action: { label: "Open Search evidence", to: "/search" },
+      action: { label: "Open Search evidence", to: "/search/tools" },
     },
     {
       id: "sitemaps",
@@ -391,7 +392,7 @@ function EssentialsPage() {
           : "No sitemap rows were returned on the latest finalized date.",
 
       gap: "Sitemaps are read only. AOOS never submits or resubmits a sitemap.",
-      action: { label: "Open Search evidence", to: "/search" },
+      action: { label: "Open Search evidence", to: "/search/tools" },
     },
   ];
 

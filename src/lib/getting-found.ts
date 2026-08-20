@@ -19,13 +19,51 @@ import {
   partitionByConstraint,
   type ConstraintFacts,
 } from "./binding-constraint";
-import { buildQueue, compareQueueItems, type QueueSource } from "./suggestion-queue";
+import {
+  buildQueue,
+  compareQueueItems,
+  type QueueItem,
+  type QueueSource,
+} from "./suggestion-queue";
 import type { PeriodComparison } from "./search-console";
 
 export type SearchListRow = {
   readonly label: string;
   readonly clicks: number;
 };
+
+/** How many search terms or pages a list shows before it is cut off. */
+export const LIST_LIMIT = 25;
+
+/** One row as Search Console stores it inside a snapshot payload. */
+export type StoredSearchRow = {
+  readonly keys?: readonly string[];
+  readonly clicks?: unknown;
+  readonly impressions?: unknown;
+};
+
+/** A stored count, or zero. A non-number is a missing field, not a measured zero. */
+export function countOf(value: unknown): number {
+  return typeof value === "number" && Number.isFinite(value) ? value : 0;
+}
+
+/**
+ * The biggest contributors first, cut to the list limit and labelled by key.
+ *
+ * A row without a usable key is dropped rather than shown as an empty label:
+ * Search Console withholds the term on rare queries, and an unlabelled line
+ * would read as a search nobody typed.
+ */
+export function topRows(rows: readonly StoredSearchRow[]): SearchListRow[] {
+  return rows
+    .flatMap((row): SearchListRow[] => {
+      const label = row.keys?.[0];
+      if (typeof label !== "string" || label.length === 0) return [];
+      return [{ label, clicks: countOf(row.clicks) }];
+    })
+    .sort((left, right) => right.clicks - left.clicks)
+    .slice(0, LIST_LIMIT);
+}
 
 export type GettingFoundFacts = {
   readonly now: string;
@@ -95,6 +133,24 @@ export type GettingFoundView = {
    * asserting a priority it cannot justify.
    */
   readonly constraint: ConstraintBanner | null;
+  /**
+   * Every open suggestion, ranked. When a constraint was diagnosed, the ones
+   * addressing it come first and the rest follow, still present and still
+   * ranked among themselves. Nothing is hidden by the diagnosis.
+   */
+  readonly suggestions: readonly QueueItem[];
+  /**
+   * The index in `suggestions` where the parked group begins, so the page can
+   * draw the divider that explains why the order changed. Null when there is no
+   * diagnosis, or when every suggestion falls on the same side of it.
+   */
+  readonly parkedFrom: number | null;
+  /** What has already been decided, so a handled item stays findable. */
+  readonly history: readonly QueueItem[];
+  /** The search terms behind the totals, biggest first. */
+  readonly queries: readonly SearchListRow[];
+  /** The pages behind the totals, biggest first. */
+  readonly pages: readonly SearchListRow[];
 };
 
 const NO_PROPERTY =
@@ -252,6 +308,8 @@ export function buildGettingFound(facts: GettingFoundFacts): GettingFoundView {
   const queue = buildQueue(facts.queueSources, facts.now);
   const open = [...queue.open].sort(compareQueueItems);
   const handled = queue.ignored.length + queue.done.length;
+  const constraint = constraintFor(facts, open);
+  const ordered = orderByConstraint(facts, open);
 
   return {
     tiles: [
@@ -268,7 +326,41 @@ export function buildGettingFound(facts: GettingFoundFacts): GettingFoundView {
       { id: "pages", label: "Pages", count: null },
       { id: "history", label: "History", count: handled },
     ],
-    constraint: constraintFor(facts, open),
+    constraint,
+    suggestions: ordered.suggestions,
+    parkedFrom: ordered.parkedFrom,
+    history: [...queue.ignored, ...queue.done],
+    queries: facts.queries,
+    pages: facts.pages,
+  };
+}
+
+/**
+ * The open queue, re-ordered so what addresses the binding constraint comes
+ * first.
+ *
+ * Nothing is dropped. A suggestion that is real but is not today\'s problem
+ * stays on the page below a divider, because removing it would be the engine
+ * deciding for the operator, and the diagnosis is a priority claim, not a
+ * correctness claim.
+ */
+function orderByConstraint(
+  facts: GettingFoundFacts,
+  open: readonly QueueItem[],
+): { suggestions: readonly QueueItem[]; parkedFrom: number | null } {
+  if (facts.constraintFacts === null) return { suggestions: open, parkedFrom: null };
+
+  const diagnosis = bindingConstraint(facts.constraintFacts);
+  if (diagnosis.constraint === null) return { suggestions: open, parkedFrom: null };
+
+  const split = partitionByConstraint(open, diagnosis.constraint, (item) => item.rule ?? "");
+  // A divider with nothing on one side of it explains nothing.
+  if (split.addressing.length === 0 || split.parked.length === 0) {
+    return { suggestions: open, parkedFrom: null };
+  }
+  return {
+    suggestions: [...split.addressing, ...split.parked],
+    parkedFrom: split.addressing.length,
   };
 }
 

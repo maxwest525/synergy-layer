@@ -740,7 +740,7 @@ function WhereThingsStand() {
 
   const tiles = [
     {
-      to: "/search",
+      to: "/search/tools",
       label: "Search results",
       value: evidence.searchConsoleSnapshots,
       note: "days of Google Search data collected",
