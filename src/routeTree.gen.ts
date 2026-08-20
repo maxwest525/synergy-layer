@@ -39,6 +39,7 @@ import { Route as SearchRouteImport } from './routes/search'
 import { Route as SeoRunsRouteImport } from './routes/seo-runs'
 import { Route as SpendRouteImport } from './routes/spend'
 import { Route as StudioRouteImport } from './routes/studio'
+import { Route as TodayRouteImport } from './routes/today'
 import { Route as WorkflowsRouteImport } from './routes/workflows'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
@@ -225,6 +226,11 @@ const SpendRoute = SpendRouteImport.update({
 const StudioRoute = StudioRouteImport.update({
   id: '/studio',
   path: '/studio',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TodayRoute = TodayRouteImport.update({
+  id: '/today',
+  path: '/today',
   getParentRoute: () => rootRouteImport,
 } as any)
 const WorkflowsRoute = WorkflowsRouteImport.update({
@@ -453,6 +459,7 @@ export interface FileRoutesByFullPath {
   '/seo-runs': typeof SeoRunsRouteWithChildren
   '/spend': typeof SpendRoute
   '/studio': typeof StudioRoute
+  '/today': typeof TodayRoute
   '/workflows': typeof WorkflowsRouteWithChildren
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -515,6 +522,7 @@ export interface FileRoutesByTo {
   '/search': typeof SearchRoute
   '/spend': typeof SpendRoute
   '/studio': typeof StudioRoute
+  '/today': typeof TodayRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/ads/advertisers': typeof AdsAdvertisersRoute
@@ -583,6 +591,7 @@ export interface FileRoutesById {
   '/seo-runs': typeof SeoRunsRouteWithChildren
   '/spend': typeof SpendRoute
   '/studio': typeof StudioRoute
+  '/today': typeof TodayRoute
   '/workflows': typeof WorkflowsRouteWithChildren
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -654,6 +663,7 @@ export interface FileRouteTypes {
     | '/seo-runs'
     | '/spend'
     | '/studio'
+    | '/today'
     | '/workflows'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
@@ -716,6 +726,7 @@ export interface FileRouteTypes {
     | '/search'
     | '/spend'
     | '/studio'
+    | '/today'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/ads/advertisers'
@@ -783,6 +794,7 @@ export interface FileRouteTypes {
     | '/seo-runs'
     | '/spend'
     | '/studio'
+    | '/today'
     | '/workflows'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
@@ -853,6 +865,7 @@ export interface RootRouteChildren {
   SeoRunsRoute: typeof SeoRunsRouteWithChildren
   SpendRoute: typeof SpendRoute
   StudioRoute: typeof StudioRoute
+  TodayRoute: typeof TodayRoute
   WorkflowsRoute: typeof WorkflowsRouteWithChildren
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -1081,6 +1094,13 @@ declare module '@tanstack/react-router' {
       path: '/studio'
       fullPath: '/studio'
       preLoaderRoute: typeof StudioRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/today': {
+      id: '/today'
+      path: '/today'
+      fullPath: '/today'
+      preLoaderRoute: typeof TodayRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/workflows': {
@@ -1512,6 +1532,7 @@ const rootRouteChildren: RootRouteChildren = {
   SeoRunsRoute: SeoRunsRouteWithChildren,
   SpendRoute: SpendRoute,
   StudioRoute: StudioRoute,
+  TodayRoute: TodayRoute,
   WorkflowsRoute: WorkflowsRouteWithChildren,
   Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
