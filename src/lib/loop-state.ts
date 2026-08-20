@@ -49,7 +49,7 @@ const STAGE_BUILDERS: Record<TaxonomyGroupKey, (facts: NextActionFacts) => LoopS
       label: "Evidence stored",
       count: facts.gsc.snapshots,
       unit: "snapshot",
-      to: "/search",
+      to: "/search/tools",
     },
     {
       key: "proposed",
@@ -86,7 +86,7 @@ const STAGE_BUILDERS: Record<TaxonomyGroupKey, (facts: NextActionFacts) => LoopS
       label: "Search stored",
       count: facts.gsc.snapshots,
       unit: "snapshot",
-      to: "/search",
+      to: "/search/tools",
     },
     {
       key: "analytics",
@@ -138,7 +138,7 @@ const STAGE_BUILDERS: Record<TaxonomyGroupKey, (facts: NextActionFacts) => LoopS
       label: "Produced evidence",
       count: facts.gsc.snapshots + facts.ga4.snapshots + facts.pagespeed.snapshots,
       unit: "snapshot",
-      to: "/search",
+      to: "/search/tools",
     },
     {
       key: "applied",
@@ -175,7 +175,7 @@ const STAGE_BUILDERS: Record<TaxonomyGroupKey, (facts: NextActionFacts) => LoopS
       label: "Feeding evidence",
       count: facts.gsc.snapshots + facts.ga4.snapshots + facts.umami.snapshots,
       unit: "snapshot",
-      to: "/search",
+      to: "/search/tools",
     },
     { key: "cost", label: "Spend recorded", count: facts.runs.total, unit: "run", to: "/spend" },
   ],

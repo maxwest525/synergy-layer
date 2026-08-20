@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { buildGettingFound, type GettingFoundFacts } from "./getting-found";
+import {
+  buildGettingFound,
+  countOf,
+  countShownPages,
+  LIST_LIMIT,
+  topRows,
+  type GettingFoundFacts,
+} from "./getting-found";
 import type { PeriodComparison } from "./search-console";
 
 const READY: PeriodComparison = {
@@ -38,7 +45,8 @@ const facts: GettingFoundFacts = {
   queries: [],
   pages: [],
   queueSources: [],
-  constraintFacts: null,
+  coverage: null,
+  sessions: null,
 };
 
 function withFacts(overrides: Partial<GettingFoundFacts>): GettingFoundFacts {
@@ -208,14 +216,7 @@ describe("the diagnosis that precedes the ranking", () => {
     const view = buildGettingFound(
       withFacts({
         comparison: READY,
-        constraintFacts: {
-          pagesKnown: 39,
-          pagesWithImpressions: 0,
-          impressions: 0,
-          clicks: 0,
-          sessions: null,
-          conversions: null,
-        },
+        coverage: { pagesKnown: 39, pagesWithImpressions: 0 },
         queueSources: [
           { ...source("indexed", 5), rule: "index_coverage_drift" },
           { ...source("unseen", 5), rule: "zero_impression_page" },
@@ -233,14 +234,7 @@ describe("the diagnosis that precedes the ranking", () => {
     const view = buildGettingFound(
       withFacts({
         comparison: READY,
-        constraintFacts: {
-          pagesKnown: 10,
-          pagesWithImpressions: 9,
-          impressions: 4000,
-          clicks: 6,
-          sessions: null,
-          conversions: null,
-        },
+        coverage: { pagesKnown: 10, pagesWithImpressions: 9 },
         queueSources: [
           { ...source("ctr", 5), rule: "weak_ctr_page" },
           { ...source("unseen", 5), rule: "zero_impression_page" },
@@ -250,6 +244,110 @@ describe("the diagnosis that precedes the ranking", () => {
     // Now the click is the constraint, so the pair flips.
     expect(view.constraint?.addressing).toBe(1);
     expect(view.constraint?.parked).toBe(1);
+  });
+});
+
+describe("the suggestion list the page renders", () => {
+  it("puts what addresses the constraint first, and parks the rest below", () => {
+    const view = buildGettingFound(
+      withFacts({
+        comparison: READY,
+        coverage: { pagesKnown: 39, pagesWithImpressions: 0 },
+        queueSources: [
+          { ...source("ctr", 5), rule: "weak_ctr_page" },
+          { ...source("unseen", 5), rule: "zero_impression_page" },
+        ],
+      }),
+    );
+    expect(view.suggestions.map((item) => item.id)).toEqual(["unseen", "ctr"]);
+    expect(view.parkedFrom).toBe(1);
+  });
+
+  it("parks nothing out of sight: every open item is still in the list", () => {
+    const view = buildGettingFound(
+      withFacts({
+        comparison: READY,
+        coverage: { pagesKnown: 39, pagesWithImpressions: 0 },
+        queueSources: [
+          { ...source("ctr", 5), rule: "weak_ctr_page" },
+          { ...source("unseen", 5), rule: "zero_impression_page" },
+          { ...source("striking", 5), rule: "striking_distance_query" },
+        ],
+      }),
+    );
+    expect(view.suggestions).toHaveLength(3);
+    expect(view.suggestions.map((item) => item.id).sort()).toEqual(["ctr", "striking", "unseen"]);
+  });
+
+  it("draws no divider when there is no diagnosis to justify one", () => {
+    const view = buildGettingFound(
+      withFacts({ comparison: READY, queueSources: [source("a", 30), source("b", 5)] }),
+    );
+    expect(view.parkedFrom).toBeNull();
+    expect(view.suggestions).toHaveLength(2);
+  });
+
+  it("draws no divider when every suggestion falls on the same side of it", () => {
+    // A divider with nothing below it explains nothing.
+    const view = buildGettingFound(
+      withFacts({
+        comparison: READY,
+        coverage: { pagesKnown: 39, pagesWithImpressions: 0 },
+        queueSources: [{ ...source("unseen", 5), rule: "zero_impression_page" }],
+      }),
+    );
+    expect(view.parkedFrom).toBeNull();
+    expect(view.suggestions).toHaveLength(1);
+  });
+
+  it("keeps decided items in history rather than dropping them", () => {
+    const view = buildGettingFound(
+      withFacts({
+        comparison: READY,
+        queueSources: [source("a", 5), source("done", 5, "applied"), source("gone", 5, "rejected")],
+      }),
+    );
+    expect(view.suggestions.map((item) => item.id)).toEqual(["a"]);
+    expect(view.history.map((item) => item.id).sort()).toEqual(["done", "gone"]);
+  });
+});
+
+describe("defects an adversarial review found before this shipped", () => {
+  it("refuses a diagnosis when the coverage window was never collected", () => {
+    // The window is absent, not empty. Assembling zeros out of it told a site
+    // with 612 impressions on screen that none of its 39 pages were findable.
+    const view = buildGettingFound(withFacts({ comparison: READY, coverage: null }));
+    expect(view.constraint).toBeNull();
+    expect(view.parkedFrom).toBeNull();
+  });
+
+  it("refuses a diagnosis when the comparison behind the tiles is not ready", () => {
+    const view = buildGettingFound(
+      withFacts({ coverage: { pagesKnown: 39, pagesWithImpressions: 0 } }),
+    );
+    expect(view.constraint).toBeNull();
+  });
+
+  it("counts the same impressions the tiles show, so the two cannot disagree", () => {
+    // The banner used to read its totals from the page-dimension window, a
+    // separate measurement that legitimately differs from the daily totals.
+    // Two impression counts on one screen, and the verdict could flip between
+    // them.
+    const view = buildGettingFound(
+      withFacts({
+        comparison: READY,
+        coverage: { pagesKnown: 10, pagesWithImpressions: 9 },
+      }),
+    );
+    // READY carries 612 impressions and 23 clicks: a 3.8% rate, well clear of
+    // the weak-CTR floor, so the click constraint must not fire.
+    expect(view.constraint?.reason).toContain("612");
+    expect(view.constraint?.reason).not.toMatch(/choosing someone else/);
+  });
+
+  it("dates the window rather than presenting a stale one as current", () => {
+    expect(buildGettingFound(withFacts({ latestDate: "2026-08-17" })).asOf).toBe("2026-08-17");
+    expect(buildGettingFound(withFacts({ latestDate: null })).asOf).toBeNull();
   });
 });
 
@@ -264,7 +362,11 @@ describe("the tab strip", () => {
     const tabs = Object.fromEntries(view.tabs.map((tab) => [tab.id, tab.count]));
     expect(tabs["suggestions"]).toBe(1);
     expect(tabs["history"]).toBe(2);
-    expect(tabs["overview"]).toBeNull();
+    // The two lists carry no count, and there is no Overview tab: it rendered
+    // the identical component to Suggestions, so it was a second door to one
+    // room. The tiles above the strip are the overview.
+    expect(tabs["queries"]).toBeNull();
+    expect(view.tabs.map((tab) => tab.id)).not.toContain("overview");
   });
 });
 
@@ -284,3 +386,85 @@ function source(id: string, ageDays: number, storedState = "proposed") {
     updatedAt: created,
   };
 }
+
+describe("the search term and page lists", () => {
+  it("puts the biggest contributors first", () => {
+    const rows = topRows([
+      { keys: ["cheap movers"], clicks: 3 },
+      { keys: ["movers near me"], clicks: 41 },
+      { keys: ["packing service"], clicks: 12 },
+    ]);
+    expect(rows.map((row) => row.label)).toEqual([
+      "movers near me",
+      "packing service",
+      "cheap movers",
+    ]);
+  });
+
+  it("keeps a stored zero, because a term shown and never clicked is a fact", () => {
+    expect(topRows([{ keys: ["storage quote"], clicks: 0 }])).toEqual([
+      { label: "storage quote", clicks: 0 },
+    ]);
+  });
+
+  it("drops a row Google withheld the term for rather than showing a blank line", () => {
+    // Search Console omits the key on rare queries. An unlabelled row would
+    // read as a search nobody typed.
+    expect(
+      topRows([{ clicks: 9 }, { keys: [""], clicks: 4 }, { keys: ["real"], clicks: 1 }]),
+    ).toEqual([{ label: "real", clicks: 1 }]);
+  });
+
+  it("treats a missing click count as zero, not as a reason to drop the row", () => {
+    expect(topRows([{ keys: ["a"] }])).toEqual([{ label: "a", clicks: 0 }]);
+    expect(countOf(undefined)).toBe(0);
+    expect(countOf(Number.NaN)).toBe(0);
+    expect(countOf(7)).toBe(7);
+  });
+
+  it("cuts the list at the limit instead of rendering every stored row", () => {
+    const many = Array.from({ length: LIST_LIMIT + 10 }, (_unused, index) => ({
+      keys: [`term ${index}`],
+      clicks: index,
+    }));
+    expect(topRows(many)).toHaveLength(LIST_LIMIT);
+    // The cut keeps the biggest, not the first stored.
+    expect(topRows(many)[0]?.clicks).toBe(LIST_LIMIT + 9);
+  });
+});
+
+describe("counting how much of the site Google shows", () => {
+  const readable = new Set(["https://x.test/a", "https://x.test/b", "https://x.test/c"]);
+
+  it("counts only pages the audit actually read", () => {
+    // Search Console reports whatever it has; the audit stops at its own limit.
+    // Counting the window's rows straight off produced shares above one, which
+    // silently un-fired the diagnosis on exactly the large sites that need it.
+    const rows = [
+      { keys: ["https://x.test/a"], impressions: 40 },
+      { keys: ["https://x.test/unknown"], impressions: 900 },
+    ];
+    expect(countShownPages(rows, readable)).toBe(1);
+  });
+
+  it("never returns more than the audit knows about", () => {
+    const rows = Array.from({ length: 500 }, (_unused, index) => ({
+      keys: [`https://x.test/${index}`],
+      impressions: 10,
+    }));
+    expect(countShownPages(rows, readable)).toBeLessThanOrEqual(readable.size);
+  });
+
+  it("does not count a page that was never shown", () => {
+    const rows = [{ keys: ["https://x.test/a"], impressions: 0 }, { keys: ["https://x.test/b"] }];
+    expect(countShownPages(rows, readable)).toBe(0);
+  });
+
+  it("counts a page once however many rows carry it", () => {
+    const rows = [
+      { keys: ["https://x.test/a"], impressions: 5 },
+      { keys: ["https://x.test/a"], impressions: 9 },
+    ];
+    expect(countShownPages(rows, readable)).toBe(1);
+  });
+});

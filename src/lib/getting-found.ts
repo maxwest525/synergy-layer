@@ -19,13 +19,80 @@ import {
   partitionByConstraint,
   type ConstraintFacts,
 } from "./binding-constraint";
-import { buildQueue, compareQueueItems, type QueueSource } from "./suggestion-queue";
+import {
+  buildQueue,
+  compareQueueItems,
+  type QueueItem,
+  type QueueSource,
+} from "./suggestion-queue";
 import type { PeriodComparison } from "./search-console";
 
 export type SearchListRow = {
   readonly label: string;
   readonly clicks: number;
 };
+
+/** How many search terms or pages a list shows before it is cut off. */
+export const LIST_LIMIT = 25;
+
+/** One row as Search Console stores it inside a snapshot payload. */
+export type StoredSearchRow = {
+  readonly keys?: readonly string[];
+  readonly clicks?: unknown;
+  readonly impressions?: unknown;
+};
+
+/**
+ * A stored count, or zero when the field is missing or not a number.
+ *
+ * Callers must not read the zero as "measured zero" on its own: it means only
+ * that nothing usable was stored. Every caller here treats it conservatively,
+ * so a missing field can lower a count but can never raise one or manufacture a
+ * finding.
+ */
+export function countOf(value: unknown): number {
+  return typeof value === "number" && Number.isFinite(value) ? value : 0;
+}
+
+/**
+ * The biggest contributors first, cut to the list limit and labelled by key.
+ *
+ * A row without a usable key is dropped rather than shown as an empty label:
+ * Search Console withholds the term on rare queries, and an unlabelled line
+ * would read as a search nobody typed.
+ */
+export function topRows(rows: readonly StoredSearchRow[]): SearchListRow[] {
+  return rows
+    .flatMap((row): SearchListRow[] => {
+      const label = row.keys?.[0];
+      if (typeof label !== "string" || label.length === 0) return [];
+      return [{ label, clicks: countOf(row.clicks) }];
+    })
+    .sort((left, right) => right.clicks - left.clicks)
+    .slice(0, LIST_LIMIT);
+}
+
+/**
+ * How many of the pages we know about Google was seen to show.
+ *
+ * Matched on the address rather than counted straight off the window, because
+ * the two sets are collected differently: Search Console reports whatever it
+ * has, while the page audit stops at its own limit. Counting the window's rows
+ * directly produced shares above one, which silently un-fired the diagnosis on
+ * exactly the large sites that most need it.
+ */
+export function countShownPages(
+  rows: readonly StoredSearchRow[],
+  readable: ReadonlySet<string>,
+): number {
+  const shown = new Set<string>();
+  for (const row of rows) {
+    if (countOf(row.impressions) <= 0) continue;
+    const url = row.keys?.[0];
+    if (typeof url === "string" && readable.has(url)) shown.add(url);
+  }
+  return shown.size;
+}
 
 export type GettingFoundFacts = {
   readonly now: string;
@@ -38,10 +105,29 @@ export type GettingFoundFacts = {
   readonly pages: readonly SearchListRow[];
   readonly queueSources: readonly QueueSource[];
   /**
-   * Site-level totals the constraint diagnosis reads. Null when there is not
-   * enough stored to attempt one.
+   * How much of the site Google has been seen to show. Null when the window
+   * that would answer it has not been collected, which is not the same as none
+   * of it being shown.
    */
-  readonly constraintFacts: ConstraintFacts | null;
+  readonly coverage: PageCoverage | null;
+  /** Null when analytics is not connected, which is not the same as no visits. */
+  readonly sessions: number | null;
+};
+
+/**
+ * The two page counts the diagnosis needs, and the only two it takes from the
+ * page-dimension window.
+ *
+ * The impression and click totals deliberately do not come from here. That
+ * window is a separate measurement from the daily totals the tiles show, and
+ * the two legitimately disagree, so taking totals from it would put two
+ * different impression counts on one screen.
+ */
+export type PageCoverage = {
+  /** Pages the audit read successfully. A page it could not read is not known. */
+  readonly pagesKnown: number;
+  /** How many of those Google was seen to show at least once. */
+  readonly pagesWithImpressions: number;
 };
 
 export type TileDelta = {
@@ -67,12 +153,12 @@ export type GettingFoundStatus = {
   readonly tone: StatusTone;
 };
 
-export type TabId = "overview" | "suggestions" | "queries" | "pages" | "history";
+export type TabId = "suggestions" | "queries" | "pages" | "history";
 
 export type Tab = {
   readonly id: TabId;
   readonly label: string;
-  /** Null when the tab carries no count, as Overview does not. */
+  /** Null when the tab carries no count, as the two lists do not. */
   readonly count: number | null;
 };
 
@@ -95,6 +181,30 @@ export type GettingFoundView = {
    * asserting a priority it cannot justify.
    */
   readonly constraint: ConstraintBanner | null;
+  /**
+   * Every open suggestion, ranked. When a constraint was diagnosed, the ones
+   * addressing it come first and the rest follow, still present and still
+   * ranked among themselves. Nothing is hidden by the diagnosis.
+   */
+  readonly suggestions: readonly QueueItem[];
+  /**
+   * The index in `suggestions` where the parked group begins, so the page can
+   * draw the divider that explains why the order changed. Null when there is no
+   * diagnosis, or when every suggestion falls on the same side of it.
+   */
+  readonly parkedFrom: number | null;
+  /** What has already been decided, so a handled item stays findable. */
+  readonly history: readonly QueueItem[];
+  /**
+   * The last finalized day the stored window covers, written for display. Null
+   * when nothing has been collected. Shown, because a four week old window
+   * presented without its date is presented as current.
+   */
+  readonly asOf: string | null;
+  /** The search terms behind the totals, biggest first. */
+  readonly queries: readonly SearchListRow[];
+  /** The pages behind the totals, biggest first. */
+  readonly pages: readonly SearchListRow[];
 };
 
 const NO_PROPERTY =
@@ -252,6 +362,8 @@ export function buildGettingFound(facts: GettingFoundFacts): GettingFoundView {
   const queue = buildQueue(facts.queueSources, facts.now);
   const open = [...queue.open].sort(compareQueueItems);
   const handled = queue.ignored.length + queue.done.length;
+  const constraint = constraintFor(facts, open);
+  const ordered = orderByConstraint(facts, open);
 
   return {
     tiles: [
@@ -262,13 +374,77 @@ export function buildGettingFound(facts: GettingFoundFacts): GettingFoundView {
     ],
     status: statusFor(open),
     tabs: [
-      { id: "overview", label: "Overview", count: null },
       { id: "suggestions", label: "Suggestions", count: open.length },
       { id: "queries", label: "Searches", count: null },
       { id: "pages", label: "Pages", count: null },
       { id: "history", label: "History", count: handled },
     ],
-    constraint: constraintFor(facts, open),
+    constraint,
+    suggestions: ordered.suggestions,
+    parkedFrom: ordered.parkedFrom,
+    history: [...queue.ignored, ...queue.done],
+    asOf: facts.latestDate,
+    queries: facts.queries,
+    pages: facts.pages,
+  };
+}
+
+/**
+ * The open queue, re-ordered so what addresses the binding constraint comes
+ * first.
+ *
+ * Nothing is dropped. A suggestion that is real but is not today\'s problem
+ * stays on the page below a divider, because removing it would be the engine
+ * deciding for the operator, and the diagnosis is a priority claim, not a
+ * correctness claim.
+ */
+function orderByConstraint(
+  facts: GettingFoundFacts,
+  open: readonly QueueItem[],
+): { suggestions: readonly QueueItem[]; parkedFrom: number | null } {
+  const constraintFacts = constraintFactsFor(facts);
+  if (constraintFacts === null) return { suggestions: open, parkedFrom: null };
+
+  const diagnosis = bindingConstraint(constraintFacts);
+  if (diagnosis.constraint === null) return { suggestions: open, parkedFrom: null };
+
+  const split = partitionByConstraint(open, diagnosis.constraint, (item) => item.rule ?? "");
+  // A divider with nothing on one side of it explains nothing.
+  if (split.addressing.length === 0 || split.parked.length === 0) {
+    return { suggestions: open, parkedFrom: null };
+  }
+  return {
+    suggestions: [...split.addressing, ...split.parked],
+    parkedFrom: split.addressing.length,
+  };
+}
+
+/**
+ * The numbers the diagnosis rests on, or null when they cannot be assembled.
+ *
+ * The impression and click totals are taken from the very same comparison the
+ * tiles render. That is not a saved read, it is the guarantee: a banner and a
+ * tile drawn from two different measurements of "impressions" will eventually
+ * contradict each other on screen, and the banner is the one that decides the
+ * order of everything below it.
+ *
+ * Refused, rather than guessed at, in two cases: when the coverage window has
+ * not been collected, and when the comparison is not ready. A zero assembled
+ * from an absent read is exactly the fabricated diagnosis this module exists to
+ * prevent.
+ */
+function constraintFactsFor(facts: GettingFoundFacts): ConstraintFacts | null {
+  if (facts.coverage === null) return null;
+  if (facts.comparison.status !== "ready") return null;
+  return {
+    pagesKnown: facts.coverage.pagesKnown,
+    pagesWithImpressions: facts.coverage.pagesWithImpressions,
+    impressions: facts.comparison.current.impressions,
+    clicks: facts.comparison.current.clicks,
+    sessions: facts.sessions,
+    // Nothing in the estate measures a conversion yet. Null says that; zero
+    // would claim we looked and found none.
+    conversions: null,
   };
 }
 
@@ -283,9 +459,10 @@ function constraintFor(
   facts: GettingFoundFacts,
   open: ReturnType<typeof buildQueue>["open"],
 ): ConstraintBanner | null {
-  if (facts.constraintFacts === null) return null;
+  const constraintFacts = constraintFactsFor(facts);
+  if (constraintFacts === null) return null;
 
-  const diagnosis = bindingConstraint(facts.constraintFacts);
+  const diagnosis = bindingConstraint(constraintFacts);
   if (diagnosis.constraint === null) return null;
 
   const split = partitionByConstraint(open, diagnosis.constraint, (item) => item.rule ?? "");

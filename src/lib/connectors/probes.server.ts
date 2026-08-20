@@ -88,6 +88,16 @@ function configuredRequest(
         url: "https://api.firecrawl.dev/v1/team/credit-usage",
         headers: { Authorization: `Bearer ${env["FIRECRAWL_API_KEY"]}` },
       };
+    case "litellm":
+      // The proxy's own model list. It answers with the models the operator
+      // configured, which is exactly what "is this reachable and is the key
+      // right" needs, and it costs nothing upstream.
+      return {
+        url: `${(env["LITELLM_BASE_URL"] ?? "").replace(/\/+$/, "").replace(/(?<!\/v\d+)$/, "/v1")}/models`,
+        headers: {
+          Authorization: `Bearer ${env["LITELLM_API_KEY"] ?? env["LITELLM_PROXY_API_KEY"]}`,
+        },
+      };
     case "gemini_generation":
       return {
         url: `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(env["GEMINI_MODEL"]!)}?key=${encodeURIComponent(env["GEMINI_API_KEY"]!)}`,

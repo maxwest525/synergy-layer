@@ -24,6 +24,7 @@ import {
   sitemapLocations,
   type SiteFacts,
 } from "./site-checks";
+import { isRobotsPathAllowed } from "./robots-rules";
 
 const FIRECRAWL_URL = "https://api.firecrawl.dev/v2/scrape";
 
@@ -328,6 +329,28 @@ export async function readPageAudit(client: Client, tenantId: string): Promise<P
 }
 
 /**
+ * Whether the audit may spend a Firecrawl call on this address.
+ *
+ * A robots.txt that could not be read is not a licence to skip: an unreadable
+ * file means unknown, and the audit reads the page rather than inventing a
+ * block that robots.txt never stated.
+ */
+function crawlablePath(url: string, robotsBody: string | null, origin: string): boolean {
+  if (robotsBody === null) return true;
+  try {
+    const parsed = new URL(url);
+    // A `sc-domain:` property spans every subdomain, and Search Console reports
+    // pages from all of them. Only this origin's robots.txt was fetched, so a
+    // page on another host is read rather than skipped on a rule that was never
+    // written for it.
+    if (parsed.origin !== origin) return true;
+    return isRobotsPathAllowed(robotsBody, `${parsed.pathname}${parsed.search}`);
+  } catch {
+    return true;
+  }
+}
+
+/**
  * Reads the whole site: robots.txt, the sitemap, and the live wording of every
  * page discovered from the sitemap and from what Google reported. One immutable
  * observation is stored per page, and one per site wide read. A page that
@@ -368,6 +391,24 @@ export async function runPageAudit(
   const rows: Database["public"]["Tables"]["page_metadata_observations"]["Insert"][] = [];
   const unreadablePages: string[] = [];
   for (const url of urls) {
+    // Firecrawl is metered. A page robots.txt disallows is one Google will
+    // never read, so paying to render it buys nothing. It is still recorded,
+    // with the reason, so the page does not quietly vanish from the audit.
+    if (!crawlablePath(url, documents.robotsBody, origin)) {
+      rows.push({
+        tenant_id: tenantId,
+        property,
+        url,
+        final_url: null,
+        title: null,
+        h1: null,
+        rendered_by: null,
+        error: "Not read: robots.txt disallows crawlers from this page.",
+        observed_at: observedAt,
+        requested_by: actorId,
+      });
+      continue;
+    }
     try {
       const rendered = await scrapePage(url, key);
       const facts = extractPageFacts(rendered.html, rendered.markdown, rendered.finalUrl);
@@ -419,6 +460,7 @@ export async function runPageAudit(
       sitemapUrls: documents.sitemapUrls,
     }),
     unreadablePages,
+    knownPages: urls,
   };
 
   const { error: siteError } = await client.from("site_audit_snapshots").insert({

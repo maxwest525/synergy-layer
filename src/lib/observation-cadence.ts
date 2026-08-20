@@ -31,7 +31,9 @@ export const OBSERVATION_SOURCES: readonly CadenceSource[] = [
     defaultCron: "0 16 * * *",
     provider: "gsc",
     storeLabel: "Search Console snapshots",
-    proveHref: "/search",
+    // The workspace, not the category page: this link is pressed to take a
+    // read, and the category page has no button that does that.
+    proveHref: "/search/tools",
   },
   {
     key: "ga4",

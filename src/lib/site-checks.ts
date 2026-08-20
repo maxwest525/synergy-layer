@@ -6,10 +6,12 @@
  */
 
 import type { Severity } from "./page-checks";
+import { blockedPaths } from "./robots-rules";
 
 export type SiteCheckId =
   | "robots_missing"
   | "robots_blocks_site"
+  | "robots_blocks_pages"
   | "sitemap_missing"
   | "sitemap_unreachable"
   | "sitemap_empty"
@@ -33,6 +35,11 @@ export type SiteFacts = {
   pagesMissingFromSitemap: string[];
   /** Pages the audit tried to read and failed. */
   unreadablePages: string[];
+  /**
+   * Every page address the audit knows about, so robots.txt can be checked
+   * against them one by one rather than only for a site-wide block.
+   */
+  knownPages?: string[];
 };
 
 export type SiteFinding = {
@@ -107,6 +114,31 @@ export function pagesMissingFromSitemap(input: {
   });
 }
 
+/**
+ * The path part of every page address the audit knows about, on this host only.
+ *
+ * robots.txt rules are written against paths, so an address that will not parse
+ * is dropped rather than guessed at: reporting a page as blocked on a path we
+ * invented would be worse than not reporting it.
+ *
+ * A `sc-domain:` property spans every subdomain, and each host serves its own
+ * robots.txt. Only the origin's own file was read, so pages on another host are
+ * dropped rather than judged by a rule that never applied to them.
+ */
+function pathsOf(pages: readonly string[], origin: string): string[] {
+  const paths = pages.map((page) => {
+    try {
+      const parsed = new URL(page);
+      if (parsed.origin !== origin) return null;
+      return `${parsed.pathname}${parsed.search}`;
+    } catch {
+      // A bare path can only have come from this origin.
+      return page.startsWith("/") ? page : null;
+    }
+  });
+  return [...new Set(paths.filter((path): path is string => path !== null))];
+}
+
 function sample(urls: string[], count = 3): string {
   const head = urls.slice(0, count).join(", ");
   return urls.length > count ? `${head} and ${urls.length - count} more` : head;
@@ -137,6 +169,22 @@ export function evaluateSite(facts: SiteFacts): SiteFinding[] {
       detail: `${facts.origin}/robots.txt disallows every crawler from every page.`,
       fixableByChangeKind: "site.crawl_directives",
     });
+  } else if (facts.robotsBody) {
+    // Not the whole site, but some of it. Named paths rather than a count, so
+    // the operator can open the file and see the rule that did it.
+    const blocked = blockedPaths(facts.robotsBody, pathsOf(facts.knownPages ?? [], facts.origin));
+    if (blocked.length > 0) {
+      findings.push({
+        check: "robots_blocks_pages",
+        label: `Robots file blocks ${blocked.length} of your pages`,
+        severity: "critical",
+        instruction: `Decide what these ${blocked.length} pages are for: remove the robots.txt rule that disallows them, or drop them from the sitemap if they are meant to stay private.`,
+        detail: `Google is not allowed to read ${sample([...blocked])}.`,
+        // Manual: the two correct fixes are opposites, and only the owner knows
+        // which of them they meant.
+        fixableByChangeKind: null,
+      });
+    }
   }
 
   if (facts.robotsBody !== null && facts.declaredSitemaps.length === 0) {

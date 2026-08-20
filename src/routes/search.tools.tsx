@@ -36,7 +36,7 @@ import {
 } from "@/lib/search-console.functions";
 import { getTenantContext } from "@/lib/tenant.functions";
 
-export const Route = createFileRoute("/search")({
+export const Route = createFileRoute("/search/tools")({
   // Operator-only workspace: rendering it server side without the operator
   // bearer token produces an empty tree the client immediately replaces.
   ssr: false,

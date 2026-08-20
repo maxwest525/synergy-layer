@@ -326,7 +326,14 @@ const KIND_LABEL: Record<QueueItem["kind"], string> = {
   audit: "Page check",
 };
 
-function actionFor(item: QueueItem): TopCardAction {
+/**
+ * Where a queue item opens.
+ *
+ * Exported so the category pages route to the same screen the Command center
+ * does. Two lists offering different destinations for one row is how an
+ * operator learns not to trust either.
+ */
+export function actionFor(item: QueueItem): TopCardAction {
   if (item.kind === "change") {
     return { label: "Review the fix", to: "/changes/$id", params: { id: item.id } };
   }

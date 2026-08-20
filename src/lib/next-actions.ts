@@ -48,6 +48,8 @@ export type NextActionFacts = {
 export type NextActionRoute =
   | "/"
   | "/search"
+  // The evidence workspace, behind the category page that is now /search.
+  | "/search/tools"
   | "/ga4"
   | "/measurement"
   | "/keywords"
@@ -204,7 +206,7 @@ export function buildNextActions(facts: NextActionFacts): NextAction[] {
         ? `Property ${facts.property.siteUrl} is selected, 0 snapshot(s) stored.`
         : "No property is selected for this workspace.",
       blockedBy: facts.property ? null : "No Search Console property is selected.",
-      to: "/search",
+      to: "/search/tools",
       actionLabel: "Open search evidence",
       weight: 15,
     });
@@ -216,7 +218,7 @@ export function buildNextActions(facts: NextActionFacts): NextAction[] {
       reason: `Only ${plural(facts.gsc.totalsDays, "finalized day")} of totals is stored, so before and after comparisons are not reliable yet.`,
       evidence: `${plural(facts.gsc.snapshots, "snapshot")} stored, latest finalized date ${facts.gsc.latestDate ?? "none"}.`,
       blockedBy: null,
-      to: "/search",
+      to: "/search/tools",
       actionLabel: "Open search evidence",
       weight: 80,
     });
@@ -462,7 +464,7 @@ export function buildMissingReasons(facts: NextActionFacts): MissingReason[] {
         ? `Property ${facts.property.siteUrl} is selected but no snapshot has been stored.`
         : "No Search Console property is selected for this workspace.",
       instruction: "Run a search performance read now.",
-      to: "/search",
+      to: "/search/tools",
       actionLabel: "Read search performance",
     });
   }

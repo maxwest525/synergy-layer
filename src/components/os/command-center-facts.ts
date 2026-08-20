@@ -1,7 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 
-import { buildCommandCenter, type CommandCenterView } from "@/lib/command-center";
+import {
+  buildCommandCenter,
+  type CommandCenterFacts,
+  type CommandCenterView,
+} from "@/lib/command-center";
 import { getCommandCenterFacts } from "@/lib/command-center.functions";
 import { useOperatorSession } from "@/hooks/use-operator-session";
 
@@ -10,6 +14,12 @@ export const COMMAND_CENTER_QUERY_KEY = ["command-center-facts"] as const;
 
 export type CommandCenterQuery = {
   readonly view: CommandCenterView | null;
+  /**
+   * The same read, underived. Category pages build their own view model from
+   * these, so a category never issues a second read of the queue and can never
+   * disagree with the badge the shell shows beside it.
+   */
+  readonly facts: CommandCenterFacts | null;
   readonly isPending: boolean;
   readonly error: Error | null;
 };
@@ -40,6 +50,7 @@ export function useCommandCenter(): CommandCenterQuery {
 
   return {
     view: query.data ? buildCommandCenter(query.data) : null,
+    facts: query.data ?? null,
     isPending: query.isPending,
     error: query.error,
   };
