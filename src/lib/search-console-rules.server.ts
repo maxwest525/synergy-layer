@@ -4,6 +4,14 @@ import { requireTenantId } from "./tenant.server";
 import type { Database } from "@/integrations/supabase/types";
 import { logActivity } from "./os.server";
 import { observationRecommendationRecord } from "./observation-record";
+import {
+  detectInspectionDrift,
+  detectQueryCoverageGaps,
+  detectQueryOverlap,
+  detectZeroImpressionPages,
+  type InspectionFacts,
+  type PageMetaFacts,
+} from "./search-console-rule-checks";
 import { SearchConsoleFailure, checksum, shiftDate, type QueryRow } from "./search-console.server";
 
 type Client = SupabaseClient<Database>;
@@ -23,7 +31,10 @@ export type Rule =
   | "weak_ctr_page"
   | "position_loss"
   | "visibility_gain"
-  | "possible_query_overlap";
+  | "possible_query_overlap"
+  | "zero_impression_page"
+  | "query_coverage_gap"
+  | "index_coverage_drift";
 
 type Observation = {
   rule: Rule;
@@ -137,6 +148,66 @@ function evaluate(current: SnapshotRow[], prior: SnapshotRow[]): Observation[] {
   return observations;
 }
 
+/**
+ * Rules that need stored context beyond the two snapshot windows: the
+ * page+query snapshot, audited page metadata, and the latest URL inspection
+ * per page. All reads are bounded; none touch the Search Console API.
+ */
+async function evaluateStoredContext(
+  client: Client,
+  property: string,
+  current: SnapshotRow[],
+): Promise<Observation[]> {
+  const pageQueryRows = rowsOf(current.find((snapshot) => snapshot.kind === "page_query"));
+  const pageRows = rowsOf(pick(current, "page"));
+
+  const { data: metaRows, error: metaError } = await client
+    .from("page_metadata_observations")
+    .select("url, title, h1, observed_at")
+    .order("observed_at", { ascending: false })
+    .limit(800);
+  if (metaError) throw new SearchConsoleFailure("persistence", metaError.message);
+
+  const metaByUrl = new Map<string, PageMetaFacts>();
+  for (const row of metaRows ?? []) {
+    if (!metaByUrl.has(row.url)) {
+      metaByUrl.set(row.url, { url: row.url, title: row.title, h1: row.h1 });
+    }
+  }
+
+  const { data: inspectionRows, error: inspectionError } = await client
+    .from("search_console_url_inspections")
+    .select(
+      "inspected_url, verdict, coverage_state, indexing_state, google_canonical, user_canonical, last_crawl_time, inspected_at",
+    )
+    .eq("property", property)
+    .order("inspected_at", { ascending: false })
+    .limit(500);
+  if (inspectionError) throw new SearchConsoleFailure("persistence", inspectionError.message);
+
+  const latestInspections = new Map<string, InspectionFacts>();
+  for (const row of inspectionRows ?? []) {
+    if (!latestInspections.has(row.inspected_url)) {
+      latestInspections.set(row.inspected_url, {
+        inspectedUrl: row.inspected_url,
+        verdict: row.verdict,
+        coverageState: row.coverage_state,
+        indexingState: row.indexing_state,
+        googleCanonical: row.google_canonical,
+        userCanonical: row.user_canonical,
+        lastCrawlTime: row.last_crawl_time,
+      });
+    }
+  }
+
+  return [
+    ...detectQueryOverlap(pageQueryRows),
+    ...detectZeroImpressionPages([...metaByUrl.keys()], pageRows),
+    ...detectQueryCoverageGaps(pageQueryRows, metaByUrl),
+    ...detectInspectionDrift([...latestInspections.values()], new Date()),
+  ];
+}
+
 export type RuleRunResult = {
   reportingDate: string | null;
   observations: number;
@@ -171,6 +242,7 @@ export async function evaluateSnapshots(
 
   const current = (currentRows ?? []) as SnapshotRow[];
   const observations = evaluate(current, (priorRows ?? []) as SnapshotRow[]);
+  observations.push(...(await evaluateStoredContext(client, property, current)));
 
   if (observations.length === 0) {
     await logActivity(client, {

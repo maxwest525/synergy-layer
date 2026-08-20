@@ -27,6 +27,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { SearchRow } from "@/lib/search.functions";
 import { getSearchWorkspace } from "@/lib/search.functions";
+import { getSearchFindings } from "@/lib/search-findings.functions";
 import {
   inspectSearchConsoleUrl,
   runSearchConsoleObservation,
@@ -189,11 +190,25 @@ function SectionCard({
   );
 }
 
+const RULE_LABEL: Record<string, string> = {
+  striking_distance_query: "Striking distance",
+  weak_ctr_page: "Weak click-through",
+  position_loss: "Position loss",
+  visibility_gain: "Visibility gain",
+  possible_query_overlap: "Query overlap",
+  zero_impression_page: "Zero impressions",
+  query_coverage_gap: "Coverage gap",
+  index_coverage_drift: "Index drift",
+};
+
+const OPEN_FINDING_STATES = new Set(["draft", "proposed", "under_review", "observed", "scheduled"]);
+
 function SearchWorkspacePage() {
   // Both reads are protected server functions, so they go through useServerFn
   // and the client middleware that attaches the operator bearer token.
   const loadTenantContext = useServerFn(getTenantContext);
   const loadWorkspace = useServerFn(getSearchWorkspace);
+  const loadFindings = useServerFn(getSearchFindings);
   const collectEvidence = useServerFn(runSearchConsoleObservation);
   const inspectUrl = useServerFn(inspectSearchConsoleUrl);
   const submitSitemap = useServerFn(submitSearchConsoleSitemap);
@@ -214,6 +229,13 @@ function SearchWorkspacePage() {
     queryFn: () => loadWorkspace(),
     retry: false,
   });
+  const findings = useSuspenseQuery({
+    queryKey: ["search-findings", activeTenantId],
+    queryFn: () => loadFindings(),
+    retry: false,
+  });
+  const [findingFilter, setFindingFilter] = useState<string>("all");
+
   const latest = data.dailyTotals[0];
   const ownedRoot = defaultOwnedUrl(data.property?.siteUrl ?? null);
   const [inspectionUrl, setInspectionUrl] = useState(ownedRoot);
@@ -224,6 +246,7 @@ function SearchWorkspacePage() {
 
   const refreshWorkspace = () => {
     void queryClient.invalidateQueries({ queryKey: ["search-workspace", activeTenantId] });
+    void queryClient.invalidateQueries({ queryKey: ["search-findings", activeTenantId] });
     void queryClient.invalidateQueries({ queryKey: ["inbox"] });
     void queryClient.invalidateQueries({ queryKey: ["change-request"] });
     void queryClient.invalidateQueries({ queryKey: ["overview"] });
@@ -495,6 +518,123 @@ function SearchWorkspacePage() {
                 </tbody>
               </table>
             </div>
+          </SectionCard>
+
+          <SectionCard
+            id="findings"
+            title="Rule findings"
+            description="What the nightly rules concluded from this evidence: pages and queries that need attention, each linked to its card in the Recommendation Queue."
+          >
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <MetricTile
+                label="Open findings"
+                value={String(
+                  findings.data.findings.filter(
+                    (finding) =>
+                      finding.recommendationState === null ||
+                      OPEN_FINDING_STATES.has(finding.recommendationState),
+                  ).length,
+                )}
+                hint="Awaiting a decision"
+              />
+              <MetricTile
+                label="Pages inspected"
+                value={String(findings.data.inspectionCoverage.urlsInspected)}
+                hint="Distinct URLs with a stored inspection"
+              />
+              <MetricTile
+                label="Not indexed"
+                value={String(findings.data.inspectionCoverage.notIndexed)}
+                hint="Latest inspection did not pass"
+              />
+              <MetricTile
+                label="Canonical or crawl drift"
+                value={String(
+                  findings.data.inspectionCoverage.canonicalMismatch +
+                    findings.data.inspectionCoverage.staleCrawl,
+                )}
+                hint={`${findings.data.inspectionCoverage.canonicalMismatch} canonical · ${findings.data.inspectionCoverage.staleCrawl} stale crawl`}
+              />
+            </div>
+
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                aria-pressed={findingFilter === "all"}
+                className={findingFilter === "all" ? "border-primary/60 text-primary" : undefined}
+                onClick={() => setFindingFilter("all")}
+              >
+                All ({findings.data.findings.length})
+              </Button>
+              {Object.entries(findings.data.countsByRule).map(([rule, count]) => (
+                <Button
+                  key={rule}
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  aria-pressed={findingFilter === rule}
+                  className={findingFilter === rule ? "border-primary/60 text-primary" : undefined}
+                  onClick={() => setFindingFilter(rule)}
+                >
+                  {RULE_LABEL[rule] ?? rule} ({count})
+                </Button>
+              ))}
+            </div>
+
+            {findings.data.findings.length === 0 ? (
+              <p className="mt-4 text-sm text-muted-foreground">
+                No findings stored yet. They appear after the nightly observation runs over
+                collected evidence.
+              </p>
+            ) : (
+              <ul className="mt-4 space-y-2">
+                {findings.data.findings
+                  .filter((finding) => findingFilter === "all" || finding.rule === findingFilter)
+                  .slice(0, 30)
+                  .map((finding) => (
+                    <li
+                      key={finding.id}
+                      className="rounded-lg border border-border/60 bg-background/30 px-3 py-2"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium text-foreground">
+                            {finding.recommendationTitle ?? finding.target}
+                          </p>
+                          <p className="mt-0.5 text-xs text-muted-foreground">
+                            {RULE_LABEL[finding.rule] ?? finding.rule} · observed{" "}
+                            {fmtDate(finding.periodEndPt)}
+                          </p>
+                        </div>
+                        <div className="flex shrink-0 items-center gap-2">
+                          {finding.recommendationState ? (
+                            <StatePill
+                              label={finding.recommendationState.replace(/_/g, " ")}
+                              tone={
+                                OPEN_FINDING_STATES.has(finding.recommendationState)
+                                  ? "warning"
+                                  : "neutral"
+                              }
+                            />
+                          ) : null}
+                          {finding.recommendationId ? (
+                            <Button asChild size="sm" variant="outline">
+                              <Link
+                                to="/recommendations/$id"
+                                params={{ id: finding.recommendationId }}
+                              >
+                                Review
+                              </Link>
+                            </Button>
+                          ) : null}
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+              </ul>
+            )}
           </SectionCard>
 
           <SectionCard

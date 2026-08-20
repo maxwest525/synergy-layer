@@ -489,6 +489,24 @@ async function runSearchConsoleNode(client: Client, ref: string): Promise<NodeOu
     }
   }
 
+  if (ref === "search.console.inspect") {
+    const { getSelectedProperty } = await import("./search-console.server");
+    const { sweepUrlInspections } = await import("./search-console-sweep.server");
+    const property = await getSelectedProperty(client);
+    if (!property) {
+      return { ok: false, error: "No Search Console property is selected." };
+    }
+    try {
+      const result = await sweepUrlInspections(client, property);
+      return { ok: true, output: { property, ...result } };
+    } catch (error) {
+      return {
+        ok: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  }
+
   if (ref === "search.console.rules") {
     const { getSelectedProperty } = await import("./search-console.server");
     const { evaluateSnapshots } = await import("./search-console-rules.server");
