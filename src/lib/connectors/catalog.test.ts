@@ -10,6 +10,7 @@ describe("connector catalog", () => {
       "google_analytics_4",
       "dataforseo",
       "firecrawl",
+      "litellm",
       "gemini_generation",
       "gemini_embeddings",
       "github_executor",

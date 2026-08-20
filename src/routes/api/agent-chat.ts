@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { convertToModelMessages, stepCountIs, streamText, type UIMessage } from "ai";
 
-import { createGateway } from "@/lib/ai/gateway.server";
-import { modeInstruction, resolveAgentModel } from "@/lib/ai/models";
+import { createGateway, modelFor } from "@/lib/ai/gateway.server";
+import { modeInstruction, resolveAgentRole } from "@/lib/ai/models";
 import { requireOperatorFromRequest } from "@/lib/ai/require-operator.server";
 import { buildEvidenceTools } from "@/lib/ai/tools/evidence.server";
 
@@ -47,7 +47,7 @@ export const Route = createFileRoute("/api/agent-chat")({
         const tools = await buildEvidenceTools(identity);
         const gateway = createGateway();
         const result = streamText({
-          model: gateway(resolveAgentModel(body.model)),
+          model: gateway(modelFor(resolveAgentRole(body.model))),
           system: `${SYSTEM_PROMPT}${modeInstruction(body.mode)}`,
           messages: await convertToModelMessages(messages),
           tools,

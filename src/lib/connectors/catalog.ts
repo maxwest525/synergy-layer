@@ -4,6 +4,7 @@ export type ConnectorKey =
   | "google_analytics_4"
   | "dataforseo"
   | "firecrawl"
+  | "litellm"
   | "gemini_generation"
   | "gemini_embeddings"
   | "github_executor"
@@ -92,6 +93,16 @@ export const CONNECTOR_CATALOG = [
     label: "Firecrawl",
     provider: "Firecrawl",
     credentialStrategies: [["FIRECRAWL_API_KEY"]],
+  }),
+  item({
+    key: "litellm",
+    label: "LiteLLM proxy",
+    provider: "Self hosted",
+    // Both are required. A proxy reachable without a key is a proxy anyone can
+    // spend the operator's OpenRouter credit through.
+    credentialStrategies: [["LITELLM_API_KEY"], ["LITELLM_PROXY_API_KEY"]],
+    configRequirements: ["LITELLM_BASE_URL"],
+    safeConfig: { baseUrl: "LITELLM_BASE_URL", reasoningModel: "LITELLM_MODEL_REASONING" },
   }),
   item({
     key: "gemini_generation",

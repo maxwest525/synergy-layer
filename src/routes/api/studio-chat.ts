@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { convertToModelMessages, streamText, type UIMessage } from "ai";
 
-import { createGateway } from "@/lib/ai/gateway.server";
-import { modeInstruction, resolveAgentModel } from "@/lib/ai/models";
+import { createGateway, modelFor } from "@/lib/ai/gateway.server";
+import { modeInstruction, resolveAgentRole } from "@/lib/ai/models";
 import { requireOperatorFromRequest } from "@/lib/ai/require-operator.server";
 
 const SYSTEM_PROMPT = `You are the AOOS studio agent: a thinking partner for the operator of a marketing operating system for a moving company (TruMove).
@@ -37,7 +37,7 @@ export const Route = createFileRoute("/api/studio-chat")({
 
         const gateway = createGateway();
         const result = streamText({
-          model: gateway(resolveAgentModel(body.model)),
+          model: gateway(modelFor(resolveAgentRole(body.model))),
           system: `${SYSTEM_PROMPT}${modeInstruction(body.mode)}`,
           messages: await convertToModelMessages(messages),
           abortSignal: request.signal,

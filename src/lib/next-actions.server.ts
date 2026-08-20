@@ -1,6 +1,6 @@
 import { generateText } from "ai";
 
-import { createGateway, REASONING_MODEL } from "./ai/gateway.server";
+import { createGateway, reasoningModel } from "./ai/gateway.server";
 import type { NextAction } from "./next-actions";
 
 export type PrioritizedAction = {
@@ -56,7 +56,7 @@ export async function prioritizeActions(actions: NextAction[]): Promise<Prioriti
   try {
     const gateway = createGateway();
     const result = await generateText({
-      model: gateway(REASONING_MODEL),
+      model: gateway(reasoningModel()),
       system: SYSTEM,
       prompt: JSON.stringify(
         actions.map((action) => ({

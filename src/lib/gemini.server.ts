@@ -1,5 +1,20 @@
+import { generateStructuredJson } from "./ai/structured.server";
+import { litellmConfigured } from "./ai/routing";
 import { validatePageMetadataWording, type PageMetadataWording } from "./page-metadata-proposals";
 import { validateTitleH1Wording, type TitleH1Wording } from "./title-h1-proposals";
+
+/**
+ * The system half of the wording request.
+ *
+ * Split out from the prompt so it is byte-identical on every call, which is the
+ * only condition under which any provider will cache it. The prompt that
+ * follows carries the page's own evidence and changes every time.
+ */
+const WORDING_SYSTEM = `You write search wording for a marketing operating system.
+
+You are given evidence read from a live page and from Google Search Console. Propose wording that is true of that page. Never invent a service, a location, a claim, a number or a guarantee that the evidence does not contain. Never write a superlative you cannot source. If the evidence is thin, write something plainer rather than something larger.
+
+Answer only with the JSON object the schema describes.`;
 
 export const GEMINI_API_ORIGIN = "https://generativelanguage.googleapis.com";
 export const DEFAULT_GEMINI_GENERATION_MODEL = "gemini-3.6-flash";
@@ -51,15 +66,43 @@ type WordingRequest = {
 };
 
 export async function generateTitleH1Wording(input: WordingRequest): Promise<TitleH1Wording> {
-  return validateTitleH1Wording(await generateStructuredWording(input, RESPONSE_JSON_SCHEMA));
+  return validateTitleH1Wording(
+    await generateWording(input, "title_h1_wording", RESPONSE_JSON_SCHEMA),
+  );
 }
 
 export async function generatePageMetadataWording(
   input: WordingRequest,
 ): Promise<PageMetadataWording> {
   return validatePageMetadataWording(
-    await generateStructuredWording(input, METADATA_RESPONSE_JSON_SCHEMA),
+    await generateWording(input, "page_metadata_wording", METADATA_RESPONSE_JSON_SCHEMA),
   );
+}
+
+/**
+ * Route the wording request through the proxy, or straight to Google until one
+ * is configured.
+ *
+ * The direct path is kept, not deleted, so a workspace that has not set the
+ * proxy up yet keeps working exactly as it did. It is the fallback, though: the
+ * proxy path is the one that can cache the system prefix and the one that keeps
+ * spend on a single account.
+ */
+async function generateWording(
+  input: WordingRequest,
+  schemaName: string,
+  schema: Record<string, unknown>,
+): Promise<unknown> {
+  if (litellmConfigured(process.env)) {
+    return generateStructuredJson({
+      system: WORDING_SYSTEM,
+      prompt: input.prompt,
+      schemaName,
+      schema,
+      ...(input.fetcher ? { fetcher: input.fetcher as typeof fetch } : {}),
+    });
+  }
+  return generateStructuredWording(input, schema);
 }
 
 async function generateStructuredWording(
