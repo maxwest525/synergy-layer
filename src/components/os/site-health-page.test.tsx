@@ -34,6 +34,7 @@ function outcome(overrides: Partial<StoredOutcome> = {}): StoredOutcome {
     coverage: null,
     baseline: null,
     siteTrend: null,
+    wordingTreatment: false,
     ...overrides,
   };
 }

@@ -26,6 +26,17 @@ import {
   type QueueSource,
 } from "./suggestion-queue";
 
+/**
+ * The `proposal_type` values that only change what Google *displays* — title
+ * and meta description — rather than the page's own content or crawl
+ * behavior. Copied from the CHECK constraint in
+ * `supabase/migrations/20260819213000_widen_proposal_type_check.sql`:
+ * `CHECK (proposal_type IN ('title_h1', 'page_metadata', 'site.crawl_directives'))`.
+ * `site.crawl_directives` is left out: it changes what Google can crawl, not
+ * what it shows.
+ */
+export const WORDING_PROPOSAL_TYPES: ReadonlySet<string> = new Set(["title_h1", "page_metadata"]);
+
 /** One stored measurement of one approved change. */
 export type StoredOutcome = {
   readonly changeId: string;
@@ -58,6 +69,8 @@ export type StoredOutcome = {
     readonly beforeImpressions: number;
     readonly afterImpressions: number;
   } | null;
+  /** True when this change's `proposal_type` is one of `WORDING_PROPOSAL_TYPES`. */
+  readonly wordingTreatment: boolean;
 };
 
 export type GradedOutcome = StoredOutcome & {
@@ -170,6 +183,7 @@ export function gradeOutcomes(outcomes: readonly StoredOutcome[]): GradedOutcome
       measurable: outcome.measurable,
       baseline: outcome.baseline,
       siteTrend: outcome.siteTrend,
+      wordingTreatment: outcome.wordingTreatment,
     });
     return { ...outcome, verdict: assessment.verdict, reason: assessment.reason };
   });

@@ -11,6 +11,7 @@ function reading(overrides: Partial<OutcomeReading> = {}): OutcomeReading {
     measurable: true,
     baseline: null,
     siteTrend: null,
+    wordingTreatment: false,
     ...overrides,
   };
 }
@@ -369,6 +370,41 @@ describe("the MIN_BASELINE floor is checked before rounding, not after", () => {
     );
     expect(graded.verdict).toBe("neutral");
     expect(graded.verdict).not.toBe("success");
+  });
+});
+
+describe("a wording-only change cannot be assumed delivered as written", () => {
+  it("a wording change that would grade failure is reported unmeasured instead", () => {
+    const graded = outcomeVerdict(
+      reading({
+        windowDays: 28,
+        daysSinceLive: 28,
+        impressions: 60,
+        clicks: 2,
+        baseline: { impressions: 400, clicks: 20 },
+        siteTrend: null,
+        wordingTreatment: true,
+      }),
+    );
+    // "We can't manually change title links for individual sites" — Google may be
+    // showing its own wording; the treatment was never verified as displayed.
+    // https://developers.google.com/search/docs/appearance/title-link
+    expect(graded.verdict).toBe("unmeasurable");
+    expect(graded.reason).toMatch(/Google|display|title/i);
+  });
+  it("a wording change can still succeed", () => {
+    const graded = outcomeVerdict(
+      reading({
+        windowDays: 28,
+        daysSinceLive: 28,
+        impressions: 300,
+        clicks: 20,
+        baseline: { impressions: 100, clicks: 5 },
+        siteTrend: null,
+        wordingTreatment: true,
+      }),
+    );
+    expect(graded.verdict).toBe("success");
   });
 });
 

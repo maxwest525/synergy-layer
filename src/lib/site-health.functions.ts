@@ -2,7 +2,12 @@ import { createServerFn } from "@tanstack/react-start";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { SiteFinding } from "./site-checks";
-import { sumSiteWindow, type SpeedReading, type StoredOutcome } from "./site-health";
+import {
+  sumSiteWindow,
+  WORDING_PROPOSAL_TYPES,
+  type SpeedReading,
+  type StoredOutcome,
+} from "./site-health";
 
 /**
  * The reads the "Site health" page needs.
@@ -89,7 +94,7 @@ export const getSiteHealthExtras = createServerFn({ method: "POST" })
         .limit(CYCLE_LIMIT),
       db
         .from("change_requests")
-        .select("id, title")
+        .select("id, title, proposal_type")
         .eq("tenant_id", tenantId)
         .order("created_at", { ascending: false })
         .limit(500),
@@ -105,6 +110,7 @@ export const getSiteHealthExtras = createServerFn({ method: "POST" })
     const changes = assertRead("Change requests", changeResult).data ?? [];
 
     const titleById = new Map(changes.map((row) => [row.id, row.title]));
+    const proposalTypeById = new Map(changes.map((row) => [row.id, row.proposal_type]));
     const cycleById = new Map(cycles.map((row) => [row.id, row]));
     const cycleIds = cycles.map((row) => row.id);
 
@@ -247,6 +253,9 @@ export const getSiteHealthExtras = createServerFn({ method: "POST" })
                   beforeImpressions: siteBefore.impressions,
                   afterImpressions: siteAfter.impressions,
                 },
+          wordingTreatment: WORDING_PROPOSAL_TYPES.has(
+            proposalTypeById.get(cycle.change_request_id) ?? "",
+          ),
         },
       ];
     });

@@ -61,6 +61,16 @@ export type OutcomeReading = {
     readonly beforeImpressions: number;
     readonly afterImpressions: number;
   } | null;
+  /**
+   * True when the change altered only what Google *displays* (title, meta
+   * description), not the page's own content or structure. Google may rewrite
+   * either: "we may try to generate an improved title link from anchors,
+   * on-page text, or other sources," and "we can't manually change title
+   * links for individual sites." A fall after a wording-only change was never
+   * verified as the wording actually shown, so it cannot be graded a failure.
+   * https://developers.google.com/search/docs/appearance/title-link
+   */
+  readonly wordingTreatment: boolean;
 };
 
 export type OutcomeAssessment = {
@@ -221,6 +231,12 @@ export function outcomeVerdict(reading: OutcomeReading): OutcomeAssessment {
       return {
         verdict: "neutral",
         reason: `Shown ${reading.impressions} times against a baseline of ${scaledBaselineImpressions}${scalingNote}, but clicks held at ${reading.clicks}. A page shown less but still earning its clicks is not a failure.`,
+      };
+    }
+    if (reading.wordingTreatment) {
+      return {
+        verdict: "unmeasurable",
+        reason: `The numbers fell, but this change only altered wording, and Google may be showing its own wording instead — it rewrites titles it doesn't like and no one can force the one on the page. Until what Google displays is verified, this is an unmeasured treatment, not a failed one.`,
       };
     }
     return {
