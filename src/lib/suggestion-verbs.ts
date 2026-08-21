@@ -9,6 +9,7 @@
  * Pure, so the three category pages cannot drift from one another.
  */
 
+import { fixTargetForPageCheck } from "./audit-fixes";
 import { hasGovernedFixPath } from "./finding-fix-target";
 import type { QueueItem } from "./suggestion-queue";
 
@@ -79,13 +80,18 @@ export function verbsFor(item: QueueItem): readonly SuggestionVerb[] {
   }
   if (item.queueState === "ignored" && item.canRestore) verbs.push(RESTORE);
   if (item.canRegenerate) verbs.push(REGENERATE);
-  if (
-    item.queueState === "open" &&
-    item.kind === "recommendation" &&
-    typeof item.rule === "string" &&
-    hasGovernedFixPath(item.rule)
-  ) {
-    verbs.push(DRAFT);
+  // A rule finding and a page-audit finding are both "something is wrong at a
+  // URL"; only their fix maps differ. Reading each kind's own map keeps the
+  // button honest — it appears exactly when a governed lane can draft the fix,
+  // and never when the server would refuse.
+  if (item.queueState === "open" && typeof item.rule === "string") {
+    const drafts =
+      item.kind === "recommendation"
+        ? hasGovernedFixPath(item.rule)
+        : item.kind === "audit"
+          ? fixTargetForPageCheck(item.rule) !== null
+          : false;
+    if (drafts) verbs.push(DRAFT);
   }
   return verbs;
 }
