@@ -8,6 +8,9 @@
  * other caller changes.
  */
 
+// Values audited against the 2026-08-20 rule-thresholds handoff; volume-honesty
+// bucket for every rule lives in rule-buckets.ts; do not change a value without
+// a citation — see .claude/skills/seo-measurement/SKILL.md
 export const SEARCH_CONSOLE_THRESHOLDS = {
   strikingDistance: { minPosition: 8, maxPosition: 20, minImpressions: 50 },
   weakCtr: { minImpressions: 200, maxCtr: 0.01 },
@@ -17,6 +20,9 @@ export const SEARCH_CONSOLE_THRESHOLDS = {
   comparisonWindowDays: 7,
 } as const;
 
+// Values audited against the 2026-08-20 rule-thresholds handoff; volume-honesty
+// bucket for every rule lives in rule-buckets.ts; do not change a value without
+// a citation — see .claude/skills/seo-measurement/SKILL.md
 export const SEO_VALIDATION_THRESHOLDS = {
   decliningTraffic: { minPreviousClicks: 10, minClickDropRatio: 0.3 },
   decliningImpressions: { minPreviousImpressions: 100, minImpressionDropRatio: 0.25 },

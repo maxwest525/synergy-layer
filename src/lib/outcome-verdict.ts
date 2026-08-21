@@ -239,6 +239,28 @@ export function outcomeVerdict(reading: OutcomeReading): OutcomeAssessment {
         reason: `The numbers fell, but this change only altered wording, and Google may be showing its own wording instead — it rewrites titles it doesn't like and no one can force the one on the page. Until what Google displays is verified, this is an unmeasured treatment, not a failed one.`,
       };
     }
+
+    // A fall only counts as this page's doing once the site's own tide is
+    // ruled out: a page falling no harder than the whole site fell is riding
+    // a site-wide slump, not failing on its own.
+    const fallTide = siteRatio(reading.siteTrend, reading.windowDays);
+    const fallRatio = reading.impressions / scaledBaselineImpressions;
+    if (fallTide !== null && fallTide <= 1 && fallRatio >= fallTide) {
+      const fallRatioLabel = fallRatio.toFixed(1);
+      const fallTideLabel = fallTide.toFixed(1);
+      // Same rounding-collision guard as the rise branch: a page ×0.6 against
+      // a site ×0.6 must not be presented as a contrast the printed numbers
+      // don't carry.
+      const siteClause =
+        fallTideLabel === fallRatioLabel
+          ? `the whole site kept pace (×${fallTideLabel})`
+          : `the whole site fell as hard, ×${fallTideLabel}`;
+      return {
+        verdict: "neutral",
+        reason: `Fell from ${scaledBaselineImpressions} to ${reading.impressions} impressions${scalingNote}, ×${fallRatioLabel}, but ${siteClause} over the same weeks — this looks like the season, not the page.`,
+      };
+    }
+
     return {
       verdict: "failure",
       reason: `Fell from ${scaledBaselineImpressions} to ${reading.impressions} impressions${scalingNote}, and clicks fell with it, from ${scaledBaselineClicks} to ${reading.clicks}. ${confidence.reason}`,
@@ -277,12 +299,20 @@ export function outcomeVerdict(reading: OutcomeReading): OutcomeAssessment {
     };
   }
 
+  const tideLabelForSuccess = tide === null ? null : tide.toFixed(1);
+  const changeRatioLabelForSuccess = changeRatio.toFixed(1);
   const tideNote =
     tide === null
       ? " No site trend was stored to compare against, so call this a success qualified, not certain."
       : tide >= 1 - FLAT_SITE_BAND && tide <= 1 + FLAT_SITE_BAND
         ? " The site held flat over the same weeks, so this looks like the treatment, not the tide."
-        : ` The site itself moved ×${tide.toFixed(1)} over the same weeks, less than this page's ×${changeRatio.toFixed(1)}.`;
+        : // Same rounding-collision guard as the tide-neutral branch above: a
+          // site ×2.16 against a page ×2.24 can both print as ×2.2, and
+          // asserting "less than" between two identical printed numbers is a
+          // false precision the underlying counts don't carry.
+          tideLabelForSuccess === changeRatioLabelForSuccess
+          ? ` The site itself kept pace, ×${tideLabelForSuccess}, over the same weeks.`
+          : ` The site itself moved ×${tideLabelForSuccess} over the same weeks, less than this page's ×${changeRatioLabelForSuccess}.`;
   return {
     verdict: "success",
     reason: `Rose from ${scaledBaselineImpressions} to ${reading.impressions} impressions${scalingNote}.${tideNote}`,

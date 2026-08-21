@@ -388,10 +388,18 @@ function ungradedNoteFor(graded: readonly GradedOutcome[]): string | null {
 const MIN_COHORT_MEMBERS = 3;
 
 function cohortNoteFor(graded: readonly GradedOutcome[]): string | null {
+  // Mirrors tilesFor's judged filter: too_early and not_yet readings predate
+  // the window they would be pooled on, and unmeasurable readings (a page
+  // outside the connected property, an ungrounded window) contribute nothing
+  // real. Pooling them in would let a handful of not-yet-closed windows read
+  // as a graded cohort.
   const eligible = graded.filter(
     (outcome) =>
       outcome.windowDays === 28 &&
       outcome.verdict !== null &&
+      outcome.verdict !== "too_early" &&
+      outcome.verdict !== "not_yet" &&
+      outcome.verdict !== "unmeasurable" &&
       outcome.baseline !== null &&
       outcome.readingStatus === "complete",
   );

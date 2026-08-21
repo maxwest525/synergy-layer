@@ -298,6 +298,43 @@ describe("judging many small changes together", () => {
     expect(view.cohortNote).toMatch(/120 to 155/);
   });
 
+  it("leaves out too-early and unmeasurable readings, pooling only the graded ones", () => {
+    // Three too-early changes and one unmeasurable page must not contribute to
+    // the pool: their windows have not closed, or nothing can be read from
+    // them at all, so "3 measured changes, judged together" would be
+    // reporting a verdict on readings that never earned one.
+    const view = buildSiteHealth(
+      withFacts({
+        siteObservedAt: NOW,
+        outcomes: [
+          outcome({ changeId: "a", baseline: { impressions: 40, clicks: 0 }, impressions: 52 }),
+          outcome({ changeId: "b", baseline: { impressions: 40, clicks: 0 }, impressions: 52 }),
+          outcome({
+            changeId: "too-early-1",
+            daysSinceLive: 10,
+            baseline: { impressions: 40, clicks: 0 },
+            impressions: 52,
+          }),
+          outcome({
+            changeId: "too-early-2",
+            daysSinceLive: 10,
+            baseline: { impressions: 40, clicks: 0 },
+            impressions: 52,
+          }),
+          outcome({
+            changeId: "unmeasurable",
+            measurable: false,
+            baseline: { impressions: 40, clicks: 0 },
+            impressions: 52,
+          }),
+        ],
+      }),
+    );
+    // Two graded members sit under MIN_COHORT_MEMBERS, so the note is null
+    // rather than built from the two graded readings plus the three others.
+    expect(view.cohortNote).toBeNull();
+  });
+
   it("leaves out a reading with no baseline or on a window other than 28 days", () => {
     const view = buildSiteHealth(
       withFacts({

@@ -19,6 +19,7 @@ import {
   partitionByConstraint,
   type ConstraintFacts,
 } from "./binding-constraint";
+import { MIN_BASELINE } from "./confidence";
 import { RULE_ASSIGNMENTS, type RuleAssignment } from "./rule-buckets";
 import {
   buildQueue,
@@ -235,6 +236,21 @@ const BEYOND_RULE_NAMES: Record<string, string> = {
 };
 
 /**
+ * What each beyond_current_volume rule's threshold actually counts.
+ *
+ * striking_distance_query, declining_position, position_loss and
+ * query_coverage_gap all read a query-dimension row: the threshold is an
+ * impression count for one search term, aggregated the same way regardless of
+ * which page earns it (search-console-rules.server.ts, seo-validation.server.ts).
+ * possible_query_overlap and research_page_traction instead read a
+ * page-dimension count — a page's own total impressions, or a page's earnings
+ * on a shared term — so "on a single search term" would misstate what they
+ * measure. See rule-buckets.ts's `needsPerTarget` for the live threshold each
+ * one cites.
+ */
+const PER_PAGE_BEYOND_RULES = new Set<string>(["possible_query_overlap", "research_page_traction"]);
+
+/**
  * The lever that changes what this volume can answer, so "not measurable
  * yet" never reads as a dead end. Discovery order per
  * docs/superpowers/research/2026-08-20-small-site-growth-research.md:
@@ -260,20 +276,31 @@ export function describeAnswerability(
   assignments: readonly RuleAssignment[],
 ): { line: string; beyond: string[] } {
   const perPage = Math.round(siteImpressions28d / pageCount);
+  // The same floor confidence.ts uses everywhere else: below it, a site-wide
+  // total is not itself trustworthy, so the site-wide half of the claim below
+  // cannot be made either.
+  const hasSiteVolume = siteImpressions28d >= MIN_BASELINE;
 
-  const line =
-    `Your site earned ~${siteImpressions28d} appearances over the last four weeks across ` +
-    `${pageCount} pages: enough for the site-wide checks and the yes/no facts, not enough ` +
-    `for per-page click judgements. That is a statement about traffic, not about the ` +
-    `site's quality. ${GROWTH_LEVER_LINE}`;
+  const line = hasSiteVolume
+    ? `Your site earned ~${siteImpressions28d} appearances over the last four weeks across ` +
+      `${pageCount} pages: enough for the site-wide checks and the yes/no facts, not enough ` +
+      `for per-page click judgements. That is a statement about traffic, not about the ` +
+      `site's quality. ${GROWTH_LEVER_LINE}`
+    : `Your site earned only ~${siteImpressions28d} appearances over the last four weeks across ` +
+      `${pageCount} pages: too little even to trust the site-wide checks, so only the yes/no ` +
+      `facts are answerable right now. That is a statement about traffic, not about the ` +
+      `site's quality. ${GROWTH_LEVER_LINE}`;
 
   const beyond = assignments
     .filter((assignment) => assignment.bucket === "beyond_current_volume")
     .map((assignment) => {
       const name = BEYOND_RULE_NAMES[assignment.rule] ?? assignment.rule;
+      const unit = PER_PAGE_BEYOND_RULES.has(assignment.rule)
+        ? "on a single page"
+        : "on a single search term";
       return (
-        `${name} need about ${assignment.needsPerTarget} appearances on a single search ` +
-        `term; your busiest page earns about ${perPage} a month.`
+        `${name} need about ${assignment.needsPerTarget} appearances ${unit}; ` +
+        `the average page here earns about ${perPage} a month.`
       );
     });
 

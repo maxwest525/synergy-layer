@@ -267,6 +267,77 @@ describe("the site's tide is compared on a per-day footing, not a raw total", ()
   });
 });
 
+describe("a fall only counts as this page's doing once the site's own tide is ruled out", () => {
+  it("grades neutral when the whole site fell at least as hard, naming both numbers", () => {
+    const graded = outcomeVerdict(
+      reading({
+        windowDays: 28,
+        daysSinceLive: 28,
+        impressions: 240,
+        clicks: 10,
+        baseline: { impressions: 400, clicks: 30 },
+        // Page fell to ×0.6, the site fell harder, to ×0.4 — the site's own
+        // slump explains the page's fall.
+        siteTrend: { beforeImpressions: 300, afterImpressions: 120 },
+      }),
+    );
+    expect(graded.verdict).toBe("neutral");
+    expect(graded.reason).toMatch(/season, not the page/);
+    expect(graded.reason).toContain("400");
+    expect(graded.reason).toContain("240");
+    expect(graded.reason).toMatch(/×0\.6/);
+    expect(graded.reason).toMatch(/×0\.4/);
+  });
+
+  it("stays a failure when the site held flat", () => {
+    const graded = outcomeVerdict(
+      reading({
+        windowDays: 28,
+        daysSinceLive: 28,
+        impressions: 240,
+        clicks: 10,
+        baseline: { impressions: 400, clicks: 30 },
+        siteTrend: { beforeImpressions: 300, afterImpressions: 300 },
+      }),
+    );
+    expect(graded.verdict).toBe("failure");
+  });
+
+  it("a wording-treatment fall stays unmeasurable even when the site also fell", () => {
+    const graded = outcomeVerdict(
+      reading({
+        windowDays: 28,
+        daysSinceLive: 28,
+        impressions: 240,
+        clicks: 10,
+        baseline: { impressions: 400, clicks: 30 },
+        siteTrend: { beforeImpressions: 300, afterImpressions: 120 },
+        wordingTreatment: true,
+      }),
+    );
+    expect(graded.verdict).toBe("unmeasurable");
+  });
+
+  it("says 'kept pace' rather than a false contrast when the two fall ratios round the same", () => {
+    // Page fell to ×0.62, site to ×0.58 — both print as ×0.6. Asserting a
+    // contrast between two numbers that print identically is a precision the
+    // underlying counts don't carry.
+    const graded = outcomeVerdict(
+      reading({
+        windowDays: 28,
+        daysSinceLive: 28,
+        impressions: 248,
+        clicks: 10,
+        baseline: { impressions: 400, clicks: 30 },
+        siteTrend: { beforeImpressions: 300, afterImpressions: 174 },
+      }),
+    );
+    expect(graded.verdict).toBe("neutral");
+    expect(graded.reason).toMatch(/kept pace \(×0\.6\)/);
+    expect(graded.reason).not.toMatch(/fell as hard/);
+  });
+});
+
 describe("a rise only counts once it earns at least as much as before", () => {
   it("being seen more while earning less is neutral, not success", () => {
     const graded = outcomeVerdict(
@@ -446,5 +517,26 @@ describe("the scaling note appears in every branch that quotes a scaled number",
     // contrast between two numbers that print identically.
     expect(graded.reason).toMatch(/kept pace \(×2\.2\)/);
     expect(graded.reason).not.toMatch(/site rose ×2\.2/);
+  });
+
+  it("applies the same rounding-collision guard to a success's tide note", () => {
+    // The page's own ratio (224 / 100 = ×2.24) and the site's (648 / 300 =
+    // ×2.16) both round to ×2.2, and the page still won (2.24 > 2.16), so
+    // this reaches the success branch — not the tide-neutral one above.
+    // Asserting "less than" between two identically printed numbers would be
+    // the same false precision the tide-neutral branch was fixed to avoid.
+    const graded = outcomeVerdict(
+      reading({
+        windowDays: 28,
+        daysSinceLive: 28,
+        impressions: 224,
+        clicks: 20,
+        baseline: { impressions: 100, clicks: 5 },
+        siteTrend: { beforeImpressions: 300, afterImpressions: 648 },
+      }),
+    );
+    expect(graded.verdict).toBe("success");
+    expect(graded.reason).toMatch(/kept pace, ×2\.2/);
+    expect(graded.reason).not.toMatch(/less than this page's/);
   });
 });

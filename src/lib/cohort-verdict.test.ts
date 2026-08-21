@@ -142,6 +142,8 @@ describe("the pieces the verdict is built from", () => {
     ]);
     expect(cancelled?.direction).toBe("flat");
     expect(cancelled?.reason).toMatch(/\), and individual changes moved.*cancelled out/);
+    expect(cancelled?.reason).toMatch(/no single page drove it/);
+    expect(cancelled?.reason).not.toMatch(/this is not one page's doing/);
     // No dangling "either" — nothing earlier in the sentence for it to refer to.
     expect(cancelled?.reason).not.toMatch(/either/);
   });

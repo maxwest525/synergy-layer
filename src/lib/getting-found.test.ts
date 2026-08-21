@@ -9,6 +9,7 @@ import {
   topRows,
   type GettingFoundFacts,
 } from "./getting-found";
+import { MIN_BASELINE } from "./confidence";
 import { RULE_ASSIGNMENTS } from "./rule-buckets";
 import type { PeriodComparison } from "./search-console";
 
@@ -463,6 +464,62 @@ describe("what this volume can and cannot answer", () => {
     const { beyond } = describeAnswerability(500, 48, RULE_ASSIGNMENTS);
     const beyondCount = RULE_ASSIGNMENTS.filter((a) => a.bucket === "beyond_current_volume").length;
     expect(beyond).toHaveLength(beyondCount);
+  });
+
+  it("attributes the per-page figure to the average page, never the busiest one", () => {
+    // perPage is the site total divided by the page count — a site average,
+    // not anything read off any one page. "Busiest page" claimed a fact
+    // nothing here measures.
+    const { beyond } = describeAnswerability(500, 48, RULE_ASSIGNMENTS);
+    expect(beyond.every((entry) => !/busiest/i.test(entry))).toBe(true);
+    expect(beyond.some((entry) => /average page/i.test(entry))).toBe(true);
+  });
+
+  it("words each beyond entry to match what its threshold actually counts", () => {
+    // possible_query_overlap and research_page_traction read a page-dimension
+    // count (a page's own impressions), not a single search term's.
+    const { beyond } = describeAnswerability(500, 48, RULE_ASSIGNMENTS);
+    const byRule = new Map(RULE_ASSIGNMENTS.map((a) => [a.rule, a]));
+
+    const overlapEntry = beyond.find((entry) =>
+      entry.startsWith("Overlapping search-term signals"),
+    );
+    expect(overlapEntry).toMatch(/on a single page/);
+    expect(overlapEntry).not.toMatch(/on a single search term/);
+
+    const tractionEntry = beyond.find((entry) => entry.startsWith("Research-page traction"));
+    expect(tractionEntry).toMatch(/on a single page/);
+    expect(tractionEntry).not.toMatch(/on a single search term/);
+
+    const strikingEntry = beyond.find((entry) => entry.startsWith("Near-miss search terms"));
+    expect(strikingEntry).toMatch(/on a single search term/);
+
+    const positionSlipEntry = beyond.find((entry) => entry.startsWith("Position-slip"));
+    expect(positionSlipEntry).toMatch(/on a single search term/);
+
+    const positionLossEntry = beyond.find((entry) => entry.startsWith("Position-loss"));
+    expect(positionLossEntry).toMatch(/on a single search term/);
+
+    const coverageGapEntry = beyond.find((entry) => entry.startsWith("Search-term coverage"));
+    expect(coverageGapEntry).toMatch(/on a single search term/);
+
+    // Sanity: every rule this test names is actually in the fixture, so the
+    // assertions above are not vacuously passing on undefined.
+    for (const rule of ["possible_query_overlap", "research_page_traction"]) {
+      expect(byRule.get(rule)?.bucket).toBe("beyond_current_volume");
+    }
+  });
+
+  it("does not claim the site-wide checks are answerable below the noise floor", () => {
+    const belowFloor = MIN_BASELINE - 1;
+    const { line } = describeAnswerability(belowFloor, 48, RULE_ASSIGNMENTS);
+    expect(line).not.toMatch(/enough for the site-wide checks/);
+    expect(line).toMatch(/yes\/no facts/);
+  });
+
+  it("still claims the site-wide checks once volume clears the noise floor", () => {
+    const { line } = describeAnswerability(MIN_BASELINE, 48, RULE_ASSIGNMENTS);
+    expect(line).toMatch(/enough for the site-wide checks/);
   });
 
   it("is null on the view model until both the volume and the page count are stored", () => {

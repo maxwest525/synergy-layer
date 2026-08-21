@@ -111,7 +111,7 @@ function unanimity(
       clause:
         nonTied === 0
           ? "and every page held exactly level, so there is nothing to test agreement on"
-          : "and individual changes moved in both directions and cancelled out, so this is not one page's doing",
+          : "and individual changes moved in both directions and cancelled out, so no single page drove it",
     };
   }
 
