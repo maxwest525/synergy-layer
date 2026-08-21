@@ -355,6 +355,28 @@ export const executeChangeRequest = createServerFn({ method: "POST" })
     return result;
   });
 
+/**
+ * The revert commit the rolled_back state now depends on. It is a separate
+ * operator action from the transition so a refused revert leaves the change
+ * request exactly where it was.
+ */
+export const revertChangeRequest = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(parseUuidInput)
+  .handler(async ({ data, context }) => {
+    const { assertOperator } = await import("../os-admin.server");
+    await assertOperator(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { createExecutionStore, createGithubApi } = await import("./execute.server");
+    const { revertSourceChange } = await import("./execute");
+    return revertSourceChange({
+      store: createExecutionStore(supabaseAdmin, context.supabase, context.userId),
+      github: createGithubApi(),
+      requestId: data.id,
+      actorId: context.userId,
+    });
+  });
+
 export const checkChangeRequestPublished = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(parseUuidInput)

@@ -27,6 +27,7 @@ import {
   verifyChangeRequest,
 } from "@/lib/change-requests.functions";
 import { describeOutcome, humanState, isChangeState } from "@/lib/change-request-state";
+import { revertChangeRequest } from "@/lib/execution/execution.functions";
 import { editTitleH1Proposal, regenerateTitleH1Proposal } from "@/lib/title-h1-proposals.functions";
 import { getTenantContext } from "@/lib/tenant.functions";
 
@@ -311,6 +312,7 @@ function ChangeRequestPage() {
   const reject = useServerFn(rejectChangeRequest);
   const verify = useServerFn(verifyChangeRequest);
   const rollBack = useServerFn(rollBackChangeRequest);
+  const revert = useServerFn(revertChangeRequest);
 
   const invalidate = () => {
     void queryClient.invalidateQueries({ queryKey: ["change-request"] });
@@ -325,6 +327,10 @@ function ChangeRequestPage() {
       if (action === "approve") return approve({ data: payload });
       if (action === "reject") return reject({ data: payload });
       if (action === "verify") return verify({ data: payload });
+      // The rolled_back state requires a recorded revert commit, so the commit
+      // is written first and a refusal never reaches the transition.
+      const reverted = await revert({ data: { id } });
+      if (reverted.status !== "reverted") throw new Error(reverted.message);
       return rollBack({ data: payload });
     },
     onSuccess: (result) => {
@@ -613,7 +619,8 @@ function ChangeRequestPage() {
         <GlassCard className="p-5">
           <h2 className="text-sm font-semibold text-foreground">Rollback</h2>
           <p className="mt-2 text-sm text-muted-foreground">
-            To undo this, restore the stored before values in the site project:
+            Reverting commits these stored before values back to the site source, then marks the
+            change rolled back. If the commit cannot be applied cleanly, nothing moves.
           </p>
           <ul className="mt-3 space-y-2">
             {fields.map((field) => (
@@ -630,7 +637,7 @@ function ChangeRequestPage() {
               disabled={busy}
               onClick={() => mutation.mutate("rollback")}
             >
-              Mark rolled back
+              Revert and roll back
             </Button>
           </div>
         </GlassCard>

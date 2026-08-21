@@ -256,16 +256,29 @@ export const listActivityFeed = createServerFn({ method: "GET" }).handler(
         });
       }
       if (change.rolled_back_at) {
+        // Only a recorded revert commit can carry the claim that the source was
+        // put back. Without one this line says what it knows and nothing more.
+        const revert = executions.find(
+          (execution) =>
+            execution.change_request_id === change.id &&
+            execution.kind === "source_revert" &&
+            execution.status === "reverted" &&
+            execution.commit_sha !== null,
+        );
         events.push({
           id: `rolledback-${change.id}`,
           stage: "deployed",
           at: change.rolled_back_at,
           title: "Rolled back",
-          detail: change.rollback_notes ?? "Reverted to the previous revision",
+          detail:
+            change.rollback_notes ??
+            (revert
+              ? `Previous values committed back in ${revert.commit_sha?.slice(0, 10)}`
+              : "No revert commit is recorded for this rollback"),
           state: "rolled_back",
           linkTo: "/changes/$id",
           linkId: change.id,
-          externalUrl: null,
+          externalUrl: revert?.commit_url ?? null,
         });
       }
 

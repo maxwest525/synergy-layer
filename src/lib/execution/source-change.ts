@@ -108,6 +108,18 @@ export function buildCommitMessage(changeRequestId: string, title: string): stri
   return `${title}\n\n${commitMarker(changeRequestId)}`;
 }
 
+/**
+ * A revert carries its own marker. Sharing the forward marker would make a
+ * revert commit answer the reconciliation search for the commit it undid.
+ */
+export function revertCommitMarker(changeRequestId: string): string {
+  return `AOOS-revert-of-change-request: ${changeRequestId}`;
+}
+
+export function buildRevertCommitMessage(changeRequestId: string, title: string): string {
+  return `Revert: ${title}\n\n${revertCommitMarker(changeRequestId)}`;
+}
+
 export type PublishedProof = {
   ok: boolean;
   expectedTitle: string | null;

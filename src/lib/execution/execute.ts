@@ -2,8 +2,10 @@ import { checkSourceTarget, checkTargetUrl } from "./allowlist";
 import {
   applyExactReplacements,
   buildCommitMessage,
+  buildRevertCommitMessage,
   commitMarker,
   type FieldChange,
+  revertCommitMarker,
   verifyRenderedPage,
   type PublishedProof,
   type RenderedPage,
@@ -36,7 +38,7 @@ export type AttemptRecord = {
   tenantId: string;
   changeRequestId: string;
   actorId: string;
-  kind: "source_commit" | "publish_check" | "preflight";
+  kind: "source_commit" | "source_revert" | "publish_check" | "preflight";
   status:
     | "committed"
     | "reconciled"
@@ -45,7 +47,8 @@ export type AttemptRecord = {
     | "failed"
     | "verified"
     | "pending"
-    | "proved";
+    | "proved"
+    | "reverted";
   commitSha?: string | null;
   commitUrl?: string | null;
   error?: string | null;
@@ -101,6 +104,20 @@ export type ExecutionOutcome = {
   commitSha?: string;
   commitUrl?: string;
 };
+
+/**
+ * One drift rule for both directions of a write. A forward commit is computed
+ * against the revision the change was proposed on; a revert is computed against
+ * the commit it undoes. Either way the branch head must still be that revision.
+ */
+function branchHeadDrift(input: {
+  head: string;
+  expected: string;
+  expectedDescription: string;
+}): string | null {
+  if (input.head === input.expected) return null;
+  return `Refused without writing: the branch head is ${input.head.slice(0, 10)} but ${input.expectedDescription} ${input.expected.slice(0, 10)}. Re-observe the source before executing.`;
+}
 
 export async function executeSourceChange(input: {
   store: ExecutionStore;
@@ -217,11 +234,12 @@ export async function executeSourceChange(input: {
     };
   }
 
-  if (head !== request.baseRevision) {
-    return refuse(
-      `Refused without writing: the branch head is ${head.slice(0, 10)} but this change was proposed against ${request.baseRevision.slice(0, 10)}. Re-observe the source before executing.`,
-    );
-  }
+  const drift = branchHeadDrift({
+    head,
+    expected: request.baseRevision,
+    expectedDescription: "this change was proposed against",
+  });
+  if (drift) return refuse(drift);
 
   let file: { sha: string; content: string };
   try {
@@ -278,6 +296,141 @@ export async function executeSourceChange(input: {
       status: "failed",
       message: `The write was attempted and did not complete cleanly. ${message} Run this again: AOOS checks for an existing commit carrying this change request's marker before writing anything.`,
     };
+  }
+}
+
+export type RevertOutcome = {
+  status: "reverted" | "refused" | "failed";
+  message: string;
+  commitSha?: string;
+  commitUrl?: string;
+};
+
+/**
+ * Undo a committed change by writing its recorded before values back. The
+ * rollback state is only allowed to claim a revert happened once this has
+ * recorded a revert commit, so a refusal here has to leave the state alone.
+ */
+export async function revertSourceChange(input: {
+  store: ExecutionStore;
+  github: GithubApi | null;
+  requestId: string;
+  actorId: string;
+}): Promise<RevertOutcome> {
+  const request = await input.store.load(input.requestId);
+  if (!request) throw new Error("That change request is not visible to this account.");
+
+  const record = async (
+    attempt: Omit<AttemptRecord, "tenantId" | "changeRequestId" | "actorId">,
+  ) => {
+    await input.store.recordAttempt({
+      tenantId: request.tenantId,
+      changeRequestId: request.id,
+      actorId: input.actorId,
+      ...attempt,
+    });
+  };
+
+  const refuse = async (reason: string): Promise<RevertOutcome> => {
+    await record({ kind: "source_revert", status: "refused", error: reason });
+    return { status: "refused", message: reason };
+  };
+
+  const fail = async (message: string): Promise<RevertOutcome> => {
+    await record({ kind: "source_revert", status: "failed", error: message });
+    return { status: "failed", message: `No revert commit was created. ${message}` };
+  };
+
+  if (!request.commitSha) {
+    return refuse(
+      "Refused without writing: no source commit is recorded for this change request, so there is nothing to revert.",
+    );
+  }
+
+  const allowed = checkSourceTarget({
+    repo: request.repo,
+    branch: request.branch,
+    filePath: request.filePath,
+    projectId: request.projectId,
+  });
+  if (!allowed.ok) return refuse(allowed.reason);
+  if (!request.filePath) {
+    return refuse("Refused without writing: this change request stores no source file.");
+  }
+  if (!input.github) {
+    return refuse(
+      "Executor credential missing. No GitHub executor token is configured, so no revert was attempted.",
+    );
+  }
+
+  const { repo, branch } = allowed.value;
+
+  let head: string;
+  try {
+    head = await input.github.branchHead(repo, branch);
+  } catch (error) {
+    return fail(error instanceof Error ? error.message : "GitHub read failed.");
+  }
+
+  const drift = branchHeadDrift({
+    head,
+    expected: request.commitSha,
+    expectedDescription: "this change was committed as",
+  });
+  if (drift) return refuse(drift);
+
+  let file: { sha: string; content: string };
+  try {
+    file = await input.github.readFile(repo, request.filePath, head);
+  } catch (error) {
+    return fail(error instanceof Error ? error.message : "GitHub read failed.");
+  }
+
+  // Undoing a sequence of edits runs it backwards: the replacement applied last
+  // is the one whose result is still intact, so it is the one undone first.
+  const reversed = [...request.changes].reverse().map((change) => ({
+    ...change,
+    before: change.after,
+    after: change.before,
+  }));
+  const applied = applyExactReplacements(file.content, reversed);
+  if (!applied.ok) return refuse(applied.reason);
+  if (applied.value.alreadyApplied) {
+    return refuse(
+      "Refused without writing: the file already holds the values this change replaced, so no revert commit is needed and none was created.",
+    );
+  }
+
+  try {
+    const result = await input.github.commitFile({
+      repo,
+      branch,
+      path: request.filePath,
+      content: applied.value.content,
+      fileSha: file.sha,
+      message: buildRevertCommitMessage(request.id, request.title),
+    });
+    await record({
+      kind: "source_revert",
+      status: "reverted",
+      commitSha: result.commitSha,
+      commitUrl: result.commitUrl,
+      detail: {
+        revertedCommitSha: request.commitSha,
+        headBeforeCommit: head,
+        marker: revertCommitMarker(request.id),
+        replacements: applied.value.replaced,
+      },
+    });
+    return {
+      status: "reverted",
+      message:
+        "The previous wording was committed back to the site source. The public page is not proven reverted until it is rendered again.",
+      commitSha: result.commitSha,
+      commitUrl: result.commitUrl,
+    };
+  } catch (error) {
+    return fail(error instanceof Error ? error.message : "GitHub write failed.");
   }
 }
 

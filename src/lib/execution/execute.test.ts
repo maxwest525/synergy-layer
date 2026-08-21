@@ -10,6 +10,7 @@ import {
 import {
   checkPublishedPage,
   executeSourceChange,
+  revertSourceChange,
   type AttemptRecord,
   type ExecutableRequest,
   type ExecutionStore,
@@ -253,6 +254,108 @@ describe("executeSourceChange", () => {
     expect(outcome.status).toBe("replayed");
     expect(writes).toHaveLength(0);
     expect(saved).toHaveLength(0);
+  });
+});
+
+const appliedFile = `export const services = {
+  seoTitle: "Employee Relocation Movers | TruMove",
+  heading: "Employee Relocation Moving Services",
+};`;
+
+describe("revertSourceChange", () => {
+  it("commits the recorded before values back", async () => {
+    const { store, attempts } = makeStore(makeRequest({ commitSha: "live-sha", state: "applied" }));
+    const { github, writes } = makeGithub(appliedFile, { head: "live-sha" });
+    const outcome = await revertSourceChange({
+      store,
+      github,
+      requestId: "x",
+      actorId: "operator",
+    });
+
+    expect(outcome.status).toBe("reverted");
+    expect(outcome.commitSha).toBe("new-sha");
+    expect(writes).toHaveLength(1);
+    const write = writes[0] as { content: string; message: string };
+    expect(write.content).toBe(file);
+    expect(write.message).toContain("AOOS-revert-of-change-request:");
+    expect(attempts[0]).toMatchObject({
+      kind: "source_revert",
+      status: "reverted",
+      commitSha: "new-sha",
+    });
+  });
+
+  it("refuses without writing when the branch head has moved past the commit it undoes", async () => {
+    const { store, attempts } = makeStore(makeRequest({ commitSha: "live-sha", state: "applied" }));
+    const { github, writes } = makeGithub(appliedFile, { head: "someone-elses-sha" });
+    const outcome = await revertSourceChange({
+      store,
+      github,
+      requestId: "x",
+      actorId: "operator",
+    });
+
+    expect(outcome.status).toBe("refused");
+    expect(outcome.message).toContain("branch head");
+    expect(writes).toHaveLength(0);
+    expect(attempts[0]).toMatchObject({ kind: "source_revert", status: "refused" });
+  });
+
+  it("refuses without writing when the file no longer holds the values it committed", async () => {
+    const { store } = makeStore(makeRequest({ commitSha: "live-sha", state: "applied" }));
+    const { github, writes } = makeGithub("someone already rewrote this file", {
+      head: "live-sha",
+    });
+    const outcome = await revertSourceChange({
+      store,
+      github,
+      requestId: "x",
+      actorId: "operator",
+    });
+
+    expect(outcome.status).toBe("refused");
+    expect(writes).toHaveLength(0);
+  });
+
+  it("refuses a second revert instead of re-committing the before values", async () => {
+    const { store } = makeStore(
+      makeRequest({
+        commitSha: "live-sha",
+        state: "applied",
+        changes: metaChanges,
+        filePath: "src/components/seo/SeoHead.tsx",
+      }),
+    );
+    const { github, writes } = makeGithub(
+      'description: "Old corporate relocation description.",',
+      { head: "live-sha" },
+    );
+    const outcome = await revertSourceChange({
+      store,
+      github,
+      requestId: "x",
+      actorId: "operator",
+    });
+
+    expect(outcome.status).toBe("refused");
+    expect(outcome.message).toContain("already holds the values");
+    expect(writes).toHaveLength(0);
+  });
+
+  it("refuses when no source commit was ever recorded", async () => {
+    const { store } = makeStore(makeRequest());
+    const { github, writes } = makeGithub(appliedFile);
+    const outcome = await revertSourceChange({
+      store,
+      github,
+      requestId: "x",
+      actorId: "operator",
+    });
+
+    expect(outcome.status).toBe("refused");
+    expect(outcome.message).toContain("nothing to revert");
+    expect(writes).toHaveLength(0);
   });
 });
 
