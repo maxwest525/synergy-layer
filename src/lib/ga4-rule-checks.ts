@@ -20,6 +20,14 @@ import { confidenceInCount, confidenceInCountChange } from "./confidence";
  * statistics one).
  */
 
+/** Every rule this module can raise, for anything that needs the whole set. */
+export const GA4_CHECK_RULES = [
+  "page_traffic_loss",
+  "page_traffic_gain",
+  "event_disappeared",
+  "zero_engagement_page",
+] as const;
+
 export type Ga4CheckRule =
   "page_traffic_loss" | "page_traffic_gain" | "event_disappeared" | "zero_engagement_page";
 
@@ -55,8 +63,14 @@ export const GA4_RULE_THRESHOLDS = {
   comparisonWindowDays: 7,
 } as const;
 
-/** Events GA4 collects on its own; they prove rendering, not engagement. */
-const AUTOMATIC_EVENTS = new Set([
+/**
+ * Events GA4 collects on its own; they prove rendering, not engagement.
+ *
+ * Exported so the visitors page can draw the same line this rule does. A
+ * second copy of the list would let the page call an event "something someone
+ * did" while the rule that reads it disagrees.
+ */
+export const AUTOMATIC_EVENTS = new Set([
   "page_view",
   "session_start",
   "first_visit",
@@ -70,7 +84,7 @@ const AUTOMATIC_EVENTS = new Set([
  * multiplies real sessions. The max across event rows (normally the page_view
  * row) is the page's session count.
  */
-function sessionsByPage(rows: Ga4Row[]): Map<string, number> {
+export function sessionsByPage(rows: Ga4Row[]): Map<string, number> {
   const byPage = new Map<string, number>();
   for (const row of rows) {
     const page = `${row.hostName}${row.pagePath}`;

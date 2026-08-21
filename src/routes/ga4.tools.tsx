@@ -20,11 +20,11 @@ import { getGa4Findings } from "@/lib/ga4-findings.functions";
 import { getMeasurementState, refreshGa4, type Ga4MetricValue } from "@/lib/measurement.functions";
 import { getTenantContext } from "@/lib/tenant.functions";
 
-export const Route = createFileRoute("/ga4")({
+export const Route = createFileRoute("/ga4/tools")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Google Analytics 4 — Marky" },
+      { title: "Analytics tools — Marky" },
       {
         name: "description",
         content:

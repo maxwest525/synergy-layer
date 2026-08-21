@@ -456,8 +456,11 @@ function MeasurementPage() {
           {ga4Mutation.isPending ? "Refreshing GA4" : "Refresh GA4"}
         </Button>
 
-        <Link to="/ga4" className="ml-3 text-sm text-primary underline-offset-4 hover:underline">
-          Open the GA4 page
+        <Link
+          to="/ga4/tools"
+          className="ml-3 text-sm text-primary underline-offset-4 hover:underline"
+        >
+          Open the analytics tools
         </Link>
 
         {ga4.connection.configured ? null : (

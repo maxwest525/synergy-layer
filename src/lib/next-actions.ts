@@ -51,6 +51,8 @@ export type NextActionRoute =
   // The evidence workspace, behind the category page that is now /search.
   | "/search/tools"
   | "/ga4"
+  // The analytics workspace, behind the category page that is now /ga4.
+  | "/ga4/tools"
   | "/measurement"
   // The measurement workspace, behind the Site health category page.
   | "/measurement/tools"
@@ -177,7 +179,7 @@ export function buildNextActions(facts: NextActionFacts): NextAction[] {
         ? `0 stored snapshot(s). Last recorded error: ${facts.ga4.lastError}.`
         : `0 stored snapshot(s). Credentials ${facts.ga4.configured ? "are recorded" : "are not recorded"}.`,
       blockedBy: facts.ga4.configured ? null : "No analytics credential is recorded yet.",
-      to: "/ga4",
+      to: "/ga4/tools",
       actionLabel: "Open analytics",
       weight: 60,
     });
@@ -428,7 +430,7 @@ export function buildMissingReasons(facts: NextActionFacts): MissingReason[] {
         ? `Every analytics read failed. Last recorded error: ${facts.ga4.lastError}.`
         : "Analytics has never completed a stored read, so visit numbers are absent rather than zero.",
       instruction: "Refresh analytics now and store the first snapshot.",
-      to: "/ga4",
+      to: "/ga4/tools",
       actionLabel: "Refresh analytics",
     });
   }

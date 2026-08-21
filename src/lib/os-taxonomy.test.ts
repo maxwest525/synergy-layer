@@ -29,6 +29,12 @@ describe("os taxonomy", () => {
     expect(taxonomyGroupForPath("/auth")).toBeNull();
   });
 
+  it("keeps the analytics subtree under evidence", () => {
+    for (const path of ["/ga4", "/ga4/tools"]) {
+      expect(taxonomyGroupForPath(path)?.key, path).toBe("evidence");
+    }
+  });
+
   it("keeps the whole capabilities subtree under system health", () => {
     // Resolution is longest-matching-prefix, so re-homing /capabilities alone
     // silently re-homes the registry, the detail route and the systems

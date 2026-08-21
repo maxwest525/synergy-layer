@@ -82,6 +82,12 @@ export const WORKSPACE_GROUP: Readonly<Record<string, TaxonomyGroupKey>> = {
   "/knowledge": "evidence",
 
   "/workflows": "run_work",
+  // Both the "who visits" front door and the snapshot workspace under it
+  // report stored facts rather than ask for a decision. One entry, because
+  // resolution is longest-matching-prefix and a narrower one would re-home the
+  // other.
+  "/ga4": "evidence",
+
   "/scheduler": "run_work",
   "/seo-runs": "run_work",
   "/openseo": "run_work",

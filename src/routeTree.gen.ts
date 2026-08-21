@@ -21,7 +21,6 @@ import { Route as CapabilitiesRouteImport } from './routes/capabilities'
 import { Route as CommandCenterRouteImport } from './routes/command-center'
 import { Route as CompetitorsRouteImport } from './routes/competitors'
 import { Route as EssentialsRouteImport } from './routes/essentials'
-import { Route as Ga4RouteImport } from './routes/ga4'
 import { Route as GapsRouteImport } from './routes/gaps'
 import { Route as KeywordsRouteImport } from './routes/keywords'
 import { Route as KnowledgeRouteImport } from './routes/knowledge'
@@ -55,6 +54,8 @@ import { Route as CapabilitiesRegistryRouteImport } from './routes/capabilities.
 import { Route as CapabilitiesSystemsRouteImport } from './routes/capabilities.systems'
 import { Route as ChangesIndexRouteImport } from './routes/changes.index'
 import { Route as ChangesIdRouteImport } from './routes/changes.$id'
+import { Route as Ga4IndexRouteImport } from './routes/ga4.index'
+import { Route as Ga4ToolsRouteImport } from './routes/ga4.tools'
 import { Route as KnowledgeIndexRouteImport } from './routes/knowledge.index'
 import { Route as KnowledgeIdRouteImport } from './routes/knowledge.$id'
 import { Route as KnowledgeManualRouteImport } from './routes/knowledge.manual'
@@ -140,11 +141,6 @@ const CompetitorsRoute = CompetitorsRouteImport.update({
 const EssentialsRoute = EssentialsRouteImport.update({
   id: '/essentials',
   path: '/essentials',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const Ga4Route = Ga4RouteImport.update({
-  id: '/ga4',
-  path: '/ga4',
   getParentRoute: () => rootRouteImport,
 } as any)
 const GapsRoute = GapsRouteImport.update({
@@ -314,6 +310,16 @@ const ChangesIdRoute = ChangesIdRouteImport.update({
   path: '/changes/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const Ga4IndexRoute = Ga4IndexRouteImport.update({
+  id: '/ga4/',
+  path: '/ga4/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const Ga4ToolsRoute = Ga4ToolsRouteImport.update({
+  id: '/ga4/tools',
+  path: '/ga4/tools',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const KnowledgeIndexRoute = KnowledgeIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -465,7 +471,6 @@ export interface FileRoutesByFullPath {
   '/command-center': typeof CommandCenterRoute
   '/competitors': typeof CompetitorsRoute
   '/essentials': typeof EssentialsRoute
-  '/ga4': typeof Ga4Route
   '/gaps': typeof GapsRoute
   '/keywords': typeof KeywordsRoute
   '/knowledge': typeof KnowledgeRouteWithChildren
@@ -494,6 +499,7 @@ export interface FileRoutesByFullPath {
   '/capabilities/registry': typeof CapabilitiesRegistryRoute
   '/capabilities/systems': typeof CapabilitiesSystemsRouteWithChildren
   '/changes/$id': typeof ChangesIdRoute
+  '/ga4/tools': typeof Ga4ToolsRoute
   '/knowledge/$id': typeof KnowledgeIdRoute
   '/knowledge/manual': typeof KnowledgeManualRoute
   '/measurement/tools': typeof MeasurementToolsRoute
@@ -508,6 +514,7 @@ export interface FileRoutesByFullPath {
   '/assets/': typeof AssetsIndexRoute
   '/capabilities/': typeof CapabilitiesIndexRoute
   '/changes/': typeof ChangesIndexRoute
+  '/ga4/': typeof Ga4IndexRoute
   '/knowledge/': typeof KnowledgeIndexRoute
   '/measurement/': typeof MeasurementIndexRoute
   '/pages/': typeof PagesIndexRoute
@@ -536,7 +543,6 @@ export interface FileRoutesByTo {
   '/command-center': typeof CommandCenterRoute
   '/competitors': typeof CompetitorsRoute
   '/essentials': typeof EssentialsRoute
-  '/ga4': typeof Ga4Route
   '/gaps': typeof GapsRoute
   '/keywords': typeof KeywordsRoute
   '/mcp': typeof McpRoute
@@ -559,6 +565,7 @@ export interface FileRoutesByTo {
   '/capabilities/$id': typeof CapabilitiesIdRoute
   '/capabilities/registry': typeof CapabilitiesRegistryRoute
   '/changes/$id': typeof ChangesIdRoute
+  '/ga4/tools': typeof Ga4ToolsRoute
   '/knowledge/$id': typeof KnowledgeIdRoute
   '/knowledge/manual': typeof KnowledgeManualRoute
   '/measurement/tools': typeof MeasurementToolsRoute
@@ -573,6 +580,7 @@ export interface FileRoutesByTo {
   '/assets': typeof AssetsIndexRoute
   '/capabilities': typeof CapabilitiesIndexRoute
   '/changes': typeof ChangesIndexRoute
+  '/ga4': typeof Ga4IndexRoute
   '/knowledge': typeof KnowledgeIndexRoute
   '/measurement': typeof MeasurementIndexRoute
   '/pages': typeof PagesIndexRoute
@@ -605,7 +613,6 @@ export interface FileRoutesById {
   '/command-center': typeof CommandCenterRoute
   '/competitors': typeof CompetitorsRoute
   '/essentials': typeof EssentialsRoute
-  '/ga4': typeof Ga4Route
   '/gaps': typeof GapsRoute
   '/keywords': typeof KeywordsRoute
   '/knowledge': typeof KnowledgeRouteWithChildren
@@ -634,6 +641,7 @@ export interface FileRoutesById {
   '/capabilities/registry': typeof CapabilitiesRegistryRoute
   '/capabilities/systems': typeof CapabilitiesSystemsRouteWithChildren
   '/changes/$id': typeof ChangesIdRoute
+  '/ga4/tools': typeof Ga4ToolsRoute
   '/knowledge/$id': typeof KnowledgeIdRoute
   '/knowledge/manual': typeof KnowledgeManualRoute
   '/measurement/tools': typeof MeasurementToolsRoute
@@ -648,6 +656,7 @@ export interface FileRoutesById {
   '/assets/': typeof AssetsIndexRoute
   '/capabilities/': typeof CapabilitiesIndexRoute
   '/changes/': typeof ChangesIndexRoute
+  '/ga4/': typeof Ga4IndexRoute
   '/knowledge/': typeof KnowledgeIndexRoute
   '/measurement/': typeof MeasurementIndexRoute
   '/pages/': typeof PagesIndexRoute
@@ -681,7 +690,6 @@ export interface FileRouteTypes {
     | '/command-center'
     | '/competitors'
     | '/essentials'
-    | '/ga4'
     | '/gaps'
     | '/keywords'
     | '/knowledge'
@@ -710,6 +718,7 @@ export interface FileRouteTypes {
     | '/capabilities/registry'
     | '/capabilities/systems'
     | '/changes/$id'
+    | '/ga4/tools'
     | '/knowledge/$id'
     | '/knowledge/manual'
     | '/measurement/tools'
@@ -724,6 +733,7 @@ export interface FileRouteTypes {
     | '/assets/'
     | '/capabilities/'
     | '/changes/'
+    | '/ga4/'
     | '/knowledge/'
     | '/measurement/'
     | '/pages/'
@@ -752,7 +762,6 @@ export interface FileRouteTypes {
     | '/command-center'
     | '/competitors'
     | '/essentials'
-    | '/ga4'
     | '/gaps'
     | '/keywords'
     | '/mcp'
@@ -775,6 +784,7 @@ export interface FileRouteTypes {
     | '/capabilities/$id'
     | '/capabilities/registry'
     | '/changes/$id'
+    | '/ga4/tools'
     | '/knowledge/$id'
     | '/knowledge/manual'
     | '/measurement/tools'
@@ -789,6 +799,7 @@ export interface FileRouteTypes {
     | '/assets'
     | '/capabilities'
     | '/changes'
+    | '/ga4'
     | '/knowledge'
     | '/measurement'
     | '/pages'
@@ -820,7 +831,6 @@ export interface FileRouteTypes {
     | '/command-center'
     | '/competitors'
     | '/essentials'
-    | '/ga4'
     | '/gaps'
     | '/keywords'
     | '/knowledge'
@@ -849,6 +859,7 @@ export interface FileRouteTypes {
     | '/capabilities/registry'
     | '/capabilities/systems'
     | '/changes/$id'
+    | '/ga4/tools'
     | '/knowledge/$id'
     | '/knowledge/manual'
     | '/measurement/tools'
@@ -863,6 +874,7 @@ export interface FileRouteTypes {
     | '/assets/'
     | '/capabilities/'
     | '/changes/'
+    | '/ga4/'
     | '/knowledge/'
     | '/measurement/'
     | '/pages/'
@@ -895,7 +907,6 @@ export interface RootRouteChildren {
   CommandCenterRoute: typeof CommandCenterRoute
   CompetitorsRoute: typeof CompetitorsRoute
   EssentialsRoute: typeof EssentialsRoute
-  Ga4Route: typeof Ga4Route
   GapsRoute: typeof GapsRoute
   KeywordsRoute: typeof KeywordsRoute
   KnowledgeRoute: typeof KnowledgeRouteWithChildren
@@ -918,11 +929,13 @@ export interface RootRouteChildren {
   ApiAgentChatRoute: typeof ApiAgentChatRoute
   ApiStudioChatRoute: typeof ApiStudioChatRoute
   ChangesIdRoute: typeof ChangesIdRoute
+  Ga4ToolsRoute: typeof Ga4ToolsRoute
   MeasurementToolsRoute: typeof MeasurementToolsRoute
   PagesToolsRoute: typeof PagesToolsRoute
   SearchToolsRoute: typeof SearchToolsRoute
   AdsIndexRoute: typeof AdsIndexRoute
   ChangesIndexRoute: typeof ChangesIndexRoute
+  Ga4IndexRoute: typeof Ga4IndexRoute
   MeasurementIndexRoute: typeof MeasurementIndexRoute
   PagesIndexRoute: typeof PagesIndexRoute
   SearchIndexRoute: typeof SearchIndexRoute
@@ -1019,13 +1032,6 @@ declare module '@tanstack/react-router' {
       path: '/essentials'
       fullPath: '/essentials'
       preLoaderRoute: typeof EssentialsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/ga4': {
-      id: '/ga4'
-      path: '/ga4'
-      fullPath: '/ga4'
-      preLoaderRoute: typeof Ga4RouteImport
       parentRoute: typeof rootRouteImport
     }
     '/gaps': {
@@ -1257,6 +1263,20 @@ declare module '@tanstack/react-router' {
       path: '/changes/$id'
       fullPath: '/changes/$id'
       preLoaderRoute: typeof ChangesIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ga4/': {
+      id: '/ga4/'
+      path: '/ga4'
+      fullPath: '/ga4/'
+      preLoaderRoute: typeof Ga4IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ga4/tools': {
+      id: '/ga4/tools'
+      path: '/ga4/tools'
+      fullPath: '/ga4/tools'
+      preLoaderRoute: typeof Ga4ToolsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/knowledge/': {
@@ -1595,7 +1615,6 @@ const rootRouteChildren: RootRouteChildren = {
   CommandCenterRoute: CommandCenterRoute,
   CompetitorsRoute: CompetitorsRoute,
   EssentialsRoute: EssentialsRoute,
-  Ga4Route: Ga4Route,
   GapsRoute: GapsRoute,
   KeywordsRoute: KeywordsRoute,
   KnowledgeRoute: KnowledgeRouteWithChildren,
@@ -1619,11 +1638,13 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAgentChatRoute: ApiAgentChatRoute,
   ApiStudioChatRoute: ApiStudioChatRoute,
   ChangesIdRoute: ChangesIdRoute,
+  Ga4ToolsRoute: Ga4ToolsRoute,
   MeasurementToolsRoute: MeasurementToolsRoute,
   PagesToolsRoute: PagesToolsRoute,
   SearchToolsRoute: SearchToolsRoute,
   AdsIndexRoute: AdsIndexRoute,
   ChangesIndexRoute: ChangesIndexRoute,
+  Ga4IndexRoute: Ga4IndexRoute,
   MeasurementIndexRoute: MeasurementIndexRoute,
   PagesIndexRoute: PagesIndexRoute,
   SearchIndexRoute: SearchIndexRoute,

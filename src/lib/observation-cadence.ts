@@ -42,7 +42,7 @@ export const OBSERVATION_SOURCES: readonly CadenceSource[] = [
     defaultCron: "30 16 * * *",
     provider: "ga4",
     storeLabel: "GA4 snapshots",
-    proveHref: "/ga4",
+    proveHref: "/ga4/tools",
   },
   {
     key: "umami",

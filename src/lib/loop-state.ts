@@ -93,7 +93,7 @@ const STAGE_BUILDERS: Record<TaxonomyGroupKey, (facts: NextActionFacts) => LoopS
       label: "Analytics stored",
       count: facts.ga4.snapshots,
       unit: "snapshot",
-      to: "/ga4",
+      to: "/ga4/tools",
     },
     {
       key: "speed",
