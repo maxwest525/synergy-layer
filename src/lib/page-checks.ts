@@ -279,7 +279,7 @@ export const CHECKS: Record<CheckId, CheckDefinition> = {
     label: "Structured data of the wrong kind",
     severity: "advice",
     instruction: (n) =>
-      `Describe ${n} pages with the kind of structured data Google reads for that kind of page.`,
+      `Add the kind of structured data machines expect on ${n} pages, so search and AI surfaces can read them correctly.`,
     fixableByWordingProposal: false,
   },
   // Google Images doc: "Google uses alt text along with computer vision
@@ -433,14 +433,19 @@ export function pageCategory(pageUrl: string): PageCategory {
  * with nothing documented maps to an empty list and is never reported.
  */
 export const EXPECTED_SCHEMA: Record<PageCategory, string[]> = {
-  // Local business doc: "When users search for businesses ... Google Search
-  // results may display a prominent Google rich result" for LocalBusiness.
+  // Local business doc: "When users search for businesses on Google Search or
+  // Maps, Search results may display a prominent Google knowledge panel with
+  // details about a business that matched the query."
   // https://developers.google.com/search/docs/appearance/structured-data/local-business
   home: ["LocalBusiness"],
   contact: ["LocalBusiness"],
   // FAQ doc: "A Frequently Asked Question (FAQ) page contains a list of
   // questions and answers pertaining to a particular topic."
   // https://developers.google.com/search/docs/appearance/structured-data/faqpage
+  // Stated assumption: Google stopped showing FAQ rich results in Search (May
+  // 2026), so no result-appearance payoff is claimed; the markup is kept
+  // because machine-readable Q&A helps answer engines and AI surfaces parse
+  // the page.
   question: ["FAQPage"],
   // Article doc: "Adding Article structured data to your news, blog, and sports
   // article pages can help Google understand more about the web page."
@@ -471,6 +476,34 @@ function satisfiesExpectedSchema(declaredTypes: string[], expected: string[]): b
     if (expectedLower.includes(type)) return true;
     return (ACCEPTED_SCHEMA_SUBTYPES[type] ?? []).some((parent) => expectedLower.includes(parent));
   });
+}
+
+/**
+ * Plain-English gloss for a schema.org type name, keyed lowercase. Only the
+ * types this check itself declares or expects are covered — everything else
+ * has no invented gloss and is shown by its bare name instead.
+ */
+const PLAIN_SCHEMA_LABELS: Record<string, string> = {
+  localbusiness: "a business",
+  faqpage: "a page of questions and answers",
+  article: "an article",
+  blogposting: "an article",
+  newsarticle: "an article",
+  service: "a service",
+  webpage: "a generic web page",
+};
+
+/** Plain words first, the schema.org name in parentheses only where a plain gloss exists. */
+function schemaTypeLabel(type: string): string {
+  const plain = PLAIN_SCHEMA_LABELS[type.toLowerCase()];
+  return plain ? `${plain} (${type})` : type;
+}
+
+/** The expected list for one category shares one plain gloss; only the technical names vary. */
+function expectedSchemaLabel(expected: string[]): string {
+  const first = expected[0] ?? "";
+  const plain = PLAIN_SCHEMA_LABELS[first.toLowerCase()];
+  return plain ? `${plain} (${expected.join(" or ")})` : expected.join(" or ");
 }
 
 function attr(tag: string, name: string): string | null {
@@ -801,10 +834,11 @@ export function evaluatePages(pages: AnalyzedPage[]): PageIssue[] {
     else {
       const expected = EXPECTED_SCHEMA[pageCategory(url)];
       if (expected.length > 0 && !satisfiesExpectedSchema(facts.jsonLdTypes, expected)) {
+        const declaredLabel = facts.jsonLdTypes.map(schemaTypeLabel).join(", ");
         add(
           "structured_data_type_missing",
           url,
-          `This page describes itself as ${facts.jsonLdTypes.join(", ")}, and Google reads ${expected.join(" or ")} for this kind of page.`,
+          `This page describes itself as ${declaredLabel}, not ${expectedSchemaLabel(expected)}.`,
         );
       }
     }
