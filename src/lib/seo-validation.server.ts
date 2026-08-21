@@ -9,6 +9,7 @@ import {
   RULE_WINDOW_KIND,
   SearchConsoleFailure,
   checksum,
+  shiftDate,
   type QueryRow,
 } from "./search-console.server";
 import { QUERY_DIMENSION_CAVEAT } from "./search-console-rule-checks";
@@ -21,7 +22,7 @@ type Client = SupabaseClient<Database>;
  * rule can never trigger on an inline magic number.
  *
  * Every rule below is bucketed in RULE_ASSIGNMENTS
- * (search-console-rule-checks.ts) per
+ * (rule-buckets.ts) per
  * docs/handoffs/2026-08-20-rule-thresholds-audit.md: declining_clicks,
  * declining_impressions, high_impression_low_ctr, zero_click_page,
  * significant_period_change, and visibility_gain-equivalents are pooled
@@ -194,9 +195,16 @@ export function evaluateSeoRules(
   const findings: Finding[] = [];
 
   const { snapshot: pageSnapshot, windowDays: pageWindowDays } = pick(current, "page");
-  const { snapshot: priorPageSnapshot } = pick(prior, "page");
+  const { snapshot: priorPageSnapshot, windowDays: priorPageWindowDays } = pick(prior, "page");
   const { snapshot: querySnapshot, windowDays: queryWindowDays } = pick(current, "query");
-  const { snapshot: priorQuerySnapshot } = pick(prior, "query");
+  const { snapshot: priorQuerySnapshot, windowDays: priorQueryWindowDays } = pick(prior, "query");
+
+  // A finding that compares before/after is only as wide as its narrower
+  // side: if the prior period fell back to a legacy daily snapshot while the
+  // current one is a real 28-day window (or vice versa), the comparison is
+  // not a 28-day one and must not claim to be.
+  const pageComparisonWindowDays = Math.min(pageWindowDays, priorPageWindowDays);
+  const queryComparisonWindowDays = Math.min(queryWindowDays, priorQueryWindowDays);
 
   const pages = rowsOf(pageSnapshot);
   const priorPages = rowsOf(priorPageSnapshot);
@@ -236,7 +244,7 @@ export function evaluateSeoRules(
         priorSnapshotId: priorPageId,
         businessImpact: before.clicks >= 100 ? "high" : "medium",
         confidence: confidenceInCountChange(before.clicks, now.clicks),
-        windowDays: pageWindowDays,
+        windowDays: pageComparisonWindowDays,
         suggestedAction: { kind: "review", area: "page_traffic_decline", target: page },
       });
     }
@@ -263,7 +271,7 @@ export function evaluateSeoRules(
         priorSnapshotId: priorPageId,
         businessImpact: "medium",
         confidence: confidenceInCountChange(before.impressions, now.impressions),
-        windowDays: pageWindowDays,
+        windowDays: pageComparisonWindowDays,
         suggestedAction: { kind: "review", area: "page_visibility_decline", target: page },
       });
     }
@@ -339,7 +347,7 @@ export function evaluateSeoRules(
         priorSnapshotId: priorPageId,
         businessImpact: "medium",
         confidence: confidenceInCountChange(before.impressions, now.impressions),
-        windowDays: pageWindowDays,
+        windowDays: pageComparisonWindowDays,
         suggestedAction: { kind: "review", area: "period_change", target: page },
       });
     }
@@ -368,7 +376,7 @@ export function evaluateSeoRules(
         priorSnapshotId: priorPageId,
         businessImpact: "medium",
         confidence: confidenceInCountChange(before.impressions, now.impressions),
-        windowDays: pageWindowDays,
+        windowDays: pageComparisonWindowDays,
         suggestedAction: { kind: "review", area: "reinforce_trending_page", target: page },
       });
     }
@@ -401,7 +409,7 @@ export function evaluateSeoRules(
         priorSnapshotId: priorQueryId,
         businessImpact: "high",
         confidence: confidenceInCount(now.impressions, t.decliningPosition.minImpressions),
-        windowDays: queryWindowDays,
+        windowDays: queryComparisonWindowDays,
         suggestedAction: { kind: "review", area: "ranking_loss", target: term },
       });
     }
@@ -664,7 +672,6 @@ export async function runSeoValidation(
 
   const dates = [...new Set((dateRows ?? []).map((row) => row.period_end_pt))];
   const reportingDate = dates[0] ?? null;
-  const comparisonDate = dates[1] ?? null;
 
   if (!reportingDate) {
     return { ...base, assetId, reason: "No stored Search Console snapshot to evaluate." };
@@ -677,6 +684,23 @@ export async function runSeoValidation(
     .eq("property", property)
     .eq("period_end_pt", reportingDate);
   if (currentError) throw new SearchConsoleFailure("persistence", currentError.message);
+
+  // Window snapshots are written daily, so the next-most-recent distinct
+  // period_end_pt (`dates[1]`) is one day back, not 28. Diffing two 28-day
+  // windows a day apart would manufacture a change out of a one-day shift —
+  // the same trap search-console-rules.server.ts:evaluateSnapshots already
+  // guards against. When the current period has a window snapshot, the
+  // honest comparison is the window that ends the day this one starts, found
+  // by date arithmetic, not by "whatever the second-most-recent row is".
+  // `dates[1]` is used only on the legacy daily path, where no window
+  // snapshot exists to compare against at all.
+  const currentSnapshotsRaw = (currentRows ?? []) as SnapshotRow[];
+  const hasWindowSnapshot = currentSnapshotsRaw.some(
+    (snapshot) => snapshot.kind === RULE_WINDOW_KIND,
+  );
+  const comparisonDate = hasWindowSnapshot
+    ? shiftDate(reportingDate, -RULE_WINDOW_DAYS)
+    : (dates[1] ?? null);
 
   let priorSnapshots: SnapshotRow[] = [];
   if (comparisonDate) {

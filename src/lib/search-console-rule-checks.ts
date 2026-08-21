@@ -8,161 +8,12 @@ import { confidenceInCount } from "./confidence";
  * database; the .server caller supplies rows and persists results.
  *
  * Every rule below is assigned to a volume-honesty bucket in RULE_ASSIGNMENTS
- * (fact / pooled / beyond_current_volume) per
+ * (`rule-buckets.ts`, fact / pooled / beyond_current_volume) per
  * docs/handoffs/2026-08-20-rule-thresholds-audit.md.
  */
 
 export type CheckRule =
   "possible_query_overlap" | "zero_impression_page" | "query_coverage_gap" | "index_coverage_drift";
-
-/**
- * How much of the property's traffic a rule needs before its answer is
- * trustworthy, and why. Not enforcement — the thresholds themselves are
- * unchanged — this is the "every rule is assigned, with the reasoning
- * written down" line of the handoff's definition of done, made executable
- * (see rule-buckets.test.ts).
- */
-export type RuleBucket = "fact" | "pooled" | "beyond_current_volume";
-
-export type RuleAssignment = {
-  readonly rule: string;
-  readonly bucket: RuleBucket;
-  /** The per-target evidence a beyond_current_volume rule would need to answer honestly; null elsewhere. */
-  readonly needsPerTarget: number | null;
-  readonly why: string;
-};
-
-/**
- * Every finding rule across the three Search Console/SEO families plus GA4,
- * bucketed per docs/handoffs/2026-08-20-rule-thresholds-audit.md §1:
- *
- * - fact: answerable at any volume (indexation, sitemap/robots states, an
- *   event that stopped arriving). No threshold needed.
- * - pooled: click/impression-shaped questions answered across the whole
- *   property rather than per page, where twelve pages together carry twelve
- *   times the per-page evidence.
- * - beyond_current_volume: query-dimension rules. At this property's volume
- *   the query table is mostly anonymized away (see QUERY_DIMENSION_CAVEAT),
- *   and pooling across pages does not recover a censored query. The existing
- *   threshold is kept as `needsPerTarget` so the UI can say what volume would
- *   change the answer; it is not changed.
- */
-export const RULE_ASSIGNMENTS: readonly RuleAssignment[] = [
-  {
-    rule: "zero_impression_page",
-    bucket: "fact",
-    needsPerTarget: null,
-    why: 'Whether a page ever appeared is read directly from the performance snapshot, not inferred from a count. "Google doesn\'t guarantee that all pages everywhere will make it into the Google index" (support.google.com/webmasters/answer/7440203), so absence itself is the fact worth reporting.',
-  },
-  {
-    rule: "index_coverage_drift",
-    bucket: "fact",
-    needsPerTarget: null,
-    why: "URL Inspection states (verdict, canonical, last crawl) are read directly from Google, not derived from a sample. No threshold answers 'is this page indexed' more honestly than asking Google.",
-  },
-  {
-    rule: "zero_click_page",
-    bucket: "pooled",
-    needsPerTarget: null,
-    why: "Zero clicks on one page needs 5-20x this property's per-page volume to mean anything alone; the click-shaped question is answered honestly only pooled across the site (see site_clicks_shift).",
-  },
-  {
-    rule: "high_impression_low_ctr",
-    bucket: "pooled",
-    needsPerTarget: null,
-    why: "Click-through rate on a single page is the textbook case: a page at this property's traffic cannot reach significance in a four-week test alone, but the same question pooled across pages can.",
-  },
-  {
-    rule: "weak_ctr_page",
-    bucket: "pooled",
-    needsPerTarget: null,
-    why: "Same click-through question as high_impression_low_ctr under a different threshold; needs pooling, not a per-page count, at this volume.",
-  },
-  {
-    rule: "declining_clicks",
-    bucket: "pooled",
-    needsPerTarget: null,
-    why: "A click drop on one page is noise at this volume; the same drop summed across the property (site_clicks_shift) carries the evidence a single page cannot.",
-  },
-  {
-    rule: "declining_impressions",
-    bucket: "pooled",
-    needsPerTarget: null,
-    why: "An impression drop on one page is inside ordinary swing at this volume; pooled across the site (site_visibility_shift) the same movement can clear the noise floor.",
-  },
-  {
-    rule: "significant_period_change",
-    bucket: "pooled",
-    needsPerTarget: null,
-    why: "A large period-over-period move on one page is exactly the kind of number that looks dramatic and means nothing at this volume; pooled across pages it can.",
-  },
-  {
-    rule: "visibility_gain",
-    bucket: "pooled",
-    needsPerTarget: null,
-    why: "An impression rise on one page needs pooling to clear the noise floor at this volume, same as its decline counterpart.",
-  },
-  {
-    rule: "striking_distance_query",
-    bucket: "beyond_current_volume",
-    needsPerTarget: 50,
-    why: 'Reads the query dimension. Google omits queries "not issued by more than a few dozen users over a two-to-three month period" (see QUERY_DIMENSION_CAVEAT), and pooling pages does not recover a censored query row. 50 impressions on one query is the existing threshold, unchanged; it names the volume that would make this answerable, not a claim it is answerable now.',
-  },
-  {
-    rule: "declining_position",
-    bucket: "beyond_current_volume",
-    needsPerTarget: 50,
-    why: "Reads the query dimension; see striking_distance_query. 50 impressions is the existing threshold, kept as the volume this would need, not lowered.",
-  },
-  {
-    rule: "position_loss",
-    bucket: "beyond_current_volume",
-    needsPerTarget: 100,
-    why: "Reads the query dimension; see striking_distance_query. 100 impressions is the existing threshold, kept as the volume this would need, not lowered.",
-  },
-  {
-    rule: "possible_query_overlap",
-    bucket: "beyond_current_volume",
-    needsPerTarget: 25,
-    why: "Reads the query dimension; a censored query table can hide exactly the overlap this rule looks for. 25 impressions per page is the existing threshold, kept as the volume this would need, not lowered.",
-  },
-  {
-    rule: "query_coverage_gap",
-    bucket: "beyond_current_volume",
-    needsPerTarget: 25,
-    why: "Reads the query dimension; see striking_distance_query. 25 impressions is the existing threshold, kept as the volume this would need, not lowered.",
-  },
-  {
-    rule: "research_page_traction",
-    bucket: "beyond_current_volume",
-    needsPerTarget: 20,
-    why: "Reads impressions on a research-backed page at a volume the handoff calls 'barely' reachable (20 impressions). Kept as the existing threshold, not lowered.",
-  },
-  {
-    rule: "page_traffic_loss",
-    bucket: "pooled",
-    needsPerTarget: null,
-    why: "A GA4 session drop on one page needs pooling across pages to separate a real shift from ordinary week-to-week noise at this volume.",
-  },
-  {
-    rule: "page_traffic_gain",
-    bucket: "pooled",
-    needsPerTarget: null,
-    why: "Same as page_traffic_loss: a session rise on one page needs pooling to clear the noise floor.",
-  },
-  {
-    rule: "zero_engagement_page",
-    bucket: "pooled",
-    needsPerTarget: null,
-    why: "Whether a page's traffic converts is a rate question, same shape as click-through rate; pooling separates a real pattern from a quiet page.",
-  },
-  {
-    rule: "event_disappeared",
-    bucket: "fact",
-    needsPerTarget: null,
-    why: "An event that fired reliably and then stopped entirely is a wiring question (a tag or trigger broke), not a statistics question. No threshold makes 'did it stop' more honest than checking whether it fired.",
-  },
-];
 
 /**
  * Google's own documentation on why any rule reading the `query` dimension is
@@ -229,7 +80,7 @@ export function detectQueryOverlap(pageQueryRows: PerformanceRow[]): Observation
       rule: "possible_query_overlap",
       target: query,
       title: `Query overlap on "${query}"`,
-      description: `${pages.length} pages split impressions for "${query}" and none ranks better than position ${best.toFixed(1)}. Consolidating or re-pointing internal links would focus authority on one page.`,
+      description: `${pages.length} pages split impressions for "${query}" and none ranks better than position ${best.toFixed(1)}. Consolidating or re-pointing internal links would focus authority on one page. ${QUERY_DIMENSION_CAVEAT}`,
       evidence: { query, pages: sorted, confidenceReason: confidence.reason },
       businessImpact: "medium",
       confidence: confidence.value,
@@ -261,11 +112,12 @@ export function detectZeroImpressionPages(
       description: `${url} is in the audited page set but earned zero impressions on the reporting date. It is either not indexed, orphaned from internal links, or too thin to rank.`,
       evidence: { page: url },
       businessImpact: "low",
-      // Stated: absence from the stored performance snapshot is read directly,
-      // not estimated from a count, so it carries no sampling noise. Capped
-      // below 1 because Search Console "stores top data rows and not all data
-      // rows" — a page reading zero may never have been stored at all.
-      confidence: 0.9,
+      // Stated assumption: 0.6 — a zero row may be a never-stored row
+      // ("stores top data rows and not all data rows"); what would settle it
+      // is URL Inspection confirming the page indexed while the row stays
+      // absent. Kept below every URL-Inspection fact: absence from a
+      // truncated table is an inference, not something read directly.
+      confidence: 0.6,
     });
     if (drafts.length >= t.maxFindingsPerRun) break;
   }
@@ -361,8 +213,9 @@ export function detectInspectionDrift(
         description: `Google reports verdict ${inspection.verdict}${inspection.coverageState ? ` (${inspection.coverageState})` : ""} for ${url}. The page cannot earn search traffic until this is resolved.`,
         evidence: { ...inspection },
         businessImpact: "high",
-        // Stated: facts read from URL Inspection carry no sampling noise;
-        // capped below 1 because the inspection itself can be stale.
+        // Stated assumption: 0.9 — facts read from URL Inspection carry no
+        // sampling noise; capped below 1 because the inspection itself can
+        // be stale. A fresher inspection is what would settle it.
         confidence: 0.9,
       });
       continue;
@@ -379,8 +232,9 @@ export function detectInspectionDrift(
         description: `We declare ${inspection.userCanonical} but Google indexed ${inspection.googleCanonical}. Traffic and signals are flowing to a page we did not choose.`,
         evidence: { ...inspection },
         businessImpact: "medium",
-        // Stated: facts read from URL Inspection carry no sampling noise;
-        // capped below 1 because the inspection itself can be stale.
+        // Stated assumption: 0.9 — facts read from URL Inspection carry no
+        // sampling noise; capped below 1 because the inspection itself can
+        // be stale. A fresher inspection is what would settle it.
         confidence: 0.9,
       });
       continue;
@@ -395,8 +249,10 @@ export function detectInspectionDrift(
           description: `Google last crawled ${url} on ${inspection.lastCrawlTime.slice(0, 10)}. Content changes since then are invisible to search.`,
           evidence: { ...inspection, crawlAgeDays: Math.floor(ageDays) },
           businessImpact: "low",
-          // Stated: facts read from URL Inspection carry no sampling noise;
-          // capped below 1 because the inspection itself can be stale.
+          // Stated assumption: 0.9 — the crawl date itself is a fact read
+          // from URL Inspection, but "stale" is a judgment against
+          // staleCrawlDays: 30, an operator-set threshold, not the
+          // inspection alone. Capped below 1 for both reasons.
           confidence: 0.9,
         });
       }

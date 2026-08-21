@@ -219,8 +219,11 @@ function coverageDrift(evidence: Evidence, on: string): FindingCopy {
 }
 
 /**
- * Site-wide totals from the last two 28-day windows, pooled across every
- * page rather than judged one page at a time.
+ * Totals from the last two 28-day windows, pooled across every page Search
+ * Console stored rather than judged one page at a time. That total is a sum
+ * over stored rows, not Google's own property-wide figure — Search Console
+ * "stores top data rows and not all data rows" — so the copy names what was
+ * summed rather than claiming "your whole site".
  */
 function siteVisibilityShift(evidence: Evidence, on: string): FindingCopy {
   const prior = num(evidence["priorImpressions"]);
@@ -229,8 +232,8 @@ function siteVisibilityShift(evidence: Evidence, on: string): FindingCopy {
   return {
     claim:
       direction === null
-        ? "Your whole site's visibility has changed"
-        : `Your whole site is being shown ${direction} than it was`,
+        ? "Visibility across the pages Search Console stored has changed"
+        : `The pages Search Console stored are being shown ${direction} than they were`,
     evidence:
       curr === null || prior === null
         ? null
@@ -246,8 +249,8 @@ function siteClicksShift(evidence: Evidence, on: string): FindingCopy {
   return {
     claim:
       direction === null
-        ? "Your whole site's clicks have changed"
-        : `Your whole site is getting ${direction} clicks than it was`,
+        ? "Clicks across the pages Search Console stored have changed"
+        : `The pages Search Console stored are getting ${direction} clicks than they were`,
     evidence:
       curr === null || prior === null
         ? null

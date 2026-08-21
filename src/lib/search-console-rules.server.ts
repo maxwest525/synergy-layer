@@ -29,7 +29,7 @@ type Client = SupabaseClient<Database>;
  * Typed thresholds. Every rule reads its numbers from here, never inline.
  *
  * Every rule in this file is bucketed in RULE_ASSIGNMENTS
- * (search-console-rule-checks.ts) per
+ * (rule-buckets.ts) per
  * docs/handoffs/2026-08-20-rule-thresholds-audit.md: striking_distance_query
  * and position_loss read the query dimension and are beyond_current_volume
  * (see QUERY_DIMENSION_CAVEAT); weak_ctr_page and visibility_gain are
@@ -109,6 +109,7 @@ function totalsOf(
   return { clicks: totals.clicks, impressions: totals.impressions };
 }
 
+/** Exported for tests — `evaluateSnapshots` below is the only production caller. */
 export function evaluate(current: SnapshotRow[], prior: SnapshotRow[]): Observation[] {
   const observations: Observation[] = [];
   const t = SEARCH_CONSOLE_THRESHOLDS;
@@ -194,10 +195,14 @@ export function evaluate(current: SnapshotRow[], prior: SnapshotRow[]): Observat
     }
   }
 
-  // Pooled site-level rules: twelve pages judged together, off the totals
-  // already stored on the page-dimension window snapshot. A missing prior
-  // window means no comparison exists, not that nothing changed, so both
-  // stay silent rather than reading absence as zero.
+  // Pooled site-level rules: the pages Search Console stored, judged
+  // together, off the totals already stored on the page-dimension window
+  // snapshot. That total is a sum over whatever rows Search Console
+  // returned for the property, which "stores top data rows and not all
+  // data rows" — it is not Google's own property-wide total, so the copy
+  // below says what was actually summed rather than "your whole site". A
+  // missing prior window means no comparison exists, not that nothing
+  // changed, so both stay silent rather than reading absence as zero.
   const currentTotals = totalsOf(pageSnapshot);
   const priorTotals = totalsOf(priorPageSnapshot);
   if (currentTotals && priorTotals) {
@@ -205,16 +210,23 @@ export function evaluate(current: SnapshotRow[], prior: SnapshotRow[]): Observat
       priorTotals.impressions,
       currentTotals.impressions,
     );
+    // Stated choice: a medium-band finding still fires here, rather than
+    // requiring "high", because it carries its derived confidence and a
+    // "not firm enough to act on alone" reason alongside it — that is
+    // honest disclosure, not noise. Silencing medium-band evidence would
+    // hide real site-level shifts at a volume where nothing else can see
+    // them.
     if (impressionConfidence.band !== "low") {
       const direction = currentTotals.impressions > priorTotals.impressions ? "more" : "less";
       observations.push({
         rule: "site_visibility_shift",
         target: "site",
-        title: `Your whole site is being shown ${direction} than last month`,
-        description: `Site-wide impressions moved from ${priorTotals.impressions} to ${currentTotals.impressions} across the last two 28-day windows. ${impressionConfidence.reason}`,
+        title: `The pages Search Console stored are being shown ${direction} than last month`,
+        description: `Across the pages Search Console stored, impressions moved from ${priorTotals.impressions} to ${currentTotals.impressions} between the two most recent non-overlapping 28-day windows (the prior window ending ${priorPageSnapshot?.period_end_pt}). ${impressionConfidence.reason}`,
         evidence: {
           priorImpressions: priorTotals.impressions,
           currentImpressions: currentTotals.impressions,
+          priorPeriodEndPt: priorPageSnapshot?.period_end_pt ?? null,
           confidenceReason: impressionConfidence.reason,
         },
         businessImpact: "medium",
@@ -223,16 +235,19 @@ export function evaluate(current: SnapshotRow[], prior: SnapshotRow[]): Observat
     }
 
     const clickConfidence = confidenceInCountChange(priorTotals.clicks, currentTotals.clicks);
+    // Stated choice: see the comment above the impression gate — the same
+    // reasoning applies to clicks.
     if (clickConfidence.band !== "low") {
       const direction = currentTotals.clicks > priorTotals.clicks ? "more" : "fewer";
       observations.push({
         rule: "site_clicks_shift",
         target: "site",
-        title: `Your whole site is getting ${direction} clicks than last month`,
-        description: `Site-wide clicks moved from ${priorTotals.clicks} to ${currentTotals.clicks} across the last two 28-day windows. ${clickConfidence.reason}`,
+        title: `The pages Search Console stored are getting ${direction} clicks than last month`,
+        description: `Across the pages Search Console stored, clicks moved from ${priorTotals.clicks} to ${currentTotals.clicks} between the two most recent non-overlapping 28-day windows (the prior window ending ${priorPageSnapshot?.period_end_pt}). ${clickConfidence.reason}`,
         evidence: {
           priorClicks: priorTotals.clicks,
           currentClicks: currentTotals.clicks,
+          priorPeriodEndPt: priorPageSnapshot?.period_end_pt ?? null,
           confidenceReason: clickConfidence.reason,
         },
         businessImpact: "medium",

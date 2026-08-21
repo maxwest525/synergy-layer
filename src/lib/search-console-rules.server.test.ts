@@ -16,12 +16,13 @@ function snapshot(
   dimension: string,
   rows: ReturnType<typeof row>[],
   totals: { clicks: number; impressions: number } | null = null,
+  periodEndPt = "2026-08-19",
 ) {
   return {
     id: `${dimension}-snapshot`,
     dimensions: [dimension],
     kind: RULE_WINDOW_KIND,
-    period_end_pt: "2026-08-19",
+    period_end_pt: periodEndPt,
     payload: { rows },
     totals: totals ?? {
       clicks: rows.reduce((sum, r) => sum + r.clicks, 0),
@@ -70,13 +71,23 @@ describe("evaluate: derived confidence replaces bare literals", () => {
 
 describe("evaluate: pooled site-level rules", () => {
   it("fires site_visibility_shift with medium+ confidence on a real move", () => {
-    const current = [snapshot("page", [], { clicks: 0, impressions: 155 })];
-    const prior = [snapshot("page", [], { clicks: 0, impressions: 120 })];
+    const current = [snapshot("page", [], { clicks: 0, impressions: 155 }, "2026-08-19")];
+    const prior = [snapshot("page", [], { clicks: 0, impressions: 120 }, "2026-07-22")];
     const observations = evaluate(current, prior);
     const finding = observations.find((o) => o.rule === "site_visibility_shift");
     expect(finding).toBeDefined();
     expect(finding?.confidence).toBeGreaterThanOrEqual(0.4);
     expect(finding?.title.toLowerCase()).toContain("more");
+  });
+
+  it("names what was summed rather than claiming 'your whole site', and dates the prior window", () => {
+    const current = [snapshot("page", [], { clicks: 0, impressions: 155 }, "2026-08-19")];
+    const prior = [snapshot("page", [], { clicks: 0, impressions: 120 }, "2026-07-22")];
+    const observations = evaluate(current, prior);
+    const finding = observations.find((o) => o.rule === "site_visibility_shift");
+    expect(finding?.title.toLowerCase()).not.toContain("your whole site");
+    expect(finding?.title).toContain("Search Console stored");
+    expect(finding?.evidence["priorPeriodEndPt"]).toBe("2026-07-22");
   });
 
   it("does not fire site_visibility_shift on a move inside the noise floor", () => {

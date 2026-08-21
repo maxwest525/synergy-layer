@@ -12,7 +12,7 @@ import { confidenceInCount, confidenceInCountChange } from "./confidence";
  * the newest week shows up as only a ~25% window-over-window drop; every
  * threshold below is scaled for that damping.
  *
- * Bucketed in RULE_ASSIGNMENTS (search-console-rule-checks.ts) per
+ * Bucketed in RULE_ASSIGNMENTS (rule-buckets.ts) per
  * docs/handoffs/2026-08-20-rule-thresholds-audit.md: trafficShift and
  * zeroEngagement are pooled (they read a per-page count that needs pooling
  * to clear the noise floor at this volume); disappearedEvent is a fact (a
@@ -172,9 +172,9 @@ export function detectDisappearedEvents(current: Ga4Row[], prior: Ga4Row[]): Ga4
       description: `"${name}" recorded ${count} events in the prior 28-day GA4 window and zero in the current one. The tag, trigger, or feature that fired it has most likely broken.`,
       evidence: { eventName: name, priorEventCount: count },
       businessImpact: "high",
-      // Stated: an event that fired reliably and then stopped entirely is a
-      // wiring fact, not a sampling question; capped below 1 because we
-      // cannot rule out the event simply being renamed.
+      // Stated assumption: 0.9 — an event that fired reliably and then
+      // stopped entirely is a wiring fact, not a sampling question; capped
+      // below 1 because we cannot rule out the event simply being renamed.
       confidence: 0.9,
     });
   }

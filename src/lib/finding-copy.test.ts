@@ -159,9 +159,9 @@ describe("query_coverage_gap", () => {
 });
 
 describe("site_visibility_shift", () => {
-  it("names the direction and both totals", () => {
+  it("names the direction and both totals, without claiming 'your whole site'", () => {
     const copy = describeFinding("site_visibility_shift", richEvidence(), ON);
-    expect(copy.claim).toBe("Your whole site is being shown more than it was");
+    expect(copy.claim).toBe("The pages Search Console stored are being shown more than they were");
     expect(copy.evidence).toBe(
       "Shown 120 times last month, 155 times in the month through 2026-08-19",
     );
@@ -174,12 +174,19 @@ describe("site_visibility_shift", () => {
 });
 
 describe("site_clicks_shift", () => {
-  it("names the direction and both totals", () => {
+  it("names the direction and both totals, without claiming 'your whole site'", () => {
     const copy = describeFinding("site_clicks_shift", richEvidence(), ON);
-    expect(copy.claim).toBe("Your whole site is getting more clicks than it was");
+    expect(copy.claim).toBe(
+      "The pages Search Console stored are getting more clicks than they were",
+    );
     expect(copy.evidence).toBe(
       "Clicked 40 times last month, 55 times in the month through 2026-08-19",
     );
+  });
+
+  it("drops the evidence line when either total is missing", () => {
+    const copy = describeFinding("site_clicks_shift", { priorClicks: 40 }, ON);
+    expect(copy.evidence).toBeNull();
   });
 });
 

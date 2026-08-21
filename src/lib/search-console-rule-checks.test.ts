@@ -43,6 +43,14 @@ describe("detectQueryOverlap", () => {
     ]);
     expect(drafts).toHaveLength(0);
   });
+
+  it("discloses that the query dimension is a censored sample", () => {
+    const drafts = detectQueryOverlap([
+      row(["https://site.com/a", "movers miami"], 60, 9.2),
+      row(["https://site.com/b", "movers miami"], 40, 12.5),
+    ]);
+    expect(drafts[0]?.description).toContain(QUERY_DIMENSION_CAVEAT);
+  });
 });
 
 describe("detectZeroImpressionPages", () => {
@@ -54,6 +62,10 @@ describe("detectZeroImpressionPages", () => {
     expect(drafts).toHaveLength(1);
     expect(drafts[0]?.target).toBe("https://site.com/ghost");
     expect(drafts[0]?.rule).toBe("zero_impression_page");
+    // Below every URL-Inspection fact: absence from a truncated table is an
+    // inference (the row may never have been stored), not something read
+    // directly.
+    expect(drafts[0]?.confidence).toBe(0.6);
   });
 
   it("caps findings per run", () => {
