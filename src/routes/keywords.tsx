@@ -14,6 +14,8 @@ import {
 } from "@/components/os/primitives";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { runKeywordEnrichment } from "@/lib/dataforseo.functions";
+import { estimatedEnrichmentCostUsd } from "@/lib/dataforseo/keyword-enrichment.server";
 import { decideKeywordCandidates, listKeywordCandidates } from "@/lib/keywords.functions";
 import { OperatorRouteError } from "@/components/os/route-error";
 
@@ -73,6 +75,7 @@ function KeywordReviewPage() {
   const { data } = useSuspenseQuery(candidatesQuery);
   const queryClient = useQueryClient();
   const decide = useServerFn(decideKeywordCandidates);
+  const enrich = useServerFn(runKeywordEnrichment);
   const [selected, setSelected] = useState<string[]>([]);
 
   const allCandidates = data.candidates;
@@ -120,6 +123,15 @@ function KeywordReviewPage() {
       void queryClient.invalidateQueries({ queryKey: ["keyword-candidates"] });
       void queryClient.invalidateQueries({ queryKey: ["inbox"] });
       void queryClient.invalidateQueries({ queryKey: ["overview"] });
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+  const enrichMutation = useMutation({
+    mutationFn: () => enrich(),
+    onSuccess: (result) => {
+      toast.success(`${result.enriched} keywords scored.`);
+      void queryClient.invalidateQueries({ queryKey: ["keyword-candidates"] });
     },
     onError: (error: Error) => toast.error(error.message),
   });
@@ -238,7 +250,23 @@ function KeywordReviewPage() {
             >
               Reject all
             </Button>
+            <span aria-hidden className="mx-1 h-5 w-px bg-border/70" />
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={enrichMutation.isPending || counts.pending === 0}
+              onClick={() => enrichMutation.mutate()}
+              aria-describedby="enrich-cost"
+            >
+              {enrichMutation.isPending ? "Scoring…" : "Score how hard these are to win"}
+            </Button>
           </GlassCard>
+          <p id="enrich-cost" className="text-xs text-muted-foreground">
+            Costs about ${estimatedEnrichmentCostUsd().toFixed(2)} — two paid look-ups covering
+            every keyword waiting for a decision, however many there are. Nothing is spent until you
+            click, and no keyword is approved by it.
+          </p>
 
           <ul className="space-y-2">
             {candidates.map((row) => {

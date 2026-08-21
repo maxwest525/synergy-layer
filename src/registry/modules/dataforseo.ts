@@ -39,6 +39,18 @@ export const definition: ModuleDefinition = {
             "Compare the owned domain against one approved competitor and list the searches only they rank for. Operator-triggered; results enter the keyword approval queue.",
           mutates: false,
         },
+        {
+          name: "labs.bulk_keyword_difficulty",
+          description:
+            "Score how hard every pending keyword candidate is to win. One task for the whole queue, operator-triggered.",
+          mutates: false,
+        },
+        {
+          name: "labs.search_intent",
+          description:
+            "Classify what each pending keyword candidate is being searched for. One task for the whole queue, operator-triggered.",
+          mutates: false,
+        },
       ],
       config: {
         mutating: false,

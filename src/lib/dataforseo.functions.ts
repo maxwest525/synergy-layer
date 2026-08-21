@@ -88,3 +88,20 @@ export const runCompetitorKeywordGap = createServerFn({ method: "POST" })
 
     return result;
   });
+
+/**
+ * Metered: two DataForSEO Labs tasks over the whole pending queue, fired only
+ * by an explicit operator click. Writes scores onto the candidates and changes
+ * no review state.
+ */
+export const runKeywordEnrichment = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { assertOperator } = await import("./os-admin.server");
+    await assertOperator(context.supabase, context.userId);
+    const { requireTenantId } = await import("./tenant.server");
+    const tenantId = await requireTenantId(context.supabase);
+
+    const { enrichPendingCandidates } = await import("./dataforseo/keyword-enrichment.server");
+    return enrichPendingCandidates(context.supabase, tenantId);
+  });
