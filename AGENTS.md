@@ -102,6 +102,19 @@ formatting, which then fails prettier. Reproduced at `2a2e87f`. It is a build
 side effect and not your change: `git checkout -- src/routes/` after building,
 and do not commit those four files unless you actually edited them.
 
+## Session start, on the web
+
+`.claude/hooks/session-start.sh` runs at the start of a Claude Code on the web
+session and installs dependencies with `npm ci`, so the gate above works from
+the first turn. It is remote-only (`CLAUDE_CODE_REMOTE`), so it never touches a
+local checkout, and it skips the install when `node_modules` already matches
+`package-lock.json`, so re-running it is free.
+
+It uses `npm ci` rather than `npm install` on purpose: `npm install` rewrites
+`package-lock.json` when it disagrees with `package.json`, which would hand
+every session a dirty tree it did not create. If the hook fails with a lockfile
+mismatch, the fix is to sync the lockfile in a commit, not to loosen the hook.
+
 ## Git
 
 - Work on a branch and open a pull request. `main` syncs to Lovable.
