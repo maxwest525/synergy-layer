@@ -448,8 +448,20 @@ function positionTile(comparison: PeriodComparison, reason: string | null): Gett
  * abstract items, per the spec's "Mostly OK, clicks dipped, 2 things worth
  * fixing".
  */
-function statusFor(open: ReturnType<typeof buildQueue>["open"]): GettingFoundStatus {
-  if (open.length === 0) return { text: "Nothing needs you here", tone: "positive" };
+function statusFor(
+  open: ReturnType<typeof buildQueue>["open"],
+  answerability: Answerability | null,
+): GettingFoundStatus {
+  if (open.length === 0) {
+    // "Nothing needs you" is a claim about what was looked at. With checks
+    // beyond this site's volume it rendered in green directly above the
+    // sentence explaining that those checks cannot answer anything, so the
+    // reassurance and its own correction sat one on top of the other.
+    const blind = answerability?.beyond.length ?? 0;
+    return blind > 0
+      ? { text: `${blind} checks cannot answer yet`, tone: "warning" }
+      : { text: "Nothing needs you here", tone: "positive" };
+  }
 
   const urgent = open.filter((item) => item.urgency === "fix_now").length;
   const rest = open.length - urgent;
@@ -477,6 +489,7 @@ export function buildGettingFound(facts: GettingFoundFacts): GettingFoundView {
 
   const queue = buildQueue(facts.queueSources, facts.now);
   const open = [...queue.open].sort(compareQueueItems);
+  const answerability = answerabilityFor(facts);
   const handled = queue.ignored.length + queue.done.length;
   const constraint = constraintFor(facts, open);
   const ordered = orderByConstraint(facts, open);
@@ -488,8 +501,8 @@ export function buildGettingFound(facts: GettingFoundFacts): GettingFoundView {
       ctrTile(facts.comparison, reason),
       positionTile(facts.comparison, reason),
     ],
-    status: statusFor(open),
-    answerability: answerabilityFor(facts),
+    status: statusFor(open, answerability),
+    answerability,
     tabs: [
       { id: "suggestions", label: "Suggestions", count: open.length },
       { id: "queries", label: "Searches", count: null },
