@@ -23,6 +23,19 @@ const QUERY_TARGET_RULES = new Set([
   "possible_query_overlap",
 ]);
 
+/**
+ * Whether a rule finding has a governed lane that can draft its fix.
+ *
+ * The one answer to that question. A surface offering "Draft the fix" reads it
+ * rather than keeping its own list — two lists is how a button appears for a
+ * rule the server then refuses.
+ */
+export function hasGovernedFixPath(rule: string): boolean {
+  return (
+    rule === "query_coverage_gap" || PAGE_TARGET_RULES.has(rule) || QUERY_TARGET_RULES.has(rule)
+  );
+}
+
 export type FixTarget =
   { ok: true; url: string; query: string | null } | { ok: false; reason: string };
 

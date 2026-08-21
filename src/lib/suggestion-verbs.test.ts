@@ -98,3 +98,27 @@ describe("what each verb tells the operator it will do", () => {
     }
   });
 });
+
+describe("drafting a fix straight from the card", () => {
+  it("offers a draft on an open suggestion whose fix is governed", () => {
+    expect(idsFor({ id: "r1", rule: "weak_ctr_page" })).toContain("draft");
+  });
+
+  it("offers no draft where no governed fix exists for the rule", () => {
+    expect(idsFor({ id: "r1", rule: "some_rule_nobody_wired" })).not.toContain("draft");
+    expect(idsFor({ id: "r1" })).not.toContain("draft");
+  });
+
+  it("offers no draft on a page check, which is not a rule finding", () => {
+    expect(
+      idsFor({ id: "audit:missing_title", kind: "audit", severity: "critical" }),
+    ).not.toContain("draft");
+  });
+
+  it("names what the draft costs and where the approval still happens", () => {
+    const queue = buildQueue([source({ id: "r1", rule: "weak_ctr_page" })], NOW);
+    const draft = verbsFor(queue.open[0]!).find((verb) => verb.id === "draft");
+    expect(draft?.metered).toBe(true);
+    expect(draft?.consequence).toMatch(/approve/i);
+  });
+});

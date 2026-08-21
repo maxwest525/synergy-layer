@@ -28,6 +28,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { SearchRow } from "@/lib/search.functions";
 import { getSearchWorkspace } from "@/lib/search.functions";
+import { hasGovernedFixPath } from "@/lib/finding-fix-target";
 import { getSearchFindings, proposeFixFromFinding } from "@/lib/search-findings.functions";
 import {
   inspectSearchConsoleUrl,
@@ -232,15 +233,6 @@ const RULE_LABEL: Record<string, string> = {
 };
 
 const OPEN_FINDING_STATES = new Set(["draft", "proposed", "under_review", "observed", "scheduled"]);
-
-/** Rules whose fix is a wording change the title/H1 proposal lane can draft. */
-const DRAFTABLE_RULES = new Set([
-  "weak_ctr_page",
-  "striking_distance_query",
-  "position_loss",
-  "query_coverage_gap",
-  "possible_query_overlap",
-]);
 
 function SearchWorkspacePage() {
   // Both reads are protected server functions, so they go through useServerFn
@@ -692,7 +684,7 @@ function SearchWorkspacePage() {
                               </Link>
                             </Button>
                           ) : null}
-                          {finding.recommendationId && DRAFTABLE_RULES.has(finding.rule) ? (
+                          {finding.recommendationId && hasGovernedFixPath(finding.rule) ? (
                             <Button
                               type="button"
                               size="sm"

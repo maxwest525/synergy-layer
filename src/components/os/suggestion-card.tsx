@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useId } from "react";
 import { toast } from "sonner";
@@ -8,6 +8,7 @@ import { COMMAND_CENTER_QUERY_KEY } from "./command-center-facts";
 import { actionFor } from "@/lib/command-center";
 import { rejectChangeRequest } from "@/lib/change-requests.functions";
 import { setRecommendationQueueState } from "@/lib/os-admin.functions";
+import { proposeFixFromFinding } from "@/lib/search-findings.functions";
 import { ignoreAuditFinding, restoreAuditFinding } from "@/lib/suggestion-suppressions.functions";
 import type { QueueItem, UrgencyTone } from "@/lib/suggestion-queue";
 import { verbsFor, type SuggestionVerb } from "@/lib/suggestion-verbs";
@@ -44,15 +45,22 @@ export function SuggestionCard({ item }: { item: QueueItem }) {
   const action = actionFor(item);
   const verbs = verbsFor(item);
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const setQueueState = useServerFn(setRecommendationQueueState);
   const rejectChange = useServerFn(rejectChangeRequest);
   const redraft = useServerFn(regenerateTitleH1Proposal);
   const ignoreAudit = useServerFn(ignoreAuditFinding);
   const restoreAudit = useServerFn(restoreAuditFinding);
+  const draftFix = useServerFn(proposeFixFromFinding);
   const describedBy = useId();
 
   const run = useMutation({
     mutationFn: async (verb: SuggestionVerb) => {
+      if (verb.id === "draft") {
+        return draftFix({
+          data: { recommendationId: item.id, idempotencyKey: crypto.randomUUID() },
+        });
+      }
       if (item.kind === "audit") {
         const fingerprint = item.fingerprint ?? item.id;
         return verb.id === "ignore"
@@ -64,6 +72,12 @@ export function SuggestionCard({ item }: { item: QueueItem }) {
       return setQueueState({ data: { id: item.id, verb: verb.id } });
     },
     onSuccess: async (_result, verb) => {
+      if (verb.id === "draft") {
+        const drafted = _result as { changeRequest: { id: string } };
+        toast.success("Draft written. Read it before approving; nothing has changed on the site.");
+        await navigate({ to: "/changes/$id", params: { id: drafted.changeRequest.id } });
+        return;
+      }
       toast.success(
         verb.id === "regenerate"
           ? "New wording drafted. Open the fix to read it before approving."

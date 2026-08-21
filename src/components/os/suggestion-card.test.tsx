@@ -9,6 +9,7 @@ vi.mock("@tanstack/react-router", () => ({
   Link: ({ children, to }: { children: React.ReactNode; to: string }) => (
     <a href={to}>{children}</a>
   ),
+  useNavigate: () => vi.fn(),
 }));
 // Only `useServerFn` is stubbed: `createMiddleware`, which the imported
 // `.functions` modules call at module scope through the generated
@@ -97,5 +98,19 @@ describe("what a verb costs is on the verb", () => {
     expect(screen.getByRole("button", { name: /Write it again/ })).toHaveAccessibleDescription(
       /one AI call/i,
     );
+  });
+});
+
+describe("drafting the fix from the card", () => {
+  it("offers the draft on a rule finding with a governed fix, with its cost stated", () => {
+    show({ id: "r1", rule: "weak_ctr_page" });
+    expect(screen.getByRole("button", { name: /Draft the fix/ })).toHaveAccessibleDescription(
+      /one page read and one AI call/i,
+    );
+  });
+
+  it("offers no draft where the rule has no governed fix", () => {
+    show({ id: "r1", rule: "some_rule_nobody_wired" });
+    expect(screen.queryByRole("button", { name: /Draft the fix/ })).not.toBeInTheDocument();
   });
 });

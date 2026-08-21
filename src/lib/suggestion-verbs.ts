@@ -9,9 +9,10 @@
  * Pure, so the three category pages cannot drift from one another.
  */
 
+import { hasGovernedFixPath } from "./finding-fix-target";
 import type { QueueItem } from "./suggestion-queue";
 
-export type SuggestionVerbId = "ignore" | "restore" | "regenerate";
+export type SuggestionVerbId = "ignore" | "restore" | "regenerate" | "draft";
 
 export type SuggestionVerb = {
   readonly id: SuggestionVerbId;
@@ -44,6 +45,14 @@ const REGENERATE: SuggestionVerb = {
   metered: true,
 };
 
+const DRAFT: SuggestionVerb = {
+  id: "draft",
+  label: "Draft the fix",
+  consequence:
+    "Writes a proposed change for the page this points at. Costs one page read and one AI call. Nothing reaches the site until you approve it on the change itself.",
+  metered: true,
+};
+
 /**
  * A done row is finished, so it carries no verbs: the decision was made and
  * neither ignoring nor redrafting it means anything.
@@ -55,5 +64,13 @@ export function verbsFor(item: QueueItem): readonly SuggestionVerb[] {
   if (item.queueState === "open" && item.canIgnore) verbs.push(IGNORE);
   if (item.queueState === "ignored" && item.canRestore) verbs.push(RESTORE);
   if (item.canRegenerate) verbs.push(REGENERATE);
+  if (
+    item.queueState === "open" &&
+    item.kind === "recommendation" &&
+    typeof item.rule === "string" &&
+    hasGovernedFixPath(item.rule)
+  ) {
+    verbs.push(DRAFT);
+  }
   return verbs;
 }
