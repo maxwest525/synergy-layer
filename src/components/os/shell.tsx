@@ -51,6 +51,12 @@ type Workspace = {
 type WorkspaceGroup = { title: string; definition: string; items: readonly Workspace[] };
 
 /**
+ * NOT MOUNTED. `__root.tsx` renders `AppShell` from `os/app-shell.tsx`, whose
+ * navigation comes from `lib/categories.ts`. Nothing imports this module except
+ * one test that reads it as text, so editing the list below changes no screen.
+ * Left in place because it is the older shell the categories work is replacing;
+ * check `categories.ts` before changing navigation here.
+ *
  * Destinations declare their taxonomy group; the sidebar order comes from
  * `TAXONOMY_GROUPS`, so navigation and page headers can never disagree.
  */

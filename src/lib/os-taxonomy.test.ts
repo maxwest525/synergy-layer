@@ -28,4 +28,20 @@ describe("os taxonomy", () => {
   it("returns null for a route outside the workspaces", () => {
     expect(taxonomyGroupForPath("/auth")).toBeNull();
   });
+
+  it("keeps the whole capabilities subtree under system health", () => {
+    // Resolution is longest-matching-prefix, so re-homing /capabilities alone
+    // silently re-homes the registry, the detail route and the systems
+    // workspaces with it. That happened once: the category page was moved to
+    // "decisions" and every screen below it changed its eyebrow to match.
+    for (const path of [
+      "/capabilities",
+      "/capabilities/registry",
+      "/capabilities/some-capability-id",
+      "/capabilities/systems",
+      "/capabilities/systems/search-console",
+    ]) {
+      expect(taxonomyGroupForPath(path)?.key, path).toBe("system_health");
+    }
+  });
 });

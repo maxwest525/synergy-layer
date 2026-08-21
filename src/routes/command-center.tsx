@@ -42,7 +42,7 @@ export const Route = createFileRoute("/command-center")({
 
 const tiles = [
   { key: "assets", label: "Assets", to: "/assets" },
-  { key: "capabilities", label: "Capabilities", to: "/capabilities" },
+  { key: "capabilities", label: "Capabilities", to: "/capabilities/registry" },
   { key: "knowledge_entries", label: "Knowledge entries", to: "/knowledge" },
   { key: "agents", label: "Agents", to: "/agents" },
   { key: "workflows", label: "Workflows", to: "/workflows" },

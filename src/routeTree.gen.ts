@@ -51,6 +51,7 @@ import { Route as AssetsIdRouteImport } from './routes/assets.$id'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as CapabilitiesIndexRouteImport } from './routes/capabilities.index'
 import { Route as CapabilitiesIdRouteImport } from './routes/capabilities.$id'
+import { Route as CapabilitiesRegistryRouteImport } from './routes/capabilities.registry'
 import { Route as CapabilitiesSystemsRouteImport } from './routes/capabilities.systems'
 import { Route as ChangesIndexRouteImport } from './routes/changes.index'
 import { Route as ChangesIdRouteImport } from './routes/changes.$id'
@@ -293,6 +294,11 @@ const CapabilitiesIdRoute = CapabilitiesIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => CapabilitiesRoute,
 } as any)
+const CapabilitiesRegistryRoute = CapabilitiesRegistryRouteImport.update({
+  id: '/registry',
+  path: '/registry',
+  getParentRoute: () => CapabilitiesRoute,
+} as any)
 const CapabilitiesSystemsRoute = CapabilitiesSystemsRouteImport.update({
   id: '/systems',
   path: '/systems',
@@ -485,6 +491,7 @@ export interface FileRoutesByFullPath {
   '/assets/$id': typeof AssetsIdRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/capabilities/$id': typeof CapabilitiesIdRoute
+  '/capabilities/registry': typeof CapabilitiesRegistryRoute
   '/capabilities/systems': typeof CapabilitiesSystemsRouteWithChildren
   '/changes/$id': typeof ChangesIdRoute
   '/knowledge/$id': typeof KnowledgeIdRoute
@@ -550,6 +557,7 @@ export interface FileRoutesByTo {
   '/assets/$id': typeof AssetsIdRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/capabilities/$id': typeof CapabilitiesIdRoute
+  '/capabilities/registry': typeof CapabilitiesRegistryRoute
   '/changes/$id': typeof ChangesIdRoute
   '/knowledge/$id': typeof KnowledgeIdRoute
   '/knowledge/manual': typeof KnowledgeManualRoute
@@ -623,6 +631,7 @@ export interface FileRoutesById {
   '/assets/$id': typeof AssetsIdRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/capabilities/$id': typeof CapabilitiesIdRoute
+  '/capabilities/registry': typeof CapabilitiesRegistryRoute
   '/capabilities/systems': typeof CapabilitiesSystemsRouteWithChildren
   '/changes/$id': typeof ChangesIdRoute
   '/knowledge/$id': typeof KnowledgeIdRoute
@@ -698,6 +707,7 @@ export interface FileRouteTypes {
     | '/assets/$id'
     | '/auth/callback'
     | '/capabilities/$id'
+    | '/capabilities/registry'
     | '/capabilities/systems'
     | '/changes/$id'
     | '/knowledge/$id'
@@ -763,6 +773,7 @@ export interface FileRouteTypes {
     | '/assets/$id'
     | '/auth/callback'
     | '/capabilities/$id'
+    | '/capabilities/registry'
     | '/changes/$id'
     | '/knowledge/$id'
     | '/knowledge/manual'
@@ -835,6 +846,7 @@ export interface FileRouteTypes {
     | '/assets/$id'
     | '/auth/callback'
     | '/capabilities/$id'
+    | '/capabilities/registry'
     | '/capabilities/systems'
     | '/changes/$id'
     | '/knowledge/$id'
@@ -1219,6 +1231,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CapabilitiesIdRouteImport
       parentRoute: typeof CapabilitiesRoute
     }
+    '/capabilities/registry': {
+      id: '/capabilities/registry'
+      path: '/registry'
+      fullPath: '/capabilities/registry'
+      preLoaderRoute: typeof CapabilitiesRegistryRouteImport
+      parentRoute: typeof CapabilitiesRoute
+    }
     '/capabilities/systems': {
       id: '/capabilities/systems'
       path: '/systems'
@@ -1476,12 +1495,14 @@ const CapabilitiesSystemsRouteWithChildren =
 
 interface CapabilitiesRouteChildren {
   CapabilitiesIdRoute: typeof CapabilitiesIdRoute
+  CapabilitiesRegistryRoute: typeof CapabilitiesRegistryRoute
   CapabilitiesSystemsRoute: typeof CapabilitiesSystemsRouteWithChildren
   CapabilitiesIndexRoute: typeof CapabilitiesIndexRoute
 }
 
 const CapabilitiesRouteChildren: CapabilitiesRouteChildren = {
   CapabilitiesIdRoute: CapabilitiesIdRoute,
+  CapabilitiesRegistryRoute: CapabilitiesRegistryRoute,
   CapabilitiesSystemsRoute: CapabilitiesSystemsRouteWithChildren,
   CapabilitiesIndexRoute: CapabilitiesIndexRoute,
 }

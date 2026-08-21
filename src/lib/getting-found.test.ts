@@ -579,3 +579,29 @@ describe("counting how much of the site Google shows", () => {
     expect(countShownPages(rows, readable)).toBe(1);
   });
 });
+
+describe("the reassurance and its own correction cannot sit one on top of the other", () => {
+  const withVolume = { comparison: READY, coverage: { pagesKnown: 48, pagesWithImpressions: 30 } };
+
+  it("does not clear the site in green while checks cannot answer", () => {
+    // The pill rendered "Nothing needs you here" in green directly above the
+    // sentence explaining that several checks are beyond this site's volume.
+    const view = buildGettingFound(withFacts(withVolume));
+    expect(view.answerability?.beyond.length).toBeGreaterThan(0);
+    expect(view.status.tone).toBe("warning");
+    expect(view.status.text).toMatch(/cannot answer yet/i);
+  });
+
+  it("counts the same checks the sentence below it lists", () => {
+    const view = buildGettingFound(withFacts(withVolume));
+    expect(view.status.text).toContain(String(view.answerability?.beyond.length));
+  });
+
+  it("still clears in green when nothing is beyond reach", () => {
+    // No coverage means no answerability claim at all, so there is no
+    // correction for the pill to contradict.
+    const view = buildGettingFound(withFacts({ comparison: READY }));
+    expect(view.answerability).toBeNull();
+    expect(view.status).toEqual({ text: "Nothing needs you here", tone: "positive" });
+  });
+});

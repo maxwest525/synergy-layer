@@ -364,7 +364,7 @@ function SearchWorkspacePage() {
               {collectionMutation.isPending ? "Collecting…" : "Collect latest GSC data"}
             </Button>
             <Button asChild size="sm" variant="outline">
-              <Link to="/capabilities">Capabilities</Link>
+              <Link to="/capabilities/registry">Capabilities</Link>
             </Button>
           </div>
         }

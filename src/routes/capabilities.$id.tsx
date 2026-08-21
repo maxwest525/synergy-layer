@@ -64,7 +64,7 @@ function CapabilityDetailPage() {
 
   return (
     <div className="space-y-10">
-      <BackLink to="/capabilities">All capabilities</BackLink>
+      <BackLink to="/capabilities/registry">All capabilities</BackLink>
       <PageHeader
         eyebrow={capability.kind.replace(/_/g, " ")}
         title={capability.name}
@@ -144,7 +144,10 @@ function CapabilityDetailPage() {
         )}
       </GlassCard>
 
-      <Link to="/capabilities" className="text-sm text-primary underline-offset-4 hover:underline">
+      <Link
+        to="/capabilities/registry"
+        className="text-sm text-primary underline-offset-4 hover:underline"
+      >
         Back to capabilities
       </Link>
     </div>
