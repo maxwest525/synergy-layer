@@ -321,6 +321,29 @@ describe("ranking and the weekly cap", () => {
   });
 });
 
+describe("what an observation may be told to do", () => {
+  it("does not offer to ignore observed evidence, because the server refuses it", () => {
+    const queue = buildQueue(
+      [source({ id: "r1", storedState: "observed", observationOnly: true })],
+      NOW,
+    );
+    expect(queue.open[0]?.canIgnore).toBe(false);
+  });
+
+  it("does not offer to restore observed evidence either", () => {
+    const queue = buildQueue(
+      [source({ id: "r1", storedState: "rejected", observationOnly: true })],
+      NOW,
+    );
+    expect(queue.ignored[0]?.canRestore).toBe(false);
+  });
+
+  it("still offers to ignore an ordinary recommendation", () => {
+    const queue = buildQueue([source({ id: "r2", storedState: "proposed" })], NOW);
+    expect(queue.open[0]?.canIgnore).toBe(true);
+  });
+});
+
 describe("weekly progress", () => {
   it("counts a suggestion as handled whether it was approved or ignored", () => {
     const queue = buildQueue(

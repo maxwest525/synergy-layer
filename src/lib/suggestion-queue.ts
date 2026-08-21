@@ -55,6 +55,11 @@ export type QueueSource = {
    * long it has been waiting.
    */
   readonly rule?: string | null;
+  /**
+   * True when the row is stored evidence rather than a proposal. The server
+   * refuses to decide one, so the queue must not offer the verb.
+   */
+  readonly observationOnly?: boolean;
   readonly createdAt: string;
   readonly updatedAt: string;
 };
@@ -162,14 +167,21 @@ export function navToneForUrgency(urgency: UrgencyRank): NavTone {
   return NAV_TONE[urgency];
 }
 
-/** A rejected change request is terminal, so restoring it is not offered. */
+/**
+ * A rejected change request is terminal, so restoring it is not offered, and
+ * observed evidence was never a decision to reverse.
+ */
 function canRestoreSource(source: QueueSource): boolean {
-  return source.kind !== "change";
+  return source.kind !== "change" && source.observationOnly !== true;
 }
 
-/** Ignoring needs somewhere to store the suppression. Audit findings have none yet. */
+/**
+ * Ignoring needs somewhere to store the suppression. Audit findings have none
+ * yet, and observed evidence is a fact rather than a suggestion: `decide`
+ * refuses it, so offering the verb here would guarantee a failed click.
+ */
 function canIgnoreSource(source: QueueSource): boolean {
-  return source.kind !== "audit";
+  return source.kind !== "audit" && source.observationOnly !== true;
 }
 
 /**
