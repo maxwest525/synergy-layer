@@ -73,6 +73,9 @@ function isGrounded(days: number): days is GroundedWindow {
   return (GROUNDED_WINDOWS as readonly number[]).includes(days);
 }
 
+/** The approval-baseline window's length. Fixed by the lifecycle trigger that cuts window-0 rows. */
+const BASELINE_WINDOW_DAYS = 28;
+
 /**
  * The site's own after/before ratio over the same weeks, or null when too
  * little site history is stored to trust it.
@@ -83,9 +86,6 @@ function isGrounded(days: number): days is GroundedWindow {
  * the ratio (a flat site reads as having "risen" ×2 or ×3.21), so both sides
  * are converted to a per-day rate first.
  */
-/** The approval-baseline window's length. Fixed by the lifecycle trigger that cuts window-0 rows. */
-const BASELINE_WINDOW_DAYS = 28;
-
 function siteRatio(trend: OutcomeReading["siteTrend"], windowDays: number): number | null {
   if (trend === null || trend.beforeImpressions < MIN_BASELINE) return null;
   const beforeRate = trend.beforeImpressions / BASELINE_WINDOW_DAYS;
@@ -169,11 +169,17 @@ export function outcomeVerdict(reading: OutcomeReading): OutcomeAssessment {
   // rounding, which is exactly the kind of fabricated confidence this module
   // exists to refuse.
   if (rawScaledBaselineImpressions < MIN_BASELINE) {
+    const scalingClause =
+      scale === 1
+        ? ""
+        : `, about ${rawScaledBaselineImpressions.toFixed(1)} scaled to ${reading.windowDays} days`;
     return {
       verdict: "neutral",
-      reason: `Only ${reading.baseline.impressions} in the 28 day baseline, about ${rawScaledBaselineImpressions.toFixed(1)} scaled to ${reading.windowDays} days, so a move to ${reading.impressions} is well inside ordinary variation. Too little happened to tell a change from noise.`,
+      reason: `Only ${reading.baseline.impressions} in the 28 day baseline${scalingClause}, so a move to ${reading.impressions} is well inside ordinary variation. Too little happened to tell a change from noise.`,
     };
   }
+
+  const scaleLabel = scale.toFixed(2).replace(/\.?0+$/, "");
 
   // Rounded once, here, and used everywhere below: an unrounded scaled count
   // (90 / 28 does not divide evenly) would otherwise leak a three-decimal
@@ -184,11 +190,18 @@ export function outcomeVerdict(reading: OutcomeReading): OutcomeAssessment {
   const scalingNote =
     scale === 1
       ? ""
-      : ` (the ${reading.windowDays} day window is compared against the 28 day baseline scaled ×${scale.toFixed(2).replace(/\.?0+$/, "")}, ${reading.baseline.impressions} to ${scaledBaselineImpressions})`;
+      : ` (the ${reading.windowDays} day window is compared against the 28 day baseline scaled ×${scaleLabel}, ${reading.baseline.impressions} to ${scaledBaselineImpressions})`;
+  // A standalone sentence carrying the same fact, for embedding after a full
+  // stop rather than mid-sentence: appending scalingNote's lowercase
+  // parenthetical straight after a period reads as a dangling fragment.
+  const scalingSentence =
+    scale === 1
+      ? ""
+      : ` The ${reading.windowDays} day window compares against the 28 day baseline scaled ×${scaleLabel}, ${reading.baseline.impressions} to ${scaledBaselineImpressions}.`;
 
   const confidence = confidenceInCountChange(scaledBaselineImpressions, reading.impressions);
   if (confidence.band === "low") {
-    return { verdict: "neutral", reason: `${confidence.reason}${scalingNote}` };
+    return { verdict: "neutral", reason: `${confidence.reason}${scalingSentence}` };
   }
 
   if (reading.impressions < scaledBaselineImpressions) {
@@ -222,9 +235,19 @@ export function outcomeVerdict(reading: OutcomeReading): OutcomeAssessment {
   const tide = siteRatio(reading.siteTrend, reading.windowDays);
   const changeRatio = reading.impressions / scaledBaselineImpressions;
   if (tide !== null && changeRatio <= tide) {
+    const changeRatioLabel = changeRatio.toFixed(1);
+    const tideLabel = tide.toFixed(1);
+    // At the rounded figure the two can coincide (a page ×2.18 against a site
+    // ×2.22 both read as ×2.2). Asserting a contrast between two numbers that
+    // print identically would read as a false precision the underlying counts
+    // don't carry.
+    const siteClause =
+      tideLabel === changeRatioLabel
+        ? `the whole site kept pace (×${tideLabel})`
+        : `the whole site rose ×${tideLabel}`;
     return {
       verdict: "neutral",
-      reason: `Rose from ${scaledBaselineImpressions} to ${reading.impressions} impressions${scalingNote}, ×${changeRatio.toFixed(1)}, but the whole site rose ×${tide.toFixed(1)} over the same weeks, so this is the tide, not the treatment.`,
+      reason: `Rose from ${scaledBaselineImpressions} to ${reading.impressions} impressions${scalingNote}, ×${changeRatioLabel}, but ${siteClause} over the same weeks, so this is the tide, not the treatment.`,
     };
   }
 

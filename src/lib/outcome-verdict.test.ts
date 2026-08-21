@@ -405,5 +405,10 @@ describe("the scaling note appears in every branch that quotes a scaled number",
     expect(graded.verdict).toBe("neutral");
     expect(graded.reason).toMatch(/scaled ×3\.21/);
     expect(graded.reason).toMatch(/tide/i);
+    // The page's own ratio (700 / 321 ≈ ×2.18) and the site's (2000/90 over
+    // 280/28 ≈ ×2.22) round to the same ×2.2, so the copy should not assert a
+    // contrast between two numbers that print identically.
+    expect(graded.reason).toMatch(/kept pace \(×2\.2\)/);
+    expect(graded.reason).not.toMatch(/site rose ×2\.2/);
   });
 });
