@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Close the structure gaps in the page audit — URL conventions, image layout stability, orphan pages, expected schema types, three standard checks the reference library lists and we do not run — and make the "this audit has never run" state loud on the category pages instead of a single grey line.
+**Goal:** Close the structure gaps in the page audit — URL conventions, image layout stability, orphan pages, expected schema types, three standard checks the reference library lists and we do not run — and make every empty list on the three category pages name the prerequisite it is waiting on, starting with the audit that has never run.
 
-**Architecture:** Every new check is a pure rule in `src/lib/page-checks.ts` (`CHECKS` record + a branch in `evaluatePages`), exactly like the 22 that exist. `src/lib/audit-fixes.ts` holds one exhaustive `Record<CheckId, AuditFixTarget | null>`, so every new id must be added there or `tsc` fails — that is the intended forcing function. Server code (`page-audit.server.ts`) only plumbs stored rows in. View models (`your-pages.ts`, `site-health.ts`, `command-center.ts`) state absence; the components render what the view model says.
+**Architecture:** Every new check is a pure rule in `src/lib/page-checks.ts` (`CHECKS` record + a branch in `evaluatePages`), exactly like the 22 that exist. `src/lib/audit-fixes.ts` holds one exhaustive `Record<CheckId, AuditFixTarget | null>`, so every new id must be added there or `tsc` fails — that is the intended forcing function. Server code (`page-audit.server.ts`) only plumbs stored rows in. View models (`getting-found.ts`, `your-pages.ts`, `site-health.ts`, `command-center.ts`) state absence; the components render what the view model says. The prerequisite registry extends `rule-buckets.ts`, which already derives its numbers from `rule-thresholds.ts` and `search-console-rule-checks.ts` — no threshold value is ever written out by hand.
 
 **Tech Stack:** TypeScript, Vitest (`<module>.test.ts` beside the module), TanStack Start server functions, Supabase reads.
 
@@ -14,11 +14,17 @@
 - `extractPageFacts(html, markdown, pageUrl)` parses the raw HTML Firecrawl already returned for that page (`page-audit.server.ts` L413-414). Reading more fields out of that same string costs nothing new.
 - Firecrawl is requested with `formats: ["rawHtml", "markdown"]` (L41). It returns **no resource byte sizes**, so image file weight is not extractable and no weight check is in this plan.
 - `AnalyzedPage = { url, facts }` (L493). `final_url` is stored on the observation row but is **not** passed into `evaluatePages` — Task 6 changes that.
-- Command center already says "The page audit has never run, so every page check is blind until it runs once." (`command-center.ts` L311-318) and already offers the `run-page-audit` suggested-next row with the cost (L444-459). Your pages and Site health do **not** — Task 5 fixes only those two.
+- Command center already says "The page audit has never run, so every page check is blind until it runs once." (`command-center.ts` L311-318) and already offers the `run-page-audit` suggested-next row with the cost (L444-459). Your pages and Site health do **not** — Task 7 fixes those two.
+- `getting-found.ts` already has `describeAnswerability(...)` and an `Answerability` view field (L176-190, L273-308), but it speaks **only** about volume. `rule-buckets.ts` already carries `bucket` and `needsPerTarget` per rule and reads every number from `SEARCH_CONSOLE_THRESHOLDS` / `SEO_VALIDATION_THRESHOLDS` / `RULE_CHECK_THRESHOLDS`. Tasks 6-7 extend that; they do not start a parallel registry.
+
+- Every rule-blocking condition that is not volume is unrecorded today: `RuleAssignment` has `bucket`, `needsPerTarget` and a developer-facing `why`, and nothing else.
+
+**Salvage from superseded PR #42** (`git show origin/claude/category-page-redesign-convz1:src/lib/rule-reachability.ts`): the keeper is the `alsoNeeds` idea — a rule can be blocked by something that is not volume at all (a second collection window, the page audit having run, analytics being connected), and an empty screen that only explains volume is still lying about why it is empty. The rest of that file is **not** ported: it hand-copies threshold values that `rule-buckets.ts` now derives, and its "not one rule rests on a citation" premise is out of date. Read it for the concept, copy no code and no numbers.
 
 ## Global Constraints
 
 - **No new providers and no new metered calls.** Every new check reads data the existing single Firecrawl scrape per page already returned, or data already stored. Tasks 2, 3 and 6 add *fields* to `PageFacts` that are parsed out of the same HTML string in the same call — the request body in `scrapePage` must not change, and `AUDIT_PAGE_LIMIT` stays 100.
+- **No threshold value is written out by hand.** Anything numeric in the prerequisite work references the existing threshold objects, exactly as `rule-buckets.ts` already does. A copied number that drifts is the specific failure PR #42 shipped.
 - **A check that cannot read its input must not ship a guess.** Every new `PageFacts` field is declared optional (`field?: T`). When it is `undefined` on a stored row, the check that needs it produces **nothing** — never a defect, never a zero. Tests must cover the undefined case explicitly.
 - **Every check carries a source comment**: a Google documentation URL with the quoted wording, or a `Stated assumption:` comment naming what would settle it. Follow the existing comment convention above each entry in `CHECKS`.
 - **No thresholds invented to make a rule fire.** Where a number would have no citable floor (click-depth limit, URL length, image byte weight), the check is not shipped and the plan says why.
@@ -505,50 +511,127 @@ Accept a subtype as satisfying its parent (`BlogPosting` satisfies `article`, an
 
 ---
 
-### Task 5: Say plainly that the audit has never run
+### Task 5: The prerequisite registry — what blocks a rule that is not volume
 
-Command center already says it and already offers the metered row. Your pages says it in one grey line under the heading; Site health says it only inside tile subtext. Both should state it once, prominently, with the cost.
+The salvage from PR #42. `rule-buckets.ts` says how much *volume* each rule needs; nothing says that six rules cannot fire at any volume until a second collection has run, that two read stored rows from a table nobody has written yet, or that the GA4 rules need analytics connected. This task adds that as pure data plus one pure helper, tested in isolation. Task 7 puts it on screen.
 
 **Files:**
-- Modify: `src/lib/your-pages.ts` (`NOT_AUDITED`, `YourPagesView`, `buildYourPages`)
-- Modify: `src/lib/site-health.ts` (`NOT_CHECKED`, `SiteHealthView`, builder)
-- Modify: `src/components/os/your-pages-page.tsx`, `src/components/os/site-health-page.tsx`
-- Test: `src/lib/your-pages.test.ts`, `src/lib/site-health.test.ts`
+- Modify: `src/lib/rule-buckets.ts` (`RuleAssignment`, every entry in `RULE_ASSIGNMENTS`, new `Prerequisite`, `PrerequisiteState`, `unmetPrerequisites`)
+- Test: `src/lib/rule-buckets.test.ts`
 
 **Interfaces:**
-- Adds `readonly neverRunNotice: string | null` to both `YourPagesView` and `SiteHealthView`. Non-null **only** when nothing has been read (`facts.lastObservedAt === null` / `facts.siteObservedAt === null`).
-
-- [ ] **Step 1: Write the failing tests** in both view-model test files:
 
 ```ts
-it("states that the audit has never run, with what it costs", () => {
-  const view = buildYourPages(facts({ lastObservedAt: null }));
-  expect(view.neverRunNotice).toContain("never run");
-  expect(view.neverRunNotice).toContain("100");
-  expect(view.tiles.every((tile) => tile.value === null || tile.missingReason === null)).toBe(true);
-});
+/**
+ * A condition other than volume that has to hold before a rule can say
+ * anything. Volume is often not what binds first: a rule comparing against a
+ * prior window cannot fire at any traffic level until a second collection has
+ * run, and an empty screen that explains only volume misnames why it is empty.
+ */
+export type Prerequisite = "second_collection" | "page_audit" | "analytics" | "url_inspection";
 
-it("says nothing once the audit has run", () => {
-  expect(buildYourPages(facts({ lastObservedAt: "2026-08-20T00:00:00Z" })).neverRunNotice).toBeNull();
+/** What has actually happened for this tenant, read from facts each page already holds. */
+export type PrerequisiteState = {
+  /** A prior window exists to compare against (`comparison.status === "ready"`). */
+  readonly secondCollection: boolean;
+  /** The page audit has stored at least one observation. */
+  readonly pageAudit: boolean;
+  /** Analytics is connected, so visits can be counted at all. */
+  readonly analytics: boolean;
+  /** At least one stored URL inspection exists to compare against. */
+  readonly urlInspection: boolean;
+};
+
+/** Added to RuleAssignment. Empty when volume is the only thing in the way. */
+readonly alsoNeeds: readonly Prerequisite[];
+
+/** The unmet prerequisites across the given rules, worst-blocking first, as sentences. */
+export function unmetPrerequisites(
+  state: PrerequisiteState,
+  assignments?: readonly RuleAssignment[],
+): readonly string[];
+```
+
+- [ ] **Step 1: Write the failing tests** in `rule-buckets.test.ts`, reusing its existing `EXPECTED_RULE_IDS` machinery:
+
+```ts
+describe("non-volume prerequisites", () => {
+  it("declares alsoNeeds on every rule, so a new rule cannot ship without an answer", () => {
+    for (const assignment of RULE_ASSIGNMENTS) {
+      expect(Array.isArray(assignment.alsoNeeds)).toBe(true);
+    }
+  });
+
+  it("names a second collection for every rule that compares against a prior window", () => {
+    const byRule = new Map(RULE_ASSIGNMENTS.map((a) => [a.rule, a]));
+    for (const rule of ["declining_clicks", "declining_impressions", "visibility_gain"]) {
+      expect(byRule.get(rule)?.alsoNeeds).toContain("second_collection");
+    }
+  });
+
+  it("says nothing when every prerequisite is met", () => {
+    expect(
+      unmetPrerequisites({
+        secondCollection: true,
+        pageAudit: true,
+        analytics: true,
+        urlInspection: true,
+      }),
+    ).toEqual([]);
+  });
+
+  it("names each unmet prerequisite once, in plain words, with no rule ids", () => {
+    const notes = unmetPrerequisites({
+      secondCollection: false,
+      pageAudit: false,
+      analytics: true,
+      urlInspection: true,
+    });
+    expect(notes).toHaveLength(2);
+    expect(notes.join(" ")).toContain("second");
+    expect(notes.join(" ")).toContain("page audit");
+    for (const assignment of RULE_ASSIGNMENTS) {
+      expect(notes.join(" ")).not.toContain(assignment.rule);
+    }
+  });
+
+  it("counts the rules each unmet prerequisite is holding, from the registry", () => {
+    const notes = unmetPrerequisites({
+      secondCollection: false,
+      pageAudit: true,
+      analytics: true,
+      urlInspection: true,
+    });
+    const held = RULE_ASSIGNMENTS.filter((a) => a.alsoNeeds.includes("second_collection")).length;
+    expect(notes[0]).toContain(String(held));
+  });
 });
 ```
 
-Mirror both for `buildSiteHealth` with `siteObservedAt`.
-
-- [ ] **Step 2: Run to verify failure.** `npx vitest run src/lib/your-pages.test.ts src/lib/site-health.test.ts`.
-- [ ] **Step 3: Implement.** Add the field to both view types and set it in each builder. Copy, in plain words and matching the wording command center already uses so the two pages do not contradict each other:
+- [ ] **Step 2: Run to verify failure.** `npx vitest run src/lib/rule-buckets.test.ts`.
+- [ ] **Step 3: Add `alsoNeeds` to `RuleAssignment` and to every entry.** Assign from what each rule actually reads, checked against its implementation, not copied from PR #42's list:
+  - `["second_collection"]` for every rule comparing windows: `declining_clicks`, `declining_impressions`, `declining_position`, `position_loss`, `visibility_gain`, `significant_period_change`, `possible_query_overlap`, `research_page_traction`, `page_traffic_loss`, `page_traffic_gain`, `event_disappeared` — verify each against its own module before assigning, and drop any that reads a single window.
+  - `["page_audit"]` for `zero_impression_page` and any rule whose target set is "pages the audit read".
+  - `["url_inspection"]` for `index_coverage_drift`.
+  - `["analytics"]` for the GA4 family (`page_traffic_loss`, `page_traffic_gain`, `event_disappeared`, `zero_engagement_page`) — combined with `second_collection` where both apply.
+  - `[]` where volume alone binds.
+- [ ] **Step 4: Implement `unmetPrerequisites`.** One sentence per unmet prerequisite, counting the rules it holds from the registry rather than from a written-in number:
 
 ```ts
-const NEVER_RUN =
-  "The page audit has never run. Every page level check below is blind until you run it once, and one run reads up to 100 pages.";
+const PREREQUISITE_COPY: Record<Prerequisite, string> = {
+  second_collection:
+    "a second collection, so there is an earlier period to compare this one against",
+  page_audit: "the page audit to have run once, so anything has been read from your pages",
+  analytics: "analytics connected, so visits can be counted at all",
+  url_inspection: "a stored index check to compare against",
+};
 ```
 
-Site health's variant names its own subject: robots.txt, the sitemap, and whether pages render.
+Return `` `${count} checks are waiting on ${PREREQUISITE_COPY[prerequisite]}.` `` per unmet prerequisite, ordered by how many rules each holds, most first. No rule ids, no thresholds, no numbers that are not counted from the registry.
 
-- [ ] **Step 4: Reword the two absence constants** so they say never rather than not yet: `NOT_AUDITED` → "The page audit has never run, so nothing here has been read from your pages." and `NOT_CHECKED` → "The site checks have never run, so nothing has been read from robots.txt or your sitemap."
-- [ ] **Step 5: Render it.** In `your-pages-page.tsx`, between the header block (ends L234) and the tiles grid (L236), render a bordered warning panel when `view.neverRunNotice !== null`, reusing the existing `STATUS_TONE` warning classes rather than inventing a colour, with the existing `Link to="/pages/tools"` label as its action. Replace the L211-213 grey line's never-run branch with the panel so the same fact is not stated twice. Mirror in `site-health-page.tsx` at the equivalent position.
-- [ ] **Step 6: Verify.** `npx vitest run src/lib/your-pages.test.ts src/lib/site-health.test.ts src/lib/nav-contract.test.ts && npx tsc --noEmit`, plus prettier and eslint on the four touched files.
-- [ ] **Step 7: Commit** `feat(os): say plainly on both category pages that the audit has never run`.
+- [ ] **Step 5: Do not port anything else from PR #42.** No `RULE_REQUIREMENTS`, no `citedRuleCount`, no hand-written `needs: { amount }` values — `needsPerTarget` already carries those from the live threshold objects.
+- [ ] **Step 6: Verify.** `npx vitest run src/lib/rule-buckets.test.ts src/lib/getting-found.test.ts && npx tsc --noEmit`, plus prettier and eslint on the two touched files.
+- [ ] **Step 7: Commit** `feat(rules): record what blocks each rule besides volume`.
 
 ---
 
@@ -644,13 +727,76 @@ Write full entries in the file's existing shape; the comments above are the requ
 
 ---
 
-### Task 7: Whole-suite gate and the honest gap list
+### Task 7: Every empty screen names what it is waiting for, then the gate
+
+Puts Task 5's registry on the three category pages, and makes the never-run state loud on the two that currently murmur it. One rule for all three pages: an empty list is never silent and never an all-clear — it states the prerequisite it is waiting on, or the volume it is short of, or that there is genuinely nothing wrong.
 
 **Files:**
+- Modify: `src/lib/getting-found.ts` (`Answerability`, `answerabilityFor`)
+- Modify: `src/lib/your-pages.ts` (`NOT_AUDITED`, `YourPagesView`, `buildYourPages`)
+- Modify: `src/lib/site-health.ts` (`NOT_CHECKED`, `SiteHealthView`, builder)
+- Modify: `src/components/os/getting-found-page.tsx`, `src/components/os/your-pages-page.tsx`, `src/components/os/site-health-page.tsx`
 - Modify: `src/lib/page-checks.ts` (module header comment only)
+- Test: `src/lib/getting-found.test.ts`, `src/lib/your-pages.test.ts`, `src/lib/site-health.test.ts`
 
-- [ ] **Step 1: Full gate.** `npx vitest run && npx tsc --noEmit`. Every failure is fixed here, not deferred.
-- [ ] **Step 2: Confirm the exhaustive map.** `PAGE_CHECK_FIX` has one entry per `CheckId` — 22 before this plan, 31 after (2 + 1 + 1 + 1 + 3 new plus the originals). `tsc` proves it; state the count in the commit body rather than in a comment that will rot.
-- [ ] **Step 3: Record what still is not checked** in the `page-checks.ts` module header, in plain sentences, so the next reader does not re-derive it: image file weight (no byte sizes are returned by the render), click depth (no citable maximum), and page speed per page (that is the stored PageSpeed reading on Site health, not this module).
-- [ ] **Step 4: Lint the touched set.** `npx prettier --check` and `npx eslint` over every file this plan touched. Repo-wide lint stays known-failing and is not fixed here.
-- [ ] **Step 5: Commit** `chore(audit): record what the page checks still cannot read`.
+**Interfaces:**
+- `Answerability` gains `readonly waitingOn: readonly string[]` — the sentences from `unmetPrerequisites`, alongside the existing volume `line` and `beyond`.
+- `YourPagesView` and `SiteHealthView` each gain `readonly waitingOn: readonly string[]` and `readonly neverRunNotice: string | null`. `neverRunNotice` is non-null **only** when nothing has been read (`facts.lastObservedAt === null` / `facts.siteObservedAt === null`).
+
+- [ ] **Step 1: Write the failing tests** across the three view-model test files:
+
+```ts
+// getting-found.test.ts
+it("names the prerequisite, not only the volume, when a window is missing", () => {
+  const view = buildGettingFound(facts({ comparison: insufficient(), sessions: null }));
+  expect(view.answerability?.waitingOn.join(" ")).toContain("second collection");
+  expect(view.answerability?.waitingOn.join(" ")).toContain("analytics");
+});
+
+it("says nothing about prerequisites once they are all met", () => {
+  const view = buildGettingFound(facts({ comparison: ready(), sessions: 40 }));
+  expect(view.answerability?.waitingOn).toEqual([]);
+});
+
+// your-pages.test.ts
+it("states that the audit has never run, with what it costs", () => {
+  const view = buildYourPages(facts({ lastObservedAt: null }));
+  expect(view.neverRunNotice).toContain("never run");
+  expect(view.neverRunNotice).toContain("100");
+  expect(view.waitingOn.join(" ")).toContain("page audit");
+});
+
+it("says nothing once the audit has run", () => {
+  expect(buildYourPages(facts({ lastObservedAt: "2026-08-20T00:00:00Z" })).neverRunNotice).toBeNull();
+});
+
+it("never puts a rule id on screen", () => {
+  const view = buildYourPages(facts({ lastObservedAt: null }));
+  for (const assignment of RULE_ASSIGNMENTS) {
+    expect(`${view.neverRunNotice} ${view.waitingOn.join(" ")}`).not.toContain(assignment.rule);
+  }
+});
+```
+
+Mirror the never-run pair for `buildSiteHealth` with `siteObservedAt`.
+
+- [ ] **Step 2: Run to verify failure.** `npx vitest run src/lib/getting-found.test.ts src/lib/your-pages.test.ts src/lib/site-health.test.ts`.
+- [ ] **Step 3: Build the state from facts each page already holds.** No new facts field, no new query: `secondCollection` is `facts.comparison.status === "ready"`; `analytics` is `facts.sessions !== null` (Site health has no sessions, so it passes `analytics: true` and says nothing about it rather than guessing); `pageAudit` is `facts.lastObservedAt !== null` on Your pages, `facts.siteObservedAt !== null` on Site health, and `facts.coverage !== null` on Getting found. `urlInspection` has no fact on these pages yet — pass `true` and leave it to whichever view later reads inspections, rather than reporting a prerequisite nothing on the page can see.
+- [ ] **Step 4: Wire `unmetPrerequisites` into all three builders** and set `waitingOn`. Getting found keeps its existing volume `line` untouched; `waitingOn` sits beside it, because "not enough traffic" and "no second window yet" are different answers and collapsing them loses the one the operator can act on.
+- [ ] **Step 5: Add the never-run copy**, matching command center's wording so the pages do not contradict each other:
+
+```ts
+const NEVER_RUN =
+  "The page audit has never run. Every page level check below is blind until you run it once, and one run reads up to 100 pages.";
+```
+
+Site health's variant names its own subject: robots.txt, the sitemap, and whether pages render.
+
+- [ ] **Step 6: Reword the two absence constants** so they say never rather than not yet: `NOT_AUDITED` → "The page audit has never run, so nothing here has been read from your pages." and `NOT_CHECKED` → "The site checks have never run, so nothing has been read from robots.txt or your sitemap."
+- [ ] **Step 7: Render it.** In `your-pages-page.tsx`, between the header block (ends L234) and the tiles grid (L236), render a bordered warning panel when `view.neverRunNotice !== null`, reusing the existing `STATUS_TONE` warning classes rather than inventing a colour, with the existing `Link to="/pages/tools"` label as its action. Replace the L211-213 grey line's never-run branch with the panel so the same fact is not stated twice. Mirror in `site-health-page.tsx`. Render `waitingOn` as a short list under each page's empty list — including inside `getting-found-page.tsx`'s existing answerability block, not as a second banner.
+- [ ] **Step 8: Full gate.** `npx vitest run && npx tsc --noEmit`. Every failure is fixed here, not deferred.
+- [ ] **Step 9: Confirm the exhaustive map.** `PAGE_CHECK_FIX` has one entry per `CheckId` — 22 before this plan, 31 after (2 + 1 + 1 + 1 + 3 new plus the originals). `tsc` proves it; state the count in the commit body rather than in a comment that will rot.
+- [ ] **Step 10: Confirm no threshold was copied.** `git diff main -- src/lib/rule-buckets.ts` shows no new numeric literal; every number still comes from the threshold objects or is counted from the registry.
+- [ ] **Step 11: Record what still is not checked** in the `page-checks.ts` module header, in plain sentences, so the next reader does not re-derive it: image file weight (no byte sizes are returned by the render), click depth (no citable maximum), and page speed per page (that is the stored PageSpeed reading on Site health, not this module).
+- [ ] **Step 12: Lint the touched set.** `npx prettier --check` and `npx eslint` over every file this plan touched. Repo-wide lint stays known-failing and is not fixed here.
+- [ ] **Step 13: Commit** `feat(os): name the prerequisite behind every empty screen`.
