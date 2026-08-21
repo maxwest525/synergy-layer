@@ -118,6 +118,18 @@ describe("grading the fixes, on screen", () => {
     expect(screen.getByText(/stored at 7 days and not graded/i)).toBeInTheDocument();
   });
 
+  it("judges three or more graded 28-day changes together, as one cohort line", async () => {
+    show({
+      outcomes: [
+        outcome({ changeId: "a", baseline: { impressions: 40, clicks: 0 }, impressions: 52 }),
+        outcome({ changeId: "b", baseline: { impressions: 40, clicks: 0 }, impressions: 52 }),
+        outcome({ changeId: "c", baseline: { impressions: 40, clicks: 0 }, impressions: 51 }),
+      ],
+    });
+    await userEvent.click(screen.getByRole("tab", { name: /Did the fixes work/ }));
+    expect(screen.getByText(/judged together/i)).toBeInTheDocument();
+  });
+
   it("opens the change a reading measured, never grading from here", async () => {
     show({ outcomes: [outcome()] });
     await userEvent.click(screen.getByRole("tab", { name: /Did the fixes work/ }));

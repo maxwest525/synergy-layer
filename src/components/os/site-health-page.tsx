@@ -288,6 +288,12 @@ export function SiteHealthPage({ initialTab }: { initialTab?: TabId } = {}) {
                   {view.ungradedNote}
                 </p>
               ) : null}
+              {view.cohortNote ? (
+                <p className="flex items-start gap-2 text-xs leading-snug text-muted-foreground">
+                  <Info className="mt-0.5 h-3 w-3 shrink-0" strokeWidth={1.6} aria-hidden="true" />
+                  {view.cohortNote}
+                </p>
+              ) : null}
               {view.outcomes.map((outcome) => (
                 <OutcomeCard key={`${outcome.changeId}:${outcome.windowDays}`} outcome={outcome} />
               ))}

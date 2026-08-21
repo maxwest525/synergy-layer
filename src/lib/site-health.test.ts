@@ -269,6 +269,57 @@ describe("naming the window nothing derives, on screen", () => {
   });
 });
 
+describe("judging many small changes together", () => {
+  it("says nothing below three eligible members", () => {
+    const view = buildSiteHealth(
+      withFacts({
+        siteObservedAt: NOW,
+        outcomes: [
+          outcome({ changeId: "a", baseline: { impressions: 120, clicks: 0 }, impressions: 155 }),
+          outcome({ changeId: "b", baseline: { impressions: 120, clicks: 0 }, impressions: 155 }),
+        ],
+      }),
+    );
+    expect(view.cohortNote).toBeNull();
+  });
+
+  it("pools three or more graded 28-day readings into one cohort line", () => {
+    const view = buildSiteHealth(
+      withFacts({
+        siteObservedAt: NOW,
+        outcomes: [
+          outcome({ changeId: "a", baseline: { impressions: 40, clicks: 0 }, impressions: 52 }),
+          outcome({ changeId: "b", baseline: { impressions: 40, clicks: 0 }, impressions: 52 }),
+          outcome({ changeId: "c", baseline: { impressions: 40, clicks: 0 }, impressions: 51 }),
+        ],
+      }),
+    );
+    expect(view.cohortNote).toContain("3");
+    expect(view.cohortNote).toMatch(/120 to 155/);
+  });
+
+  it("leaves out a reading with no baseline or on a window other than 28 days", () => {
+    const view = buildSiteHealth(
+      withFacts({
+        siteObservedAt: NOW,
+        outcomes: [
+          outcome({ changeId: "a", baseline: { impressions: 40, clicks: 0 }, impressions: 52 }),
+          outcome({ changeId: "b", baseline: { impressions: 40, clicks: 0 }, impressions: 52 }),
+          outcome({ changeId: "c", baseline: null, impressions: 51 }),
+          outcome({
+            changeId: "d",
+            windowDays: 14,
+            daysSinceLive: 14,
+            baseline: { impressions: 40, clicks: 0 },
+            impressions: 52,
+          }),
+        ],
+      }),
+    );
+    expect(view.cohortNote).toBeNull();
+  });
+});
+
 describe("defects an adversarial review found before this shipped", () => {
   it("grades a closed window instead of calling every reading too early", () => {
     // daysSinceLive was measured from live_at to the window's own end date.

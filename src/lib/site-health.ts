@@ -16,6 +16,7 @@
  * to.
  */
 
+import { cohortVerdict } from "./cohort-verdict";
 import { GROUNDED_WINDOWS, outcomeVerdict, type OutcomeVerdict } from "./outcome-verdict";
 import type { Severity } from "./page-checks";
 import type { SiteFinding } from "./site-checks";
@@ -135,6 +136,14 @@ export type SiteHealthView = {
   readonly ungradedNote: string | null;
   /** Set when a read hit its limit, so a truncation is never shown as a total. */
   readonly truncatedNote: string | null;
+  /**
+   * The 28-day graded readings judged together, rather than one at a time.
+   *
+   * At this property's volume a single page rarely reaches the noise floor in
+   * `confidence.ts`; a cohort of them can. Null below three members, or when
+   * `cohortVerdict` itself refuses. See `cohort-verdict.ts`.
+   */
+  readonly cohortNote: string | null;
 };
 
 const NOT_CHECKED =
@@ -375,6 +384,25 @@ function ungradedNoteFor(graded: readonly GradedOutcome[]): string | null {
   return `${ungraded.length} ${ungraded.length === 1 ? "reading is" : "readings are"} stored at ${windows.join(" and ")} days and not graded. The windows this grades are ${GRADED_AND_STORABLE.join(" and ")}.${notCollected}`;
 }
 
+/** Minimum members before a cohort verdict is worth showing at all. */
+const MIN_COHORT_MEMBERS = 3;
+
+function cohortNoteFor(graded: readonly GradedOutcome[]): string | null {
+  const eligible = graded.filter(
+    (outcome) =>
+      outcome.windowDays === 28 &&
+      outcome.verdict !== null &&
+      outcome.baseline !== null &&
+      outcome.readingStatus === "complete",
+  );
+  if (eligible.length < MIN_COHORT_MEMBERS) return null;
+  const members = eligible.map((outcome) => ({
+    before: outcome.baseline!.impressions,
+    after: outcome.impressions,
+  }));
+  return cohortVerdict(members)?.reason ?? null;
+}
+
 export function buildSiteHealth(facts: SiteHealthFacts): SiteHealthView {
   const queue = buildQueue(facts.queueSources, facts.now);
   const open = [...queue.open].sort(compareQueueItems);
@@ -400,6 +428,7 @@ export function buildSiteHealth(facts: SiteHealthFacts): SiteHealthView {
     history: [...queue.ignored, ...queue.done],
     asOf: facts.siteObservedAt,
     ungradedNote: ungradedNoteFor(graded),
+    cohortNote: cohortNoteFor(graded),
     truncatedNote: facts.truncated
       ? "More changes are stored than were read for this page, so the counts above are a floor rather than a total."
       : null,
