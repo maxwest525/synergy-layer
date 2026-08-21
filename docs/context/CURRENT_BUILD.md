@@ -8,7 +8,163 @@ It is not authoritative documentation. Provider digests under
 `docs/integrations/<provider>/DIGEST.md` and their PLAN files remain the source of
 truth for provider behaviour and must never be overwritten by this file.
 
-Last updated: 2026-08-18 (analytics proof milestone in progress).
+Last updated: 2026-08-21, at `2a2e87f` (PR #48).
+
+**How to read this file.** Section 0 is the current state and supersedes anything
+below it that disagrees. The later sections are kept in the order they were
+written, as a dated record of how the build got here. Where an older section
+contradicts section 0, section 0 wins and the contradiction is named rather than
+quietly edited away.
+
+## 0. State of the build, 2026-08-21
+
+Verified in this worktree at `2a2e87f`: `npm run typecheck` clean, `npm test`
+1168 passing in 118 files, `npm run lint` 0 errors and 14 pre-existing
+react-refresh warnings. What follows is read from code and applied migrations;
+anything about a live provider or the production database is marked as such and
+was not re-verified here.
+
+### The product surface
+
+The eight numbered workspaces of the original brief were replaced by a
+seven-slot category navigation, defined once in `src/lib/categories.ts` and
+capped permanently. The Command center and four of the six category pages are
+built:
+
+| Category | Page | Route it renders at | Reserved slug |
+| --- | --- | --- | --- |
+| Command center | `command-center-page.tsx` | `/` | — |
+| Getting found on Google | `getting-found-page.tsx` | `/search` | `/getting-found-on-google` |
+| Your pages | `your-pages-page.tsx` | `/pages` | `/your-pages` |
+| Site health | `site-health-page.tsx` | `/measurement` | `/site-health` |
+| Connections | `connections-page.tsx` | `/capabilities` | `/connections` |
+| Who visits your site | not built | `/ga4` (absorbed) | `/who-visits-your-site` |
+| Your competition | not built | `/competitors` (absorbed) | `/your-competition` |
+
+**Deviation from the redesign plan, recorded deliberately.** The plan said each
+category's `to` would move to `/${slug}` when its page landed. It has not: the
+new pages render at the legacy routes instead. `categoryForPath` matches both,
+so the navigation and breadcrumbs are correct either way, but the reserved slugs
+are still unused. Moving them is a one-line change per category plus redirects,
+and nobody has decided when.
+
+The roughly thirty legacy routes are still on disk and still reachable by URL,
+outside the new navigation by design. The old sidebar
+(`src/components/os/shell.tsx`) is unused and retained.
+
+### Connections: the four stages
+
+`src/lib/connections.ts` grades every account on how far its evidence actually
+travels: not configured, configured, collecting-and-reaching-nobody, reaching
+you. Stage three is where most of this estate sat, and the page exists to say so
+per connection with the row counts behind it. Only four modules in the codebase
+write a recommendation, so any connector outside their reach stops at stage
+three however well wired it is. `connections.registry.test.ts` asserts the
+registry against the rest of the codebase, so a stage claim cannot drift from
+what the code does.
+
+### The rule-threshold audit is closed
+
+`docs/handoffs/2026-08-20-rule-thresholds-audit.md` is done. Its finding was that
+every threshold had been written for a site with roughly a hundred times this
+property's traffic, so almost no rule could fire, and that lowering them until
+they fired would have been worse than silence.
+
+What shipped instead, in `src/lib/rule-buckets.ts`: all 24 finding rules across
+the Search Console, SEO-validation and GA4 families are assigned a bucket —
+**5 `fact`** (answerable at any volume: indexation, robots and sitemap states),
+**13 `pooled`** (click-shaped questions answered across the property rather than
+per page), **6 `beyond_current_volume`** (the page states the volume that would
+make it answerable and ships no threshold). No threshold value is written out by
+hand; every number is read from the threshold objects.
+
+The same registry carries `alsoNeeds`, the non-volume prerequisites — a second
+collection window, the page audit having run, analytics connected, a stored URL
+inspection, approved keywords, two backlink readings. Every empty list on the
+category pages now names the prerequisite it is waiting on, and distinguishes
+"never run" from "not yet". Migration `20260820200000_grounded_measurement_windows`
+carries the grounded windows.
+
+### The suggestion queue can be acted on
+
+`src/lib/suggestion-queue.ts` is the state machine: open / ignored / done, dedup
+by `issue_fingerprint`, urgency ranking, seven visible per week. Every card now
+renders the verbs the queue says are legal (`suggestion-verbs.ts`,
+`suggestion-card.tsx`) or an on-screen sentence saying why a verb is absent —
+never a disabled control. Legality that was previously a lie was corrected at
+the source: observation-only rows lost `canIgnore`, audit findings gained it
+once suppression storage existed (`20260821090000_suggestion_suppressions`,
+including the `UPDATE` grant the upsert needs), and the ignore verb on a
+change-kind card reads Reject, because `rejectChangeRequest` is terminal.
+Approve still routes only through `/changes/$id`.
+
+### The page audit
+
+`src/lib/page-checks.ts` runs 30 checks over the HTML a single Firecrawl scrape
+already returned, up to 100 pages per run. The structure-enforcement lane added
+URL conventions (underscores, parameters), missing image width/height, orphan
+pages no internal link path reaches, expected schema type per page kind, and
+redirect / canonical-chain / meta-refresh checks. `PAGE_CHECK_FIX` in
+`audit-fixes.ts` is exhaustive over `CheckId`, so `tsc` refuses a new check
+without its fix target.
+
+Deliberately not built, with the reason recorded in the module header: image
+file weight (the render returns no byte sizes), click depth (no Google document
+sets a maximum, so any limit would be invented), and per-page speed, which is
+the stored PageSpeed reading on Site health.
+
+### The targeting layer
+
+`targeting-rules.ts` plus `dataforseo/targeting-rules.server.ts` is the fourth —
+and newest — module that writes a recommendation, which is what moved DataForSEO
+from stage three to stage four. Approved keywords that nothing has observed, and
+keywords with no page to rank, are now findings. The competitor keyword gap files
+as `keyword_candidates` in `pending`, entering the approval flow
+`decideKeywordCandidates` already governs; nothing is auto-tracked. Difficulty
+and intent scoring runs on an operator click, batched at 1000 keywords with
+"scored N of M pending" reported when the queue is longer. Referring-domain
+movement is reported from backlink snapshots already stored.
+
+**Verified dead end, so nobody re-derives it:** question mining from stored SERP
+payloads does not work. A read-only query against the real stored rows returned
+40 `serp_organic` snapshots with an item-type histogram of `{organic: 741}` and
+no `people_also_ask` at all, because `payload->'rows'` is a projection filtered
+at ingest (`serp.server.ts`). The absence reflects what AOOS chose to keep, not
+what Google returned. Recovering it needs a different provider call.
+
+### Model routing
+
+Every model call routes through a self-hosted LiteLLM proxy when
+`LITELLM_BASE_URL` and `LITELLM_API_KEY` are set, with OpenRouter behind it, and
+falls back to the previous paths when they are not. The server side is deployed
+and documented in `docs/litellm-routing.md`, including the stated simplification
+that there is no database behind the proxy, so the app authenticates with the
+master key rather than a virtual key. `LOVABLE_API_KEY` is still required for
+Search Console, which is a data gateway and unaffected by any of this.
+
+### CI is a real gate
+
+`.github/workflows/ci.yml` runs lint, typecheck, test and build on every pull
+request. Before that, `vite build` was the only check and type errors could
+reach `main` freely despite a strict `tsconfig`. Earlier records in this file and
+in the lane plans describe repo-wide lint as "pre-broken with thousands of
+prettier errors" — that is no longer true and those notes are stale.
+
+### Still blocked, still waiting on a human
+
+Unchanged from the sections below, restated because they are the things most
+likely to waste someone's afternoon:
+
+- `GITHUB_EXECUTOR_TOKEN` is not configured, so no change request has ever been
+  executed against the real repository. The UI names this exactly and refuses
+  without writing.
+- `cap.github` is not connected, which blocks `wf.publish`.
+- The six-domain competitor shortlist is still `pending` in `/competitors`. An
+  agent must not approve or reject it.
+- The free SerpAPI account gate for `cap.serpapi_ads_transparency` still needs
+  revalidating. All ads schedules remain disabled.
+- Two categories have no page yet: Who visits your site, and Your competition.
+
 
 ## 1. What AOOS is
 

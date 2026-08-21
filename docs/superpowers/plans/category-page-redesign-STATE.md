@@ -2,6 +2,8 @@
 
 Living record of where the six-phase build has got to. Updated at the end of every phase.
 
+Last updated 2026-08-21 at `2a2e87f`.
+
 Authorities, in order: the spec
 `docs/superpowers/specs/2026-08-20-category-page-redesign-design.md`, then the approved boards
 in `design/` (`Home.dc.html` = Command center, `Main.dc.html` = Category page). These decisions
@@ -20,12 +22,26 @@ are settled and are not reopened phase by phase.
 
 | # | Phase | State | PR |
 |---|---|---|---|
-| 1 | Shell + Command center | in review | see branch `claude/category-page-redesign-convz1` |
-| 2 | Getting found on Google | not started | |
-| 3 | Your pages | not started | |
+| 1 | Shell + Command center | shipped | #35 |
+| 2 | Getting found on Google | shipped | #38, extended by #40, #43, #45, #46 |
+| 3 | Your pages | shipped | #40 |
 | 4 | Who visits your site | not started | |
-| 5 | Your competition, Site health, Connections | not started | |
+| 5 | Your competition | not started | |
+| 5 | Site health | shipped | #41 |
+| 5 | Connections | shipped | #44 |
 | 6 | Ask Marky composer | not started | |
+
+Phase 5 was split: Site health and Connections shipped as their own pages, Your
+competition did not. It and Who visits your site are the two categories still
+pointing at the legacy routes they absorb.
+
+**Where the pages actually live.** The plan below says a phase moves its
+category's `to` to `/${slug}` when the page lands. That is not what happened:
+every built page renders at the legacy route it absorbed (`/search`, `/pages`,
+`/measurement`, `/capabilities`) and the reserved slugs are unused.
+`categoryForPath` matches both, so nav and breadcrumbs are correct either way.
+Moving them is a one-line change per category plus redirects for anything
+holding the old URLs, and nobody has decided when.
 
 ## What phase 1 established, that later phases build on
 
@@ -49,8 +65,18 @@ are settled and are not reopened phase by phase.
 - The Action center now lives at `/today`: reachable, deliberately unlinked.
 - `src/components/os/shell.tsx` (the old ~30-item sidebar) is unused but still on disk, as the
   spec's "nothing is deleted in this phase" requires.
-- Ignoring an audit finding has nowhere to persist to, so the queue reports `canIgnore: false`
-  for that kind rather than showing a button that cannot work. A later phase that adds
-  suppression storage should revisit `canIgnoreSource` in `src/lib/suggestion-queue.ts`.
-- Repo-wide `npm run lint` was already failing before this work (thousands of pre-existing
-  prettier errors). Every file these phases touch is kept lint clean individually.
+- ~~Ignoring an audit finding has nowhere to persist to~~ — **resolved in #45.** Migration
+  `20260821090000_suggestion_suppressions` gives it storage, `canIgnoreSource` was revisited,
+  and the queue's verbs are rendered by `src/lib/suggestion-verbs.ts` through one shared
+  `suggestion-card.tsx`.
+- ~~Repo-wide `npm run lint` was already failing (thousands of pre-existing prettier errors)~~ —
+  **no longer true.** CI became a real gate (lint, typecheck, test, build) and the repo is
+  clean: 0 errors, 14 react-refresh warnings, verified at `2a2e87f`. The thousands of errors
+  were phantom: `eslint .` was following the `node_modules` symlink inside
+  `.claude/worktrees/*` and linting every dependency. `eslint.config.js` now ignores
+  `.claude`. Do not carry the "lint is pre-broken" line into new plans; it is what let a
+  real formatting error sit unnoticed on `main`.
+- The lane plans in this directory still carry a Windows worktree path and a
+  `bunx`-based test command in their Global Constraints. The repository itself is npm and
+  vitest (`npm test`, `npx vitest run <file>`); read those lines as one contributor's local
+  setup, not as project convention.

@@ -20,7 +20,11 @@ describe("governed knowledge ingestion CLI", () => {
       mode: "dry-run",
       sourceCount: 18,
       modelRequestCount: 18,
-      estimatedInputTokens: 70_737,
+      // The handbook is the input, so editing any file in
+      // docs/execution-handbook/ moves this number. Re-run the script and paste
+      // the new total; a changed estimate here is the expected cost of a
+      // documentation change, not a regression.
+      estimatedInputTokens: 72_331,
     });
   });
 });

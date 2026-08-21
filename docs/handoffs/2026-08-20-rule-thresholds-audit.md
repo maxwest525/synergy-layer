@@ -1,8 +1,37 @@
 # Handoff: the rule thresholds are wrong, and most of them cannot fire
 
-**Status:** open. Nobody has done this work.
+**Status: closed, 2026-08-21.** The work shipped across #37, #41, #43 and #45.
+Everything below is kept as written, because the reasoning is the reason the
+thresholds are what they are and re-deriving it would cost a day. Read it as the
+record of a decision, not as a work order.
+
 **Read first:** `.claude/skills/seo-measurement/SKILL.md` — it carries the method
-and the primary-source quotes. This document is the work order.
+and the primary-source quotes.
+
+## What closed it
+
+Against this document's own definition of done, verified in code at `2a2e87f`:
+
+| Criterion | Where |
+| --- | --- |
+| Every rule assigned answerable / pooled-only / not-answerable-here, with the reasoning in the file | `src/lib/rule-buckets.ts` — 24 rules: 5 `fact`, 13 `pooled`, 6 `beyond_current_volume`, each with a developer-facing `why`. `rule-buckets.test.ts` forces an assignment for every registered rule. |
+| No number written out by hand | Every value is read from `rule-thresholds.ts` / `search-console-rule-checks.ts`. |
+| Outcome verdict grounded, never failure at 14 days, Google-rewritten title reported unmeasured | `src/lib/outcome-verdict.ts` — `GROUNDED_WINDOWS = [14, 28, 56, 90]`, the 14-day branch answers "not yet" rather than failure, wording-only changes grade as an unmeasured treatment. Confidence via `src/lib/confidence.ts`. Migration `20260820200000_grounded_measurement_windows`. |
+| Rules reading the `query` dimension disclose that the data is filtered | `QUERY_DIMENSION_CAVEAT` in `search-console-rule-checks.ts`, carried into the finding description the operator reads. |
+| Checks cite their Google documentation or say what they assume | `page-checks.ts` and `site-checks.ts` carry a quoted source or a `Stated assumption:` per check. #45 relabelled two that had been dressed as sourced when the cited document did not support the claim. |
+| Suite, typecheck and lint green | Verified at `2a2e87f`: 1168 tests in 118 files, typecheck clean, lint 0 errors. |
+
+The audit also grew a part it did not ask for: volume is often not what binds
+first. `rule-buckets.ts` carries `alsoNeeds` — second collection, page audit,
+analytics, URL inspection, approved keywords, backlink collection — so an empty
+screen names the prerequisite it is actually waiting on instead of blaming
+traffic for a missing second window.
+
+Not done, and deliberately: the adversarial pre-merge review named in the last
+line of the definition of done is not evidenced in this repository. If it ran, it
+ran outside it.
+
+---
 
 ## The situation, bluntly
 

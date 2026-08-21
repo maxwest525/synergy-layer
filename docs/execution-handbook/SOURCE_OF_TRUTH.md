@@ -3,7 +3,7 @@ id: 20260814-source-of-truth
 title: Source of Truth
 tags: [governance, architecture]
 created: 2026-08-14
-updated: 2026-08-14
+updated: 2026-08-21
 related:
   [
     20260814-execution-handbook-index,
@@ -37,19 +37,37 @@ Every feature, adapter, rule, or document claim must be marked `IMPLEMENTED`, `D
 
 ## Current state summary
 
-| Area                                                   | State                                         | Evidence                                                          |
-| ------------------------------------------------------ | --------------------------------------------- | ----------------------------------------------------------------- |
-| GSC collection and stored observations                 | `IMPLEMENTED`, deployed, and data-proven      | `src/lib/search-console*.ts`; live snapshots                      |
-| DataForSEO evidence adapters and spend ledger          | `IMPLEMENTED`; provider state is `EXTERNAL`   | `src/lib/dataforseo/`                                             |
-| Observation-only approval separation                   | `IMPLEMENTED` and deployed                    | `src/lib/observation-record.ts`; signal-integrity migration/tests |
-| Title/H1 evidence, drafting, persistence, and versions | `IMPLEMENTED` and deployed                    | `src/lib/title-h1-proposals*`; `20260814080000` migration         |
-| Proposal UI                                            | `IMPLEMENTED`                                 | `src/routes/changes.new.tsx`; `src/routes/changes.$id.tsx`        |
-| GitHub execution and rendered proof                    | `IMPLEMENTED`; historically live-proven       | `src/lib/execution/`; live change-request receipts                |
-| GitHub/Lovable source synchronization                  | `EXTERNAL`, matched at audit commit `1fc0040` | GitHub remote and Lovable metadata                                |
-| Lovable production publication                         | `EXTERNAL`, published at audit time           | Lovable metadata; sync and Publish remain separate actions        |
-| GA4 outcome collection                                 | `IMPLEMENTED`, deployed, not live-proven      | adapter/registry exist; zero live GA4 snapshots                   |
-| Proposal knowledge retrieval                           | `IMPLEMENTED` for bounded tenant guidance     | deterministic retrieval in the proposal service                   |
-| General governed ingestion, chunking, and refresh      | `DESIGNED`                                    | storage exists; full activation pipeline does not                 |
+| Area                                                   | State                                                  | Evidence                                                                                                                                                                                                                                                                                 |
+| ------------------------------------------------------ | ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GSC collection and stored observations                 | `IMPLEMENTED`, deployed, and data-proven               | `src/lib/search-console*.ts`; live snapshots                                                                                                                                                                                                                                             |
+| DataForSEO evidence adapters and spend ledger          | `IMPLEMENTED`; provider state is `EXTERNAL`            | `src/lib/dataforseo/`                                                                                                                                                                                                                                                                    |
+| Observation-only approval separation                   | `IMPLEMENTED` and deployed                             | `src/lib/observation-record.ts`; signal-integrity migration/tests                                                                                                                                                                                                                        |
+| Title/H1 evidence, drafting, persistence, and versions | `IMPLEMENTED` and deployed                             | `src/lib/title-h1-proposals*`; `20260814080000` migration                                                                                                                                                                                                                                |
+| Proposal UI                                            | `IMPLEMENTED`                                          | `src/routes/changes.new.tsx`; `src/routes/changes.$id.tsx`                                                                                                                                                                                                                               |
+| GitHub execution and rendered proof                    | `IMPLEMENTED`; **`BLOCKED` in the current deployment** | `src/lib/execution/`. `GITHUB_EXECUTOR_TOKEN` is not configured and `cap.github` is not connected, so no change request has been executed against the repository since. The "historically live-proven" claim and the current blocker are both true and are recorded together on purpose. |
+| GitHub/Lovable source synchronization                  | `EXTERNAL`, matched at audit commit `1fc0040`          | GitHub remote and Lovable metadata                                                                                                                                                                                                                                                       |
+| Lovable production publication                         | `EXTERNAL`, published at audit time                    | Lovable metadata; sync and Publish remain separate actions                                                                                                                                                                                                                               |
+| GA4 outcome collection                                 | `IMPLEMENTED`; live-proven per record, `EXTERNAL` now  | First successful snapshot recorded 2026-08-18 (124 rows, 48 pages) in `docs/context/CURRENT_BUILD.md`. The "zero live GA4 snapshots" note here predates it. Neither claim was re-verified against the production database on 2026-08-21.                                                 |
+| Proposal knowledge retrieval                           | `IMPLEMENTED` for bounded tenant guidance              | deterministic retrieval in the proposal service                                                                                                                                                                                                                                          |
+| General governed ingestion, chunking, and refresh      | `DESIGNED`                                             | storage exists; full activation pipeline does not                                                                                                                                                                                                                                        |
+
+### Added 2026-08-21, at `2a2e87f`
+
+Read from code and applied migrations in this worktree. Nothing in these rows was
+verified against production.
+
+| Area                                                                | State                                         | Evidence                                                                                                                       |
+| ------------------------------------------------------------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| Rule bucketing and non-volume prerequisites                         | `IMPLEMENTED`                                 | `src/lib/rule-buckets.ts`, 24 rules bucketed with `alsoNeeds`; `rule-buckets.test.ts` forces an assignment per registered rule |
+| Grounded outcome verdicts                                           | `IMPLEMENTED`                                 | `src/lib/outcome-verdict.ts`, `confidence.ts`, migration `20260820200000_grounded_measurement_windows`                         |
+| Page audit checks                                                   | `IMPLEMENTED`                                 | `src/lib/page-checks.ts`, 30 checks; `audit-fixes.ts` exhaustive over `CheckId`                                                |
+| Suggestion queue verbs and suppression                              | `IMPLEMENTED`                                 | `suggestion-queue.ts`, `suggestion-verbs.ts`, `suggestion-card.tsx`, migration `20260821090000_suggestion_suppressions`        |
+| Targeting layer (keyword and backlink findings)                     | `IMPLEMENTED`                                 | `src/lib/targeting-rules.ts`, `src/lib/dataforseo/targeting-rules.server.ts`                                                   |
+| Connection stage registry                                           | `IMPLEMENTED`                                 | `src/lib/connections.ts`; `connections.registry.test.ts` asserts it against the codebase                                       |
+| Category pages: Getting found, Your pages, Site health, Connections | `IMPLEMENTED`                                 | `src/components/os/*-page.tsx`                                                                                                 |
+| Category pages: Who visits your site, Your competition              | `DESIGNED`                                    | `src/lib/categories.ts` reserves the slugs; the nav absorbs `/ga4` and `/competitors`                                          |
+| Model routing through LiteLLM                                       | `IMPLEMENTED` in app, `EXTERNAL` at the proxy | `docs/litellm-routing.md`; falls back to the previous paths when unconfigured                                                  |
+| CI verification gate                                                | `IMPLEMENTED`                                 | `.github/workflows/ci.yml`: lint, typecheck, test, build on every pull request                                                 |
 
 ## Change rule
 

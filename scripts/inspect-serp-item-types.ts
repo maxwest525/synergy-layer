@@ -77,13 +77,19 @@ async function main() {
     }
   }
 
-  console.log(JSON.stringify({
-    snapshotsRead: (data ?? []).length,
-    endpoints: [...new Set((data ?? []).map((row) => row.endpoint))],
-    itemTypes: Object.fromEntries([...typeCounts.entries()].sort((a, b) => b[1] - a[1])),
-    peopleAlsoAskPresent: typeCounts.has("people_also_ask"),
-    peopleAlsoAskSample: paaSample,
-  }, null, 2));
+  console.log(
+    JSON.stringify(
+      {
+        snapshotsRead: (data ?? []).length,
+        endpoints: [...new Set((data ?? []).map((row) => row.endpoint))],
+        itemTypes: Object.fromEntries([...typeCounts.entries()].sort((a, b) => b[1] - a[1])),
+        peopleAlsoAskPresent: typeCounts.has("people_also_ask"),
+        peopleAlsoAskSample: paaSample,
+      },
+      null,
+      2,
+    ),
+  );
 }
 
 main().catch((error) => {
