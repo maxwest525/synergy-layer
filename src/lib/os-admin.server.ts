@@ -75,6 +75,57 @@ export async function decide(
 }
 
 /**
+ * Set a suggestion aside, or take it back.
+ *
+ * This is not `decide`. It records that the operator does not want to see the
+ * row now; it authorises nothing and runs nothing, so it is not gated on there
+ * being an executable handler. `approved_at` and `approved_by` are deliberately
+ * left alone: nobody approved anything.
+ */
+export async function setQueueState(
+  client: Client,
+  id: string,
+  verb: "ignore" | "restore",
+  userId: string,
+) {
+  const { isObservationOnly } = await import("./recommendation-action");
+  const { nextRecommendationState } = await import("./recommendation-queue-state");
+
+  const { data: existing, error: readError } = await client
+    .from("recommendations")
+    .select("id, title, state, metadata")
+    .eq("id", id)
+    .maybeSingle();
+  if (readError) throw new Error(readError.message);
+  if (!existing) throw new Error("That suggestion is not visible to this account.");
+
+  const write = nextRecommendationState(verb, existing.state, isObservationOnly(existing.metadata));
+  if (!write.ok) throw new Error(write.reason);
+
+  const { data: updated, error } = await client
+    .from("recommendations")
+    .update({ state: write.nextState })
+    .eq("id", id)
+    .select("id, state")
+    .single();
+  if (error) throw new Error(error.message);
+
+  await logActivity(client, {
+    actorKind: "user",
+    actorId: userId,
+    verb: `recommendation.${verb}`,
+    subjectKind: "recommendation",
+    subjectId: id,
+    summary:
+      verb === "ignore"
+        ? `${existing.title} was set aside.`
+        : `${existing.title} was put back on the list.`,
+  });
+
+  return updated;
+}
+
+/**
  * Clearing is one atomic operator action in the database: it preserves the
  * prior lane, records who cleared it, and logs the event. Pending approvals are
  * rejected there, not here, so no client can route around the gate.

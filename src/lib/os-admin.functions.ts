@@ -71,6 +71,21 @@ export const decideRecommendation = createServerFn({ method: "POST" })
     return decide(context.supabase, data.id, data.decision, context.userId);
   });
 
+/**
+ * Set a suggestion aside, or take it back. Reversible, records nothing as
+ * approved, and runs nothing — so it carries no cost and no site effect.
+ */
+export const setRecommendationQueueState = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) =>
+    z.object({ id: z.string().uuid(), verb: z.enum(["ignore", "restore"]) }).parse(data),
+  )
+  .handler(async ({ data, context }) => {
+    const { assertOperator, setQueueState } = await import("./os-admin.server");
+    await assertOperator(context.supabase, context.userId);
+    return setQueueState(context.supabase, data.id, data.verb, context.userId);
+  });
+
 export const resolveInboxItem = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) => z.object({ id: z.string().uuid() }).parse(data))
