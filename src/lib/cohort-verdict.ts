@@ -65,9 +65,17 @@ export function exactBinomialTwoSidedP(n: number, k: number): number {
   return Math.min(1, p);
 }
 
-/** "p below 0.01" instead of a rounded "p 0.00", which reads as certainty this test never claims. */
+/**
+ * "p below 0.01" instead of a rounded "p 0.00", which reads as certainty this
+ * test never claims. Three decimals between 0.01 and 0.10 so a p just under
+ * 0.05 and one just over it don't both round to the same "p 0.05" — which
+ * would print "clears the noise" and "does not clear the noise" side by side
+ * with identical evidence shown.
+ */
 function pClause(p: number): string {
-  return p < 0.01 ? "p below 0.01" : `p ${p.toFixed(2)}`;
+  if (p < 0.01) return "p below 0.01";
+  if (p < 0.1) return `p ${p.toFixed(3)}`;
+  return `p ${p.toFixed(2)}`;
 }
 
 /**
@@ -91,19 +99,20 @@ function unanimity(
       unanimousEnough: false,
       clause:
         nonTied === 0
-          ? "every page held exactly level, so there is nothing to test agreement on"
-          : "individual changes moved in both directions and cancelled out, so this is not one page's doing either",
+          ? "and every page held exactly level, so there is nothing to test agreement on"
+          : "and individual changes moved in both directions and cancelled out, so this is not one page's doing either",
     };
   }
 
   const agreeing = members.filter((member) =>
     direction === "rise" ? member.after > member.before : member.after < member.before,
   ).length;
+  const nonTiedWord = nonTied === 1 ? "change is" : "changes are";
 
   if (nonTied < 6) {
     return {
       unanimousEnough: false,
-      clause: `${agreeing} of ${nonTied} moved the same way, but ${nonTied} changes are too few for that agreement to rule out chance`,
+      clause: `but ${agreeing} of ${nonTied} moved the same way, and ${nonTied} ${nonTiedWord} too few for that agreement to rule out chance`,
     };
   }
 
@@ -133,6 +142,7 @@ export function cohortVerdict(members: readonly CohortMember[]): CohortVerdict |
   if (before + after === 0 || before < MIN_BASELINE) return null;
 
   const p = exactBinomialTwoSidedP(before + after, after);
+  const significant = p < 0.05;
   const direction = after > before ? "rise" : after < before ? "fall" : "flat";
   const { unanimousEnough, clause: unanimityClause } = unanimity(direction, members);
 
@@ -140,14 +150,25 @@ export function cohortVerdict(members: readonly CohortMember[]): CohortVerdict |
     direction === "flat"
       ? `stayed at ${before}`
       : `${direction === "rise" ? "rose" : "fell"} from ${before} to ${after}`;
-  const significanceClause =
-    p < 0.05 ? `clears the noise (${pClause(p)})` : `does not clear the noise (${pClause(p)})`;
+  const significanceClause = significant
+    ? `clears the noise (${pClause(p)})`
+    : `does not clear the noise (${pClause(p)})`;
   const changeWord = members.length === 1 ? "change" : "changes";
+
+  // An affirmative "not one page's doing" is a robustness claim, and a
+  // robustness claim about a result that did not itself clear the noise is a
+  // claim this module cannot back. `unanimousEnough` still reports what the
+  // sign test found; only the copy is suppressed here.
+  const showUnanimityClause = !(unanimousEnough && !significant);
+
+  const sentence = showUnanimityClause
+    ? `Your ${members.length} measured ${changeWord}, judged together: impressions ${pooledClause}, which ${significanceClause}, ${unanimityClause}.`
+    : `Your ${members.length} measured ${changeWord}, judged together: impressions ${pooledClause}, which ${significanceClause}.`;
 
   return {
     direction,
     p,
     unanimousEnough,
-    reason: `Your ${members.length} measured ${changeWord}, judged together: impressions ${pooledClause}, which ${significanceClause} ${unanimityClause}.`,
+    reason: sentence,
   };
 }

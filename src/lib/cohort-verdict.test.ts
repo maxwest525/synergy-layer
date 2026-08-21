@@ -18,6 +18,20 @@ describe("the pooled exact test", () => {
   it("refuses below the confidence module's own baseline floor", () => {
     expect(cohortVerdict([{ before: 4, after: 9 }])).toBeNull();
   });
+
+  it("never prints the same rounded p on both sides of the 0.05 threshold", () => {
+    // 24 -> 41 (p ~= 0.0464) and 44 -> 65 (p ~= 0.0549) straddle 0.05 closely
+    // enough that two-decimal rounding printed "p 0.05" on both sides, once
+    // as "clears the noise" and once as "does not". Three decimals in this
+    // range tells them apart.
+    const clears = cohortVerdict([{ before: 24, after: 41 }]);
+    expect(clears?.p).toBeLessThan(0.05);
+    expect(clears?.reason).toContain("clears the noise (p 0.046)");
+
+    const doesNot = cohortVerdict([{ before: 44, after: 65 }]);
+    expect(doesNot?.p).toBeGreaterThan(0.05);
+    expect(doesNot?.reason).toContain("does not clear the noise (p 0.055)");
+  });
 });
 
 describe("the sign test guards against one page doing all the work", () => {
@@ -57,13 +71,39 @@ describe("the sign test guards against one page doing all the work", () => {
     expect(verdict?.reason).toMatch(/too few/);
     expect(verdict?.reason).not.toMatch(/not one page's doing/);
     expect(verdict?.reason).not.toMatch(/could be one page's doing/);
+    // The seam: the significance clause's closing paren must be followed by
+    // a comma and a conjunction, not run straight into the next clause.
+    expect(verdict?.reason).toMatch(/\), but \d+ of \d+ moved/);
+  });
+
+  it("uses singular grammar when only one change is non-tied", () => {
+    const verdict = cohortVerdict([{ before: 10, after: 14 }]);
+    expect(verdict?.reason).toMatch(/1 change is too few/);
+    expect(verdict?.reason).not.toMatch(/1 changes are too few/);
   });
 
   it("clears the too-few floor at six members and calls a clean sweep unanimous", () => {
-    const up = { before: 10, after: 14 };
+    // Strong enough per-member rise that the pooled result also clears the
+    // noise, so the unanimity clause is not suppressed as an affirmative
+    // claim riding on a null pooled result (see the suppression tests below).
+    const up = { before: 10, after: 16 };
     const verdict = cohortVerdict(Array(6).fill(up));
+    expect(verdict?.p).toBeLessThan(0.05);
     expect(verdict?.unanimousEnough).toBe(true);
-    expect(verdict?.reason).toMatch(/not one page's doing/);
+    expect(verdict?.reason).toMatch(/\), and is not one page's doing/);
+  });
+
+  it("does not claim robustness for a pooled result that never cleared the noise", () => {
+    // 6 members each 2 -> 3: every one of them rose (sign test unanimous),
+    // but the pooled count itself (12 -> 18) does not clear the noise. An
+    // affirmative "not one page's doing" here would misrepresent a null
+    // result as a robust one.
+    const up = { before: 2, after: 3 };
+    const verdict = cohortVerdict(Array(6).fill(up));
+    expect(verdict?.p).toBeGreaterThan(0.05);
+    expect(verdict?.unanimousEnough).toBe(true);
+    expect(verdict?.reason).not.toMatch(/one page's doing/);
+    expect(verdict?.reason).toMatch(/does not clear the noise \(p [\d.]+\)\.$/);
   });
 });
 
@@ -81,14 +121,14 @@ describe("the pieces the verdict is built from", () => {
 
   it("tells apart a pool where every member held level from one that cancelled out", () => {
     const level = cohortVerdict(Array(3).fill({ before: 10, after: 10 }));
-    expect(level?.reason).toMatch(/nothing to test agreement on/);
+    expect(level?.reason).toMatch(/\), and every page held exactly level/);
 
     const cancelled = cohortVerdict([
       { before: 10, after: 14 },
       { before: 10, after: 6 },
     ]);
     expect(cancelled?.direction).toBe("flat");
-    expect(cancelled?.reason).toMatch(/cancelled out/);
+    expect(cancelled?.reason).toMatch(/\), and individual changes moved.*cancelled out/);
   });
 
   it("never rounds a tiny p down to a false '0.00'", () => {
