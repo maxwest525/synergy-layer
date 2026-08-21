@@ -82,7 +82,9 @@ export function SuggestionCard({ item }: { item: QueueItem }) {
         verb.id === "regenerate"
           ? "New wording drafted. Open the fix to read it before approving."
           : verb.id === "ignore"
-            ? "Set aside. You can put it back from the ignored list."
+            ? item.kind === "change"
+              ? "Rejected. This proposal is closed for good."
+              : "Set aside. You can put it back from the ignored list."
             : "Put back on your list.",
       );
       await queryClient.invalidateQueries({ queryKey: COMMAND_CENTER_QUERY_KEY });

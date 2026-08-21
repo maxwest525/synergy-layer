@@ -141,6 +141,14 @@ function PageList({ view }: { view: YourPagesView }) {
           title="No pages stored yet"
           description="Run the Search Console observation to store the 28 day window this list reads from."
         />
+        {view.orphanNote ? (
+          // Named rather than dropped: orphan detection failing to run at all is
+          // worth seeing on its own, distinct from finding no orphans.
+          <p className="flex items-start gap-2 text-xs leading-snug text-muted-foreground">
+            <Info className="mt-0.5 h-3 w-3 shrink-0" strokeWidth={1.6} aria-hidden="true" />
+            {view.orphanNote}
+          </p>
+        ) : null}
         {view.waitingOn.length > 0 ? (
           <ul className="flex flex-col gap-1 text-xs leading-snug text-muted-foreground">
             {view.waitingOn.map((entry) => (

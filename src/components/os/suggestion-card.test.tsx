@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { buildQueue, type QueueSource } from "@/lib/suggestion-queue";
@@ -11,6 +12,9 @@ vi.mock("@tanstack/react-router", () => ({
   ),
   useNavigate: () => vi.fn(),
 }));
+
+const toastSuccess = vi.hoisted(() => vi.fn());
+vi.mock("sonner", () => ({ toast: { success: toastSuccess, error: vi.fn() } }));
 // Only `useServerFn` is stubbed: `createMiddleware`, which the imported
 // `.functions` modules call at module scope through the generated
 // auth-middleware, must stay real or importing them throws before any test
@@ -54,6 +58,7 @@ function show(overrides: Partial<QueueSource> & Pick<QueueSource, "id">) {
 
 beforeEach(() => {
   useServerFn.mockClear();
+  toastSuccess.mockClear();
 });
 
 describe("a card an operator can act on", () => {
@@ -89,6 +94,49 @@ describe("a verb that is not legal is absent, never disabled", () => {
     for (const button of screen.queryAllByRole("button")) {
       expect(button).toBeEnabled();
     }
+  });
+});
+
+describe("a change card's ignore is honestly labeled, because rejecting is terminal", () => {
+  it("labels it Reject, not Not now, and warns it cannot be undone", () => {
+    show({ id: "c1", kind: "change", proposalType: "page_metadata", storedState: "proposed" });
+    expect(screen.queryByRole("button", { name: /Not now/ })).not.toBeInTheDocument();
+    const reject = screen.getByRole("button", { name: "Reject" });
+    expect(reject).toHaveAccessibleDescription(/cannot be undone/i);
+    expect(reject).not.toHaveAccessibleDescription(/put it back/i);
+  });
+
+  it("never renders the reversible set-aside sentence on a change card", () => {
+    show({ id: "c1", kind: "change", proposalType: "page_metadata", storedState: "proposed" });
+    expect(screen.queryByText(/you can put it back at any time/i)).not.toBeInTheDocument();
+  });
+
+  it("keeps the reversible label and copy on a recommendation card", () => {
+    show({ id: "r1" });
+    const notNow = screen.getByRole("button", { name: "Not now" });
+    expect(notNow).toHaveAccessibleDescription(/put it back/i);
+  });
+
+  it("keeps the reversible label and copy on an audit card", () => {
+    show({ id: "audit:missing_title", kind: "audit", severity: "critical" });
+    const notNow = screen.getByRole("button", { name: "Not now" });
+    expect(notNow).toHaveAccessibleDescription(/put it back/i);
+  });
+
+  it("tells the operator the reject closed the proposal for good, not that it can be put back", async () => {
+    show({ id: "c1", kind: "change", proposalType: "page_metadata", storedState: "proposed" });
+    await userEvent.click(screen.getByRole("button", { name: "Reject" }));
+    await waitFor(() => expect(toastSuccess).toHaveBeenCalled());
+    expect(toastSuccess).toHaveBeenCalledWith(expect.stringMatching(/closed for good/i));
+  });
+
+  it("keeps the reversible toast on a recommendation's set-aside", async () => {
+    show({ id: "r1" });
+    await userEvent.click(screen.getByRole("button", { name: "Not now" }));
+    await waitFor(() => expect(toastSuccess).toHaveBeenCalled());
+    expect(toastSuccess).toHaveBeenCalledWith(
+      expect.stringMatching(/put it back from the ignored list/i),
+    );
   });
 });
 

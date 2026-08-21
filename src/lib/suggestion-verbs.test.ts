@@ -86,6 +86,34 @@ describe("what each verb tells the operator it will do", () => {
     expect(ignore?.consequence).toMatch(/put it back/i);
   });
 
+  it("says the same reversible thing on an audit card, which can also be restored", () => {
+    const queue = buildQueue(
+      [source({ id: "audit:missing_title", kind: "audit", severity: "critical" })],
+      NOW,
+    );
+    const ignore = verbsFor(queue.open[0]!).find((verb) => verb.id === "ignore");
+    expect(ignore?.label).toBe("Not now");
+    expect(ignore?.consequence).toMatch(/put it back/i);
+  });
+
+  it("labels a change card's ignore as a terminal reject, never a reversible set-aside", () => {
+    const queue = buildQueue(
+      [
+        source({
+          id: "c1",
+          kind: "change",
+          proposalType: "page_metadata",
+          storedState: "proposed",
+        }),
+      ],
+      NOW,
+    );
+    const reject = verbsFor(queue.open[0]!).find((verb) => verb.id === "ignore");
+    expect(reject?.label).toBe("Reject");
+    expect(reject?.consequence).toMatch(/cannot be undone/i);
+    expect(reject?.consequence).not.toMatch(/put it back/i);
+  });
+
   it("never names a rule id or a stored state in operator copy", () => {
     const queue = buildQueue(
       [source({ id: "c1", kind: "change", proposalType: "title_h1", storedState: "proposed" })],

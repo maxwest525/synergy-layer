@@ -94,9 +94,10 @@ function ConstraintBanner({ constraint }: { constraint: GettingFoundView["constr
 
 /**
  * What this volume can and cannot answer, collapsed by default so it does
- * not compete with the diagnosis above it. Renders nothing when the totals
- * behind it are not stored — the tiles already carry that reason, and this
- * is never a second "not measurable" message.
+ * not compete with the diagnosis above it. Renders a degraded form naming
+ * what is missing when only the comparison is absent; renders nothing only
+ * when the page count is unknown — the tiles already carry that reason, and
+ * this is never a second "not measurable" message.
  */
 function AnswerabilityPanel({ answerability }: { answerability: Answerability | null }) {
   const [isOpen, setIsOpen] = useState(false);

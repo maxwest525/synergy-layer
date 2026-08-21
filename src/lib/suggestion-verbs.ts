@@ -30,6 +30,19 @@ const IGNORE: SuggestionVerb = {
   metered: false,
 };
 
+/**
+ * A change request's "ignore" is `rejectChangeRequest`, which is terminal
+ * (see change-request-state.ts: `rejected` has no exits). The reversible
+ * IGNORE copy would promise a restore that does not exist, so a change item
+ * gets its own honest label and consequence instead.
+ */
+const REJECT_CHANGE: SuggestionVerb = {
+  id: "ignore",
+  label: "Reject",
+  consequence: "Rejects this change. This cannot be undone — a new draft would have to be written.",
+  metered: false,
+};
+
 const RESTORE: SuggestionVerb = {
   id: "restore",
   label: "Put it back",
@@ -61,7 +74,9 @@ export function verbsFor(item: QueueItem): readonly SuggestionVerb[] {
   if (item.queueState === "done") return [];
 
   const verbs: SuggestionVerb[] = [];
-  if (item.queueState === "open" && item.canIgnore) verbs.push(IGNORE);
+  if (item.queueState === "open" && item.canIgnore) {
+    verbs.push(item.kind === "change" ? REJECT_CHANGE : IGNORE);
+  }
   if (item.queueState === "ignored" && item.canRestore) verbs.push(RESTORE);
   if (item.canRegenerate) verbs.push(REGENERATE);
   if (

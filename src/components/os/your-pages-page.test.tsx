@@ -194,6 +194,17 @@ describe("the page list, which is the point of this page", () => {
     await userEvent.click(screen.getByRole("tab", { name: /Pages/ }));
     expect(screen.getByText(/Run the Search Console observation/)).toBeInTheDocument();
   });
+
+  it("still names why orphan detection could not run when Search Console reported no rows", async () => {
+    show({
+      lastObservedAt: NOW,
+      orphanBailReason: "no home page is among the pages the audit read",
+    });
+    await userEvent.click(screen.getByRole("tab", { name: /Pages/ }));
+    expect(screen.getByText(/Run the Search Console observation/)).toBeInTheDocument();
+    expect(screen.getByText(/Orphan detection could not run/)).toBeInTheDocument();
+    expect(screen.getByText(/no home page/)).toBeInTheDocument();
+  });
 });
 
 describe("what the page is allowed to do", () => {
