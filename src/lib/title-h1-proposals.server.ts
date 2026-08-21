@@ -18,10 +18,12 @@ import {
   buildProposalEvidenceGroups,
   buildTitleH1Changes,
   buildTitleH1Prompt,
+  describeEvidenceMode,
   requireProposalTarget,
   selectGscProposalEvidence,
   selectRelevantCompetitorEvidence,
   type CompetitorSnapshotInput,
+  type EvidenceMode,
   type GscSnapshotInput,
   type ProposalEvidence,
   type ProposalOptionalContext,
@@ -63,8 +65,12 @@ export async function prepareTitleH1Proposal(
   client: Client,
   tenantId: string,
   rawTargetUrl: string,
-  options: { wordingMode?: "gemini" | "deterministic_dev" } = {},
+  options: {
+    wordingMode?: "gemini" | "deterministic_dev";
+    evidenceMode?: EvidenceMode;
+  } = {},
 ): Promise<PreparedTitleH1Proposal> {
+  const evidenceMode = options.evidenceMode ?? "wording";
   const targetUrl = requireProposalTarget(rawTargetUrl);
   const observedAt = new Date().toISOString();
 
@@ -161,7 +167,7 @@ export async function prepareTitleH1Proposal(
   }
 
   const evidenceInput = { livePage, gsc, competitors };
-  assertCompleteEvidence(evidenceInput);
+  assertCompleteEvidence(evidenceInput, evidenceMode);
   const evidence: ProposalEvidence = evidenceInput;
   const competitorEvidenceMode = evidence.competitors.some(
     (row) => row.query.trim().toLowerCase() !== row.matchedGscQuery.trim().toLowerCase(),
@@ -294,8 +300,9 @@ export async function prepareTitleH1Proposal(
       optionalContext,
       guidance,
       competitorEvidenceMode,
+      evidenceMode,
     ),
-    evidenceSummary: `The current rendered title and H1 were observed at ${observedAt}; ${evidence.gsc.length} exact-page GSC page/query rows and ${evidence.competitors.length} active-tracked-competitor DataForSEO organic rows (${competitorEvidenceMode === "exact_query" ? "exact query" : "strict related-query fallback"}) informed the wording.`,
+    evidenceSummary: `The current rendered title and H1 were observed at ${observedAt}; ${evidence.gsc.length} exact-page GSC page/query rows and ${evidence.competitors.length} active-tracked-competitor DataForSEO organic rows (${competitorEvidenceMode === "exact_query" ? "exact query" : "strict related-query fallback"}) informed the wording. ${describeEvidenceMode(evidenceMode)}`,
     evidenceLimitations:
       "Search Console rows are finalized historical observations, competitor rankings do not prove causation, and publication or performance improvement is not guaranteed.",
     riskNote:
@@ -306,6 +313,7 @@ export async function prepareTitleH1Proposal(
       provider: wordingMode === "deterministic_dev" ? "deterministic_dev" : "google_gemini_direct",
       model: wordingMode === "deterministic_dev" ? null : model,
       wordingMode,
+      evidenceMode,
       generatedAt: new Date().toISOString(),
       competitorEvidenceMode,
       sourceRoles: {

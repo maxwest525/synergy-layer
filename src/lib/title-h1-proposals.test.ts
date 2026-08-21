@@ -6,6 +6,7 @@ import {
   buildDeterministicDevWording,
   buildProposalEvidenceGroups,
   buildTitleH1Prompt,
+  describeEvidenceMode,
   selectRelevantCompetitorEvidence,
   type ProposalEvidence,
 } from "./title-h1-proposals";
@@ -48,6 +49,36 @@ describe("title/H1 proposal evidence contract", () => {
       expect(() => assertCompleteEvidence(evidence)).toThrow(/required/i);
     },
   );
+
+  it("accepts a rendered live page with no GSC or competitor rows in defect mode", () => {
+    const defectOnly = { ...complete, gsc: [], competitors: [] };
+
+    expect(() => assertCompleteEvidence(defectOnly, "defect")).not.toThrow();
+    expect(() => assertCompleteEvidence(defectOnly, "wording")).toThrow(/search console/i);
+    expect(() => assertCompleteEvidence(defectOnly)).toThrow(/search console/i);
+  });
+
+  it("still requires a rendered live page in defect mode", () => {
+    expect(() => assertCompleteEvidence({ ...complete, livePage: null }, "defect")).toThrow(
+      /live-page title and H1/i,
+    );
+  });
+
+  it("records the evidence mode that gated the proposal", () => {
+    const wordingGroups = buildProposalEvidenceGroups(complete);
+    const defectGroups = buildProposalEvidenceGroups(
+      { ...complete, gsc: [], competitors: [] },
+      undefined,
+      undefined,
+      undefined,
+      "defect",
+    );
+
+    expect(wordingGroups[0]).toMatchObject({ source: "live_page", evidenceMode: "wording" });
+    expect(defectGroups[0]).toMatchObject({ source: "live_page", evidenceMode: "defect" });
+    expect(describeEvidenceMode("defect")).toMatch(/only the rendered live page was required/i);
+    expect(describeEvidenceMode("wording")).toMatch(/all required/i);
+  });
 
   it("keeps only active tracked competitors from exact GSC queries", () => {
     const rows = selectRelevantCompetitorEvidence({
