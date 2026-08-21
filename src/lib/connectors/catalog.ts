@@ -28,6 +28,21 @@ export type ConnectorCatalogItem = {
   safeConfig?: Readonly<Record<string, string>>;
 };
 
+// Every outcome a probe can record. A persisted row carrying one of these is a
+// row a probe wrote; anything else got its health from something that never
+// called the provider.
+export const CONNECTOR_PROBE_OUTCOMES = [
+  "missing_configuration",
+  "configured_no_safe_probe",
+  "success",
+  "http_error",
+  "schema_error",
+  "timeout",
+  "network_error",
+] as const;
+
+export type ConnectorProbeOutcome = (typeof CONNECTOR_PROBE_OUTCOMES)[number];
+
 export type ConnectorReadiness = {
   key: ConnectorKey;
   label: string;

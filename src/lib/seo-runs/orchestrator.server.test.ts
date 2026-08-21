@@ -32,6 +32,34 @@ describe("SEO run preflight", () => {
     });
   });
 
+  it("blocks a required connector whose stored health no probe ever established", () => {
+    const currentEnv = {
+      SUPABASE_URL: "https://project.supabase.co",
+      SUPABASE_SERVICE_ROLE_KEY: "service-role",
+      LOVABLE_API_KEY: "gsc-key",
+      DATAFORSEO_BASIC_TOKEN: "dataforseo-token",
+      FIRECRAWL_API_KEY: "firecrawl-key",
+      GEMINI_API_KEY: "gemini-key",
+      GITHUB_EXECUTOR_TOKEN: "github-key",
+    };
+    const persisted = SEO_REQUIRED_CONNECTORS.map((capabilityKey) => ({
+      capability_key: capabilityKey,
+      config: capabilityKey === "github_executor" ? {} : { probe_outcome: "success" },
+      health: "healthy",
+      integration_state: "real",
+    }));
+
+    const snapshot = buildCurrentSeoConnectorSnapshot(persisted, currentEnv);
+    const result = assessSeoPreflight(snapshot, { searchConsoleRows: 7, dataForSeoSnapshots: 56 });
+
+    expect(snapshot.find((row) => row.capabilityKey === "github_executor")).toMatchObject({
+      health: "never_checked",
+      probeOutcome: null,
+    });
+    expect(result.unhealthyConnectors).toEqual(["github_executor"]);
+    expect(result.ready).toBe(false);
+  });
+
   it("blocks stale healthy proof when required current configuration was removed", () => {
     const persisted = SEO_REQUIRED_CONNECTORS.map((capabilityKey) => ({
       capability_key: capabilityKey,

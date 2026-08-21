@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database } from "@/integrations/supabase/types";
 import { createRequestClient, resolveTenantId } from "../tenant.server";
-import { CONNECTOR_CATALOG, describeConnectorReadiness, type ConnectorReadiness } from "./catalog";
+import { describeConnectorReadiness, type ConnectorReadiness } from "./catalog";
 import { projectCurrentConnectorReadiness } from "./current-readiness";
 import { probeConnector, type ConnectorProbeResult } from "./probes.server";
 
@@ -64,18 +64,6 @@ export async function fetchConnectorReadiness() {
   return {
     connections,
     configuredCount: connections.filter((item) => item.state === "configured").length,
-    healthyCount: connections.filter((item) => item.persisted?.health === "healthy").length,
-  };
-}
-
-export async function checkAllConnectorReadiness() {
-  const { db, authenticated } = createRequestClient();
-  const tenantId = authenticated ? await resolveTenantId(db) : null;
-  if (!tenantId) throw new Error("An authenticated tenant operator is required.");
-  const connections = await syncConnectorReadiness(db, tenantId);
-  return {
-    connections,
-    checkedCount: CONNECTOR_CATALOG.length,
-    healthyCount: connections.filter((row) => row.health === "healthy").length,
+    healthyCount: connections.filter((item) => item.health === "healthy").length,
   };
 }

@@ -4,19 +4,13 @@ import {
   describeConnectorReadiness,
   withConnectorDefaults,
   type ConnectorKey,
+  type ConnectorProbeOutcome,
 } from "./catalog";
 
 export type ConnectorProbeResult = {
   key: ConnectorKey;
   health: "unknown" | "healthy" | "degraded" | "failing";
-  outcome:
-    | "missing_configuration"
-    | "configured_no_safe_probe"
-    | "success"
-    | "http_error"
-    | "schema_error"
-    | "timeout"
-    | "network_error";
+  outcome: ConnectorProbeOutcome;
   checkedAt: string;
   missing: string[];
   proof: {

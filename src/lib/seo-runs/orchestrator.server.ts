@@ -14,20 +14,12 @@ export function buildCurrentSeoConnectorSnapshot(
   persistedConnections: readonly PersistedSeoConnector[],
   env: Record<string, string | undefined>,
 ): ConnectorProof[] {
-  return projectCurrentConnectorReadiness(persistedConnections, env).map((item) => {
-    const config =
-      item.persisted?.config &&
-      typeof item.persisted.config === "object" &&
-      !Array.isArray(item.persisted.config)
-        ? (item.persisted.config as Record<string, unknown>)
-        : {};
-    return {
-      capabilityKey: item.key,
-      integrationState: item.persisted?.integration_state ?? "pending",
-      health: item.health,
-      probeOutcome: typeof config["probe_outcome"] === "string" ? config["probe_outcome"] : null,
-    };
-  });
+  return projectCurrentConnectorReadiness(persistedConnections, env).map((item) => ({
+    capabilityKey: item.key,
+    integrationState: item.persisted?.integration_state ?? "pending",
+    health: item.health,
+    probeOutcome: item.probeOutcome,
+  }));
 }
 
 export function assessSeoPreflight(
