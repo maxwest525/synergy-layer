@@ -88,8 +88,11 @@ describe("grading the fixes, which nothing has ever done", () => {
   });
 
   it("carries the AI Overview rule through: shown but unclicked is not a failure", () => {
-    const [graded] = gradeOutcomes([outcome({ impressions: 140, clicks: 0 })]);
+    const [graded] = gradeOutcomes([
+      outcome({ impressions: 140, clicks: 0, baseline: { impressions: 300, clicks: 0 } }),
+    ]);
     expect(graded?.verdict).toBe("neutral");
+    expect(graded?.reason).toMatch(/AI Overview/i);
   });
 
   it("still calls almost no impressions and no clicks a failure", () => {

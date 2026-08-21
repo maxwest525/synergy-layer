@@ -105,7 +105,7 @@ describe("grading the fixes, on screen", () => {
     });
     await userEvent.click(screen.getByRole("tab", { name: /Did the fixes work/ }));
     expect(screen.getByText("No change yet")).toBeInTheDocument();
-    expect(screen.getByText(/shown/i)).toBeInTheDocument();
+    expect(screen.getByText(/AI Overview|shown/i)).toBeInTheDocument();
   });
 
   it("shows a reading on an underived window as not graded, and names why", async () => {

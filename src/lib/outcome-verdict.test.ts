@@ -240,3 +240,115 @@ describe("the verdict grades the change, not the level", () => {
     expect(graded.verdict).not.toBe("failure");
   });
 });
+
+describe("the site's tide is compared on a per-day footing, not a raw total", () => {
+  // Bug the review caught: beforeImpressions covers a fixed 28 days while
+  // afterImpressions covers windowDays days. Dividing the raw totals carries
+  // that window-length factor into the "ratio", so a perfectly flat site at
+  // 90 days reported as having "risen" ×3.21 - a fabricated number in
+  // operator-facing copy - and downgraded real successes to neutral with it.
+  it("does not read a flat site as a rise just because its window is longer", () => {
+    const graded = outcomeVerdict(
+      reading({
+        windowDays: 90,
+        daysSinceLive: 90,
+        impressions: 2700,
+        clicks: 50,
+        baseline: { impressions: 280, clicks: 0 },
+        // Same per-day rate (10/day) in both periods: 280 over 28 days,
+        // 900 over 90 days. A page that genuinely tripled against that.
+        siteTrend: { beforeImpressions: 280, afterImpressions: 900 },
+      }),
+    );
+    expect(graded.verdict).toBe("success");
+    expect(graded.reason).toMatch(/held flat/i);
+    expect(graded.reason).not.toMatch(/rose ×3|moved ×3/i);
+  });
+});
+
+describe("a rise only counts once it earns at least as much as before", () => {
+  it("being seen more while earning less is neutral, not success", () => {
+    const graded = outcomeVerdict(
+      reading({
+        windowDays: 28,
+        daysSinceLive: 28,
+        impressions: 300,
+        clicks: 0,
+        baseline: { impressions: 100, clicks: 20 },
+        siteTrend: null,
+      }),
+    );
+    expect(graded.verdict).toBe("neutral");
+    expect(graded.reason).toMatch(/earning less|not yet a win/i);
+  });
+  it("a rise with clicks held at or above the baseline stays a success", () => {
+    const graded = outcomeVerdict(
+      reading({
+        windowDays: 28,
+        daysSinceLive: 28,
+        impressions: 300,
+        clicks: 25,
+        baseline: { impressions: 100, clicks: 20 },
+        siteTrend: null,
+      }),
+    );
+    expect(graded.verdict).toBe("success");
+  });
+});
+
+describe("no unrounded scaled count reaches the operator", () => {
+  it("never puts a three-or-more-decimal number in a reason string", () => {
+    const scenarios: OutcomeReading[] = [
+      // 90 / 28 does not divide evenly, so every branch below scales a
+      // baseline by a fractional factor.
+      reading({ windowDays: 90, daysSinceLive: 90, impressions: 8, clicks: 1, baseline: null }),
+      reading({
+        windowDays: 90,
+        daysSinceLive: 90,
+        impressions: 8,
+        clicks: 1,
+        baseline: { impressions: 2, clicks: 0 },
+      }),
+      reading({
+        windowDays: 90,
+        daysSinceLive: 90,
+        impressions: 10,
+        clicks: 0,
+        baseline: { impressions: 100, clicks: 0 },
+      }),
+      reading({
+        windowDays: 90,
+        daysSinceLive: 90,
+        impressions: 5,
+        clicks: 0,
+        baseline: { impressions: 100, clicks: 20 },
+      }),
+      reading({
+        windowDays: 90,
+        daysSinceLive: 90,
+        impressions: 900,
+        clicks: 0,
+        baseline: { impressions: 50, clicks: 10 },
+      }),
+      reading({
+        windowDays: 90,
+        daysSinceLive: 90,
+        impressions: 900,
+        clicks: 40,
+        baseline: { impressions: 50, clicks: 10 },
+        siteTrend: { beforeImpressions: 50, afterImpressions: 900 },
+      }),
+      reading({
+        windowDays: 90,
+        daysSinceLive: 90,
+        impressions: 900,
+        clicks: 40,
+        baseline: { impressions: 50, clicks: 10 },
+      }),
+    ];
+    for (const scenario of scenarios) {
+      const graded = outcomeVerdict(scenario);
+      expect(graded.reason).not.toMatch(/\d+\.\d{3,}/);
+    }
+  });
+});
