@@ -15,7 +15,7 @@ CREATE TABLE public.suggestion_suppressions (
   UNIQUE (tenant_id, fingerprint)
 );
 
-GRANT SELECT, INSERT, DELETE ON public.suggestion_suppressions TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.suggestion_suppressions TO authenticated;
 GRANT ALL ON public.suggestion_suppressions TO service_role;
 ALTER TABLE public.suggestion_suppressions ENABLE ROW LEVEL SECURITY;
 CREATE POLICY ss_read ON public.suggestion_suppressions FOR SELECT TO authenticated
