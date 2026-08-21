@@ -2,12 +2,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
-import {
-  GOVERNED_BRANCH,
-  GOVERNED_FILES,
-  GOVERNED_PROJECT_ID,
-  GOVERNED_REPO,
-} from "./allowlist";
+import { GOVERNED_BRANCH, GOVERNED_FILES, GOVERNED_PROJECT_ID, GOVERNED_REPO } from "./allowlist";
 
 /**
  * The executor and the database-side rendered-proof routine each re-check the
@@ -49,6 +44,8 @@ describe("rendered proof execution target", () => {
   it("still pins the repository, branch, and source project the executor pins", () => {
     expect(sql).toContain(`v_row.source_repo IS DISTINCT FROM '${GOVERNED_REPO}'`);
     expect(sql).toContain(`v_row.source_branch IS DISTINCT FROM '${GOVERNED_BRANCH}'`);
-    expect(sql).toContain(`v_row.source_project_id::text IS DISTINCT FROM '${GOVERNED_PROJECT_ID}'`);
+    expect(sql).toContain(
+      `v_row.source_project_id::text IS DISTINCT FROM '${GOVERNED_PROJECT_ID}'`,
+    );
   });
 });

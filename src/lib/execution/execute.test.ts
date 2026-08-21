@@ -332,10 +332,9 @@ describe("revertSourceChange", () => {
         filePath: "src/components/seo/SeoHead.tsx",
       }),
     );
-    const { github, writes } = makeGithub(
-      'description: "Old corporate relocation description.",',
-      { head: "live-sha" },
-    );
+    const { github, writes } = makeGithub('description: "Old corporate relocation description.",', {
+      head: "live-sha",
+    });
     const outcome = await revertSourceChange({
       store,
       github,

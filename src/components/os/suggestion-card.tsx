@@ -64,7 +64,9 @@ export function SuggestionCard({ item }: { item: QueueItem }) {
         // lanes file a governed proposal and return the same shape.
         if (item.kind === "audit") {
           if (!item.targetUrl) {
-            throw new Error("This finding names no page yet, so there is nothing to draft against.");
+            throw new Error(
+              "This finding names no page yet, so there is nothing to draft against.",
+            );
           }
           return draftAuditFix({
             data: {

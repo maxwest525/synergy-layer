@@ -59,7 +59,18 @@ export const proposeAuditFix = createServerFn({ method: "POST" })
     if (target.changeKind === "page.metadata") {
       const { preparePageMetadataProposal } = await import("./page-metadata-proposals.server");
       const { fileGovernedProposal } = await import("./audit-fixes.server");
-      const proposal = await preparePageMetadataProposal(context.supabase, tenantId, data.targetUrl);
+      // An audit finding is a defect the audit already observed on the rendered
+      // page, so the rendered page is what justifies removing it. Demanding
+      // impressions from a page whose broken metadata is the reason it has none
+      // refuses every page that most needs the fix.
+      const proposal = await preparePageMetadataProposal(
+        context.supabase,
+        tenantId,
+        data.targetUrl,
+        {
+          evidenceMode: "defect",
+        },
+      );
       return fileGovernedProposal({
         tenantId,
         actorId: context.userId,
@@ -72,6 +83,7 @@ export const proposeAuditFix = createServerFn({ method: "POST" })
     const { serviceRpc } = await import("./title-h1-proposals.functions");
     const proposal = await prepareTitleH1Proposal(context.supabase, tenantId, data.targetUrl, {
       wordingMode: "gemini",
+      evidenceMode: "defect",
     });
     const result = await serviceRpc("create_title_h1_proposal", {
       _tenant_id: tenantId,

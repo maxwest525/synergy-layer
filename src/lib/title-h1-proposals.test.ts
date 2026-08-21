@@ -213,7 +213,10 @@ describe("title/H1 proposal evidence contract", () => {
   });
 
   it("names no row counts or competitor match mode when nothing was read", () => {
-    const empty = describeEvidenceRowsUsed({ ...complete, gsc: [], competitors: [] }, "exact_query");
+    const empty = describeEvidenceRowsUsed(
+      { ...complete, gsc: [], competitors: [] },
+      "exact_query",
+    );
 
     expect(empty).toBe(
       "no exact-page Search Console or active-tracked-competitor rows were available to inform the wording.",

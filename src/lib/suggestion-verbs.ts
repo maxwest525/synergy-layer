@@ -81,9 +81,10 @@ export function verbsFor(item: QueueItem): readonly SuggestionVerb[] {
   if (item.queueState === "ignored" && item.canRestore) verbs.push(RESTORE);
   if (item.canRegenerate) verbs.push(REGENERATE);
   // A rule finding and a page-audit finding are both "something is wrong at a
-  // URL"; only their fix maps differ. Reading each kind's own map keeps the
-  // button honest — it appears exactly when a governed lane can draft the fix,
-  // and never when the server would refuse.
+  // URL"; only their fix maps differ. Reading each kind's own map is what keeps
+  // the button off findings no governed lane owns. It is not a promise the
+  // draft will succeed: the server also refuses a finding that names no page,
+  // and a page whose evidence the proposal lane cannot assemble.
   if (item.queueState === "open" && typeof item.rule === "string") {
     const drafts =
       item.kind === "recommendation"
