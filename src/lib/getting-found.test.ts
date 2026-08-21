@@ -4,10 +4,13 @@ import {
   buildGettingFound,
   countOf,
   countShownPages,
+  describeAnswerability,
   LIST_LIMIT,
   topRows,
   type GettingFoundFacts,
 } from "./getting-found";
+import { MIN_BASELINE } from "./confidence";
+import { RULE_ASSIGNMENTS } from "./rule-buckets";
 import type { PeriodComparison } from "./search-console";
 
 const READY: PeriodComparison = {
@@ -430,6 +433,114 @@ describe("the search term and page lists", () => {
     expect(topRows(many)).toHaveLength(LIST_LIMIT);
     // The cut keeps the biggest, not the first stored.
     expect(topRows(many)[0]?.clicks).toBe(LIST_LIMIT + 9);
+  });
+});
+
+describe("what this volume can and cannot answer", () => {
+  it("names the observed volume and lists what the query dimension needs, in plain words", () => {
+    const { line, beyond } = describeAnswerability(500, 48, RULE_ASSIGNMENTS);
+    expect(line).toContain("500");
+    expect(line).toContain("48");
+    expect(line).not.toMatch(/\brule\b/i);
+    for (const rule of RULE_ASSIGNMENTS) {
+      expect(line).not.toContain(rule.rule);
+    }
+    // 500 / 48 rounds to 10.
+    expect(beyond.some((entry) => entry.includes("about 10 a month"))).toBe(true);
+    expect(beyond.some((entry) => /position/i.test(entry))).toBe(true);
+    expect(beyond.every((entry) => !RULE_ASSIGNMENTS.some((a) => entry.includes(a.rule)))).toBe(
+      true,
+    );
+  });
+
+  it("names the lever that changes the volume, so absence never reads as a dead end", () => {
+    const { line } = describeAnswerability(500, 48, RULE_ASSIGNMENTS);
+    expect(line).toMatch(/internal links first/);
+    expect(line).toMatch(/sitemap second/);
+    expect(line).toMatch(/recrawl request third/);
+  });
+
+  it("carries one entry per beyond_current_volume rule, needing its live threshold", () => {
+    const { beyond } = describeAnswerability(500, 48, RULE_ASSIGNMENTS);
+    const beyondCount = RULE_ASSIGNMENTS.filter((a) => a.bucket === "beyond_current_volume").length;
+    expect(beyond).toHaveLength(beyondCount);
+  });
+
+  it("attributes the per-page figure to the average page, never the busiest one", () => {
+    // perPage is the site total divided by the page count — a site average,
+    // not anything read off any one page. "Busiest page" claimed a fact
+    // nothing here measures.
+    const { beyond } = describeAnswerability(500, 48, RULE_ASSIGNMENTS);
+    expect(beyond.every((entry) => !/busiest/i.test(entry))).toBe(true);
+    expect(beyond.some((entry) => /average page/i.test(entry))).toBe(true);
+  });
+
+  it("words each beyond entry to match what its threshold actually counts", () => {
+    // possible_query_overlap and research_page_traction read a page-dimension
+    // count (a page's own impressions), not a single search term's.
+    const { beyond } = describeAnswerability(500, 48, RULE_ASSIGNMENTS);
+    const byRule = new Map(RULE_ASSIGNMENTS.map((a) => [a.rule, a]));
+
+    const overlapEntry = beyond.find((entry) =>
+      entry.startsWith("Overlapping search-term signals"),
+    );
+    expect(overlapEntry).toMatch(/on a single page/);
+    expect(overlapEntry).not.toMatch(/on a single search term/);
+
+    const tractionEntry = beyond.find((entry) => entry.startsWith("Research-page traction"));
+    expect(tractionEntry).toMatch(/on a single page/);
+    expect(tractionEntry).not.toMatch(/on a single search term/);
+
+    const strikingEntry = beyond.find((entry) => entry.startsWith("Near-miss search terms"));
+    expect(strikingEntry).toMatch(/on a single search term/);
+
+    const positionSlipEntry = beyond.find((entry) => entry.startsWith("Position-slip"));
+    expect(positionSlipEntry).toMatch(/on a single search term/);
+
+    const positionLossEntry = beyond.find((entry) => entry.startsWith("Position-loss"));
+    expect(positionLossEntry).toMatch(/on a single search term/);
+
+    const coverageGapEntry = beyond.find((entry) => entry.startsWith("Search-term coverage"));
+    expect(coverageGapEntry).toMatch(/on a single search term/);
+
+    // Sanity: every rule this test names is actually in the fixture, so the
+    // assertions above are not vacuously passing on undefined.
+    for (const rule of ["possible_query_overlap", "research_page_traction"]) {
+      expect(byRule.get(rule)?.bucket).toBe("beyond_current_volume");
+    }
+  });
+
+  it("does not claim the site-wide checks are answerable below the noise floor", () => {
+    const belowFloor = MIN_BASELINE - 1;
+    const { line } = describeAnswerability(belowFloor, 48, RULE_ASSIGNMENTS);
+    expect(line).not.toMatch(/enough for the site-wide checks/);
+    expect(line).toMatch(/yes\/no facts/);
+  });
+
+  it("still claims the site-wide checks once volume clears the noise floor", () => {
+    const { line } = describeAnswerability(MIN_BASELINE, 48, RULE_ASSIGNMENTS);
+    expect(line).toMatch(/enough for the site-wide checks/);
+  });
+
+  it("is null on the view model until both the volume and the page count are stored", () => {
+    const view = buildGettingFound(
+      withFacts({ comparison: READY, coverage: { pagesKnown: 48, pagesWithImpressions: 9 } }),
+    );
+    expect(view.answerability).not.toBeNull();
+    expect(view.answerability?.line).toContain(String(READY.current.impressions));
+    expect(view.answerability?.line).toContain("48");
+  });
+
+  it("stays null when the coverage window was never collected, leaving the tile's own reason as the only message", () => {
+    const view = buildGettingFound(withFacts({ comparison: READY, coverage: null }));
+    expect(view.answerability).toBeNull();
+  });
+
+  it("stays null when the comparison behind the tiles is not ready", () => {
+    const view = buildGettingFound(
+      withFacts({ coverage: { pagesKnown: 48, pagesWithImpressions: 9 } }),
+    );
+    expect(view.answerability).toBeNull();
   });
 });
 

@@ -160,6 +160,9 @@ function sample(urls: string[], count = 3): string {
 export function evaluateSite(facts: SiteFacts): SiteFinding[] {
   const findings: SiteFinding[] = [];
 
+  // robots.txt intro doc: "A robots.txt file tells search engine crawlers
+  // which URLs the crawler can access on your site."
+  // https://developers.google.com/search/docs/crawling-indexing/robots/intro
   if (facts.robotsStatus === null || facts.robotsStatus >= 400) {
     findings.push({
       check: "robots_missing",
@@ -173,6 +176,10 @@ export function evaluateSite(facts: SiteFacts): SiteFinding[] {
       fixableByChangeKind: "site.crawl_directives",
     });
   } else if (facts.robotsBody && robotsBlocksEverything(facts.robotsBody)) {
+    // robots_txt reference: "Disallow: /" under "User-agent: *" — "/"
+    // "Matches the root and any lower level URL," so this rule blocks
+    // every crawler from every page.
+    // https://developers.google.com/search/docs/crawling-indexing/robots/robots_txt
     findings.push({
       check: "robots_blocks_site",
       label: "Robots file blocks the whole site",
@@ -191,6 +198,10 @@ export function evaluateSite(facts: SiteFacts): SiteFinding[] {
       pathsOf(facts.declaredPages ?? [], facts.origin),
     );
     if (blocked.length > 0) {
+      // robots.txt intro doc: robots.txt "tells search engine crawlers
+      // which URLs the crawler can access." A page declared indexable but
+      // disallowed here is the site contradicting itself in two files.
+      // https://developers.google.com/search/docs/crawling-indexing/robots/intro
       findings.push({
         check: "robots_blocks_pages",
         label: `Robots file blocks ${blocked.length} pages you asked Google to index`,
@@ -202,6 +213,10 @@ export function evaluateSite(facts: SiteFacts): SiteFinding[] {
     }
   }
 
+  // Sitemaps overview: "Search engines like Google read this file to crawl
+  // your site more efficiently," particularly because "Googlebot might not
+  // discover your pages if no other sites link to them."
+  // https://developers.google.com/search/docs/crawling-indexing/sitemaps/overview
   if (facts.robotsBody !== null && facts.declaredSitemaps.length === 0) {
     findings.push({
       check: "sitemap_not_declared",
@@ -213,6 +228,10 @@ export function evaluateSite(facts: SiteFacts): SiteFinding[] {
     });
   }
 
+  // Sitemaps overview: a sitemap gives Google "information about the
+  // pages, videos, and other files on your site, and the relationships
+  // between them" — the same doc as above.
+  // https://developers.google.com/search/docs/crawling-indexing/sitemaps/overview
   if (facts.sitemapUrl === null) {
     findings.push({
       check: "sitemap_missing",
@@ -223,6 +242,9 @@ export function evaluateSite(facts: SiteFacts): SiteFinding[] {
       fixableByChangeKind: "site.crawl_directives",
     });
   } else if (facts.sitemapStatus !== null && facts.sitemapStatus >= 400) {
+    // Sitemaps overview: same doc as above — a sitemap that returns an
+    // error can't tell Google anything about the site's pages.
+    // https://developers.google.com/search/docs/crawling-indexing/sitemaps/overview
     findings.push({
       check: "sitemap_unreachable",
       label: "Sitemap cannot be read",
@@ -232,6 +254,9 @@ export function evaluateSite(facts: SiteFacts): SiteFinding[] {
       fixableByChangeKind: "site.crawl_directives",
     });
   } else if ((facts.sitemapUrlCount ?? 0) === 0) {
+    // Sitemaps overview: same doc as above — an empty sitemap gives Google
+    // no page addresses to read.
+    // https://developers.google.com/search/docs/crawling-indexing/sitemaps/overview
     findings.push({
       check: "sitemap_empty",
       label: "Sitemap lists no pages",
@@ -242,6 +267,10 @@ export function evaluateSite(facts: SiteFacts): SiteFinding[] {
     });
   }
 
+  // Sitemaps overview: "Googlebot might not discover your pages if no
+  // other sites link to them" — a live page absent from the sitemap is
+  // relying on that discovery instead of declaring itself.
+  // https://developers.google.com/search/docs/crawling-indexing/sitemaps/overview
   if (facts.pagesMissingFromSitemap.length > 0) {
     findings.push({
       check: "sitemap_coverage_gap",
@@ -253,6 +282,9 @@ export function evaluateSite(facts: SiteFacts): SiteFinding[] {
     });
   }
 
+  // Stated assumption: no single Google doc states "a crawler sees the
+  // same failure a renderer does" as a blanket rule; kept as a reasonable
+  // inference from Google's own rendering-based indexing.
   if (facts.unreadablePages.length > 0) {
     findings.push({
       check: "pages_unreadable",

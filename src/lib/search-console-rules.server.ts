@@ -9,9 +9,11 @@ import {
   detectQueryCoverageGaps,
   detectQueryOverlap,
   detectZeroImpressionPages,
+  QUERY_DIMENSION_CAVEAT,
   type InspectionFacts,
   type PageMetaFacts,
 } from "./search-console-rule-checks";
+import { confidenceInCount, confidenceInCountChange } from "./confidence";
 import {
   RULE_WINDOW_DAYS,
   RULE_WINDOW_KIND,
@@ -23,15 +25,23 @@ import {
 
 type Client = SupabaseClient<Database>;
 
-/** Typed thresholds. Every rule reads its numbers from here, never inline. */
-export const SEARCH_CONSOLE_THRESHOLDS = {
-  strikingDistance: { minPosition: 8, maxPosition: 20, minImpressions: 50 },
-  weakCtr: { minImpressions: 200, maxCtr: 0.01 },
-  positionLoss: { minImpressions: 100, minPositionDrop: 3 },
-  visibilityGain: { minImpressions: 100, minImpressionGrowth: 0.35 },
-  queryOverlap: { minImpressionsPerPage: 25, minPages: 2 },
-  comparisonWindowDays: 7,
-} as const;
+/**
+ * Typed thresholds. Every rule reads its numbers from here, never inline.
+ *
+ * Every rule in this file is bucketed in RULE_ASSIGNMENTS
+ * (rule-buckets.ts) per
+ * docs/handoffs/2026-08-20-rule-thresholds-audit.md: striking_distance_query
+ * and position_loss read the query dimension and are beyond_current_volume
+ * (see QUERY_DIMENSION_CAVEAT); weak_ctr_page and visibility_gain are
+ * pooled, answered honestly only alongside site_visibility_shift and
+ * site_clicks_shift below, which judge the whole property at once.
+ *
+ * Defined in the pure `rule-thresholds.ts` and re-exported here so
+ * `rule-buckets.ts` can reference the live numbers without pulling this
+ * .server module (and its database/crypto chain) into client-reachable code.
+ */
+export { SEARCH_CONSOLE_THRESHOLDS } from "./rule-thresholds";
+import { SEARCH_CONSOLE_THRESHOLDS } from "./rule-thresholds";
 
 export type Rule =
   | "striking_distance_query"
@@ -41,7 +51,9 @@ export type Rule =
   | "possible_query_overlap"
   | "zero_impression_page"
   | "query_coverage_gap"
-  | "index_coverage_drift";
+  | "index_coverage_drift"
+  | "site_visibility_shift"
+  | "site_clicks_shift";
 
 type Observation = {
   rule: Rule;
@@ -84,14 +96,28 @@ function pick(snapshots: SnapshotRow[], dimension: string): SnapshotRow | undefi
   );
 }
 
-function evaluate(current: SnapshotRow[], prior: SnapshotRow[]): Observation[] {
+/** Site-wide totals stored on a `dimensional_rows_window` snapshot. */
+function totalsOf(
+  snapshot: SnapshotRow | undefined,
+): { clicks: number; impressions: number } | null {
+  const totals = snapshot?.totals as { clicks?: unknown; impressions?: unknown } | null | undefined;
+  if (!totals || typeof totals.clicks !== "number" || typeof totals.impressions !== "number") {
+    return null;
+  }
+  return { clicks: totals.clicks, impressions: totals.impressions };
+}
+
+/** Exported for tests — `evaluateSnapshots` below is the only production caller. */
+export function evaluate(current: SnapshotRow[], prior: SnapshotRow[]): Observation[] {
   const observations: Observation[] = [];
   const t = SEARCH_CONSOLE_THRESHOLDS;
 
   const queries = rowsOf(pick(current, "query"));
   const priorQueries = rowsOf(pick(prior, "query"));
-  const pages = rowsOf(pick(current, "page"));
-  const priorPages = rowsOf(pick(prior, "page"));
+  const pageSnapshot = pick(current, "page");
+  const priorPageSnapshot = pick(prior, "page");
+  const pages = rowsOf(pageSnapshot);
+  const priorPages = rowsOf(priorPageSnapshot);
 
   for (const row of queries) {
     const term = row.keys?.[0] ?? "";
@@ -100,14 +126,15 @@ function evaluate(current: SnapshotRow[], prior: SnapshotRow[]): Observation[] {
       row.position >= t.strikingDistance.minPosition &&
       row.position <= t.strikingDistance.maxPosition
     ) {
+      const confidence = confidenceInCount(row.impressions, t.strikingDistance.minImpressions);
       observations.push({
         rule: "striking_distance_query",
         target: term,
         title: `Striking distance query: "${term}"`,
-        description: `"${term}" averages position ${row.position.toFixed(1)} on ${row.impressions} impressions. Small relevance gains on the ranking page could move it onto page one.`,
-        evidence: { query: term, ...row },
+        description: `"${term}" averages position ${row.position.toFixed(1)} on ${row.impressions} impressions. Small relevance gains on the ranking page could move it onto page one. ${QUERY_DIMENSION_CAVEAT}`,
+        evidence: { query: term, ...row, confidenceReason: confidence.reason },
         businessImpact: row.impressions > 500 ? "high" : "medium",
-        confidence: 0.7,
+        confidence: confidence.value,
       });
     }
 
@@ -117,14 +144,15 @@ function evaluate(current: SnapshotRow[], prior: SnapshotRow[]): Observation[] {
       row.impressions >= t.positionLoss.minImpressions &&
       row.position - before.position >= t.positionLoss.minPositionDrop
     ) {
+      const confidence = confidenceInCount(row.impressions, t.positionLoss.minImpressions);
       observations.push({
         rule: "position_loss",
         target: term,
         title: `Position loss on "${term}"`,
-        description: `Average position moved from ${before.position.toFixed(1)} to ${row.position.toFixed(1)} on ${row.impressions} impressions.`,
-        evidence: { query: term, before, after: row },
+        description: `Average position moved from ${before.position.toFixed(1)} to ${row.position.toFixed(1)} on ${row.impressions} impressions. ${QUERY_DIMENSION_CAVEAT}`,
+        evidence: { query: term, before, after: row, confidenceReason: confidence.reason },
         businessImpact: "high",
-        confidence: 0.65,
+        confidence: confidence.value,
       });
     }
   }
@@ -133,14 +161,15 @@ function evaluate(current: SnapshotRow[], prior: SnapshotRow[]): Observation[] {
     const page = row.keys?.[0] ?? "";
     const ctr = row.impressions > 0 ? row.clicks / row.impressions : null;
     if (row.impressions >= t.weakCtr.minImpressions && ctr !== null && ctr <= t.weakCtr.maxCtr) {
+      const confidence = confidenceInCount(row.impressions, t.weakCtr.minImpressions);
       observations.push({
         rule: "weak_ctr_page",
         target: page,
         title: `Weak click-through on ${page}`,
         description: `${row.impressions} impressions produced ${row.clicks} clicks (${(ctr * 100).toFixed(2)}% CTR) at average position ${row.position.toFixed(1)}.`,
-        evidence: { page, ...row, ctr },
+        evidence: { page, ...row, ctr, confidenceReason: confidence.reason },
         businessImpact: "medium",
-        confidence: 0.6,
+        confidence: confidence.value,
       });
     }
 
@@ -151,14 +180,76 @@ function evaluate(current: SnapshotRow[], prior: SnapshotRow[]): Observation[] {
       (row.impressions - before.impressions) / before.impressions >=
         t.visibilityGain.minImpressionGrowth
     ) {
+      const confidence = confidenceInCountChange(before.impressions, row.impressions);
       observations.push({
         rule: "visibility_gain",
         target: page,
         title: `Visibility gain on ${page}`,
         description: `Impressions rose from ${before.impressions} to ${row.impressions}. Worth reinforcing while the page is trending.`,
-        evidence: { page, before, after: row },
+        evidence: { page, before, after: row, confidenceReason: confidence.reason },
         businessImpact: "medium",
-        confidence: 0.6,
+        confidence: confidence.value,
+      });
+    }
+  }
+
+  // Pooled site-level rules: the pages Search Console stored, judged
+  // together, off the totals already stored on the page-dimension window
+  // snapshot. That total is a sum over whatever rows Search Console
+  // returned for the property, which "stores top data rows and not all
+  // data rows" — it is not Google's own property-wide total, so the copy
+  // below says what was actually summed rather than "your whole site". A
+  // missing prior window means no comparison exists, not that nothing
+  // changed, so both stay silent rather than reading absence as zero.
+  const currentTotals = totalsOf(pageSnapshot);
+  const priorTotals = totalsOf(priorPageSnapshot);
+  if (currentTotals && priorTotals) {
+    const impressionConfidence = confidenceInCountChange(
+      priorTotals.impressions,
+      currentTotals.impressions,
+    );
+    // Stated choice: a medium-band finding still fires here, rather than
+    // requiring "high", because it carries its derived confidence and a
+    // "not firm enough to act on alone" reason alongside it — that is
+    // honest disclosure, not noise. Silencing medium-band evidence would
+    // hide real site-level shifts at a volume where nothing else can see
+    // them.
+    if (impressionConfidence.band !== "low") {
+      const direction = currentTotals.impressions > priorTotals.impressions ? "more" : "less";
+      observations.push({
+        rule: "site_visibility_shift",
+        target: "site",
+        title: `The pages Search Console stored are being shown ${direction} than last month`,
+        description: `Across the pages Search Console stored, impressions moved from ${priorTotals.impressions} to ${currentTotals.impressions} between the two most recent non-overlapping 28-day windows (the prior window ending ${priorPageSnapshot?.period_end_pt}). ${impressionConfidence.reason}`,
+        evidence: {
+          priorImpressions: priorTotals.impressions,
+          currentImpressions: currentTotals.impressions,
+          priorPeriodEndPt: priorPageSnapshot?.period_end_pt ?? null,
+          confidenceReason: impressionConfidence.reason,
+        },
+        businessImpact: "medium",
+        confidence: impressionConfidence.value,
+      });
+    }
+
+    const clickConfidence = confidenceInCountChange(priorTotals.clicks, currentTotals.clicks);
+    // Stated choice: see the comment above the impression gate — the same
+    // reasoning applies to clicks.
+    if (clickConfidence.band !== "low") {
+      const direction = currentTotals.clicks > priorTotals.clicks ? "more" : "fewer";
+      observations.push({
+        rule: "site_clicks_shift",
+        target: "site",
+        title: `The pages Search Console stored are getting ${direction} clicks than last month`,
+        description: `Across the pages Search Console stored, clicks moved from ${priorTotals.clicks} to ${currentTotals.clicks} between the two most recent non-overlapping 28-day windows (the prior window ending ${priorPageSnapshot?.period_end_pt}). ${clickConfidence.reason}`,
+        evidence: {
+          priorClicks: priorTotals.clicks,
+          currentClicks: currentTotals.clicks,
+          priorPeriodEndPt: priorPageSnapshot?.period_end_pt ?? null,
+          confidenceReason: clickConfidence.reason,
+        },
+        businessImpact: "medium",
+        confidence: clickConfidence.value,
       });
     }
   }

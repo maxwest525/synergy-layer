@@ -1,4 +1,5 @@
 import type { Database } from "@/integrations/supabase/types";
+import { confidenceInCount, confidenceInCountChange } from "./confidence";
 
 /**
  * Pure rule checks over already-stored GA4 snapshots. Kept out of the .server
@@ -10,6 +11,13 @@ import type { Database } from "@/integrations/supabase/types";
  * taken 7 days apart still share 21 days of data. A complete traffic stop in
  * the newest week shows up as only a ~25% window-over-window drop; every
  * threshold below is scaled for that damping.
+ *
+ * Bucketed in RULE_ASSIGNMENTS (rule-buckets.ts) per
+ * docs/handoffs/2026-08-20-rule-thresholds-audit.md: trafficShift and
+ * zeroEngagement are pooled (they read a per-page count that needs pooling
+ * to clear the noise floor at this volume); disappearedEvent is a fact (a
+ * tag or trigger stopped firing entirely, which is a wiring question, not a
+ * statistics one).
  */
 
 export type Ga4CheckRule =
@@ -102,26 +110,40 @@ export function detectPageTrafficShift(current: Ga4Row[], prior: Ga4Row[]): Ga4O
   const drafts: Ga4ObservationDraft[] = [];
   losses.sort((a, b) => a.ratio - b.ratio);
   for (const entry of losses.slice(0, t.maxFindingsPerRun)) {
+    const confidence = confidenceInCountChange(entry.before, entry.after);
     drafts.push({
       rule: "page_traffic_loss",
       target: entry.page,
       title: `Traffic loss on ${entry.page}`,
       description: `Sessions fell from ${entry.before} to ${entry.after} (${(entry.ratio * 100).toFixed(0)}%) between overlapping 28-day GA4 windows. Because the windows share most of their days, even this damped drop means recent daily traffic fell hard.`,
-      evidence: { page: entry.page, before: entry.before, after: entry.after, ratio: entry.ratio },
+      evidence: {
+        page: entry.page,
+        before: entry.before,
+        after: entry.after,
+        ratio: entry.ratio,
+        confidenceReason: confidence.reason,
+      },
       businessImpact: "high",
-      confidence: 0.6,
+      confidence: confidence.value,
     });
   }
   gains.sort((a, b) => b.ratio - a.ratio);
   for (const entry of gains.slice(0, t.maxFindingsPerRun)) {
+    const confidence = confidenceInCountChange(entry.before, entry.after);
     drafts.push({
       rule: "page_traffic_gain",
       target: entry.page,
       title: `Traffic gain on ${entry.page}`,
       description: `Sessions rose from ${entry.before} to ${entry.after} (+${(entry.ratio * 100).toFixed(0)}%) between overlapping 28-day GA4 windows. Worth reinforcing while the page is trending.`,
-      evidence: { page: entry.page, before: entry.before, after: entry.after, ratio: entry.ratio },
+      evidence: {
+        page: entry.page,
+        before: entry.before,
+        after: entry.after,
+        ratio: entry.ratio,
+        confidenceReason: confidence.reason,
+      },
       businessImpact: "medium",
-      confidence: 0.6,
+      confidence: confidence.value,
     });
   }
   return drafts;
@@ -150,7 +172,10 @@ export function detectDisappearedEvents(current: Ga4Row[], prior: Ga4Row[]): Ga4
       description: `"${name}" recorded ${count} events in the prior 28-day GA4 window and zero in the current one. The tag, trigger, or feature that fired it has most likely broken.`,
       evidence: { eventName: name, priorEventCount: count },
       businessImpact: "high",
-      confidence: 0.7,
+      // Stated assumption: 0.9 — an event that fired reliably and then
+      // stopped entirely is a wiring fact, not a sampling question; capped
+      // below 1 because we cannot rule out the event simply being renamed.
+      confidence: 0.9,
     });
   }
   return drafts;
@@ -175,14 +200,15 @@ export function detectZeroEngagementPages(current: Ga4Row[]): Ga4ObservationDraf
     .filter(([page, sessions]) => sessions >= t.minSessions && !pagesWithCustomEvents.has(page))
     .sort((a, b) => b[1] - a[1]);
   for (const [page, sessions] of candidates.slice(0, t.maxFindingsPerRun)) {
+    const confidence = confidenceInCount(sessions, t.minSessions);
     drafts.push({
       rule: "zero_engagement_page",
       target: page,
       title: `No tracked engagement on ${page}`,
       description: `${page} drew ${sessions} sessions in the 28-day window but fired only GA4's automatic events. Either the page offers no next step or its key events are not instrumented.`,
-      evidence: { page, sessions },
+      evidence: { page, sessions, confidenceReason: confidence.reason },
       businessImpact: "medium",
-      confidence: 0.5,
+      confidence: confidence.value,
     });
   }
   return drafts;

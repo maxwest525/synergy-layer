@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { evaluatePages, extractPageFacts, groupFindings } from "./page-checks";
+import { CHECKS, evaluatePages, extractPageFacts, groupFindings } from "./page-checks";
 
 const HTML = `<!doctype html><html lang="en"><head>
 <title>Movers</title>
@@ -50,5 +50,17 @@ describe("on page checks", () => {
     const duplicate = findings.find((finding) => finding.check === "h1_duplicate");
     expect(duplicate?.pages).toHaveLength(2);
     expect(findings[0]?.severity).toBe("critical");
+  });
+
+  it("thin_content asks for substance without claiming a word-count ranking rule", () => {
+    const check = CHECKS.thin_content;
+    // "The length of the content alone doesn't matter for ranking purposes
+    //  (there's no magical word count target)" — SEO starter guide.
+    expect(check.instruction(3).toLowerCase()).not.toMatch(/rank/);
+    expect(check.instruction(3)).toMatch(/understand|about|say/i);
+  });
+
+  it("description checks say they are about the snippet, not the ranking", () => {
+    expect(CHECKS.description_too_long.instruction(2)).toMatch(/results|snippet/i);
   });
 });

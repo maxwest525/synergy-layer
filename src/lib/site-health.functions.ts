@@ -2,7 +2,12 @@ import { createServerFn } from "@tanstack/react-start";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { SiteFinding } from "./site-checks";
-import type { SpeedReading, StoredOutcome } from "./site-health";
+import {
+  sumSiteWindow,
+  WORDING_PROPOSAL_TYPES,
+  type SpeedReading,
+  type StoredOutcome,
+} from "./site-health";
 
 /**
  * The reads the "Site health" page needs.
@@ -78,6 +83,7 @@ export const getSiteHealthExtras = createServerFn({ method: "POST" })
     const tenantId = await requireTenantId(context.supabase);
     const db = context.supabase;
     const now = new Date().toISOString();
+    const audit = await readPageAudit(db, tenantId);
 
     const [cycleResult, changeResult, speedResult] = await Promise.all([
       db
@@ -88,7 +94,7 @@ export const getSiteHealthExtras = createServerFn({ method: "POST" })
         .limit(CYCLE_LIMIT),
       db
         .from("change_requests")
-        .select("id, title")
+        .select("id, title, proposal_type")
         .eq("tenant_id", tenantId)
         .order("created_at", { ascending: false })
         .limit(500),
@@ -104,6 +110,7 @@ export const getSiteHealthExtras = createServerFn({ method: "POST" })
     const changes = assertRead("Change requests", changeResult).data ?? [];
 
     const titleById = new Map(changes.map((row) => [row.id, row.title]));
+    const proposalTypeById = new Map(changes.map((row) => [row.id, row.proposal_type]));
     const cycleById = new Map(cycles.map((row) => [row.id, row]));
     const cycleIds = cycles.map((row) => row.id);
 
@@ -116,7 +123,7 @@ export const getSiteHealthExtras = createServerFn({ method: "POST" })
         ? Promise.resolve({ data: [], error: null })
         : db
             .from("change_measurement_windows")
-            .select("id, cycle_id, window_days, period_end_pt")
+            .select("id, cycle_id, window_days, period_start_pt, period_end_pt")
             .eq("tenant_id", tenantId)
             .in("cycle_id", cycleIds)
             .order("window_days"),
@@ -145,6 +152,53 @@ export const getSiteHealthExtras = createServerFn({ method: "POST" })
       }
     }
 
+    // The window-0 row is the approval snapshot: the 28 days ending the day
+    // before approval. Its GSC observation is the before picture a change is
+    // graded against; its period bounds are also the "before" half of the
+    // site-wide trend, independent of whether that observation ever landed.
+    const baselineByCycle = new Map<string, { impressions: number; clicks: number }>();
+    const baselineBoundsByCycle = new Map<string, { start: string; end: string }>();
+    for (const window of windows) {
+      if (window.window_days !== 0) continue;
+      baselineBoundsByCycle.set(window.cycle_id, {
+        start: window.period_start_pt,
+        end: window.period_end_pt,
+      });
+      const observation = newestByWindow.get(window.id);
+      if (!observation || readingStatusOf(observation.status) !== "complete") continue;
+      const payload = (observation.payload ?? {}) as { totals?: Record<string, unknown> };
+      baselineByCycle.set(window.cycle_id, {
+        impressions: numberOrZero(totals(payload)?.["impressions"]),
+        clicks: numberOrZero(totals(payload)?.["clicks"]),
+      });
+    }
+
+    // Site-wide daily totals for the site's own trend, read once for the whole
+    // span every window needs rather than once per outcome.
+    const siteDays: Array<{ date: string; impressions: number }> = [];
+    if (audit.property !== null && windows.length > 0) {
+      const starts = windows.map((window) => window.period_start_pt);
+      const ends = windows.map((window) => window.period_end_pt);
+      const spanStart = starts.reduce((min, date) => (date < min ? date : min));
+      const spanEnd = ends.reduce((max, date) => (date > max ? date : max));
+      const siteTotalsResult = await db
+        .from("search_console_snapshots")
+        .select("period_start_pt, totals")
+        .eq("tenant_id", tenantId)
+        .eq("property", audit.property)
+        .eq("kind", "property_totals")
+        .gte("period_start_pt", spanStart)
+        .lte("period_start_pt", spanEnd);
+      const siteTotalsRows = assertRead("Site daily totals", siteTotalsResult).data ?? [];
+      for (const row of siteTotalsRows) {
+        const rowTotals = (row.totals ?? {}) as Record<string, unknown>;
+        siteDays.push({
+          date: row.period_start_pt,
+          impressions: numberOrZero(rowTotals["impressions"]),
+        });
+      }
+    }
+
     const outcomes: StoredOutcome[] = windows.flatMap((window) => {
       const cycle = cycleById.get(window.cycle_id);
       const observation = newestByWindow.get(window.id);
@@ -161,6 +215,13 @@ export const getSiteHealthExtras = createServerFn({ method: "POST" })
       const status = readingStatusOf(observation.status);
       const expected = numberOrNull(payload.coverage?.["expectedDays"]);
       const observed = numberOrNull(payload.coverage?.["observedDays"]);
+
+      const baselineBounds = baselineBoundsByCycle.get(window.cycle_id);
+      const siteBefore =
+        baselineBounds === undefined
+          ? null
+          : sumSiteWindow(siteDays, baselineBounds.start, baselineBounds.end);
+      const siteAfter = sumSiteWindow(siteDays, window.period_start_pt, window.period_end_pt);
 
       return [
         {
@@ -183,11 +244,21 @@ export const getSiteHealthExtras = createServerFn({ method: "POST" })
             expected === null || observed === null
               ? null
               : { expectedDays: expected, observedDays: observed },
+          baseline:
+            window.window_days === 0 ? null : (baselineByCycle.get(window.cycle_id) ?? null),
+          siteTrend:
+            window.window_days === 0 || siteBefore === null || siteAfter === null
+              ? null
+              : {
+                  beforeImpressions: siteBefore.impressions,
+                  afterImpressions: siteAfter.impressions,
+                },
+          wordingTreatment: WORDING_PROPOSAL_TYPES.has(
+            proposalTypeById.get(cycle.change_request_id) ?? "",
+          ),
         },
       ];
     });
-
-    const audit = await readPageAudit(db, tenantId);
 
     const speed: SpeedReading[] = (assertRead("Speed snapshots", speedResult).data ?? []).map(
       (row) => ({

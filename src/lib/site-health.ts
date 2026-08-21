@@ -16,6 +16,7 @@
  * to.
  */
 
+import { cohortVerdict } from "./cohort-verdict";
 import { GROUNDED_WINDOWS, outcomeVerdict, type OutcomeVerdict } from "./outcome-verdict";
 import type { Severity } from "./page-checks";
 import type { SiteFinding } from "./site-checks";
@@ -25,6 +26,17 @@ import {
   type QueueItem,
   type QueueSource,
 } from "./suggestion-queue";
+
+/**
+ * The `proposal_type` values that only change what Google *displays* — title
+ * and meta description — rather than the page's own content or crawl
+ * behavior. Copied from the CHECK constraint in
+ * `supabase/migrations/20260819213000_widen_proposal_type_check.sql`:
+ * `CHECK (proposal_type IN ('title_h1', 'page_metadata', 'site.crawl_directives'))`.
+ * `site.crawl_directives` is left out: it changes what Google can crawl, not
+ * what it shows.
+ */
+export const WORDING_PROPOSAL_TYPES: ReadonlySet<string> = new Set(["title_h1", "page_metadata"]);
 
 /** One stored measurement of one approved change. */
 export type StoredOutcome = {
@@ -51,6 +63,15 @@ export type StoredOutcome = {
   readonly readingStatus: "complete" | "partial" | "empty";
   /** Days the window asked for against days actually stored. Null when unknown. */
   readonly coverage: { readonly expectedDays: number; readonly observedDays: number } | null;
+  /** The 28 days ending the day before approval, from the stored window-0 GSC observation. Null when never stored. */
+  readonly baseline: { readonly impressions: number; readonly clicks: number } | null;
+  /** Site-wide impressions over the same before/after pair. Null when fewer days are stored than the pair needs. */
+  readonly siteTrend: {
+    readonly beforeImpressions: number;
+    readonly afterImpressions: number;
+  } | null;
+  /** True when this change's `proposal_type` is one of `WORDING_PROPOSAL_TYPES`. */
+  readonly wordingTreatment: boolean;
 };
 
 export type GradedOutcome = StoredOutcome & {
@@ -115,6 +136,14 @@ export type SiteHealthView = {
   readonly ungradedNote: string | null;
   /** Set when a read hit its limit, so a truncation is never shown as a total. */
   readonly truncatedNote: string | null;
+  /**
+   * The 28-day graded readings judged together, rather than one at a time.
+   *
+   * At this property's volume a single page rarely reaches the noise floor in
+   * `confidence.ts`; a cohort of them can. Null below three members, or when
+   * `cohortVerdict` itself refuses. See `cohort-verdict.ts`.
+   */
+  readonly cohortNote: string | null;
 };
 
 const NOT_CHECKED =
@@ -161,9 +190,42 @@ export function gradeOutcomes(outcomes: readonly StoredOutcome[]): GradedOutcome
       impressions: outcome.impressions,
       clicks: outcome.clicks,
       measurable: outcome.measurable,
+      baseline: outcome.baseline,
+      siteTrend: outcome.siteTrend,
+      wordingTreatment: outcome.wordingTreatment,
     });
     return { ...outcome, verdict: assessment.verdict, reason: assessment.reason };
   });
+}
+
+/** One calendar day past a `YYYY-MM-DD` Pacific date string. */
+function nextDate(date: string): string {
+  const next = new Date(`${date}T00:00:00Z`);
+  next.setUTCDate(next.getUTCDate() + 1);
+  return next.toISOString().slice(0, 10);
+}
+
+/**
+ * Sum of daily site impressions inside [start, end], or null when any day is
+ * missing.
+ *
+ * A missing day is not a zero. Summing over a gap would understate the
+ * site's own trend and make a page's rise look bigger than the tide really
+ * was, which is exactly the honesty failure this module exists to avoid.
+ */
+export function sumSiteWindow(
+  days: ReadonlyArray<{ readonly date: string; readonly impressions: number }>,
+  start: string,
+  end: string,
+): { readonly impressions: number } | null {
+  const byDate = new Map(days.map((day) => [day.date, day.impressions]));
+  let sum = 0;
+  for (let cursor = start; cursor <= end; cursor = nextDate(cursor)) {
+    const value = byDate.get(cursor);
+    if (value === undefined) return null;
+    sum += value;
+  }
+  return { impressions: sum };
 }
 
 const SEVERITY_ORDER: Record<Severity, number> = { critical: 0, warning: 1, advice: 2 };
@@ -201,6 +263,7 @@ function tilesFor(facts: SiteHealthFacts, graded: readonly GradedOutcome[]): Til
     (outcome) =>
       outcome.verdict !== null &&
       outcome.verdict !== "too_early" &&
+      outcome.verdict !== "not_yet" &&
       outcome.verdict !== "unmeasurable",
   );
   const worked = judged.filter((outcome) => outcome.verdict === "success").length;
@@ -321,6 +384,33 @@ function ungradedNoteFor(graded: readonly GradedOutcome[]): string | null {
   return `${ungraded.length} ${ungraded.length === 1 ? "reading is" : "readings are"} stored at ${windows.join(" and ")} days and not graded. The windows this grades are ${GRADED_AND_STORABLE.join(" and ")}.${notCollected}`;
 }
 
+/** Minimum members before a cohort verdict is worth showing at all. */
+const MIN_COHORT_MEMBERS = 3;
+
+function cohortNoteFor(graded: readonly GradedOutcome[]): string | null {
+  // Mirrors tilesFor's judged filter: too_early and not_yet readings predate
+  // the window they would be pooled on, and unmeasurable readings (a page
+  // outside the connected property, an ungrounded window) contribute nothing
+  // real. Pooling them in would let a handful of not-yet-closed windows read
+  // as a graded cohort.
+  const eligible = graded.filter(
+    (outcome) =>
+      outcome.windowDays === 28 &&
+      outcome.verdict !== null &&
+      outcome.verdict !== "too_early" &&
+      outcome.verdict !== "not_yet" &&
+      outcome.verdict !== "unmeasurable" &&
+      outcome.baseline !== null &&
+      outcome.readingStatus === "complete",
+  );
+  if (eligible.length < MIN_COHORT_MEMBERS) return null;
+  const members = eligible.map((outcome) => ({
+    before: outcome.baseline!.impressions,
+    after: outcome.impressions,
+  }));
+  return cohortVerdict(members)?.reason ?? null;
+}
+
 export function buildSiteHealth(facts: SiteHealthFacts): SiteHealthView {
   const queue = buildQueue(facts.queueSources, facts.now);
   const open = [...queue.open].sort(compareQueueItems);
@@ -346,6 +436,7 @@ export function buildSiteHealth(facts: SiteHealthFacts): SiteHealthView {
     history: [...queue.ignored, ...queue.done],
     asOf: facts.siteObservedAt,
     ungradedNote: ungradedNoteFor(graded),
+    cohortNote: cohortNoteFor(graded),
     truncatedNote: facts.truncated
       ? "More changes are stored than were read for this page, so the counts above are a floor rather than a total."
       : null,
@@ -355,9 +446,10 @@ export function buildSiteHealth(facts: SiteHealthFacts): SiteHealthView {
 const VERDICT_ORDER: Record<string, number> = {
   failure: 0,
   neutral: 1,
-  too_early: 2,
-  success: 3,
-  unmeasurable: 4,
+  not_yet: 2,
+  too_early: 3,
+  success: 4,
+  unmeasurable: 5,
 };
 
 function verdictRank(outcome: GradedOutcome): number {

@@ -26,6 +26,8 @@ export const ALL_SEARCH_RULES = [
   "zero_impression_page",
   "query_coverage_gap",
   "index_coverage_drift",
+  "site_visibility_shift",
+  "site_clicks_shift",
 ] as const;
 
 export type SearchRule = (typeof ALL_SEARCH_RULES)[number];
@@ -216,6 +218,47 @@ function coverageDrift(evidence: Evidence, on: string): FindingCopy {
   };
 }
 
+/**
+ * Totals from the last two 28-day windows, pooled across every page Search
+ * Console stored rather than judged one page at a time. That total is a sum
+ * over stored rows, not Google's own property-wide figure — Search Console
+ * "stores top data rows and not all data rows" — so the copy names what was
+ * summed rather than claiming "your whole site".
+ */
+function siteVisibilityShift(evidence: Evidence, on: string): FindingCopy {
+  const prior = num(evidence["priorImpressions"]);
+  const curr = num(evidence["currentImpressions"]);
+  const direction = curr !== null && prior !== null ? (curr > prior ? "more" : "less") : null;
+  return {
+    claim:
+      direction === null
+        ? "Visibility across the pages Search Console stored has changed"
+        : `The pages Search Console stored are being shown ${direction} than they were`,
+    evidence:
+      curr === null || prior === null
+        ? null
+        : `Shown ${prior} times last month, ${curr} times in the month through ${on}`,
+    currentWording: null,
+  };
+}
+
+function siteClicksShift(evidence: Evidence, on: string): FindingCopy {
+  const prior = num(evidence["priorClicks"]);
+  const curr = num(evidence["currentClicks"]);
+  const direction = curr !== null && prior !== null ? (curr > prior ? "more" : "fewer") : null;
+  return {
+    claim:
+      direction === null
+        ? "Clicks across the pages Search Console stored have changed"
+        : `The pages Search Console stored are getting ${direction} clicks than they were`,
+    evidence:
+      curr === null || prior === null
+        ? null
+        : `Clicked ${prior} times last month, ${curr} times in the month through ${on}`,
+    currentWording: null,
+  };
+}
+
 const WRITERS: Record<SearchRule, (evidence: Evidence, on: string) => FindingCopy> = {
   striking_distance_query: strikingDistance,
   position_loss: positionLoss,
@@ -225,6 +268,8 @@ const WRITERS: Record<SearchRule, (evidence: Evidence, on: string) => FindingCop
   zero_impression_page: zeroImpressions,
   query_coverage_gap: coverageGap,
   index_coverage_drift: coverageDrift,
+  site_visibility_shift: siteVisibilityShift,
+  site_clicks_shift: siteClicksShift,
 };
 
 export function isSearchRule(value: string): value is SearchRule {

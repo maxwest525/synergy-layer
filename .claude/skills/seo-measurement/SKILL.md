@@ -41,11 +41,18 @@ those *"not issued by more than a few dozen users over a two-to-three month
 period"*. They are omitted from tables, included in chart totals, **and omitted
 whenever a filter is applied**. On a low-traffic property almost every query is
 under this threshold, so query-dimension data is largely absent rather than
-merely thin. Prefer page-dimension data as the unit of measurement.
-<https://support.google.com/webmasters/answer/96568>
+merely thin. Prefer page-dimension data as the unit of measurement. Non-query,
+non-URL dimensions do not have this problem: *"For requests that don't involve
+query or URL dimensions… Search Console will display and export all the
+data"* — one more reason page-dimension beats query-dimension here.
+<https://developers.google.com/search/blog/2022/10/performance-data-deep-dive>
+(verbatim definition and per-dimension completeness);
+<https://support.google.com/webmasters/answer/96568> (current top-rows
+wording; the "few dozen users" definition itself is no longer stated here)
 
 **Not every row is stored.** *"Due to internal limitations, Search Console
-stores top data rows and not all data rows."* A page reading zero may never have
+stores top data rows and not all data rows. As a result, not all queries
+beyond anonymized queries will be shown."* A page reading zero may never have
 been stored. Treat a missing page as unknown, never as a measured zero.
 
 **Data lags two to three days.** Never measure a window that has not finalized.
@@ -87,11 +94,16 @@ the real one, not a ranking claim Google denies.
 
 ## Before you write a verdict
 
-**Ask whether the volume can carry the question.** The published guidance is
-that a page at forty organic visits a month cannot reach significance in a four
-week test. Below that, no method rescues it — not longer windows, not
-difference-in-differences, not Bayesian structural time series. A verdict
-returned from three clicks is fabricated regardless of how it was computed.
+**Ask whether the volume can carry the question.** At a 28-day baseline of 10
+events, the exact two-sample Poisson test (Przyborowski & Wilenski 1940;
+Krishnamoorthy & Thomson 2004) needs an observed jump of at least 2.3× before
+p<0.05 is reached, and a true effect of roughly 2.7× before the test has 80%
+power. Pooled to about 120 events across a cohort, an observed +29% clears
+significance. No method rescues a single page below this floor — not longer
+windows, not difference-in-differences, not Bayesian structural time series. A
+per-page verdict at ten events a month is fabricated regardless of how it was
+computed, and now for a citable reason:
+`docs/superpowers/research/2026-08-20-low-volume-measurement-research.md` §2.
 
 What survives at low volume:
 

@@ -46,6 +46,7 @@ const VERDICT_LABEL: Record<OutcomeVerdict, string> = {
   success: "It worked",
   neutral: "No change yet",
   failure: "It did not work",
+  not_yet: "Not yet",
   too_early: "Too early to say",
   unmeasurable: "Cannot be measured",
 };
@@ -54,6 +55,7 @@ const VERDICT_TONE: Record<OutcomeVerdict, string> = {
   success: "text-primary",
   neutral: "text-info",
   failure: "text-destructive",
+  not_yet: "text-muted-foreground",
   too_early: "text-muted-foreground",
   unmeasurable: "text-muted-foreground",
 };
@@ -284,6 +286,12 @@ export function SiteHealthPage({ initialTab }: { initialTab?: TabId } = {}) {
                 <p className="flex items-start gap-2 text-xs leading-snug text-muted-foreground">
                   <Info className="mt-0.5 h-3 w-3 shrink-0" strokeWidth={1.6} aria-hidden="true" />
                   {view.ungradedNote}
+                </p>
+              ) : null}
+              {view.cohortNote ? (
+                <p className="flex items-start gap-2 text-xs leading-snug text-muted-foreground">
+                  <Info className="mt-0.5 h-3 w-3 shrink-0" strokeWidth={1.6} aria-hidden="true" />
+                  {view.cohortNote}
                 </p>
               ) : null}
               {view.outcomes.map((outcome) => (

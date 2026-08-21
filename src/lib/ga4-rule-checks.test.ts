@@ -24,6 +24,8 @@ describe("detectPageTrafficShift", () => {
     expect(drafts).toHaveLength(1);
     expect(drafts[0]?.rule).toBe("page_traffic_loss");
     expect(drafts[0]?.target).toBe("site.com/a");
+    expect(drafts[0]?.confidence).toBeGreaterThan(0);
+    expect(drafts[0]?.confidence).toBeLessThan(1);
   });
 
   it("flags a page whose sessions grew past the growth threshold", () => {
@@ -75,6 +77,7 @@ describe("detectDisappearedEvents", () => {
     expect(drafts).toHaveLength(1);
     expect(drafts[0]?.rule).toBe("event_disappeared");
     expect(drafts[0]?.target).toBe("generate_lead");
+    expect(drafts[0]?.confidence).toBe(0.9);
   });
 
   it("stays quiet when the event still fires at all", () => {
@@ -107,6 +110,8 @@ describe("detectZeroEngagementPages", () => {
     expect(drafts).toHaveLength(1);
     expect(drafts[0]?.rule).toBe("zero_engagement_page");
     expect(drafts[0]?.target).toBe("site.com/pricing");
+    expect(drafts[0]?.confidence).toBeGreaterThan(0);
+    expect(drafts[0]?.confidence).toBeLessThan(1);
   });
 
   it("stays quiet when any non-automatic event fires on the page", () => {

@@ -197,6 +197,29 @@ describe("the tabs", () => {
   });
 });
 
+describe("what your traffic can answer", () => {
+  it("shows the section collapsed, revealing the line and each beyond entry on expand", async () => {
+    show({ coverage: { pagesKnown: 48, pagesWithImpressions: 9 } });
+
+    const trigger = screen.getByRole("button", { name: /What your traffic can answer/i });
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByText(/Your site earned/)).not.toBeInTheDocument();
+
+    await userEvent.click(trigger);
+    expect(trigger).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByText(/Your site earned/)).toBeInTheDocument();
+    expect(screen.getByText(/internal links first/)).toBeInTheDocument();
+    // A beyond_current_volume rule's plain-words name, not its id.
+    expect(screen.getByText(/Position-slip warnings/)).toBeInTheDocument();
+    expect(screen.queryByText(/declining_position/)).not.toBeInTheDocument();
+  });
+
+  it("renders nothing when the totals it needs are not stored", () => {
+    show({ coverage: null });
+    expect(screen.queryByText(/What your traffic can answer/i)).not.toBeInTheDocument();
+  });
+});
+
 describe("when the read fails", () => {
   it("says so instead of rendering an empty page that looks measured", () => {
     useGettingFound.mockReturnValue({

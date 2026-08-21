@@ -1,0 +1,85 @@
+import { describe, expect, it } from "vitest";
+
+import { RULE_ASSIGNMENTS, type RuleBucket } from "./rule-buckets";
+import { SEARCH_CONSOLE_THRESHOLDS, SEO_RULES } from "./rule-thresholds";
+import { ALL_SEARCH_RULES } from "./finding-copy";
+import type { Ga4CheckRule } from "./ga4-rule-checks";
+
+/**
+ * Rules deliberately excluded from RULE_ASSIGNMENTS: they carry their own
+ * SERP-derived confidence (a heuristic classifier's own score, not a Search
+ * Console count) and were never part of the handoff's volume table.
+ */
+const EXCLUDED_FROM_BUCKETING = new Set<string>([
+  "competitor_outranks_owned",
+  "owned_absent_from_approved_serps",
+]);
+
+/**
+ * Compile-time exhaustiveness for the GA4 family: ga4-rule-checks.ts has no
+ * runtime array of its rule ids (only the `Ga4CheckRule` type), so a new rule
+ * id added there without a matching key here fails the build, not just this
+ * test at runtime.
+ */
+const GA4_RULES_COVERED: Record<Ga4CheckRule, true> = {
+  page_traffic_loss: true,
+  page_traffic_gain: true,
+  event_disappeared: true,
+  zero_engagement_page: true,
+};
+
+/**
+ * The rule ids RULE_ASSIGNMENTS must cover, read from the actual runtime
+ * unions rather than a hand-maintained list — SEO_RULES (family A) and
+ * ALL_SEARCH_RULES (families B and C, via finding-copy.ts) plus the
+ * compile-time-checked GA4 ids above, minus the explicit exclusion set.
+ * This is what catches drift like a new pooled rule shipping without a
+ * bucket assignment.
+ */
+const EXPECTED_RULE_IDS = [
+  ...new Set<string>([...SEO_RULES, ...ALL_SEARCH_RULES, ...Object.keys(GA4_RULES_COVERED)]),
+].filter((rule) => !EXCLUDED_FROM_BUCKETING.has(rule));
+
+describe("RULE_ASSIGNMENTS", () => {
+  it("assigns every rule exactly once", () => {
+    for (const rule of EXPECTED_RULE_IDS) {
+      const matches = RULE_ASSIGNMENTS.filter((assignment) => assignment.rule === rule);
+      expect(matches, `expected exactly one assignment for "${rule}"`).toHaveLength(1);
+    }
+  });
+
+  it("has no assignments outside the expected set", () => {
+    const extra = RULE_ASSIGNMENTS.map((a) => a.rule).filter(
+      (rule) => !EXPECTED_RULE_IDS.includes(rule),
+    );
+    expect(extra).toEqual([]);
+  });
+
+  it("gives every assignment a non-empty reasoning string", () => {
+    for (const assignment of RULE_ASSIGNMENTS) {
+      expect(assignment.why.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("carries the live threshold as needsPerTarget for beyond_current_volume rules", () => {
+    const byRule = new Map(RULE_ASSIGNMENTS.map((a) => [a.rule, a]));
+    const strikingDistance = byRule.get("striking_distance_query");
+    expect(strikingDistance?.bucket).toBe("beyond_current_volume" satisfies RuleBucket);
+    expect(strikingDistance?.needsPerTarget).toBe(
+      SEARCH_CONSOLE_THRESHOLDS.strikingDistance.minImpressions,
+    );
+  });
+
+  it("needs no threshold for fact rules", () => {
+    const byRule = new Map(RULE_ASSIGNMENTS.map((a) => [a.rule, a]));
+    expect(byRule.get("zero_impression_page")?.needsPerTarget).toBeNull();
+    expect(byRule.get("index_coverage_drift")?.needsPerTarget).toBeNull();
+    expect(byRule.get("event_disappeared")?.needsPerTarget).toBeNull();
+  });
+
+  it("buckets the two pooled site-level rules", () => {
+    const byRule = new Map(RULE_ASSIGNMENTS.map((a) => [a.rule, a]));
+    expect(byRule.get("site_visibility_shift")?.bucket).toBe("pooled" satisfies RuleBucket);
+    expect(byRule.get("site_clicks_shift")?.bucket).toBe("pooled" satisfies RuleBucket);
+  });
+});

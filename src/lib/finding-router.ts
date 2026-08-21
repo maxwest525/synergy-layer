@@ -48,6 +48,8 @@ const CATEGORY_BY_RULE: Record<string, CategoryId> = {
   zero_impression_page: "search",
   query_coverage_gap: "search",
   index_coverage_drift: "search",
+  site_visibility_shift: "search",
+  site_clicks_shift: "search",
 };
 
 const CATEGORY_BY_MODULE: Record<string, CategoryId> = {

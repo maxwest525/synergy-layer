@@ -1,14 +1,29 @@
 import type { Database } from "@/integrations/supabase/types";
+import { confidenceInCount } from "./confidence";
 
 /**
  * Pure rule checks over already-stored Search Console and page-audit data.
  * Kept out of the .server module so they test without mocks, matching
  * page-checks.ts and site-checks.ts. Nothing here reads a network or a
  * database; the .server caller supplies rows and persists results.
+ *
+ * Every rule below is assigned to a volume-honesty bucket in RULE_ASSIGNMENTS
+ * (`rule-buckets.ts`, fact / pooled / beyond_current_volume) per
+ * docs/handoffs/2026-08-20-rule-thresholds-audit.md.
  */
 
 export type CheckRule =
   "possible_query_overlap" | "zero_impression_page" | "query_coverage_gap" | "index_coverage_drift";
+
+/**
+ * Google's own documentation on why any rule reading the `query` dimension is
+ * reading a censored sample: queries "not issued by more than a few dozen
+ * users over a two-to-three month period" are omitted from tables and dropped
+ * from totals whenever a filter is applied.
+ * https://developers.google.com/search/blog/2022/10/performance-data-deep-dive
+ */
+export const QUERY_DIMENSION_CAVEAT =
+  "Caveat: at this site's volume Google hides most queries for privacy (only queries from more than a few dozen users are stored), so this reads a censored sample.";
 
 export type ObservationDraft = {
   rule: CheckRule;
@@ -58,14 +73,17 @@ export function detectQueryOverlap(pageQueryRows: PerformanceRow[]): Observation
     const best = Math.min(...pages.map((entry) => entry.position));
     if (best <= t.ignoreBestPositionAtOrAbove) continue;
     const sorted = [...pages].sort((a, b) => b.impressions - a.impressions);
+    const totalImpressions = pages.reduce((sum, entry) => sum + entry.impressions, 0);
+    const needed = t.minImpressionsPerPage * t.minPages;
+    const confidence = confidenceInCount(totalImpressions, needed);
     drafts.push({
       rule: "possible_query_overlap",
       target: query,
       title: `Query overlap on "${query}"`,
-      description: `${pages.length} pages split impressions for "${query}" and none ranks better than position ${best.toFixed(1)}. Consolidating or re-pointing internal links would focus authority on one page.`,
-      evidence: { query, pages: sorted },
+      description: `${pages.length} pages split impressions for "${query}" and none ranks better than position ${best.toFixed(1)}. Consolidating or re-pointing internal links would focus authority on one page. ${QUERY_DIMENSION_CAVEAT}`,
+      evidence: { query, pages: sorted, confidenceReason: confidence.reason },
       businessImpact: "medium",
-      confidence: 0.6,
+      confidence: confidence.value,
     });
   }
   return drafts;
@@ -94,7 +112,12 @@ export function detectZeroImpressionPages(
       description: `${url} is in the audited page set but earned zero impressions on the reporting date. It is either not indexed, orphaned from internal links, or too thin to rank.`,
       evidence: { page: url },
       businessImpact: "low",
-      confidence: 0.5,
+      // Stated assumption: 0.6 — a zero row may be a never-stored row
+      // ("stores top data rows and not all data rows"); what would settle it
+      // is URL Inspection confirming the page indexed while the row stays
+      // absent. Kept below every URL-Inspection fact: absence from a
+      // truncated table is an inference, not something read directly.
+      confidence: 0.6,
     });
     if (drafts.length >= t.maxFindingsPerRun) break;
   }
@@ -139,14 +162,22 @@ export function detectQueryCoverageGaps(
     if (words.length === 0) continue;
     const missing = words.filter((word) => !haystack.includes(word));
     if (missing.length !== words.length) continue;
+    const confidence = confidenceInCount(row.impressions, t.minImpressions);
     drafts.push({
       rule: "query_coverage_gap",
       target: `${page} :: ${query}`,
       title: `"${query}" is not answered on ${page}`,
-      description: `${page} ranks at position ${row.position.toFixed(1)} for "${query}" (${row.impressions} impressions), but no word of the query appears in the page title or H1. Addressing it directly could lift the ranking.`,
-      evidence: { page, query, ...row, pageTitle: meta.title, pageH1: meta.h1 },
+      description: `${page} ranks at position ${row.position.toFixed(1)} for "${query}" (${row.impressions} impressions), but no word of the query appears in the page title or H1. Addressing it directly could lift the ranking. ${QUERY_DIMENSION_CAVEAT}`,
+      evidence: {
+        page,
+        query,
+        ...row,
+        pageTitle: meta.title,
+        pageH1: meta.h1,
+        confidenceReason: confidence.reason,
+      },
       businessImpact: "medium",
-      confidence: 0.55,
+      confidence: confidence.value,
     });
   }
   return drafts;
@@ -182,7 +213,10 @@ export function detectInspectionDrift(
         description: `Google reports verdict ${inspection.verdict}${inspection.coverageState ? ` (${inspection.coverageState})` : ""} for ${url}. The page cannot earn search traffic until this is resolved.`,
         evidence: { ...inspection },
         businessImpact: "high",
-        confidence: 0.8,
+        // Stated assumption: 0.9 — facts read from URL Inspection carry no
+        // sampling noise; capped below 1 because the inspection itself can
+        // be stale. A fresher inspection is what would settle it.
+        confidence: 0.9,
       });
       continue;
     }
@@ -198,7 +232,10 @@ export function detectInspectionDrift(
         description: `We declare ${inspection.userCanonical} but Google indexed ${inspection.googleCanonical}. Traffic and signals are flowing to a page we did not choose.`,
         evidence: { ...inspection },
         businessImpact: "medium",
-        confidence: 0.7,
+        // Stated assumption: 0.9 — facts read from URL Inspection carry no
+        // sampling noise; capped below 1 because the inspection itself can
+        // be stale. A fresher inspection is what would settle it.
+        confidence: 0.9,
       });
       continue;
     }
@@ -212,7 +249,11 @@ export function detectInspectionDrift(
           description: `Google last crawled ${url} on ${inspection.lastCrawlTime.slice(0, 10)}. Content changes since then are invisible to search.`,
           evidence: { ...inspection, crawlAgeDays: Math.floor(ageDays) },
           businessImpact: "low",
-          confidence: 0.6,
+          // Stated assumption: 0.9 — the crawl date itself is a fact read
+          // from URL Inspection, but "stale" is a judgment against
+          // staleCrawlDays: 30, an operator-set threshold, not the
+          // inspection alone. Capped below 1 for both reasons.
+          confidence: 0.9,
         });
       }
     }
