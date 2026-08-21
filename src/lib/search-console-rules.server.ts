@@ -434,7 +434,7 @@ export async function evaluateSnapshots(
         period_end_pt: reportingDate,
         evidence: observation.evidence as never,
       },
-      { onConflict: "observation_fingerprint", ignoreDuplicates: true },
+      { onConflict: "tenant_id,observation_fingerprint", ignoreDuplicates: true },
     );
     if (observationError) throw new SearchConsoleFailure("persistence", observationError.message);
   }
