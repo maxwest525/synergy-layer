@@ -184,7 +184,10 @@ describe("expected schema types", () => {
   });
 
   it("names the missing type when a page has other structured data", () => {
-    const facts = { ...extractPageFacts(HTML, "words", "https://a.test/contact"), jsonLdTypes: ["WebPage"] };
+    const facts = {
+      ...extractPageFacts(HTML, "words", "https://a.test/contact"),
+      jsonLdTypes: ["WebPage"],
+    };
     const issue = evaluatePages([{ url: "https://a.test/contact", facts }]).find(
       (entry) => entry.check === "structured_data_type_missing",
     );
@@ -199,13 +202,19 @@ describe("expected schema types", () => {
   });
 
   it("does not fire on a page it could not classify", () => {
-    const facts = { ...extractPageFacts(HTML, "words", "https://a.test/xyz"), jsonLdTypes: ["WebPage"] };
+    const facts = {
+      ...extractPageFacts(HTML, "words", "https://a.test/xyz"),
+      jsonLdTypes: ["WebPage"],
+    };
     const checks = evaluatePages([{ url: "https://a.test/xyz", facts }]).map((i) => i.check);
     expect(checks).not.toContain("structured_data_type_missing");
   });
 
   it("accepts the expected type declared anywhere in the graph", () => {
-    const facts = { ...extractPageFacts(HTML, "words", "https://a.test/faq"), jsonLdTypes: ["WebPage", "FAQPage"] };
+    const facts = {
+      ...extractPageFacts(HTML, "words", "https://a.test/faq"),
+      jsonLdTypes: ["WebPage", "FAQPage"],
+    };
     const checks = evaluatePages([{ url: "https://a.test/faq", facts }]).map((i) => i.check);
     expect(checks).not.toContain("structured_data_type_missing");
   });
@@ -217,10 +226,60 @@ describe("expected schema types", () => {
   });
 
   it("glosses an unmapped declared type generically rather than printing its bare name", () => {
-    const facts = { ...extractPageFacts(HTML, "words", "https://a.test/contact"), jsonLdTypes: ["Organization"] };
+    const facts = {
+      ...extractPageFacts(HTML, "words", "https://a.test/contact"),
+      jsonLdTypes: ["Organization"],
+    };
     const issue = evaluatePages([{ url: "https://a.test/contact", facts }]).find(
       (entry) => entry.check === "structured_data_type_missing",
     );
     expect(issue?.detail).toContain("a different kind of structured data (Organization)");
+  });
+});
+
+describe("redirects and canonical chains", () => {
+  it("reports an address that did not serve itself", () => {
+    const facts = extractPageFacts(HTML, "words", "https://a.test/one");
+    const issue = evaluatePages([
+      { url: "https://a.test/old", facts, finalUrl: "https://a.test/one" },
+    ]).find((entry) => entry.check === "url_redirects");
+    expect(issue?.detail).toContain("https://a.test/one");
+  });
+
+  it("ignores a trailing slash difference, which is not a redirect worth naming", () => {
+    const facts = extractPageFacts(HTML, "words", "https://a.test/one");
+    const checks = evaluatePages([
+      { url: "https://a.test/one/", facts, finalUrl: "https://a.test/one" },
+    ]).map((i) => i.check);
+    expect(checks).not.toContain("url_redirects");
+  });
+
+  it("reports a canonical whose own target points somewhere else again", () => {
+    const one = {
+      ...extractPageFacts(HTML, "words", "https://a.test/one"),
+      canonical: "https://a.test/two",
+    };
+    const two = {
+      ...extractPageFacts(HTML, "words", "https://a.test/two"),
+      canonical: "https://a.test/three",
+    };
+    const checks = evaluatePages([
+      { url: "https://a.test/one", facts: one },
+      { url: "https://a.test/two", facts: two },
+    ])
+      .filter((i) => i.check === "canonical_chain")
+      .map((i) => i.url);
+    expect(checks).toEqual(["https://a.test/one"]);
+  });
+
+  it("reads a meta refresh out of the page", () => {
+    const facts = extractPageFacts(
+      `<html><head><meta http-equiv="refresh" content="0;url=/two"></head><body></body></html>`,
+      "words",
+      "https://a.test/one",
+    );
+    expect(facts.hasMetaRefresh).toBe(true);
+    const checks = evaluatePages([{ url: "https://a.test/one", facts }]).map((i) => i.check);
+    expect(checks).toContain("meta_refresh");
   });
 });

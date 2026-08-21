@@ -55,6 +55,9 @@ export const PAGE_CHECK_FIX: Record<CheckId, AuditFixTarget | null> = {
   url_underscores: null,
   url_query_string: null,
   orphan_page: null,
+  url_redirects: null,
+  canonical_chain: null,
+  meta_refresh: null,
 };
 
 /** Which governed change kind can fix each site level check. */

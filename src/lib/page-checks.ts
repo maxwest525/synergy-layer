@@ -29,6 +29,7 @@ export type PageFacts = {
   ogTitle: string | null;
   ogImage: string | null;
   hasFavicon: boolean;
+  hasMetaRefresh?: boolean;
 };
 
 export type CheckId =
@@ -58,7 +59,10 @@ export type CheckId =
   | "og_missing"
   | "url_underscores"
   | "url_query_string"
-  | "orphan_page";
+  | "orphan_page"
+  | "url_redirects"
+  | "canonical_chain"
+  | "meta_refresh";
 
 export type Severity = "critical" | "warning" | "advice";
 
@@ -387,6 +391,44 @@ export const CHECKS: Record<CheckId, CheckDefinition> = {
       `Link to ${n} pages from somewhere a reader can reach from your home page. Nothing on the site points at them today.`,
     fixableByWordingProposal: false,
   },
+  // Reference: Screaming Frog's redirects guide — a redirect is an extra hop
+  // between the address you published and the page that answers.
+  // https://www.screamingfrog.co.uk/learn-seo/redirects/
+  // Canonicalization doc: Google picks one address per page, so publishing the
+  // address that redirects makes the site declare the hop rather than the page.
+  // https://developers.google.com/search/docs/crawling-indexing/canonicalization
+  url_redirects: {
+    check: "url_redirects",
+    label: "Address redirects instead of answering",
+    severity: "warning",
+    instruction: (n) =>
+      `Publish the address that actually answers on ${n} pages instead of one that redirects to it.`,
+    fixableByWordingProposal: false,
+  },
+  // Reference: Screaming Frog's canonicals guide — a canonical pointing at a
+  // page that itself canonicalizes elsewhere is a chain, and the middle page's
+  // declaration is the one Google has to resolve.
+  // https://www.screamingfrog.co.uk/learn-seo/canonicals/
+  canonical_chain: {
+    check: "canonical_chain",
+    label: "Canonical points at another canonical",
+    severity: "warning",
+    instruction: (n) =>
+      `Point the canonical address on ${n} pages straight at the final page instead of another redirect in the chain.`,
+    fixableByWordingProposal: false,
+  },
+  // Reference: Screaming Frog's redirects guide lists meta refresh among the
+  // redirect types, and it is the one that happens in the browser after the
+  // page has already been served.
+  // https://www.screamingfrog.co.uk/learn-seo/redirects/
+  meta_refresh: {
+    check: "meta_refresh",
+    label: "Redirects in the browser, not on the server",
+    severity: "advice",
+    instruction: (n) =>
+      `Replace the meta refresh on ${n} pages with a server redirect, so the redirect happens before the page is served.`,
+    fixableByWordingProposal: false,
+  },
 };
 
 // Stated assumption: display truncation is by pixels and unpublished; these
@@ -701,6 +743,9 @@ export function extractPageFacts(html: string, markdown: string, pageUrl: string
     ogTitle: metaContent(html, "property", "og:title"),
     ogImage: metaContent(html, "property", "og:image"),
     hasFavicon,
+    hasMetaRefresh: metaTags(html).some(
+      (tag) => attr(tag, "http-equiv")?.toLowerCase() === "refresh",
+    ),
   };
 }
 
@@ -721,7 +766,7 @@ function duplicateKeys(values: (string | null)[]): Set<string> {
   return new Set([...counts.entries()].filter(([, count]) => count > 1).map(([key]) => key));
 }
 
-export type AnalyzedPage = { url: string; facts: PageFacts };
+export type AnalyzedPage = { url: string; facts: PageFacts; finalUrl?: string | null };
 
 /**
  * Pages no chain of internal links reaches from the home page.
@@ -782,12 +827,24 @@ export function evaluatePages(pages: AnalyzedPage[]): PageIssue[] {
   const duplicateDescriptions = duplicateKeys(pages.map((page) => page.facts.metaDescription));
   const unreachable = unreachablePages(pages);
 
+  // Keyed the same way as internalLinkTargets: origin + pathname, trailing
+  // slash stripped, so a slash alone never counts as a different address.
+  const canonicalByAddress = new Map<string, string | null>();
+  for (const page of pages) {
+    const key = linkKey(page.url, page.url);
+    if (key)
+      canonicalByAddress.set(
+        key,
+        page.facts.canonical ? linkKey(page.facts.canonical, page.url) : null,
+      );
+  }
+
   const issues: PageIssue[] = [];
   const add = (check: CheckId, url: string, detail: string): void => {
     issues.push({ check, url, severity: CHECKS[check].severity, detail });
   };
 
-  for (const { url, facts } of pages) {
+  for (const { url, facts, finalUrl } of pages) {
     const title = facts.title;
     if (!title) add("title_missing", url, "The page has no tab title at all.");
     else {
@@ -880,6 +937,34 @@ export function evaluatePages(pages: AnalyzedPage[]): PageIssue[] {
 
     if (unreachable.has(url))
       add("orphan_page", url, "No chain of links from the home page reaches this page.");
+
+    if (finalUrl !== undefined && finalUrl !== null) {
+      const from = linkKey(url, url);
+      const to = linkKey(finalUrl, url);
+      if (from && to && from !== to) {
+        add("url_redirects", url, `This address redirects to ${finalUrl}.`);
+      }
+    }
+
+    if (facts.canonical) {
+      const target = linkKey(facts.canonical, url);
+      const targetsOwnCanonical = target ? canonicalByAddress.get(target) : undefined;
+      if (target && targetsOwnCanonical) {
+        add(
+          "canonical_chain",
+          url,
+          `The canonical address, ${facts.canonical}, itself canonicalizes elsewhere.`,
+        );
+      }
+    }
+
+    if (facts.hasMetaRefresh) {
+      add(
+        "meta_refresh",
+        url,
+        "The page redirects with a meta refresh tag instead of a server redirect.",
+      );
+    }
   }
 
   return issues;

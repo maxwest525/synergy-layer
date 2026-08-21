@@ -298,7 +298,11 @@ export async function readPageAudit(client: Client, tenantId: string): Promise<P
   const duplicates = findDuplicateWording(readable);
   const analyzed = readable
     .filter((observation) => observation.facts)
-    .map((observation) => ({ url: observation.url, facts: observation.facts as PageFacts }));
+    .map((observation) => ({
+      url: observation.url,
+      facts: observation.facts as PageFacts,
+      finalUrl: observation.finalUrl,
+    }));
   const findings = groupFindings(evaluatePages(analyzed));
 
   const site = await latestSiteFacts(client, tenantId, property);
