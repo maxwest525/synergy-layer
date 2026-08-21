@@ -83,7 +83,11 @@ function makeStore(
 
 function makeGithub(
   content: string,
-  options: { head?: string; markerHit?: { commitSha: string; commitUrl: string } | null } = {},
+  options: {
+    head?: string;
+    markerHit?: { commitSha: string; commitUrl: string } | null;
+    writeError?: string;
+  } = {},
 ) {
   const writes: unknown[] = [];
   const github: GithubApi = {
@@ -92,6 +96,7 @@ function makeGithub(
     findCommitByMarker: async () => options.markerHit ?? null,
     commitFile: async (input) => {
       writes.push(input);
+      if (options.writeError) throw new Error(options.writeError);
       return { commitSha: "new-sha", commitUrl: "https://github.com/acme/site/commit/new-sha" };
     },
   };
@@ -344,7 +349,7 @@ describe("revertSourceChange", () => {
   });
 
   it("refuses when no source commit was ever recorded", async () => {
-    const { store } = makeStore(makeRequest());
+    const { store } = makeStore(makeRequest({ state: "applied" }));
     const { github, writes } = makeGithub(appliedFile);
     const outcome = await revertSourceChange({
       store,
@@ -356,6 +361,68 @@ describe("revertSourceChange", () => {
     expect(outcome.status).toBe("refused");
     expect(outcome.message).toContain("nothing to revert");
     expect(writes).toHaveLength(0);
+  });
+
+  it("refuses a change request in a state the roll_back transition would not accept", async () => {
+    const { store, attempts } = makeStore(makeRequest({ commitSha: "live-sha" }));
+    const { github, writes } = makeGithub(appliedFile, { head: "live-sha" });
+    const outcome = await revertSourceChange({
+      store,
+      github,
+      requestId: "x",
+      actorId: "operator",
+    });
+
+    expect(outcome.status).toBe("refused");
+    expect(outcome.message).toContain("only an applied or verified change request");
+    expect(writes).toHaveLength(0);
+    expect(attempts[0]).toMatchObject({ kind: "source_revert", status: "refused" });
+  });
+
+  it("records a revert commit already in the branch instead of refusing on head drift", async () => {
+    const { store, attempts } = makeStore(makeRequest({ commitSha: "live-sha", state: "applied" }));
+    const { github, writes } = makeGithub(file, {
+      head: "revert-sha",
+      markerHit: {
+        commitSha: "revert-sha",
+        commitUrl: "https://github.com/acme/site/commit/revert-sha",
+      },
+    });
+    const outcome = await revertSourceChange({
+      store,
+      github,
+      requestId: "x",
+      actorId: "operator",
+    });
+
+    expect(outcome.status).toBe("reconciled");
+    expect(outcome.commitSha).toBe("revert-sha");
+    expect(writes).toHaveLength(0);
+    expect(attempts[0]).toMatchObject({
+      kind: "source_revert",
+      status: "reconciled",
+      commitSha: "revert-sha",
+    });
+  });
+
+  it("does not claim no revert commit exists when the write itself failed", async () => {
+    const { store, attempts } = makeStore(makeRequest({ commitSha: "live-sha", state: "applied" }));
+    const { github } = makeGithub(appliedFile, {
+      head: "live-sha",
+      writeError: "502 Bad Gateway",
+    });
+    const outcome = await revertSourceChange({
+      store,
+      github,
+      requestId: "x",
+      actorId: "operator",
+    });
+
+    expect(outcome.status).toBe("failed");
+    expect(outcome.message).not.toContain("No revert commit was created");
+    expect(outcome.message).toContain("did not complete cleanly");
+    expect(outcome.message).toContain("502 Bad Gateway");
+    expect(attempts[0]).toMatchObject({ kind: "source_revert", status: "failed" });
   });
 });
 

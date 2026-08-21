@@ -92,7 +92,9 @@ BEGIN
     FROM public.change_request_executions e
     WHERE e.change_request_id = _id
       AND e.kind = 'source_revert'
-      AND e.status = 'reverted'
+      -- 'reconciled' is a revert commit the executor found in the branch rather
+      -- than wrote; the commit exists either way, which is what this guards.
+      AND e.status IN ('reverted', 'reconciled')
       AND e.commit_sha IS NOT NULL
     ORDER BY e.created_at DESC
     LIMIT 1;

@@ -18,7 +18,7 @@ describe("rollback transition contract", () => {
     expect(sql).toMatch(/IF _action = 'roll_back' THEN/);
     expect(sql).toMatch(/FROM public\.change_request_executions e/);
     expect(sql).toMatch(/e\.kind = 'source_revert'/);
-    expect(sql).toMatch(/e\.status = 'reverted'/);
+    expect(sql).toMatch(/e\.status IN \('reverted', 'reconciled'\)/);
     expect(sql).toMatch(/e\.commit_sha IS NOT NULL/);
     expect(sql).toMatch(/IF v_revert_sha IS NULL THEN\s+RAISE EXCEPTION/);
   });

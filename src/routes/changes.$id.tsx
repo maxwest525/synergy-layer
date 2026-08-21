@@ -330,8 +330,21 @@ function ChangeRequestPage() {
       // The rolled_back state requires a recorded revert commit, so the commit
       // is written first and a refusal never reaches the transition.
       const reverted = await revert({ data: { id } });
-      if (reverted.status !== "reverted") throw new Error(reverted.message);
-      return rollBack({ data: payload });
+      if (reverted.status !== "reverted" && reverted.status !== "reconciled") {
+        throw new Error(reverted.message);
+      }
+      try {
+        return await rollBack({ data: payload });
+      } catch (error) {
+        // The source already moved. Naming the revert commit is the only way
+        // the operator learns that from a failed transition.
+        const sha = reverted.commitSha ? ` in ${reverted.commitSha.slice(0, 10)}` : "";
+        throw new Error(
+          `The previous values were committed back${sha}, but this change request could not be marked rolled back: ${
+            error instanceof Error ? error.message : "the transition failed."
+          }`,
+        );
+      }
     },
     onSuccess: (result) => {
       toast.success(
@@ -618,28 +631,39 @@ function ChangeRequestPage() {
       {state === "applied" || state === "verified" ? (
         <GlassCard className="p-5">
           <h2 className="text-sm font-semibold text-foreground">Rollback</h2>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Reverting commits these stored before values back to the site source, then marks the
-            change rolled back. If the commit cannot be applied cleanly, nothing moves.
-          </p>
-          <ul className="mt-3 space-y-2">
-            {fields.map((field) => (
-              <li key={`rollback-${field.field}`} className="text-sm text-muted-foreground">
-                {field.label ?? field.field}:{" "}
-                <span className="text-foreground">{field.before}</span>
-              </li>
-            ))}
-          </ul>
-          <div className="mt-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              disabled={busy}
-              onClick={() => mutation.mutate("rollback")}
-            >
-              Revert and roll back
-            </Button>
-          </div>
+          {change.source_commit_sha ? (
+            <>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Reverting commits these stored before values back to the site source, then marks the
+                change rolled back. A refused revert writes nothing and leaves the state where it
+                is.
+              </p>
+              <ul className="mt-3 space-y-2">
+                {fields.map((field) => (
+                  <li key={`rollback-${field.field}`} className="text-sm text-muted-foreground">
+                    {field.label ?? field.field}:{" "}
+                    <span className="text-foreground">{field.before}</span>
+                  </li>
+                ))}
+              </ul>
+              <div className="mt-4">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={busy}
+                  onClick={() => mutation.mutate("rollback")}
+                >
+                  Revert and roll back
+                </Button>
+              </div>
+            </>
+          ) : (
+            <p className="mt-2 text-sm text-muted-foreground">
+              No source commit is recorded for this change request, so the executor did not apply it
+              and cannot revert it. Undo it wherever it was applied by hand. AOOS will not mark a
+              rollback it did not perform.
+            </p>
+          )}
         </GlassCard>
       ) : null}
 

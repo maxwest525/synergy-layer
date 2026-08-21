@@ -36,4 +36,13 @@ describe("AOOS operator surface", () => {
     expect(changeDetail).toContain('to="/seo-runs/$id"');
     expect(changeDetail).toContain("Back to originating SEO run");
   });
+
+  it("offers the revert button only where a source commit exists to revert", () => {
+    const changeDetail = readFileSync(`${routesDirectory}/changes.$id.tsx`, "utf8");
+    const rollbackCard = changeDetail.slice(changeDetail.indexOf(">Rollback<"));
+
+    expect(rollbackCard).toMatch(/change\.source_commit_sha \? \([\s\S]*Revert and roll back/);
+    expect(rollbackCard).toContain("No source commit is recorded for this change request");
+    expect(rollbackCard).not.toContain("nothing moves");
+  });
 });

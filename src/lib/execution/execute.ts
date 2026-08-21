@@ -300,7 +300,7 @@ export async function executeSourceChange(input: {
 }
 
 export type RevertOutcome = {
-  status: "reverted" | "refused" | "failed";
+  status: "reverted" | "reconciled" | "refused" | "failed";
   message: string;
   commitSha?: string;
   commitUrl?: string;
@@ -341,6 +341,15 @@ export async function revertSourceChange(input: {
     return { status: "failed", message: `No revert commit was created. ${message}` };
   };
 
+  // The executor's own precondition has to match the states the roll_back
+  // transition accepts, or this writes production commits for a request the
+  // database will then refuse to move.
+  if (request.state !== "applied" && request.state !== "verified") {
+    return refuse(
+      `Refused without writing: only an applied or verified change request can be reverted. This one is ${request.state}.`,
+    );
+  }
+
   if (!request.commitSha) {
     return refuse(
       "Refused without writing: no source commit is recorded for this change request, so there is nothing to revert.",
@@ -364,12 +373,40 @@ export async function revertSourceChange(input: {
   }
 
   const { repo, branch } = allowed.value;
+  const marker = revertCommitMarker(request.id);
 
+  // A revert that lands leaves the head past the commit it undid, so the drift
+  // rule below would refuse every retry. Searching for the revert marker first
+  // is the only way an unrecorded revert commit can still be recorded.
+  let existing: { commitSha: string; commitUrl: string } | null;
   let head: string;
   try {
+    existing = await input.github.findCommitByMarker({
+      repo,
+      branch,
+      path: request.filePath,
+      marker,
+    });
     head = await input.github.branchHead(repo, branch);
   } catch (error) {
     return fail(error instanceof Error ? error.message : "GitHub read failed.");
+  }
+
+  if (existing) {
+    await record({
+      kind: "source_revert",
+      status: "reconciled",
+      commitSha: existing.commitSha,
+      commitUrl: existing.commitUrl,
+      detail: { marker, revertedCommitSha: request.commitSha, reason: "commit_found_by_marker" },
+    });
+    return {
+      status: "reconciled",
+      message:
+        "A commit carrying this change request's revert marker already existed in the branch. AOOS recorded it instead of writing a second time.",
+      commitSha: existing.commitSha,
+      commitUrl: existing.commitUrl,
+    };
   }
 
   const drift = branchHeadDrift({
@@ -418,7 +455,7 @@ export async function revertSourceChange(input: {
       detail: {
         revertedCommitSha: request.commitSha,
         headBeforeCommit: head,
-        marker: revertCommitMarker(request.id),
+        marker,
         replacements: applied.value.replaced,
       },
     });
@@ -430,7 +467,14 @@ export async function revertSourceChange(input: {
       commitUrl: result.commitUrl,
     };
   } catch (error) {
-    return fail(error instanceof Error ? error.message : "GitHub write failed.");
+    // A write that errors after GitHub applied it leaves a real revert commit,
+    // so this must not claim none exists.
+    const message = error instanceof Error ? error.message : "GitHub write failed.";
+    await record({ kind: "source_revert", status: "failed", error: message });
+    return {
+      status: "failed",
+      message: `The write was attempted and did not complete cleanly. ${message} Run this again: AOOS checks for an existing commit carrying this change request's revert marker before writing anything.`,
+    };
   }
 }
 
