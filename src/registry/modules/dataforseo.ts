@@ -120,7 +120,7 @@ export const definition: ModuleDefinition = {
       kind: "internal_module",
       category: "Organic",
       description:
-        "Re-reads the approved keyword set against stored SERP snapshots and the pages the audit has read, and files what it finds as suggestions: an approved search nothing has looked up, and an approved search no page is about. Costs nothing and calls no provider.",
+        "Re-reads the approved keyword set against stored SERP snapshots, the pages the audit has read, and the two most recent referring-domain snapshots, and files what it finds as suggestions: an approved search nothing has looked up, an approved search no page is about, and a meaningful change in who links here. Costs nothing and calls no provider.",
       integrationState: "real",
       operations: [
         {
@@ -283,7 +283,7 @@ export const definition: ModuleDefinition = {
       key: "dfs-targeting-pass",
       name: "Targeting pass",
       description:
-        "Turns the approved keyword set and the stored SERP snapshots into suggestions. Costs nothing, calls no provider, and never approves or tracks anything on its own.",
+        "Turns the approved keyword set, the stored SERP snapshots, and referring-domain movement into suggestions. Costs nothing, calls no provider, and never approves or tracks anything on its own.",
       triggerKind: "manual",
       graph: {
         nodes: [{ key: "target", kind: "capability", ref: "serp.targeting" }],

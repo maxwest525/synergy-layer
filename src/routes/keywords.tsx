@@ -15,7 +15,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { runKeywordEnrichment } from "@/lib/dataforseo.functions";
-import { estimatedEnrichmentCostUsd } from "@/lib/dataforseo/keyword-enrichment.server";
+import {
+  ENRICHMENT_BATCH_CAP,
+  estimatedEnrichmentCostUsd,
+} from "@/lib/dataforseo/keyword-enrichment.server";
 import { decideKeywordCandidates, listKeywordCandidates } from "@/lib/keywords.functions";
 import { OperatorRouteError } from "@/components/os/route-error";
 
@@ -281,9 +284,10 @@ function KeywordReviewPage() {
             </Button>
           </GlassCard>
           <p id="enrich-cost" className="text-xs text-muted-foreground">
-            Costs about ${estimatedEnrichmentCostUsd().toFixed(2)} — two paid look-ups covering
-            every keyword waiting for a decision, however many there are. Nothing is spent until you
-            click, and no keyword is approved by it.
+            Costs about ${estimatedEnrichmentCostUsd().toFixed(2)} — two paid look-ups covering up
+            to {ENRICHMENT_BATCH_CAP.toLocaleString()} keywords waiting for a decision at a time;
+            the rest run on the next click. Nothing is spent until you click, and no keyword is
+            approved by it.
           </p>
 
           <ul className="space-y-2">

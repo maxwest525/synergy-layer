@@ -782,18 +782,19 @@ async function runSerpCompetitorNode(client: Client, ref: string): Promise<NodeO
     const { deriveCompetitorsFromSerp } = await import("./dataforseo/competitors.server");
 
     const tenantId = await requireTenantId(client);
-    const property = await getSelectedProperty(client);
-    const own = (property ?? "")
-      .replace(/^sc-domain:/, "")
-      .replace(/^https?:\/\//, "")
-      .replace(/\/$/, "");
-    if (!own) return { ok: false, error: "No owned property is selected." };
 
     if (ref === "serp.targeting") {
       const { runTargetingPass } = await import("./dataforseo/targeting-rules.server");
       const result = await runTargetingPass(client, tenantId);
       return { ok: true, output: { ...result, costUsd: 0 } };
     }
+
+    const property = await getSelectedProperty(client);
+    const own = (property ?? "")
+      .replace(/^sc-domain:/, "")
+      .replace(/^https?:\/\//, "")
+      .replace(/\/$/, "");
+    if (!own) return { ok: false, error: "No owned property is selected." };
 
     if (ref === "serp.competitor_intelligence") {
       const { buildCompetitorProfiles } =
