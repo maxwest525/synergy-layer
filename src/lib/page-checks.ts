@@ -133,6 +133,9 @@ export const CHECKS: Record<CheckId, CheckDefinition> = {
       `Trim the search description on ${n} pages to under 160 characters so the snippet under your link reads well in results.`,
     fixableByWordingProposal: false,
   },
+  // Snippet doc covers appearance and click-through, not ranking; it does
+  // not state a description ranking effect at all.
+  // https://developers.google.com/search/docs/appearance/snippet
   description_too_short: {
     check: "description_too_short",
     label: "Search description too thin",

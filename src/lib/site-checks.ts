@@ -242,6 +242,9 @@ export function evaluateSite(facts: SiteFacts): SiteFinding[] {
       fixableByChangeKind: "site.crawl_directives",
     });
   } else if (facts.sitemapStatus !== null && facts.sitemapStatus >= 400) {
+    // Sitemaps overview: same doc as above — a sitemap that returns an
+    // error can't tell Google anything about the site's pages.
+    // https://developers.google.com/search/docs/crawling-indexing/sitemaps/overview
     findings.push({
       check: "sitemap_unreachable",
       label: "Sitemap cannot be read",
@@ -251,6 +254,9 @@ export function evaluateSite(facts: SiteFacts): SiteFinding[] {
       fixableByChangeKind: "site.crawl_directives",
     });
   } else if ((facts.sitemapUrlCount ?? 0) === 0) {
+    // Sitemaps overview: same doc as above — an empty sitemap gives Google
+    // no page addresses to read.
+    // https://developers.google.com/search/docs/crawling-indexing/sitemaps/overview
     findings.push({
       check: "sitemap_empty",
       label: "Sitemap lists no pages",
