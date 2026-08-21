@@ -49,3 +49,42 @@ export const getDataForSeoState = createServerFn({ method: "POST" })
       pendingKeywordCandidates: (candidates ?? []).length,
     };
   });
+
+/**
+ * Metered. One DataForSEO Labs task per approved competitor, fired only by an
+ * explicit operator click with the estimate shown on the button. Results are
+ * filed as pending keyword candidates and go through the existing approval
+ * gate; nothing is tracked here.
+ */
+export const runCompetitorKeywordGap = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { assertOperator } = await import("./os-admin.server");
+    await assertOperator(context.supabase, context.userId);
+    const { requireTenantId } = await import("./tenant.server");
+    const tenantId = await requireTenantId(context.supabase);
+
+    const { getSelectedProperty } = await import("./search-console.server");
+    const property = await getSelectedProperty(context.supabase);
+    const ownDomain = (property ?? "")
+      .replace(/^sc-domain:/, "")
+      .replace(/^https?:\/\//, "")
+      .replace(/\/$/, "");
+    if (!ownDomain) throw new Error("No owned property is selected to compare against.");
+
+    const { runKeywordGap } = await import("./dataforseo/keyword-gap.server");
+    const result = await runKeywordGap(context.supabase, tenantId, ownDomain);
+
+    const { logActivity } = await import("./os.server");
+    await logActivity(context.supabase, {
+      tenantId,
+      actorKind: "user",
+      actorId: context.userId,
+      verb: "keyword.gap.collected",
+      subjectKind: "capability",
+      summary: `Compared the site against ${result.competitors} approved competitors and filed ${result.filed} keyword candidates for review${result.unparsed > 0 ? ` (${result.unparsed} items skipped: unrecognized response shape)` : ""}.`,
+      payload: { ...result },
+    });
+
+    return result;
+  });

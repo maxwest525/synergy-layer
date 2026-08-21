@@ -33,6 +33,12 @@ export const definition: ModuleDefinition = {
           description: "Collect the ranked keyword landscape for a domain.",
           mutates: false,
         },
+        {
+          name: "labs.domain_intersection",
+          description:
+            "Compare the owned domain against one approved competitor and list the searches only they rank for. Operator-triggered; results enter the keyword approval queue.",
+          mutates: false,
+        },
       ],
       config: {
         mutating: false,

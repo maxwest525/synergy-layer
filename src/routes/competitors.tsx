@@ -30,6 +30,8 @@ import {
   listCompetitorShortlist,
   updateCompanyClassification,
 } from "@/lib/competitors.functions";
+import { estimatedGapCostUsd } from "@/lib/dataforseo/keyword-gap.server";
+import { runCompetitorKeywordGap } from "@/lib/dataforseo.functions";
 import { OperatorRouteError } from "@/components/os/route-error";
 
 const shortlistQuery = {
@@ -74,6 +76,8 @@ function CompetitorReviewPage() {
   const queryClient = useQueryClient();
   const decide = useServerFn(decideCompetitorCandidates);
   const classify = useServerFn(updateCompanyClassification);
+  const runGap = useServerFn(runCompetitorKeywordGap);
+  const trackedCount = data.tracked.filter((row) => row.active).length;
   const [selected, setSelected] = useState<string[]>([]);
   const [expanded, setExpanded] = useState<string | null>(null);
 
@@ -105,6 +109,21 @@ function CompetitorReviewPage() {
       void queryClient.invalidateQueries({ queryKey: ["competitor-shortlist"] });
       void queryClient.invalidateQueries({ queryKey: ["inbox"] });
       void queryClient.invalidateQueries({ queryKey: ["overview"] });
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+  const gapMutation = useMutation({
+    mutationFn: () => runGap(),
+    onSuccess: (result) => {
+      toast.success(
+        `${result.filed} searches filed for approval from ${result.competitors} competitors${
+          result.unparsed > 0
+            ? ` (${result.unparsed} items skipped: unrecognized response shape)`
+            : ""
+        }.`,
+      );
+      void queryClient.invalidateQueries({ queryKey: ["keyword-candidates"] });
     },
     onError: (error: Error) => toast.error(error.message),
   });
@@ -144,6 +163,26 @@ function CompetitorReviewPage() {
         eyebrow="Decide"
         title="Competitors"
         description="Derived from the stored SERP evidence for approved keywords. Ranking alone is not proof of business competition, so every row carries its own confidence and reasoning. Nothing is tracked until you approve it."
+        actions={
+          trackedCount > 0 ? (
+            <div className="flex flex-col items-end gap-1">
+              <Button
+                type="button"
+                size="sm"
+                disabled={gapMutation.isPending}
+                onClick={() => gapMutation.mutate()}
+                aria-describedby="gap-cost"
+              >
+                {gapMutation.isPending ? "Comparing…" : "Find searches they win and you miss"}
+              </Button>
+              <p id="gap-cost" className="text-xs text-muted-foreground">
+                Costs about ${estimatedGapCostUsd(trackedCount).toFixed(2)} — one paid look-up per
+                approved competitor. Nothing is spent until you click, and every search it finds
+                arrives in the keyword queue for approval before anything tracks it.
+              </p>
+            </div>
+          ) : undefined
+        }
       />
 
       <div className="grid gap-4 sm:grid-cols-4">
