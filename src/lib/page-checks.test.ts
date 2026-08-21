@@ -1,7 +1,14 @@
 import { describe, expect, it } from "vitest";
 
 import type { AnalyzedPage } from "./page-checks";
-import { CHECKS, evaluatePages, extractPageFacts, groupFindings, urlDefects } from "./page-checks";
+import {
+  CHECKS,
+  evaluatePages,
+  extractPageFacts,
+  groupFindings,
+  pageCategory,
+  urlDefects,
+} from "./page-checks";
 
 const HTML = `<!doctype html><html lang="en"><head>
 <title>Movers</title>
@@ -163,5 +170,49 @@ describe("orphan pages", () => {
   it("says nothing when no home page is among the read pages", () => {
     const issues = evaluatePages([linked("https://a.test/deep/one", [])]);
     expect(issues.some((issue) => issue.check === "orphan_page")).toBe(false);
+  });
+});
+
+describe("expected schema types", () => {
+  it("classifies pages from the address alone, and admits when it cannot", () => {
+    expect(pageCategory("https://a.test/")).toBe("home");
+    expect(pageCategory("https://a.test/contact-us")).toBe("contact");
+    expect(pageCategory("https://a.test/faq")).toBe("question");
+    expect(pageCategory("https://a.test/blog/moving-day")).toBe("article");
+    expect(pageCategory("https://a.test/services/packing")).toBe("service");
+    expect(pageCategory("https://a.test/xyz")).toBe("other");
+  });
+
+  it("names the missing type when a page has other structured data", () => {
+    const facts = { ...extractPageFacts(HTML, "words", "https://a.test/contact"), jsonLdTypes: ["WebPage"] };
+    const issue = evaluatePages([{ url: "https://a.test/contact", facts }]).find(
+      (entry) => entry.check === "structured_data_type_missing",
+    );
+    expect(issue?.detail).toContain("LocalBusiness");
+  });
+
+  it("does not fire on a page with no structured data at all", () => {
+    const facts = { ...extractPageFacts(HTML, "words", "https://a.test/contact"), jsonLdTypes: [] };
+    const checks = evaluatePages([{ url: "https://a.test/contact", facts }]).map((i) => i.check);
+    expect(checks).toContain("structured_data_missing");
+    expect(checks).not.toContain("structured_data_type_missing");
+  });
+
+  it("does not fire on a page it could not classify", () => {
+    const facts = { ...extractPageFacts(HTML, "words", "https://a.test/xyz"), jsonLdTypes: ["WebPage"] };
+    const checks = evaluatePages([{ url: "https://a.test/xyz", facts }]).map((i) => i.check);
+    expect(checks).not.toContain("structured_data_type_missing");
+  });
+
+  it("accepts the expected type declared anywhere in the graph", () => {
+    const facts = { ...extractPageFacts(HTML, "words", "https://a.test/faq"), jsonLdTypes: ["WebPage", "FAQPage"] };
+    const checks = evaluatePages([{ url: "https://a.test/faq", facts }]).map((i) => i.check);
+    expect(checks).not.toContain("structured_data_type_missing");
+  });
+
+  it("accepts a documented LocalBusiness subtype like MovingCompany on a home page", () => {
+    const facts = extractPageFacts(HTML, "words", "https://a.test/");
+    const checks = evaluatePages([{ url: "https://a.test/", facts }]).map((i) => i.check);
+    expect(checks).not.toContain("structured_data_type_missing");
   });
 });

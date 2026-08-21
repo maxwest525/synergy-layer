@@ -50,6 +50,7 @@ export type CheckId =
   | "lang_missing"
   | "structured_data_missing"
   | "structured_data_invalid"
+  | "structured_data_type_missing"
   | "image_alt_missing"
   | "image_dimensions_missing"
   | "thin_content"
@@ -269,6 +270,18 @@ export const CHECKS: Record<CheckId, CheckDefinition> = {
     instruction: (n) => `Fix unreadable structured data on ${n} pages. Google is ignoring it now.`,
     fixableByWordingProposal: false,
   },
+  // Structured data policy doc: "Using structured data enables a feature to be
+  // present, it does not guarantee that it will be present" — the right type is
+  // what makes the feature possible at all.
+  // https://developers.google.com/search/docs/appearance/structured-data/sd-policies
+  structured_data_type_missing: {
+    check: "structured_data_type_missing",
+    label: "Structured data of the wrong kind",
+    severity: "advice",
+    instruction: (n) =>
+      `Describe ${n} pages with the kind of structured data Google reads for that kind of page.`,
+    fixableByWordingProposal: false,
+  },
   // Google Images doc: "Google uses alt text along with computer vision
   // algorithms and the contents of the page to understand the subject
   // matter of the image," and alt text "also improves accessibility for
@@ -388,6 +401,77 @@ export const DESCRIPTION_MIN = 70;
 // derives it — what would settle it is Google publishing any floor, which
 // it says it will not.
 export const THIN_CONTENT_WORDS = 250;
+
+export type PageCategory = "home" | "contact" | "question" | "article" | "service" | "other";
+
+/**
+ * Stated assumption: this is a small, conservative table of path prefixes, not
+ * a rule engine — it feeds one advisory check, so a miss just skips that
+ * check rather than misreporting one. An address that will not parse, or that
+ * matches nothing below, is "other".
+ */
+export function pageCategory(pageUrl: string): PageCategory {
+  let pathname: string;
+  try {
+    pathname = new URL(pageUrl).pathname.toLowerCase();
+  } catch {
+    return "other";
+  }
+  if (pathname === "/" || pathname === "") return "home";
+  if (pathname.includes("contact")) return "contact";
+  if (pathname.includes("faq") || pathname.includes("questions")) return "question";
+  const segments = pathname.split("/").filter((segment) => segment.length > 0);
+  const first = segments[0] ?? "";
+  if (["blog", "news", "articles", "guides"].includes(first)) return "article";
+  if (["services", "service"].includes(first) && segments.length > 1) return "service";
+  return "other";
+}
+
+/**
+ * The structured data type Google's own documentation names for each kind of
+ * page. Only types with a documented Google feature are listed; a page category
+ * with nothing documented maps to an empty list and is never reported.
+ */
+export const EXPECTED_SCHEMA: Record<PageCategory, string[]> = {
+  // Local business doc: "When users search for businesses ... Google Search
+  // results may display a prominent Google rich result" for LocalBusiness.
+  // https://developers.google.com/search/docs/appearance/structured-data/local-business
+  home: ["LocalBusiness"],
+  contact: ["LocalBusiness"],
+  // FAQ doc: "A Frequently Asked Question (FAQ) page contains a list of
+  // questions and answers pertaining to a particular topic."
+  // https://developers.google.com/search/docs/appearance/structured-data/faqpage
+  question: ["FAQPage"],
+  // Article doc: "Adding Article structured data to your news, blog, and sports
+  // article pages can help Google understand more about the web page."
+  // https://developers.google.com/search/docs/appearance/structured-data/article
+  article: ["Article", "BlogPosting", "NewsArticle"],
+  // Stated assumption: Google documents no Service rich result. Service is
+  // schema.org vocabulary a service page can carry so the offering is machine
+  // readable; what would settle it is Google documenting a Service feature.
+  service: ["Service"],
+  other: [],
+};
+
+/**
+ * Stated assumption: schema.org's own subtype hierarchy is not consulted here
+ * — that would mean guessing which of its many subtypes count. This lists
+ * only the specific subtype this audit has a reason to accept, keyed
+ * lowercase, mapped to the lowercase parent type(s) it satisfies.
+ */
+const ACCEPTED_SCHEMA_SUBTYPES: Record<string, string[]> = {
+  movingcompany: ["localbusiness"],
+};
+
+/** Whether any declared type is the expected type itself, or an accepted subtype of it. */
+function satisfiesExpectedSchema(declaredTypes: string[], expected: string[]): boolean {
+  const expectedLower = expected.map((type) => type.toLowerCase());
+  return declaredTypes.some((declaredType) => {
+    const type = declaredType.toLowerCase();
+    if (expectedLower.includes(type)) return true;
+    return (ACCEPTED_SCHEMA_SUBTYPES[type] ?? []).some((parent) => expectedLower.includes(parent));
+  });
+}
 
 function attr(tag: string, name: string): string | null {
   const match = new RegExp(`${name}\\s*=\\s*("([^"]*)"|'([^']*)')`, "i").exec(tag);
@@ -642,12 +726,10 @@ export function unreachablePages(pages: AnalyzedPage[]): Set<string> {
     }
   }
 
-  // Stated assumption: a home page whose own stored links never resolve to
-  // another read page (reached grows no further than the home page itself)
-  // is treated the same as having no home page at all — that would call
-  // every other read page an orphan at once, which reads as broken link
-  // capture rather than a broken site, and a false orphan is worse than a
-  // silent one.
+  // Home's captured links reach no other read page. That can mean a nav the
+  // parser cannot see (JS-rendered), OR a legitimate topology whose nav
+  // targets did not make this audit's capped 100-page sample — the two are
+  // indistinguishable here, so the check stays silent rather than mass-flagging.
   if (reached.size <= 1) return new Set();
 
   return new Set(
@@ -716,6 +798,16 @@ export function evaluatePages(pages: AnalyzedPage[]): PageIssue[] {
       add("structured_data_invalid", url, "Structured data on the page is not readable JSON.");
     else if (facts.jsonLdTypes.length === 0)
       add("structured_data_missing", url, "No structured data blocks were found.");
+    else {
+      const expected = EXPECTED_SCHEMA[pageCategory(url)];
+      if (expected.length > 0 && !satisfiesExpectedSchema(facts.jsonLdTypes, expected)) {
+        add(
+          "structured_data_type_missing",
+          url,
+          `This page describes itself as ${facts.jsonLdTypes.join(", ")}, and Google reads ${expected.join(" or ")} for this kind of page.`,
+        );
+      }
+    }
 
     if (facts.imagesMissingAlt > 0) {
       add(
