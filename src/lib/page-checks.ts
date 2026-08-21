@@ -70,6 +70,10 @@ export type CheckDefinition = {
 };
 
 export const CHECKS: Record<CheckId, CheckDefinition> = {
+  // Title-link doc: no character limit on <title>, but "the title link is
+  // truncated in Google Search results as needed, typically to fit the
+  // device width" — a missing title has nothing to truncate or rewrite.
+  // https://developers.google.com/search/docs/appearance/title-link
   title_missing: {
     check: "title_missing",
     label: "Missing tab title",
@@ -77,6 +81,10 @@ export const CHECKS: Record<CheckId, CheckDefinition> = {
     instruction: (n) => `Write a tab title for ${n} pages that have none.`,
     fixableByWordingProposal: true,
   },
+  // https://developers.google.com/search/docs/appearance/title-link —
+  // "the title link is truncated in Google Search results as needed,
+  // typically to fit the device width." TITLE_MAX is a proxy for that fit,
+  // not a documented character limit.
   title_too_long: {
     check: "title_too_long",
     label: "Tab title cut off in results",
@@ -84,6 +92,8 @@ export const CHECKS: Record<CheckId, CheckDefinition> = {
     instruction: (n) => `Shorten the tab title on ${n} pages so Google stops truncating it.`,
     fixableByWordingProposal: true,
   },
+  // Stated assumption: a short title reads as thin to a person scanning
+  // results; Google's own doc sets no minimum length for <title>.
   title_too_short: {
     check: "title_too_short",
     label: "Tab title too thin",
@@ -91,6 +101,8 @@ export const CHECKS: Record<CheckId, CheckDefinition> = {
     instruction: (n) => `Expand the tab title on ${n} pages to describe the page and the service.`,
     fixableByWordingProposal: true,
   },
+  // Stated assumption: no Google doc says duplicate titles are penalized;
+  // the reason given is for the reader comparing results, not for ranking.
   title_duplicate: {
     check: "title_duplicate",
     label: "Same tab title on several pages",
@@ -98,6 +110,11 @@ export const CHECKS: Record<CheckId, CheckDefinition> = {
     instruction: (n) => `Give each of these ${n} pages its own tab title.`,
     fixableByWordingProposal: true,
   },
+  // Snippet doc: "Google sometimes uses the meta description HTML element
+  // if it might give users a more accurate description of the page than
+  // content taken directly from the page" — a missing tag just means
+  // Google always falls back to page content instead.
+  // https://developers.google.com/search/docs/appearance/snippet
   description_missing: {
     check: "description_missing",
     label: "Missing search description",
@@ -105,20 +122,27 @@ export const CHECKS: Record<CheckId, CheckDefinition> = {
     instruction: (n) => `Write a search description for ${n} pages so Google stops inventing one.`,
     fixableByWordingProposal: false,
   },
+  // Snippet doc covers appearance and click-through, not ranking; it does
+  // not state a description ranking effect at all.
+  // https://developers.google.com/search/docs/appearance/snippet
   description_too_long: {
     check: "description_too_long",
     label: "Search description cut off",
     severity: "advice",
-    instruction: (n) => `Trim the search description on ${n} pages to under 160 characters.`,
+    instruction: (n) =>
+      `Trim the search description on ${n} pages to under 160 characters so the snippet under your link reads well in results.`,
     fixableByWordingProposal: false,
   },
   description_too_short: {
     check: "description_too_short",
     label: "Search description too thin",
     severity: "advice",
-    instruction: (n) => `Expand the search description on ${n} pages to at least 70 characters.`,
+    instruction: (n) =>
+      `Expand the search description on ${n} pages to at least 70 characters so the snippet under your link reads well in results.`,
     fixableByWordingProposal: false,
   },
+  // Stated assumption: no Google doc says duplicate descriptions are
+  // penalized; the reason given is for the reader comparing results.
   description_duplicate: {
     check: "description_duplicate",
     label: "Same search description on several pages",
@@ -126,6 +150,11 @@ export const CHECKS: Record<CheckId, CheckDefinition> = {
     instruction: (n) => `Give each of these ${n} pages its own search description.`,
     fixableByWordingProposal: false,
   },
+  // Title-link doc: "If Google Search detects that there are multiple
+  // large, prominent headings, it may use the first heading as the text
+  // for the title link" — a missing headline leaves nothing for that to
+  // draw on either.
+  // https://developers.google.com/search/docs/appearance/title-link
   h1_missing: {
     check: "h1_missing",
     label: "Missing headline",
@@ -133,6 +162,11 @@ export const CHECKS: Record<CheckId, CheckDefinition> = {
     instruction: (n) => `Add a main headline to ${n} pages that have none.`,
     fixableByWordingProposal: true,
   },
+  // Title-link doc: "If Google Search detects that there are multiple
+  // large, prominent headings, it may use the first heading as the text
+  // for the title link" — competing headlines invite Google to rewrite the
+  // title link rather than use the <title> tag.
+  // https://developers.google.com/search/docs/appearance/title-link
   h1_multiple: {
     check: "h1_multiple",
     label: "More than one main headline",
@@ -140,6 +174,8 @@ export const CHECKS: Record<CheckId, CheckDefinition> = {
     instruction: (n) => `Leave one main headline on ${n} pages and demote the rest.`,
     fixableByWordingProposal: true,
   },
+  // Stated assumption: no Google doc says a duplicate headline is
+  // penalized; the reason given is for the reader, not for ranking.
   h1_duplicate: {
     check: "h1_duplicate",
     label: "Same headline on several pages",
@@ -147,6 +183,11 @@ export const CHECKS: Record<CheckId, CheckDefinition> = {
     instruction: (n) => `Give each of these ${n} pages its own headline.`,
     fixableByWordingProposal: true,
   },
+  // Canonicalization doc: "A canonical URL is the URL of a page that
+  // Google chose as the most representative from a set of duplicate
+  // pages"; declaring one is a hint that helps Google "show only one
+  // version of the otherwise duplicate content in its search results."
+  // https://developers.google.com/search/docs/crawling-indexing/canonicalization
   canonical_missing: {
     check: "canonical_missing",
     label: "No canonical address",
@@ -154,6 +195,9 @@ export const CHECKS: Record<CheckId, CheckDefinition> = {
     instruction: (n) => `Declare the canonical address on ${n} pages so duplicates cannot split.`,
     fixableByWordingProposal: false,
   },
+  // Robots meta tag doc: noindex means "Do not show this page, media, or
+  // resource in search results."
+  // https://developers.google.com/search/docs/crawling-indexing/robots-meta-tag
   noindex: {
     check: "noindex",
     label: "Page blocked from Google",
@@ -161,6 +205,9 @@ export const CHECKS: Record<CheckId, CheckDefinition> = {
     instruction: (n) => `Remove the noindex tag from ${n} pages that should be findable.`,
     fixableByWordingProposal: false,
   },
+  // Robots meta tag doc: nofollow means "Do not follow the links on this
+  // page."
+  // https://developers.google.com/search/docs/crawling-indexing/robots-meta-tag
   nofollow: {
     check: "nofollow",
     label: "Links on the page not followed",
@@ -168,6 +215,9 @@ export const CHECKS: Record<CheckId, CheckDefinition> = {
     instruction: (n) => `Remove the nofollow robots tag from ${n} pages.`,
     fixableByWordingProposal: false,
   },
+  // Stated assumption: no viewport-specific Google doc quote was found
+  // this pass (the mobile-friendly doc URLs tried returned 404); kept as
+  // a standard mobile-rendering practice, not cited to Google's wording.
   viewport_missing: {
     check: "viewport_missing",
     label: "Not set up for phones",
@@ -175,6 +225,8 @@ export const CHECKS: Record<CheckId, CheckDefinition> = {
     instruction: (n) => `Add the mobile viewport tag to ${n} pages.`,
     fixableByWordingProposal: false,
   },
+  // Stated assumption: no Google doc quote on the html lang attribute was
+  // found this pass; kept as a general accessibility/clarity practice.
   lang_missing: {
     check: "lang_missing",
     label: "Language not declared",
@@ -182,6 +234,10 @@ export const CHECKS: Record<CheckId, CheckDefinition> = {
     instruction: (n) => `Declare the page language on ${n} pages.`,
     fixableByWordingProposal: false,
   },
+  // Structured data policy doc: "Using structured data enables a feature
+  // to be present, it does not guarantee that it will be present" — richer
+  // results, not ranking.
+  // https://developers.google.com/search/docs/appearance/structured-data/sd-policies
   structured_data_missing: {
     check: "structured_data_missing",
     label: "No structured data",
@@ -190,6 +246,10 @@ export const CHECKS: Record<CheckId, CheckDefinition> = {
       `Add structured data to ${n} pages so Google can show richer results for them.`,
     fixableByWordingProposal: false,
   },
+  // Structured data policy doc: "If your page contains a structured data
+  // issue, it can result in a manual action" against the rich-result
+  // eligibility; standard web ranking is unaffected.
+  // https://developers.google.com/search/docs/appearance/structured-data/sd-policies
   structured_data_invalid: {
     check: "structured_data_invalid",
     label: "Broken structured data",
@@ -197,6 +257,11 @@ export const CHECKS: Record<CheckId, CheckDefinition> = {
     instruction: (n) => `Fix unreadable structured data on ${n} pages. Google is ignoring it now.`,
     fixableByWordingProposal: false,
   },
+  // Google Images doc: "Google uses alt text along with computer vision
+  // algorithms and the contents of the page to understand the subject
+  // matter of the image," and alt text "also improves accessibility for
+  // people who can't see images."
+  // https://developers.google.com/search/docs/appearance/google-images
   image_alt_missing: {
     check: "image_alt_missing",
     label: "Images with no description",
@@ -204,13 +269,26 @@ export const CHECKS: Record<CheckId, CheckDefinition> = {
     instruction: (n) => `Describe the images on ${n} pages so they are readable and searchable.`,
     fixableByWordingProposal: false,
   },
+  // SEO starter guide: "The length of the content alone doesn't matter for
+  // ranking purposes (there's no magical word count target)." The only
+  // defensible reason to flag a near-empty page is that it gives Google
+  // nothing to understand, not that it hurts ranking.
+  // https://developers.google.com/search/docs/fundamentals/seo-starter-guide
+  // Stated assumption: 250 words is a proxy for "nearly empty"; nothing
+  // derives it — what would settle it is Google publishing any floor,
+  // which it says it will not.
   thin_content: {
     check: "thin_content",
-    label: "Very little text",
-    severity: "warning",
-    instruction: (n) => `Add real content to ${n} pages that carry almost no text.`,
+    label: "Almost nothing on the page",
+    severity: "advice",
+    instruction: (n) =>
+      `Give ${n} nearly empty pages something to say — a page with almost no text gives Google nothing to understand.`,
     fixableByWordingProposal: false,
   },
+  // SEO starter guide: "Links are a great way to connect your users and
+  // search engines to other parts of your site," and "the vast majority
+  // of the new pages Google finds every day are through links."
+  // https://developers.google.com/search/docs/fundamentals/seo-starter-guide
   no_internal_links: {
     check: "no_internal_links",
     label: "Orphaned from the rest of the site",
@@ -218,6 +296,9 @@ export const CHECKS: Record<CheckId, CheckDefinition> = {
     instruction: (n) => `Link ${n} isolated pages to the rest of the site.`,
     fixableByWordingProposal: false,
   },
+  // Stated assumption: Open Graph tags are a Facebook/social-platform
+  // convention, not a Google-documented signal; kept for how shared links
+  // look on other platforms, not for Search.
   og_missing: {
     check: "og_missing",
     label: "No share preview",
@@ -227,10 +308,17 @@ export const CHECKS: Record<CheckId, CheckDefinition> = {
   },
 };
 
+// Stated assumption: display truncation is by pixels and unpublished; these
+// character counts are folklore medians, kept only as a proxy.
 export const TITLE_MAX = 60;
 export const TITLE_MIN = 25;
+// Stated assumption: display truncation is by pixels and unpublished; these
+// character counts are folklore medians, kept only as a proxy.
 export const DESCRIPTION_MAX = 160;
 export const DESCRIPTION_MIN = 70;
+// Stated assumption: 250 words is a proxy for "nearly empty"; nothing
+// derives it — what would settle it is Google publishing any floor, which
+// it says it will not.
 export const THIN_CONTENT_WORDS = 250;
 
 function attr(tag: string, name: string): string | null {
