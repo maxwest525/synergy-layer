@@ -203,7 +203,7 @@ function SystemsPage() {
         description="Available to enable, enabled, credentialed, implemented, and callable from AOOS are separate facts. A system existing on a workstation, or a credential existing for it, does not make it callable from AOOS."
         actions={
           <Button variant="outline" asChild>
-            <Link to="/capabilities">Back to capabilities</Link>
+            <Link to="/capabilities/registry">Back to capabilities</Link>
           </Button>
         }
       />

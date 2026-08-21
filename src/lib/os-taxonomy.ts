@@ -88,7 +88,10 @@ export const WORKSPACE_GROUP: Readonly<Record<string, TaxonomyGroupKey>> = {
   "/openai-ads": "run_work",
   "/agents": "run_work",
 
-  "/capabilities": "system_health",
+  // The category front door. Its inventory workspace is /capabilities/registry,
+  // which stays under system health below.
+  "/capabilities": "decisions",
+  "/capabilities/registry": "system_health",
   "/spend": "system_health",
   "/operators": "system_health",
 };

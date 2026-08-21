@@ -229,9 +229,18 @@ const workspaces: readonly Workspace[] = [
 
   {
     to: "/capabilities",
-    label: "Setup",
+    label: "Connections",
     icon: Plug,
-    hint: "Connections, costs, access",
+    hint: "What each account collects, and whether it reaches you",
+    // The category front door, matching os-taxonomy. Its inventory workspace is
+    // the entry below.
+    group: "decisions",
+  },
+  {
+    to: "/capabilities/registry",
+    label: "Capability registry",
+    icon: Plug,
+    hint: "Every credential, module and skill",
     group: "system_health",
   },
   {
