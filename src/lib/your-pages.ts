@@ -452,8 +452,10 @@ export function buildYourPages(facts: YourPagesFacts): YourPagesView {
       secondCollection: facts.comparison.status === "ready",
       pageAudit: facts.lastObservedAt !== null,
       analytics: facts.sessions !== null,
-      // Nothing on this page reads a stored URL inspection yet.
+      // Nothing on this page reads a stored URL inspection or approved
+      // keywords yet.
       urlInspection: true,
+      approvedKeywords: true,
     }),
     neverRunNotice: facts.lastObservedAt === null ? NEVER_RUN : null,
     orphanNote:

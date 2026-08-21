@@ -61,6 +61,7 @@ function facts(overrides: Partial<GettingFoundFacts> = {}): GettingFoundFacts {
     queueSources: [],
     coverage: null,
     sessions: null,
+    approvedKeywords: 0,
     ...overrides,
   };
 }

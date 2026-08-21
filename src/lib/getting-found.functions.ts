@@ -29,6 +29,8 @@ export type GettingFoundExtras = {
   readonly coverage: PageCoverage | null;
   /** Null when analytics is not connected, which is not the same as no visits. */
   readonly sessions: number | null;
+  /** Approved keywords on the tenant. Zero means nothing has been chosen to target. */
+  readonly approvedKeywords: number;
 };
 
 /** The stored rows of one window snapshot, or none when the payload is not one. */
@@ -59,10 +61,17 @@ export const getGettingFoundExtras = createServerFn({ method: "POST" })
       null;
 
     if (property === null) {
-      return { latestDate: null, queries: [], pages: [], coverage: null, sessions: null };
+      return {
+        latestDate: null,
+        queries: [],
+        pages: [],
+        coverage: null,
+        sessions: null,
+        approvedKeywords: 0,
+      };
     }
 
-    const [windowResult, observedResult, ga4Result] = await Promise.all([
+    const [windowResult, observedResult, ga4Result, keywordResult] = await Promise.all([
       db
         .from("search_console_snapshots")
         .select("dimensions, period_end_pt, payload, totals")
@@ -92,6 +101,11 @@ export const getGettingFoundExtras = createServerFn({ method: "POST" })
         .eq("tenant_id", tenantId)
         .order("end_date", { ascending: false })
         .limit(1),
+      db
+        .from("tracked_keywords")
+        .select("keyword", { count: "exact", head: true })
+        .eq("tenant_id", tenantId)
+        .eq("active", true),
     ]);
 
     const windows = assertRead("Search Console window snapshots", windowResult).data ?? [];
@@ -140,6 +154,8 @@ export const getGettingFoundExtras = createServerFn({ method: "POST" })
     const sessions =
       typeof rawSessions === "number" && Number.isFinite(rawSessions) ? rawSessions : null;
 
+    const approvedKeywords = assertRead("Approved keywords", keywordResult).count ?? 0;
+
     return {
       latestDate: completeDate,
       queries: topRows(rowsOf(queryWindow?.payload)),
@@ -158,5 +174,6 @@ export const getGettingFoundExtras = createServerFn({ method: "POST" })
               pagesWithImpressions: countShownPages(pageRows, readable),
             },
       sessions,
+      approvedKeywords,
     };
   });

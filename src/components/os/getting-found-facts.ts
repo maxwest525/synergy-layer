@@ -67,6 +67,7 @@ export function useGettingFound(): GettingFoundQuery {
       queueSources: facts.queueSources.filter((source) => source.categoryId === CATEGORY_ID),
       coverage: extras.data.coverage,
       sessions: extras.data.sessions,
+      approvedKeywords: extras.data.approvedKeywords,
     }),
     isPending,
     error: null,

@@ -50,6 +50,7 @@ const facts: GettingFoundFacts = {
   queueSources: [],
   coverage: null,
   sessions: null,
+  approvedKeywords: 0,
 };
 
 function withFacts(overrides: Partial<GettingFoundFacts>): GettingFoundFacts {
@@ -566,6 +567,7 @@ describe("what still has to happen before this volume can be judged", () => {
         comparison: READY,
         coverage: { pagesKnown: 48, pagesWithImpressions: 9 },
         sessions: 40,
+        approvedKeywords: 1,
       }),
     );
     expect(view.answerability?.waitingOn).toEqual([]);
