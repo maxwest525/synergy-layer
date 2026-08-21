@@ -160,8 +160,15 @@ export const editTitleH1Proposal = createServerFn({ method: "POST" })
     const live = liveEvidence(row["evidence"]);
     const base = row["source_revision_before"];
     if (typeof base !== "string" || !base) throw new Error("This draft has no source baseline.");
+    // The edit is proved against the file this draft was drawn from, not against
+    // whichever file the wording lane happens to default to.
+    const sourceFile = row["source_file"];
+    if (typeof sourceFile !== "string" || !sourceFile) {
+      throw new Error("This draft records no source file, so an edit cannot be proved against it.");
+    }
     const changes = await proveEditedWordingAgainstSource({
       baseRevision: base,
+      sourceFile,
       liveTitle: live.title,
       liveH1: live.h1,
       ...wording,

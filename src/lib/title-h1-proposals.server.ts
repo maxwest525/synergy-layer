@@ -3,11 +3,12 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import {
   GOVERNED_BRANCH,
-  GOVERNED_FILE,
   GOVERNED_PROJECT_ID,
   GOVERNED_REPO,
+  changeKindForFile,
 } from "./execution/allowlist";
 import { createGithubApi, createRenderedVerifier } from "./execution/execute.server";
+import { resolvePageSource } from "./execution/page-source-map";
 import { applyExactReplacements, countOccurrences } from "./execution/source-change";
 import { generateTitleH1Wording } from "./gemini.server";
 import { retrieveKnowledgeGuidance } from "./knowledge-retrieval.server";
@@ -248,16 +249,26 @@ export async function prepareTitleH1Proposal(
       "An executable source baseline cannot be proven: GITHUB_EXECUTOR_TOKEN is not configured.",
     );
   }
+  // Which file renders this page, rather than assuming the service data file.
+  // Assuming it meant a finding on any other page drafted against a file that
+  // does not render it, then failed on the uniqueness check below — a refusal
+  // that described the wrong problem.
+  const resolved = resolvePageSource(targetUrl);
+  if (!resolved.ok) throw new Error(resolved.reason);
+  const sourceFile = resolved.source.filePath;
+
   const head = await github.branchHead(GOVERNED_REPO, GOVERNED_BRANCH);
-  const source = await github.readFile(GOVERNED_REPO, GOVERNED_FILE, head);
+  const source = await github.readFile(GOVERNED_REPO, sourceFile, head);
   if (countOccurrences(source.content, evidence.livePage.title) !== 1) {
     throw new Error(
-      "The rendered live title is not one unique literal in the allowlisted source file.",
+      `The rendered live title is not one unique literal in ${sourceFile}, ` +
+        `where ${resolved.source.because}.`,
     );
   }
   if (countOccurrences(source.content, evidence.livePage.h1) !== 1) {
     throw new Error(
-      "The rendered live H1 is not one unique literal in the allowlisted source file.",
+      `The rendered live H1 is not one unique literal in ${sourceFile}, ` +
+        `where ${resolved.source.because}.`,
     );
   }
 
@@ -337,7 +348,7 @@ export async function prepareTitleH1Proposal(
     },
     sourceRepo: GOVERNED_REPO,
     sourceBranch: GOVERNED_BRANCH,
-    sourceFile: GOVERNED_FILE,
+    sourceFile,
     sourceProjectId: GOVERNED_PROJECT_ID,
     sourceRevisionBefore: head,
   };
@@ -345,6 +356,8 @@ export async function prepareTitleH1Proposal(
 
 export async function proveEditedWordingAgainstSource(input: {
   baseRevision: string;
+  /** The file this draft was based on, as recorded on the change request. */
+  sourceFile: string;
   liveTitle: string;
   liveH1: string;
   seoTitle: string;
@@ -359,7 +372,13 @@ export async function proveEditedWordingAgainstSource(input: {
       `Revision drift: source is at ${head.slice(0, 10)} but this draft was based on ${input.baseRevision.slice(0, 10)}. Regenerate from fresh evidence.`,
     );
   }
-  const source = await github.readFile(GOVERNED_REPO, GOVERNED_FILE, head);
+  // Re-read the file this draft was actually based on. Re-reading the service
+  // data file regardless would prove an edit against a file that does not
+  // render the page, and pass.
+  if (changeKindForFile(input.sourceFile) === null) {
+    throw new Error(`${input.sourceFile} is not a file any governed change kind may write.`);
+  }
+  const source = await github.readFile(GOVERNED_REPO, input.sourceFile, head);
   const changes = buildTitleH1Changes(
     {
       url: "",
