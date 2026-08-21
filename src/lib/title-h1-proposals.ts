@@ -60,7 +60,13 @@ export function buildDeterministicDevWording(evidence: ProposalEvidence): TitleH
   const observedQuery = [...evidence.gsc]
     .sort((a, b) => b.impressions - a.impressions || a.position - b.position)[0]
     ?.query.trim();
-  const normalized = (observedQuery || "corporate relocation movers")
+  // The wording and its rationale are both derived from this query, so without
+  // one there is nothing to build that does not invent a keyword and claim a
+  // Search Console source for it.
+  if (!observedQuery) {
+    throw new Error("Development-mode wording requires exact-page Google Search Console evidence.");
+  }
+  const normalized = observedQuery
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, " ")
     .trim();
@@ -75,9 +81,7 @@ export function buildDeterministicDevWording(evidence: ProposalEvidence): TitleH
   return validateTitleH1Wording({
     seoTitle: `${lead} | Corporate Relocation | TruMove`,
     h1: `${lead} & Corporate Relocation Services`,
-    rationale: `Development-mode wording uses the highest-impression exact-page GSC query${
-      observedQuery ? `, “${observedQuery},”` : ""
-    } while preserving the page's observed corporate-relocation intent. It bypasses only Gemini generation; all evidence, source-proof, review, and approval gates remain active.`,
+    rationale: `Development-mode wording uses the highest-impression exact-page GSC query, “${observedQuery},” while preserving the page's observed corporate-relocation intent. It bypasses only Gemini generation; all evidence, source-proof, review, and approval gates remain active.`,
   });
 }
 
@@ -372,6 +376,25 @@ export function buildProposalEvidenceGroups(
       },
     },
   ];
+}
+
+/**
+ * Zero rows informed nothing, and the competitor match mode describes rows that
+ * exist — `some` on an empty array reports "exact query" by default, not by
+ * observation. Neither is stated unless something was actually read.
+ */
+export function describeEvidenceRowsUsed(
+  evidence: ProposalEvidence,
+  competitorEvidenceMode: CompetitorEvidenceMode,
+): string {
+  if (evidence.gsc.length === 0 && evidence.competitors.length === 0) {
+    return "no exact-page Search Console or active-tracked-competitor rows were available to inform the wording.";
+  }
+  const matchMode =
+    evidence.competitors.length > 0
+      ? ` (${competitorEvidenceMode === "exact_query" ? "exact query" : "strict related-query fallback"})`
+      : "";
+  return `${evidence.gsc.length} exact-page GSC page/query rows and ${evidence.competitors.length} active-tracked-competitor DataForSEO organic rows${matchMode} informed the wording.`;
 }
 
 /** Reviewer-facing record of which evidence bar the proposal actually cleared. */

@@ -25,6 +25,7 @@ import {
   selectRelevantCompetitorEvidence,
   buildProposalEvidenceGroups,
   describeEvidenceMode,
+  describeEvidenceRowsUsed,
   type CompetitorSnapshotInput,
   type EvidenceMode,
   type GscSnapshotInput,
@@ -310,7 +311,7 @@ export async function preparePageMetadataProposal(
         evidenceMode,
       ),
     ],
-    evidenceSummary: `The current rendered meta description was observed at ${observedAt}; ${evidence.gsc.length} exact-page GSC page/query rows and ${evidence.competitors.length} active-tracked-competitor DataForSEO organic rows (${competitorEvidenceMode === "exact_query" ? "exact query" : "strict related-query fallback"}) informed the wording. ${describeEvidenceMode(evidenceMode)}`,
+    evidenceSummary: `The current rendered meta description was observed at ${observedAt}; ${describeEvidenceRowsUsed(evidence, competitorEvidenceMode)} ${describeEvidenceMode(evidenceMode)}`,
     evidenceLimitations:
       "Search Console rows are finalized historical observations, competitor rankings do not prove causation, and publication or performance improvement is not guaranteed.",
     riskNote: sitewideDefault

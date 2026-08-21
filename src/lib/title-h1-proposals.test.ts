@@ -7,6 +7,7 @@ import {
   buildProposalEvidenceGroups,
   buildTitleH1Prompt,
   describeEvidenceMode,
+  describeEvidenceRowsUsed,
   selectRelevantCompetitorEvidence,
   type ProposalEvidence,
 } from "./title-h1-proposals";
@@ -202,6 +203,29 @@ describe("title/H1 proposal evidence contract", () => {
     });
     expect(wording.seoTitle).not.toBe(complete.livePage.title);
     expect(wording.h1).not.toBe(complete.livePage.h1);
+    expect(wording.rationale).toContain("employee relocation movers");
+  });
+
+  it("refuses a deterministic dev draft when no GSC query backs its rationale", () => {
+    expect(() => buildDeterministicDevWording({ ...complete, gsc: [] })).toThrow(
+      /requires exact-page Google Search Console evidence/i,
+    );
+  });
+
+  it("names no row counts or competitor match mode when nothing was read", () => {
+    const empty = describeEvidenceRowsUsed({ ...complete, gsc: [], competitors: [] }, "exact_query");
+
+    expect(empty).toBe(
+      "no exact-page Search Console or active-tracked-competitor rows were available to inform the wording.",
+    );
+    expect(empty).not.toMatch(/exact query/);
+
+    expect(describeEvidenceRowsUsed({ ...complete, competitors: [] }, "exact_query")).toBe(
+      "1 exact-page GSC page/query rows and 0 active-tracked-competitor DataForSEO organic rows informed the wording.",
+    );
+    expect(describeEvidenceRowsUsed(complete, "related_query_fallback")).toContain(
+      "1 active-tracked-competitor DataForSEO organic rows (strict related-query fallback)",
+    );
   });
 
   it("builds a wording-only prompt with explicit roles and optional-source absence", () => {
