@@ -134,7 +134,7 @@ If it fails in CI it is not done, whatever passed locally.
 
 ## Commits and PRs
 
-- Commit subjects are free-form (35% conventional). Match the surrounding style; do not impose a new convention.
+- Commit subjects are **free-form**. Match the surrounding style; do not impose a new convention.
 - Never force-push, rebase, or amend commits that are already pushed.
 
 ## Reporting back
