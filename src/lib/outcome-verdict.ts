@@ -25,6 +25,8 @@
  * doing exactly what it should.
  */
 
+import { confidenceInCountChange, MIN_BASELINE } from "./confidence";
+
 /**
  * The windows the research actually grounds.
  *
@@ -52,6 +54,13 @@ export type OutcomeReading = {
    * property, so nothing can read it. Not the same as having failed.
    */
   readonly measurable: boolean;
+  /** The 28 days ending the day before approval, from the stored window-0 GSC observation. Null when never stored — stated, not defaulted. */
+  readonly baseline: { readonly impressions: number; readonly clicks: number } | null;
+  /** Site-wide impressions over the same before/after pair, from property_totals daily snapshots. Null when fewer days are stored than the pair needs. */
+  readonly siteTrend: {
+    readonly beforeImpressions: number;
+    readonly afterImpressions: number;
+  } | null;
 };
 
 export type OutcomeAssessment = {
@@ -60,15 +69,14 @@ export type OutcomeAssessment = {
   readonly reason: string;
 };
 
-/** 28d: a page shown this often has been given a real chance to be clicked. */
-const REAL_EXPOSURE = 100;
-/** 28d: clicks that count as the page having earned traffic. */
-const EARNED_CLICKS = 5;
-/** 56d and 90d: sustained visibility across the window. */
-const SUSTAINED_IMPRESSIONS = 300;
-
 function isGrounded(days: number): days is GroundedWindow {
   return (GROUNDED_WINDOWS as readonly number[]).includes(days);
+}
+
+/** The site's own after/before ratio over the same weeks, or null when too little site history is stored to trust it. */
+function siteRatio(trend: OutcomeReading["siteTrend"]): number | null {
+  if (trend === null || trend.beforeImpressions < MIN_BASELINE) return null;
+  return trend.afterImpressions / trend.beforeImpressions;
 }
 
 /**
@@ -121,41 +129,65 @@ export function outcomeVerdict(reading: OutcomeReading): OutcomeAssessment {
         };
   }
 
-  if (reading.windowDays === 28) {
-    if (reading.clicks >= EARNED_CLICKS) {
-      return {
-        verdict: "success",
-        reason: `This page earned ${reading.clicks} clicks from ${reading.impressions} appearances in four weeks.`,
-      };
-    }
-    if (reading.impressions >= REAL_EXPOSURE) {
-      // The load-bearing rule. See the module comment.
+  // 28, 56 and 90 days all ask the same question: did this change move the
+  // number, against the site's own before picture and the site's own tide?
+  // The level alone answers neither, which is why it is never used here.
+  if (reading.baseline === null) {
+    return {
+      verdict: "neutral",
+      reason:
+        "No before picture was stored for this change, so there is nothing honest to compare against. The level alone cannot say whether the fix did anything.",
+    };
+  }
+
+  const scale = reading.windowDays / 28;
+  const scaledBaselineImpressions = reading.baseline.impressions * scale;
+  const scaledBaselineClicks = reading.baseline.clicks * scale;
+  const scalingNote =
+    scale === 1
+      ? ""
+      : ` (the ${reading.windowDays} day window is compared against the 28 day baseline scaled ×${scale.toFixed(2).replace(/\.?0+$/, "")}, ${reading.baseline.impressions} to ${Math.round(scaledBaselineImpressions)})`;
+
+  const confidence = confidenceInCountChange(scaledBaselineImpressions, reading.impressions);
+  if (confidence.band === "low") {
+    return { verdict: "neutral", reason: confidence.reason };
+  }
+
+  if (reading.impressions < scaledBaselineImpressions) {
+    // A fall. Clicks holding despite fewer impressions is the same AIO-shaped
+    // rule as the zero-click case below: the page is still earning what it is
+    // shown, so a drop in visibility alone is not graded a failure.
+    if (reading.clicks >= scaledBaselineClicks) {
       return {
         verdict: "neutral",
-        reason: `Shown ${reading.impressions} times and clicked ${reading.clicks} times. Being shown without being clicked is not a failure in 2026: an AI Overview on the results page cuts clicks sharply even when your page is doing its job. Keep measuring.`,
+        reason: `Shown ${reading.impressions} times against a baseline of ${Math.round(scaledBaselineImpressions)}${scalingNote}, but clicks held at ${reading.clicks}. A page shown less but still earning its clicks is not a failure.`,
       };
     }
     return {
       verdict: "failure",
-      reason: `Shown only ${reading.impressions} times in four weeks and clicked ${reading.clicks} times. There is not enough visibility here for the wording to be the problem.`,
+      reason: `Fell from ${Math.round(scaledBaselineImpressions)} to ${reading.impressions} impressions${scalingNote}, and clicks fell with it, from ${Math.round(scaledBaselineClicks)} to ${reading.clicks}. ${confidence.reason}`,
     };
   }
 
-  // 56 and 90 days both ask whether the visibility held.
-  if (reading.impressions >= SUSTAINED_IMPRESSIONS) {
-    return {
-      verdict: "success",
-      reason: `Still being shown, ${reading.impressions} times over ${reading.windowDays} days. The gain held.`,
-    };
-  }
-  if (reading.impressions > 0) {
+  // A rise. It only counts as this change's doing once the site's own tide is
+  // ruled out: a page rising no faster than the whole site rose is riding the
+  // tide, not the treatment.
+  const tide = siteRatio(reading.siteTrend);
+  const changeRatio = reading.impressions / scaledBaselineImpressions;
+  if (tide !== null && changeRatio <= tide) {
     return {
       verdict: "neutral",
-      reason: `Shown ${reading.impressions} times over ${reading.windowDays} days. Present but not growing, so it is worth watching rather than judging.`,
+      reason: `Rose from ${Math.round(scaledBaselineImpressions)} to ${reading.impressions} impressions, ×${changeRatio.toFixed(1)}, but the whole site rose ×${tide.toFixed(1)} over the same weeks, so this is the tide, not the treatment.`,
     };
   }
+  const tideNote =
+    tide === null
+      ? " No site trend was stored to compare against, so call this a success qualified, not certain."
+      : tide >= 0.95 && tide <= 1.05
+        ? " The site held flat over the same weeks, so this looks like the treatment, not the tide."
+        : ` The site itself moved ×${tide.toFixed(1)} over the same weeks, less than this page's ×${changeRatio.toFixed(1)}.`;
   return {
-    verdict: "failure",
-    reason: `Not shown once over ${reading.windowDays} days. Whatever visibility this had did not last.`,
+    verdict: "success",
+    reason: `Rose from ${Math.round(scaledBaselineImpressions)} to ${reading.impressions} impressions${scalingNote}.${tideNote}`,
   };
 }

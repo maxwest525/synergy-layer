@@ -9,6 +9,8 @@ function reading(overrides: Partial<OutcomeReading> = {}): OutcomeReading {
     impressions: 0,
     clicks: 0,
     measurable: true,
+    baseline: null,
+    siteTrend: null,
     ...overrides,
   };
 }
@@ -28,26 +30,27 @@ describe("the windows are the ones the research grounds", () => {
 
 describe("the rule that matters most in 2026", () => {
   it("calls no clicks with real impressions neutral, not failure", () => {
-    // Organic CTR drops 61% on queries showing an AI Overview. A page appearing
-    // in search but unclicked is not a failed page.
-    const verdict = outcomeVerdict(reading({ impressions: 140, clicks: 0 }));
+    // Organic CTR drops 61% on queries showing an AI Overview. A page shown
+    // less but still earning what it is shown is not a failed page.
+    const verdict = outcomeVerdict(
+      reading({ impressions: 140, clicks: 0, baseline: { impressions: 300, clicks: 0 } }),
+    );
     expect(verdict.verdict).toBe("neutral");
-    expect(verdict.reason).toMatch(/AI Overview|shown/i);
+    expect(verdict.reason).toMatch(/shown/i);
   });
 
-  it("still calls no clicks and almost no impressions a failure", () => {
-    const verdict = outcomeVerdict(reading({ impressions: 12, clicks: 0 }));
+  it("still calls a real fall with clicks gone a failure", () => {
+    const verdict = outcomeVerdict(
+      reading({ impressions: 12, clicks: 0, baseline: { impressions: 100, clicks: 20 } }),
+    );
     expect(verdict.verdict).toBe("failure");
   });
 
-  it("counts five clicks as a success at 28 days", () => {
-    const verdict = outcomeVerdict(reading({ impressions: 400, clicks: 5 }));
+  it("counts a clear rise with no site trend to explain it as a success", () => {
+    const verdict = outcomeVerdict(
+      reading({ impressions: 400, clicks: 5, baseline: { impressions: 50, clicks: 0 } }),
+    );
     expect(verdict.verdict).toBe("success");
-  });
-
-  it("counts four clicks as not yet a success", () => {
-    const verdict = outcomeVerdict(reading({ impressions: 400, clicks: 4 }));
-    expect(verdict.verdict).toBe("neutral");
   });
 });
 
@@ -116,22 +119,124 @@ describe("refusing to grade what it cannot", () => {
   });
 });
 
-describe("the later windows", () => {
-  it("judges 56 days on sustained visibility", () => {
-    expect(
-      outcomeVerdict(reading({ windowDays: 56, daysSinceLive: 60, impressions: 300 })).verdict,
-    ).toBe("success");
-    expect(
-      outcomeVerdict(reading({ windowDays: 56, daysSinceLive: 60, impressions: 40 })).verdict,
-    ).toBe("neutral");
-    expect(
-      outcomeVerdict(reading({ windowDays: 56, daysSinceLive: 60, impressions: 0 })).verdict,
-    ).toBe("failure");
+describe("the later windows scale the 28 day baseline", () => {
+  it("scales ×2 at 56 days and grades a real rise a success", () => {
+    const graded = outcomeVerdict(
+      reading({
+        windowDays: 56,
+        daysSinceLive: 60,
+        impressions: 900,
+        clicks: 60,
+        baseline: { impressions: 100, clicks: 5 },
+      }),
+    );
+    expect(graded.verdict).toBe("success");
+    expect(graded.reason).toContain("200");
   });
 
-  it("judges 90 days the same way, on a longer horizon", () => {
+  it("scales ×3.21 at 90 days and grades a real fall with clicks gone a failure", () => {
+    const graded = outcomeVerdict(
+      reading({
+        windowDays: 90,
+        daysSinceLive: 95,
+        impressions: 10,
+        clicks: 0,
+        baseline: { impressions: 100, clicks: 20 },
+      }),
+    );
+    expect(graded.verdict).toBe("failure");
+  });
+
+  it("without a stored baseline, 56 and 90 day windows say so instead of grading the level", () => {
+    expect(
+      outcomeVerdict(reading({ windowDays: 56, daysSinceLive: 60, impressions: 300 })).verdict,
+    ).toBe("neutral");
     expect(
       outcomeVerdict(reading({ windowDays: 90, daysSinceLive: 95, impressions: 300 })).verdict,
-    ).toBe("success");
+    ).toBe("neutral");
+  });
+});
+
+describe("the verdict grades the change, not the level", () => {
+  it("holding steady is neutral, not success", () => {
+    const graded = outcomeVerdict(
+      reading({
+        windowDays: 28,
+        daysSinceLive: 28,
+        impressions: 400,
+        clicks: 40,
+        baseline: { impressions: 400, clicks: 40 },
+        siteTrend: null,
+      }),
+    );
+    expect(graded.verdict).toBe("neutral");
+  });
+  it("a fall that clears the noise floor is a failure even with clicks remaining", () => {
+    const graded = outcomeVerdict(
+      reading({
+        windowDays: 28,
+        daysSinceLive: 28,
+        impressions: 60,
+        clicks: 6,
+        baseline: { impressions: 400, clicks: 50 },
+        siteTrend: null,
+      }),
+    );
+    expect(graded.verdict).toBe("failure");
+  });
+  it("a rise inside the noise is neutral and says so", () => {
+    const graded = outcomeVerdict(
+      reading({
+        windowDays: 28,
+        daysSinceLive: 28,
+        impressions: 13,
+        clicks: 1,
+        baseline: { impressions: 10, clicks: 1 },
+        siteTrend: null,
+      }),
+    );
+    expect(graded.verdict).toBe("neutral");
+    expect(graded.reason).toMatch(/noise|ordinary|too little/i);
+  });
+  it("a rise the whole site shares is the tide, not the treatment", () => {
+    const graded = outcomeVerdict(
+      reading({
+        windowDays: 28,
+        daysSinceLive: 28,
+        impressions: 200,
+        clicks: 10,
+        baseline: { impressions: 100, clicks: 5 },
+        siteTrend: { beforeImpressions: 300, afterImpressions: 620 },
+      }),
+    );
+    expect(graded.verdict).toBe("neutral");
+    expect(graded.reason).toMatch(/site/i);
+  });
+  it("with no stored baseline it says so instead of grading the level", () => {
+    const graded = outcomeVerdict(
+      reading({
+        windowDays: 28,
+        daysSinceLive: 28,
+        impressions: 150,
+        clicks: 8,
+        baseline: null,
+        siteTrend: null,
+      }),
+    );
+    expect(graded.verdict).toBe("neutral");
+    expect(graded.reason).toMatch(/baseline|before/i);
+  });
+  it("shown much more but still unclicked stays neutral (AIO rule survives)", () => {
+    const graded = outcomeVerdict(
+      reading({
+        windowDays: 28,
+        daysSinceLive: 28,
+        impressions: 160,
+        clicks: 0,
+        baseline: { impressions: 40, clicks: 0 },
+        siteTrend: null,
+      }),
+    );
+    expect(graded.verdict).not.toBe("failure");
   });
 });

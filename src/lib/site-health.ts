@@ -51,6 +51,13 @@ export type StoredOutcome = {
   readonly readingStatus: "complete" | "partial" | "empty";
   /** Days the window asked for against days actually stored. Null when unknown. */
   readonly coverage: { readonly expectedDays: number; readonly observedDays: number } | null;
+  /** The 28 days ending the day before approval, from the stored window-0 GSC observation. Null when never stored. */
+  readonly baseline: { readonly impressions: number; readonly clicks: number } | null;
+  /** Site-wide impressions over the same before/after pair. Null when fewer days are stored than the pair needs. */
+  readonly siteTrend: {
+    readonly beforeImpressions: number;
+    readonly afterImpressions: number;
+  } | null;
 };
 
 export type GradedOutcome = StoredOutcome & {
@@ -161,9 +168,41 @@ export function gradeOutcomes(outcomes: readonly StoredOutcome[]): GradedOutcome
       impressions: outcome.impressions,
       clicks: outcome.clicks,
       measurable: outcome.measurable,
+      baseline: outcome.baseline,
+      siteTrend: outcome.siteTrend,
     });
     return { ...outcome, verdict: assessment.verdict, reason: assessment.reason };
   });
+}
+
+/** One calendar day past a `YYYY-MM-DD` Pacific date string. */
+function nextDate(date: string): string {
+  const next = new Date(`${date}T00:00:00Z`);
+  next.setUTCDate(next.getUTCDate() + 1);
+  return next.toISOString().slice(0, 10);
+}
+
+/**
+ * Sum of daily site impressions inside [start, end], or null when any day is
+ * missing.
+ *
+ * A missing day is not a zero. Summing over a gap would understate the
+ * site's own trend and make a page's rise look bigger than the tide really
+ * was, which is exactly the honesty failure this module exists to avoid.
+ */
+export function sumSiteWindow(
+  days: ReadonlyArray<{ readonly date: string; readonly impressions: number }>,
+  start: string,
+  end: string,
+): { readonly impressions: number } | null {
+  const byDate = new Map(days.map((day) => [day.date, day.impressions]));
+  let sum = 0;
+  for (let cursor = start; cursor <= end; cursor = nextDate(cursor)) {
+    const value = byDate.get(cursor);
+    if (value === undefined) return null;
+    sum += value;
+  }
+  return { impressions: sum };
 }
 
 const SEVERITY_ORDER: Record<Severity, number> = { critical: 0, warning: 1, advice: 2 };

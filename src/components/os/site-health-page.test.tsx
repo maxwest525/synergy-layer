@@ -32,6 +32,8 @@ function outcome(overrides: Partial<StoredOutcome> = {}): StoredOutcome {
     measurable: true,
     readingStatus: "complete" as const,
     coverage: null,
+    baseline: null,
+    siteTrend: null,
     ...overrides,
   };
 }
@@ -84,7 +86,11 @@ beforeEach(() => {
 
 describe("grading the fixes, on screen", () => {
   it("says whether a fix worked, in words rather than a stored enum", async () => {
-    show({ outcomes: [outcome({ impressions: 400, clicks: 6 })] });
+    show({
+      outcomes: [
+        outcome({ impressions: 400, clicks: 6, baseline: { impressions: 50, clicks: 0 } }),
+      ],
+    });
     await userEvent.click(screen.getByRole("tab", { name: /Did the fixes work/ }));
     expect(screen.getByText("It worked")).toBeInTheDocument();
     // The operator never sees the stored value.
@@ -92,10 +98,14 @@ describe("grading the fixes, on screen", () => {
   });
 
   it("explains a verdict rather than asserting it", async () => {
-    show({ outcomes: [outcome({ impressions: 140, clicks: 0 })] });
+    show({
+      outcomes: [
+        outcome({ impressions: 140, clicks: 0, baseline: { impressions: 300, clicks: 0 } }),
+      ],
+    });
     await userEvent.click(screen.getByRole("tab", { name: /Did the fixes work/ }));
     expect(screen.getByText("No change yet")).toBeInTheDocument();
-    expect(screen.getByText(/AI Overview|shown/i)).toBeInTheDocument();
+    expect(screen.getByText(/shown/i)).toBeInTheDocument();
   });
 
   it("shows a reading on an underived window as not graded, and names why", async () => {
@@ -221,7 +231,9 @@ describe("landing on a tab from a link", () => {
     // "Wait for the measurement window, then read the outcome" used to arrive
     // on Suggestions, which usually says nothing is waiting.
     useSiteHealth.mockReturnValue({
-      view: buildSiteHealth(facts({ outcomes: [outcome()] })),
+      view: buildSiteHealth(
+        facts({ outcomes: [outcome({ baseline: { impressions: 50, clicks: 0 } })] }),
+      ),
       isPending: false,
       error: null,
     });
@@ -230,7 +242,7 @@ describe("landing on a tab from a link", () => {
   });
 
   it("still defaults to suggestions when the route asked for nothing", () => {
-    show({ outcomes: [outcome()] });
+    show({ outcomes: [outcome({ baseline: { impressions: 50, clicks: 0 } })] });
     expect(screen.queryByText("It worked")).not.toBeInTheDocument();
   });
 });

@@ -4,6 +4,7 @@ import {
   buildSiteHealth,
   gradeOutcomes,
   STORABLE_WINDOWS,
+  sumSiteWindow,
   worstSpeed,
   type SiteHealthFacts,
   type StoredOutcome,
@@ -25,6 +26,8 @@ function outcome(overrides: Partial<StoredOutcome> = {}): StoredOutcome {
     measurable: true,
     readingStatus: "complete" as const,
     coverage: null,
+    baseline: null,
+    siteTrend: null,
     ...overrides,
   };
 }
@@ -57,7 +60,14 @@ function withFacts(overrides: Partial<SiteHealthFacts>): SiteHealthFacts {
 
 describe("grading the fixes, which nothing has ever done", () => {
   it("grades a reading on a window the research derives", () => {
-    const [graded] = gradeOutcomes([outcome({ windowDays: 28, impressions: 400, clicks: 6 })]);
+    const [graded] = gradeOutcomes([
+      outcome({
+        windowDays: 28,
+        impressions: 400,
+        clicks: 6,
+        baseline: { impressions: 50, clicks: 0 },
+      }),
+    ]);
     expect(graded?.verdict).toBe("success");
     expect(graded?.reason.length).toBeGreaterThan(20);
   });
@@ -83,7 +93,9 @@ describe("grading the fixes, which nothing has ever done", () => {
   });
 
   it("still calls almost no impressions and no clicks a failure", () => {
-    const [graded] = gradeOutcomes([outcome({ impressions: 12, clicks: 0 })]);
+    const [graded] = gradeOutcomes([
+      outcome({ impressions: 12, clicks: 0, baseline: { impressions: 100, clicks: 20 } }),
+    ]);
     expect(graded?.verdict).toBe("failure");
   });
 
@@ -99,8 +111,18 @@ describe("what the page leads with", () => {
       withFacts({
         siteObservedAt: NOW,
         outcomes: [
-          outcome({ changeId: "worked", impressions: 400, clicks: 6 }),
-          outcome({ changeId: "failed", impressions: 12, clicks: 0 }),
+          outcome({
+            changeId: "worked",
+            impressions: 400,
+            clicks: 6,
+            baseline: { impressions: 50, clicks: 0 },
+          }),
+          outcome({
+            changeId: "failed",
+            impressions: 12,
+            clicks: 0,
+            baseline: { impressions: 100, clicks: 20 },
+          }),
         ],
       }),
     );
@@ -134,7 +156,12 @@ describe("what the page leads with", () => {
 
   it("says a fix did not work when nothing is blocking Google", () => {
     const view = buildSiteHealth(
-      withFacts({ siteObservedAt: NOW, outcomes: [outcome({ impressions: 12, clicks: 0 })] }),
+      withFacts({
+        siteObservedAt: NOW,
+        outcomes: [
+          outcome({ impressions: 12, clicks: 0, baseline: { impressions: 100, clicks: 20 } }),
+        ],
+      }),
     );
     expect(view.status.text).toMatch(/did not work/i);
   });
@@ -245,7 +272,13 @@ describe("defects an adversarial review found before this shipped", () => {
     // difference always floored to one day short and every reading on every
     // tenant graded "too early", forever. The whole feature was unreachable.
     const [graded] = gradeOutcomes([
-      outcome({ windowDays: 28, daysSinceLive: 28, impressions: 5000, clicks: 400 }),
+      outcome({
+        windowDays: 28,
+        daysSinceLive: 28,
+        impressions: 5000,
+        clicks: 400,
+        baseline: { impressions: 500, clicks: 50 },
+      }),
     ]);
     expect(graded?.verdict).toBe("success");
   });
@@ -352,7 +385,13 @@ describe("defects an adversarial review found before this shipped", () => {
 
   it("grades a 90 day reading, which the database could not previously hold", () => {
     const [graded] = gradeOutcomes([
-      outcome({ windowDays: 90, daysSinceLive: 95, impressions: 900, clicks: 30 }),
+      outcome({
+        windowDays: 90,
+        daysSinceLive: 95,
+        impressions: 900,
+        clicks: 30,
+        baseline: { impressions: 100, clicks: 5 },
+      }),
     ]);
     expect(graded?.verdict).toBe("success");
   });
@@ -387,6 +426,23 @@ describe("defects an adversarial review found before this shipped", () => {
     const tile = view.tiles.find((entry) => entry.label === "Slowest page");
     expect(tile?.explanation).toContain("/a");
     expect(tile?.explanation).toContain("2026-08-19");
+  });
+
+  it("sums daily site impressions across an inclusive date range", () => {
+    const days = [
+      { date: "2026-08-01", impressions: 10 },
+      { date: "2026-08-02", impressions: 20 },
+      { date: "2026-08-03", impressions: 30 },
+    ];
+    expect(sumSiteWindow(days, "2026-08-01", "2026-08-03")).toEqual({ impressions: 60 });
+  });
+
+  it("returns null when a day inside the range is missing", () => {
+    const days = [
+      { date: "2026-08-01", impressions: 10 },
+      { date: "2026-08-03", impressions: 30 },
+    ];
+    expect(sumSiteWindow(days, "2026-08-01", "2026-08-03")).toBeNull();
   });
 
   it("does not say Google can read the site while crawl problems are open", () => {
