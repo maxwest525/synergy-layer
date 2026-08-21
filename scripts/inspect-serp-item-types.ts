@@ -9,22 +9,41 @@ import type { Database } from "../src/integrations/supabase/types";
  *
  * Calls no provider and writes nothing.
  *
- * NOT YET RUN AGAINST REAL DATA (2026-08-21). This environment has no
- * SUPABASE_SECRET_KEY / SUPABASE_SERVICE_ROLE_KEY — only SUPABASE_PUBLISHABLE_KEY
- * is set in .env. Two attempts to reach real rows both failed to produce a
- * type histogram:
- *   1. Running this script with SUPABASE_PUBLISHABLE_KEY substituted for the
- *      secret key: "permission denied for function is_tenant_member" — RLS
- *      on dataforseo_snapshots requires an authenticated tenant session the
- *      anon key does not carry.
- *   2. The claude.ai Supabase MCP connector: list_projects does not include
- *      this repo's project (SUPABASE_PROJECT_ID from .env is not among the
- *      12 projects the connector has access to), so execute_sql cannot
- *      target it either.
- * No real-data read was possible from this environment. This is the
- * Outcome-B-adjacent case the task brief names explicitly: stop, do not
- * implement the parser, and report the block rather than guessing at
- * whether people_also_ask items exist in stored payloads.
+ * This implementer's local environment had no SUPABASE_SECRET_KEY /
+ * SUPABASE_SERVICE_ROLE_KEY, and the connected Supabase MCP project list
+ * did not include this repo's project, so this script itself could not be
+ * run here. The verification was instead completed by the controller via
+ * a read-only SQL query over the project database (Lovable DB connection,
+ * 2026-08-21):
+ *
+ *   select (elem->>'type') as type, count(*)
+ *   from dataforseo_snapshots, jsonb_array_elements(payload->'rows') as elem
+ *   where kind in ('serp_organic', 'serp_organic_live')
+ *   group by 1;
+ *
+ * VERIFIED RESULT — OUTCOME B: 40 stored snapshots of kind serp_organic.
+ * Item-type histogram: { organic: 741 }. No other type appears; count for
+ * people_also_ask is 0. peopleAlsoAskPresent = false.
+ *
+ * Why: `payload->'rows'` (see `ingestSerpPostback`, serp.server.ts:154-158)
+ * is a pre-filtered projection written at ingest time, not the raw
+ * `result[0].items` DataForSEO returns — non-organic item types, including
+ * people_also_ask, are stripped before storage. Their absence here reflects
+ * what AOOS chose to keep, not what Google returned.
+ *
+ * Conclusion: question mining from already-stored payloads does not ship.
+ * `readQuestionsFromRows` / `detectQuestionsWithoutPage` /
+ * `question_asked_no_page` were not implemented, per the task brief's gate.
+ *
+ * Two separate, uncosted follow-ups (neither implemented here):
+ *   (a) Widen `ingestSerpPostback` to retain non-organic item types. This
+ *       needs the `task_get/advanced` endpoint (serp.server.ts:158, :170)
+ *       in place of `task_get/regular`; nobody in this repo has measured
+ *       whether that endpoint is billed differently, so it must not be
+ *       promised as free.
+ *   (b) SerpAPI's `google_related_questions` endpoint — a metered call,
+ *       out of this lane's scope, requiring an explicit operator-approved
+ *       spend gate before use.
  */
 function required(name: string): string {
   const value = process.env[name]?.trim();
