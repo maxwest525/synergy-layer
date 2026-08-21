@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   detectKeywordsWithoutPage,
+  detectReferringDomainMovement,
   detectUnobservedKeywords,
   type ApprovedKeyword,
   type ObservedSerp,
@@ -65,5 +66,43 @@ describe("an approved keyword no page is about", () => {
 
   it("says nothing at all when the audit has read no pages, rather than accusing every keyword", () => {
     expect(detectKeywordsWithoutPage(approved("piano movers austin"), [])).toEqual([]);
+  });
+});
+
+describe("movement in the sites linking to this one", () => {
+  const prior = { reportingDate: "2026-07-14", domains: ["a.test", "b.test", "c.test"] };
+
+  it("says nothing when only one snapshot exists, because nothing can have moved", () => {
+    expect(detectReferringDomainMovement(null, prior)).toEqual([]);
+  });
+
+  it("says nothing when the two snapshots hold the same domains", () => {
+    expect(
+      detectReferringDomainMovement(prior, {
+        reportingDate: "2026-08-14",
+        domains: [...prior.domains],
+      }),
+    ).toEqual([]);
+  });
+
+  it("names what appeared and what disappeared between the two", () => {
+    const found = detectReferringDomainMovement(prior, {
+      reportingDate: "2026-08-14",
+      domains: ["a.test", "b.test", "d.test"],
+    });
+    expect(found).toHaveLength(1);
+    expect(found[0]?.rule).toBe("referring_domain_movement");
+    expect(found[0]?.evidence["gained"]).toEqual(["d.test"]);
+    expect(found[0]?.evidence["lost"]).toEqual(["c.test"]);
+  });
+
+  it("takes its confidence from the counts, not from a literal", () => {
+    const found = detectReferringDomainMovement(prior, {
+      reportingDate: "2026-08-14",
+      domains: ["a.test"],
+    });
+    // Three to one is far below confidence.ts's MIN_BASELINE of ten, so the
+    // finding is recorded and reported as weak rather than suppressed.
+    expect(found[0]?.confidence).toBeLessThan(0.4);
   });
 });

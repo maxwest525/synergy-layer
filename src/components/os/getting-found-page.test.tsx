@@ -62,6 +62,7 @@ function facts(overrides: Partial<GettingFoundFacts> = {}): GettingFoundFacts {
     coverage: null,
     sessions: null,
     approvedKeywords: 0,
+    backlinkSnapshots: 0,
     ...overrides,
   };
 }

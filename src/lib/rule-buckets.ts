@@ -21,7 +21,12 @@ export type RuleBucket = "fact" | "pooled" | "beyond_current_volume";
  * run, and an empty screen that explains only volume misnames why it is empty.
  */
 export type Prerequisite =
-  "second_collection" | "page_audit" | "analytics" | "url_inspection" | "approved_keywords";
+  | "second_collection"
+  | "page_audit"
+  | "analytics"
+  | "url_inspection"
+  | "approved_keywords"
+  | "backlink_collection";
 
 /** What has actually happened for this tenant, read from facts each page already holds. */
 export type PrerequisiteState = {
@@ -35,6 +40,8 @@ export type PrerequisiteState = {
   readonly urlInspection: boolean;
   /** The operator has approved at least one keyword to target. */
   readonly approvedKeywords: boolean;
+  /** Two stored backlink readings exist, so there is movement to compare. */
+  readonly backlinkCollection: boolean;
 };
 
 export type RuleAssignment = {
@@ -231,6 +238,13 @@ export const RULE_ASSIGNMENTS: readonly RuleAssignment[] = [
     alsoNeeds: ["approved_keywords", "page_audit"],
     why: 'Whether any read page carries the approved phrase in its title or H1 is read from page_metadata_observations, not inferred from counts. Google: "Other pages are discovered when Google extracts a link from a known page to a new page: for example, a hub page, such as a category page, links to a new blog post" (developers.google.com/search/docs/fundamentals/how-search-works, fetched 2026-08-21) — a page has to exist and be linked before it can rank, so a phrase with no page is a discovery gap, not a measurement question. detectKeywordsWithoutPage returns nothing when the audit has read no pages, so the page-audit prerequisite is real rather than decorative.',
   },
+  {
+    rule: "referring_domain_movement",
+    bucket: "pooled",
+    needsPerTarget: null,
+    alsoNeeds: ["backlink_collection", "second_collection"],
+    why: "The count of linking domains is a count, so it takes confidenceInCountChange like every other count-shaped rule rather than a literal: at this property's link volume a move of one or two domains sits inside ordinary variation, and the finding says so instead of being suppressed. It is pooled by construction — the whole property has one referring-domain set, not one per page. detectReferringDomainMovement returns nothing without two stored backlinks_referring_domains snapshots.",
+  },
 ];
 
 const PREREQUISITE_COPY: Record<Prerequisite, string> = {
@@ -240,6 +254,7 @@ const PREREQUISITE_COPY: Record<Prerequisite, string> = {
   analytics: "analytics connected, so visits can be counted at all",
   url_inspection: "a stored index check to compare against",
   approved_keywords: "at least one approved keyword, so there is something to target",
+  backlink_collection: "two stored backlink readings, so there is movement to compare",
 };
 
 const PREREQUISITE_STATE_KEY: Record<Prerequisite, keyof PrerequisiteState> = {
@@ -248,6 +263,7 @@ const PREREQUISITE_STATE_KEY: Record<Prerequisite, keyof PrerequisiteState> = {
   analytics: "analytics",
   url_inspection: "urlInspection",
   approved_keywords: "approvedKeywords",
+  backlink_collection: "backlinkCollection",
 };
 
 /** The unmet prerequisites across the given rules, worst-blocking first, as sentences. */

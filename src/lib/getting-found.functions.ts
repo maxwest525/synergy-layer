@@ -31,6 +31,8 @@ export type GettingFoundExtras = {
   readonly sessions: number | null;
   /** Approved keywords on the tenant. Zero means nothing has been chosen to target. */
   readonly approvedKeywords: number;
+  /** Stored backlinks_referring_domains snapshots. Two or more means movement can be compared. */
+  readonly backlinkSnapshots: number;
 };
 
 /** The stored rows of one window snapshot, or none when the payload is not one. */
@@ -68,45 +70,52 @@ export const getGettingFoundExtras = createServerFn({ method: "POST" })
         coverage: null,
         sessions: null,
         approvedKeywords: 0,
+        backlinkSnapshots: 0,
       };
     }
 
-    const [windowResult, observedResult, ga4Result, keywordResult] = await Promise.all([
-      db
-        .from("search_console_snapshots")
-        .select("dimensions, period_end_pt, payload, totals")
-        .eq("tenant_id", tenantId)
-        .eq("property", property)
-        .eq("kind", RULE_WINDOW_KIND)
-        .order("period_end_pt", { ascending: false })
-        // Three dimension sets are written per collection, so this spans several
-        // collections and the newest of each is picked out below.
-        .limit(30),
-      // What the page audit actually read. This is the honest denominator for
-      // "how much of the site is reachable": pages nobody has ever observed
-      // cannot be counted as either found or missing.
-      db
-        .from("page_metadata_observations")
-        .select("url")
-        .eq("tenant_id", tenantId)
-        .eq("property", property)
-        // A page the audit could not read is not a page we know about. Rows
-        // stored with a reason - unrenderable, or disallowed by robots.txt -
-        // would otherwise inflate the denominator and make a site of public
-        // pages plus blocked admin pages diagnose as unreachable.
-        .is("error", null),
-      db
-        .from("ga4_snapshots")
-        .select("end_date, metrics")
-        .eq("tenant_id", tenantId)
-        .order("end_date", { ascending: false })
-        .limit(1),
-      db
-        .from("tracked_keywords")
-        .select("keyword", { count: "exact", head: true })
-        .eq("tenant_id", tenantId)
-        .eq("active", true),
-    ]);
+    const [windowResult, observedResult, ga4Result, keywordResult, backlinkResult] =
+      await Promise.all([
+        db
+          .from("search_console_snapshots")
+          .select("dimensions, period_end_pt, payload, totals")
+          .eq("tenant_id", tenantId)
+          .eq("property", property)
+          .eq("kind", RULE_WINDOW_KIND)
+          .order("period_end_pt", { ascending: false })
+          // Three dimension sets are written per collection, so this spans several
+          // collections and the newest of each is picked out below.
+          .limit(30),
+        // What the page audit actually read. This is the honest denominator for
+        // "how much of the site is reachable": pages nobody has ever observed
+        // cannot be counted as either found or missing.
+        db
+          .from("page_metadata_observations")
+          .select("url")
+          .eq("tenant_id", tenantId)
+          .eq("property", property)
+          // A page the audit could not read is not a page we know about. Rows
+          // stored with a reason - unrenderable, or disallowed by robots.txt -
+          // would otherwise inflate the denominator and make a site of public
+          // pages plus blocked admin pages diagnose as unreachable.
+          .is("error", null),
+        db
+          .from("ga4_snapshots")
+          .select("end_date, metrics")
+          .eq("tenant_id", tenantId)
+          .order("end_date", { ascending: false })
+          .limit(1),
+        db
+          .from("tracked_keywords")
+          .select("keyword", { count: "exact", head: true })
+          .eq("tenant_id", tenantId)
+          .eq("active", true),
+        db
+          .from("dataforseo_snapshots")
+          .select("id", { count: "exact", head: true })
+          .eq("tenant_id", tenantId)
+          .eq("kind", "backlinks_referring_domains"),
+      ]);
 
     const windows = assertRead("Search Console window snapshots", windowResult).data ?? [];
 
@@ -155,6 +164,7 @@ export const getGettingFoundExtras = createServerFn({ method: "POST" })
       typeof rawSessions === "number" && Number.isFinite(rawSessions) ? rawSessions : null;
 
     const approvedKeywords = assertRead("Approved keywords", keywordResult).count ?? 0;
+    const backlinkSnapshots = assertRead("Backlink snapshots", backlinkResult).count ?? 0;
 
     return {
       latestDate: completeDate,
@@ -175,5 +185,6 @@ export const getGettingFoundExtras = createServerFn({ method: "POST" })
             },
       sessions,
       approvedKeywords,
+      backlinkSnapshots,
     };
   });

@@ -3,9 +3,11 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import {
   detectKeywordsWithoutPage,
+  detectReferringDomainMovement,
   detectUnobservedKeywords,
   type ObservedSerp,
   type PageText,
+  type ReferringDomainSnapshot,
   type TargetingObservation,
 } from "../targeting-rules";
 import { checksum } from "./transport.server";
@@ -68,6 +70,32 @@ async function readPageText(client: Client, tenantId: string): Promise<PageText[
   return (data ?? []).map((row) => ({ url: row.url, title: row.title, h1: row.h1 }));
 }
 
+async function readReferringDomainSnapshots(
+  client: Client,
+  tenantId: string,
+): Promise<[ReferringDomainSnapshot | null, ReferringDomainSnapshot | null]> {
+  const { data, error } = await client
+    .from("dataforseo_snapshots")
+    .select("reporting_date, payload")
+    .eq("tenant_id", tenantId)
+    .eq("kind", "backlinks_referring_domains")
+    .order("reporting_date", { ascending: false })
+    .limit(2);
+  if (error) throw new Error(error.message);
+
+  const read = (row: { reporting_date: string; payload: unknown } | undefined) =>
+    row === undefined
+      ? null
+      : {
+          reportingDate: row.reporting_date,
+          domains: ((row.payload as { rows?: Record<string, unknown>[] } | null)?.rows ?? [])
+            .map((item) => String(item["domain"] ?? ""))
+            .filter(Boolean),
+        };
+
+  return [read((data ?? [])[1]), read((data ?? [])[0])];
+}
+
 /** One recommendation per observation, deduped on the same fingerprint scheme the other rule families use. */
 async function persist(
   client: Client,
@@ -125,15 +153,17 @@ export async function runTargetingPass(
   client: Client,
   tenantId: string,
 ): Promise<{ observations: number; recommendations: number }> {
-  const [approved, observed, pages] = await Promise.all([
+  const [approved, observed, pages, [priorLinks, currentLinks]] = await Promise.all([
     readApprovedKeywords(client, tenantId),
     readObservedSerps(client, tenantId),
     readPageText(client, tenantId),
+    readReferringDomainSnapshots(client, tenantId),
   ]);
 
   const observations = [
     ...detectUnobservedKeywords(approved, observed),
     ...detectKeywordsWithoutPage(approved, pages),
+    ...detectReferringDomainMovement(priorLinks, currentLinks),
   ];
 
   return {

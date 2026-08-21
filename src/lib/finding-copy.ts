@@ -34,6 +34,7 @@ export const ALL_SEARCH_RULES = [
   // assignment in rule-buckets.ts.
   "approved_keyword_unobserved",
   "approved_keyword_no_page",
+  "referring_domain_movement",
 ] as const;
 
 export type SearchRule = (typeof ALL_SEARCH_RULES)[number];
@@ -293,6 +294,25 @@ function keywordWithoutPage(evidence: Evidence, on: string): FindingCopy {
   };
 }
 
+function referringDomainMovement(evidence: Evidence, on: string): FindingCopy {
+  const priorCount = num(evidence["priorCount"]);
+  const currentCount = num(evidence["currentCount"]);
+  const priorDate = text(evidence["priorDate"]) ?? on;
+  const gained = Array.isArray(evidence["gained"]) ? evidence["gained"].length : 0;
+  const lost = Array.isArray(evidence["lost"]) ? evidence["lost"].length : 0;
+  return {
+    claim:
+      gained >= lost
+        ? "More other sites link here than they did"
+        : "Fewer other sites link here than they did",
+    evidence:
+      priorCount === null || currentCount === null
+        ? null
+        : `${priorCount} linking sites on ${priorDate}, ${currentCount} on ${on} · ${gained} new, ${lost} gone`,
+    currentWording: null,
+  };
+}
+
 const WRITERS: Record<SearchRule, (evidence: Evidence, on: string) => FindingCopy> = {
   striking_distance_query: strikingDistance,
   position_loss: positionLoss,
@@ -306,6 +326,7 @@ const WRITERS: Record<SearchRule, (evidence: Evidence, on: string) => FindingCop
   site_clicks_shift: siteClicksShift,
   approved_keyword_unobserved: keywordUnobserved,
   approved_keyword_no_page: keywordWithoutPage,
+  referring_domain_movement: referringDomainMovement,
 };
 
 export function isSearchRule(value: string): value is SearchRule {

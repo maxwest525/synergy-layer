@@ -13,6 +13,8 @@
  * the confidence comes from `confidence.ts` rather than from a literal.
  */
 
+import { confidenceInCountChange } from "./confidence";
+
 export type TargetingRule =
   | "approved_keyword_unobserved"
   | "approved_keyword_no_page"
@@ -98,4 +100,58 @@ export function detectKeywordsWithoutPage(
       evidence: { keyword: entry.keyword, pagesRead: pages.length },
       confidence: 1,
     }));
+}
+
+export type ReferringDomainSnapshot = {
+  readonly reportingDate: string;
+  readonly domains: readonly string[];
+};
+
+/**
+ * How the set of sites linking here moved between the two most recent stored
+ * backlink snapshots.
+ *
+ * This reports movement and stops. Acquiring links is never recommended:
+ * "Exchanging money for links" is link spam in Google's own spam policies
+ * (docs/superpowers/research/2026-08-20-small-site-growth-research.md §3), and
+ * this lane emits nothing that could be read as an instruction to buy them.
+ *
+ * Both sides are counts, so the confidence is derived rather than asserted.
+ */
+export function detectReferringDomainMovement(
+  prior: ReferringDomainSnapshot | null,
+  current: ReferringDomainSnapshot | null,
+): TargetingObservation[] {
+  if (prior === null || current === null) return [];
+
+  const before = new Set(prior.domains.map(normalise));
+  const after = new Set(current.domains.map(normalise));
+  const gained = [...after].filter((domain) => !before.has(domain));
+  const lost = [...before].filter((domain) => !after.has(domain));
+  if (gained.length === 0 && lost.length === 0) return [];
+
+  const judgement = confidenceInCountChange(before.size, after.size);
+
+  return [
+    {
+      rule: "referring_domain_movement",
+      target: current.reportingDate,
+      title:
+        gained.length >= lost.length
+          ? `${gained.length} more sites link here than last time`
+          : `${lost.length} sites that linked here no longer do`,
+      description:
+        `Between ${prior.reportingDate} and ${current.reportingDate} the number of sites linking ` +
+        `here went from ${before.size} to ${after.size}. ${judgement.reason}`,
+      evidence: {
+        priorDate: prior.reportingDate,
+        currentDate: current.reportingDate,
+        priorCount: before.size,
+        currentCount: after.size,
+        gained: gained.slice(0, 25),
+        lost: lost.slice(0, 25),
+      },
+      confidence: judgement.value,
+    },
+  ];
 }

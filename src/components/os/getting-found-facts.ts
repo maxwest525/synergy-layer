@@ -68,6 +68,7 @@ export function useGettingFound(): GettingFoundQuery {
       coverage: extras.data.coverage,
       sessions: extras.data.sessions,
       approvedKeywords: extras.data.approvedKeywords,
+      backlinkSnapshots: extras.data.backlinkSnapshots,
     }),
     isPending,
     error: null,
