@@ -35,7 +35,14 @@ export type CohortVerdict = {
   readonly direction: "rise" | "fall" | "flat";
   /** Two-sided p from the exact conditional test on pooled counts. */
   readonly p: number;
-  /** True when the pooled result also survives the sign test at p<0.05. */
+  /**
+   * True when the pooled result also survives the sign test at p<0.05.
+   *
+   * `reason` deliberately omits the affirmative "not one page's doing" claim
+   * when the pooled test itself did not clear the noise, even though this
+   * field is still `true` in that case — a future caller rendering this
+   * boolean directly, instead of `reason`, would reintroduce that claim.
+   */
   readonly unanimousEnough: boolean;
   readonly reason: string;
 };
@@ -67,15 +74,18 @@ export function exactBinomialTwoSidedP(n: number, k: number): number {
 
 /**
  * "p below 0.01" instead of a rounded "p 0.00", which reads as certainty this
- * test never claims. Three decimals between 0.01 and 0.10 so a p just under
- * 0.05 and one just over it don't both round to the same "p 0.05" — which
- * would print "clears the noise" and "does not clear the noise" side by side
- * with identical evidence shown.
+ * test never claims. Above that, round three decimal places AWAY from the
+ * significance threshold rather than to the nearest value: a p of 0.0498
+ * naively rounds to "0.050", and a p of 0.0501 also rounds to "0.050" — the
+ * same printed number sitting beside opposite verdicts. Rounding toward
+ * "clears" when it does, and toward "does not" when it doesn't, guarantees
+ * the printed p can never contradict the word next to it.
  */
-function pClause(p: number): string {
+function pClause(p: number, significant: boolean): string {
   if (p < 0.01) return "p below 0.01";
-  if (p < 0.1) return `p ${p.toFixed(3)}`;
-  return `p ${p.toFixed(2)}`;
+  const rounded = significant ? Math.floor(p * 1000) / 1000 : Math.ceil(p * 1000) / 1000;
+  if (rounded < 0.1) return `p ${rounded.toFixed(3)}`;
+  return `p ${rounded.toFixed(2)}`;
 }
 
 /**
@@ -88,6 +98,7 @@ function pClause(p: number): string {
 function unanimity(
   direction: CohortVerdict["direction"],
   members: readonly CohortMember[],
+  significant: boolean,
 ): { readonly unanimousEnough: boolean; readonly clause: string } {
   const nonTied = members.filter((member) => member.after !== member.before).length;
 
@@ -100,7 +111,7 @@ function unanimity(
       clause:
         nonTied === 0
           ? "and every page held exactly level, so there is nothing to test agreement on"
-          : "and individual changes moved in both directions and cancelled out, so this is not one page's doing either",
+          : "and individual changes moved in both directions and cancelled out, so this is not one page's doing",
     };
   }
 
@@ -110,9 +121,15 @@ function unanimity(
   const nonTiedWord = nonTied === 1 ? "change is" : "changes are";
 
   if (nonTied < 6) {
+    // The leading conjunction has to match the clause it follows: "and" reads
+    // as a continuation after a significant result, "but" as a contrast
+    // after one that did not clear the noise. A single hardcoded word cannot
+    // serve both.
     return {
       unanimousEnough: false,
-      clause: `but ${agreeing} of ${nonTied} moved the same way, and ${nonTied} ${nonTiedWord} too few for that agreement to rule out chance`,
+      clause: significant
+        ? `and ${agreeing} of ${nonTied} moved the same way, though ${nonTied} ${nonTiedWord} too few for that agreement to rule out chance`
+        : `but ${agreeing} of ${nonTied} moved the same way, and ${nonTied} ${nonTiedWord} too few for that agreement to rule out chance`,
     };
   }
 
@@ -144,15 +161,15 @@ export function cohortVerdict(members: readonly CohortMember[]): CohortVerdict |
   const p = exactBinomialTwoSidedP(before + after, after);
   const significant = p < 0.05;
   const direction = after > before ? "rise" : after < before ? "fall" : "flat";
-  const { unanimousEnough, clause: unanimityClause } = unanimity(direction, members);
+  const { unanimousEnough, clause: unanimityClause } = unanimity(direction, members, significant);
 
   const pooledClause =
     direction === "flat"
       ? `stayed at ${before}`
       : `${direction === "rise" ? "rose" : "fell"} from ${before} to ${after}`;
   const significanceClause = significant
-    ? `clears the noise (${pClause(p)})`
-    : `does not clear the noise (${pClause(p)})`;
+    ? `clears the noise (${pClause(p, significant)})`
+    : `does not clear the noise (${pClause(p, significant)})`;
   const changeWord = members.length === 1 ? "change" : "changes";
 
   // An affirmative "not one page's doing" is a robustness claim, and a

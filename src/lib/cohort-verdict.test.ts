@@ -20,17 +20,17 @@ describe("the pooled exact test", () => {
   });
 
   it("never prints the same rounded p on both sides of the 0.05 threshold", () => {
-    // 24 -> 41 (p ~= 0.0464) and 44 -> 65 (p ~= 0.0549) straddle 0.05 closely
-    // enough that two-decimal rounding printed "p 0.05" on both sides, once
-    // as "clears the noise" and once as "does not". Three decimals in this
-    // range tells them apart.
-    const clears = cohortVerdict([{ before: 24, after: 41 }]);
+    // Fix-round receipt: pooled 25 -> 42 (p = 0.0498) and pooled 10 -> 22
+    // (p = 0.0501) both round to a naive "0.050" at three decimals — the same
+    // printed number sitting beside opposite verdicts. Rounding away from the
+    // threshold (floor when significant, ceil when not) tells them apart.
+    const clears = cohortVerdict([{ before: 25, after: 42 }]);
     expect(clears?.p).toBeLessThan(0.05);
-    expect(clears?.reason).toContain("clears the noise (p 0.046)");
+    expect(clears?.reason).toContain("clears the noise (p 0.049)");
 
-    const doesNot = cohortVerdict([{ before: 44, after: 65 }]);
+    const doesNot = cohortVerdict([{ before: 10, after: 22 }]);
     expect(doesNot?.p).toBeGreaterThan(0.05);
-    expect(doesNot?.reason).toContain("does not clear the noise (p 0.055)");
+    expect(doesNot?.reason).toContain("does not clear the noise (p 0.051)");
   });
 });
 
@@ -74,6 +74,19 @@ describe("the sign test guards against one page doing all the work", () => {
     // The seam: the significance clause's closing paren must be followed by
     // a comma and a conjunction, not run straight into the next clause.
     expect(verdict?.reason).toMatch(/\), but \d+ of \d+ moved/);
+  });
+
+  it("uses a conjunction that matches whether the pooled result cleared the noise", () => {
+    // Under six members the too-few clause always follows a significance
+    // clause, and "and" reads as a continuation while "but" reads as a
+    // contrast — a single hardcoded conjunction cannot serve both.
+    const significant = cohortVerdict(Array(3).fill({ before: 10, after: 18 }));
+    expect(significant?.p).toBeLessThan(0.05);
+    expect(significant?.reason).toMatch(/\), and \d+ of \d+ moved the same way, though/);
+
+    const notSignificant = cohortVerdict(Array(3).fill({ before: 10, after: 14 }));
+    expect(notSignificant?.p).toBeGreaterThan(0.05);
+    expect(notSignificant?.reason).toMatch(/\), but \d+ of \d+ moved the same way, and/);
   });
 
   it("uses singular grammar when only one change is non-tied", () => {
@@ -129,6 +142,8 @@ describe("the pieces the verdict is built from", () => {
     ]);
     expect(cancelled?.direction).toBe("flat");
     expect(cancelled?.reason).toMatch(/\), and individual changes moved.*cancelled out/);
+    // No dangling "either" — nothing earlier in the sentence for it to refer to.
+    expect(cancelled?.reason).not.toMatch(/either/);
   });
 
   it("never rounds a tiny p down to a false '0.00'", () => {
