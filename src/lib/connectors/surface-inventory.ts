@@ -13,6 +13,8 @@
  * lives in the connection probes and stored snapshots, not in this file.
  */
 
+import { GOVERNED_REPO } from "../execution/allowlist";
+
 export type SurfaceStatus = "wired" | "partial" | "not_built";
 
 export type SurfaceOperation = {
@@ -466,7 +468,12 @@ export const CONNECTION_SURFACES: SurfaceConnection[] = [
     key: "github_executor",
     label: "GitHub executor",
     provider: "GitHub",
-    auth: "Fine grained token on maxwest525/synergy-layer",
+    // The executor writes to the client site's repository, not to this app's.
+    // This string named maxwest525/synergy-layer — this app's own repo — while
+    // GOVERNED_REPO in execution/allowlist.ts has always been the client site.
+    // Anyone scoping a token to the name shown here got a credential that could
+    // never reach the file the executor edits.
+    auth: `Fine grained token on ${GOVERNED_REPO}`,
     operations: [
       op({
         id: "gh.contents.get",
