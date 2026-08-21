@@ -215,4 +215,12 @@ describe("expected schema types", () => {
     const checks = evaluatePages([{ url: "https://a.test/", facts }]).map((i) => i.check);
     expect(checks).not.toContain("structured_data_type_missing");
   });
+
+  it("glosses an unmapped declared type generically rather than printing its bare name", () => {
+    const facts = { ...extractPageFacts(HTML, "words", "https://a.test/contact"), jsonLdTypes: ["Organization"] };
+    const issue = evaluatePages([{ url: "https://a.test/contact", facts }]).find(
+      (entry) => entry.check === "structured_data_type_missing",
+    );
+    expect(issue?.detail).toContain("a different kind of structured data (Organization)");
+  });
 });

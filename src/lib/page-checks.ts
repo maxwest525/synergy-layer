@@ -493,10 +493,12 @@ const PLAIN_SCHEMA_LABELS: Record<string, string> = {
   webpage: "a generic web page",
 };
 
-/** Plain words first, the schema.org name in parentheses only where a plain gloss exists. */
+/** Plain words first, the schema.org name in parentheses. A type with no known
+ * gloss reads as "a different kind of structured data" rather than the bare
+ * technical name. */
 function schemaTypeLabel(type: string): string {
-  const plain = PLAIN_SCHEMA_LABELS[type.toLowerCase()];
-  return plain ? `${plain} (${type})` : type;
+  const plain = PLAIN_SCHEMA_LABELS[type.toLowerCase()] ?? "a different kind of structured data";
+  return `${plain} (${type})`;
 }
 
 /** The expected list for one category shares one plain gloss; only the technical names vary. */
