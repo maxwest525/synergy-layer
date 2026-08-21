@@ -88,3 +88,27 @@ model. Its probe calls the proxy's own `/v1/models`, which answers with the
 models you configured and costs nothing upstream — so a green light there means
 the proxy is reachable and the key is right, and nothing more. Configured is not
 connected, and connected is not proven.
+
+## The server side, as actually deployed (2026-08-21)
+
+The proxy runs on the self-host box (`ssh selfhost`, 212.227.242.130), where
+Caddy already terminates TLS for the other `marky.systems` services.
+
+| Piece | Where | What it is |
+| --- | --- | --- |
+| Container | `/root/litellm/docker-compose.yml` | `ghcr.io/berriai/litellm:main-stable`, bound to `127.0.0.1:4000`, `restart: unless-stopped`. |
+| Config | `/root/litellm/config.yaml` | A wildcard passthrough: the app's OpenRouter slugs go through unchanged (`model_name: "*"` → `openrouter/*`), so `cache_control` markers arrive at the provider as sent. |
+| Secrets | `/root/litellm/.env` (root-only, never committed) | `LITELLM_MASTER_KEY` (generated on the box) and `OPENROUTER_API_KEY` (set by the operator). |
+| TLS + hostname | `/etc/caddy/Caddyfile` (`litellm.marky.systems { reverse_proxy 127.0.0.1:4000 }`) | Caddy issues the certificate automatically once DNS resolves. Pre-change backup at `Caddyfile.bak-litellm`. |
+| DNS | name.com, A record `litellm.marky.systems → 212.227.242.130` | Individual records, no wildcard — the record is the one manual step. |
+
+**Stated simplification:** there is no database behind the proxy, so LiteLLM
+virtual keys are unavailable; the app authenticates with the master key itself.
+For a single-operator deployment that is the same trust boundary. If more keys,
+per-key budgets, or key rotation are ever wanted, add LiteLLM's Postgres and
+mint a virtual key — the app-side variables do not change shape.
+
+Operations, all from `ssh selfhost`, working directory `/root/litellm`:
+`docker compose restart` after editing `.env` · `docker logs litellm` for the
+proxy's own account of a failing call · `curl -s http://127.0.0.1:4000/health/liveliness`
+answers 200 without touching OpenRouter.
