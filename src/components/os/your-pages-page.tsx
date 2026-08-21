@@ -4,9 +4,9 @@ import { FileText, ListOrdered } from "lucide-react";
 
 import { useYourPages } from "./your-pages-facts";
 import { EmptyState } from "./primitives";
-import { actionFor } from "@/lib/command-center";
+import { SuggestionCard } from "./suggestion-card";
 import type { PageRow, StatusTone, TabId, Tile, YourPagesView } from "@/lib/your-pages";
-import type { QueueItem, UrgencyTone } from "@/lib/suggestion-queue";
+import type { QueueItem } from "@/lib/suggestion-queue";
 import { cn } from "@/lib/utils";
 
 /**
@@ -32,12 +32,6 @@ const SEVERITY_TONE: Record<string, string> = {
   critical: "text-destructive",
   warning: "text-warning",
   advice: "text-info",
-};
-
-const URGENCY_TONE: Record<UrgencyTone, string> = {
-  danger: "text-destructive",
-  warning: "text-warning",
-  info: "text-info",
 };
 
 const LINK =
@@ -109,30 +103,6 @@ function PageCard({ row }: { row: PageRow }) {
   );
 }
 
-function SuggestionRow({ item }: { item: QueueItem }) {
-  const action = actionFor(item);
-  return (
-    <div className="flex items-center justify-between gap-3 rounded-[10px] border border-border bg-card px-4 py-3">
-      <span className="flex min-w-0 flex-col gap-0.5">
-        <span className="truncate text-[13px] font-semibold text-foreground">{item.title}</span>
-        <span className="text-[10.5px] font-bold uppercase tracking-[0.1em] text-subtle">
-          <span className={URGENCY_TONE[item.tone]}>{item.urgencyLabel}</span>
-          {item.targetUrl ? ` · ${item.targetUrl}` : null}
-        </span>
-      </span>
-      {action.params ? (
-        <Link to={action.to} params={action.params} className={LINK}>
-          {action.label}
-        </Link>
-      ) : (
-        <Link to={action.to} className={LINK}>
-          {action.label}
-        </Link>
-      )}
-    </div>
-  );
-}
-
 function QueueList({ items, empty }: { items: readonly QueueItem[]; empty: string }) {
   if (items.length === 0) {
     return <EmptyState title="Nothing here" description={empty} />;
@@ -140,7 +110,7 @@ function QueueList({ items, empty }: { items: readonly QueueItem[]; empty: strin
   return (
     <div className="flex flex-col gap-2.5">
       {items.map((item) => (
-        <SuggestionRow key={item.id} item={item} />
+        <SuggestionCard key={item.id} item={item} />
       ))}
     </div>
   );

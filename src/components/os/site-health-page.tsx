@@ -4,11 +4,11 @@ import { Gauge, Info } from "lucide-react";
 
 import { useSiteHealth } from "./site-health-facts";
 import { EmptyState } from "./primitives";
-import { actionFor } from "@/lib/command-center";
+import { SuggestionCard } from "./suggestion-card";
 import type { GradedOutcome, StatusTone, TabId, Tile } from "@/lib/site-health";
 import type { OutcomeVerdict } from "@/lib/outcome-verdict";
 import type { SiteFinding } from "@/lib/site-checks";
-import type { QueueItem, UrgencyTone } from "@/lib/suggestion-queue";
+import type { QueueItem } from "@/lib/suggestion-queue";
 import { cn } from "@/lib/utils";
 
 /**
@@ -33,12 +33,6 @@ const SEVERITY_TONE: Record<string, string> = {
   critical: "text-destructive",
   warning: "text-warning",
   advice: "text-info",
-};
-
-const URGENCY_TONE: Record<UrgencyTone, string> = {
-  danger: "text-destructive",
-  warning: "text-warning",
-  info: "text-info",
 };
 
 /** Plain words, not the stored enum. The operator never sees "too_early". */
@@ -130,36 +124,12 @@ function CrawlCard({ finding }: { finding: SiteFinding }) {
   );
 }
 
-function SuggestionRow({ item }: { item: QueueItem }) {
-  const action = actionFor(item);
-  return (
-    <div className="flex items-center justify-between gap-3 rounded-[10px] border border-border bg-card px-4 py-3">
-      <span className="flex min-w-0 flex-col gap-0.5">
-        <span className="truncate text-[13px] font-semibold text-foreground">{item.title}</span>
-        <span className="text-[10.5px] font-bold uppercase tracking-[0.1em] text-subtle">
-          <span className={URGENCY_TONE[item.tone]}>{item.urgencyLabel}</span>
-          {item.targetUrl ? ` · ${item.targetUrl}` : null}
-        </span>
-      </span>
-      {action.params ? (
-        <Link to={action.to} params={action.params} className={LINK}>
-          {action.label}
-        </Link>
-      ) : (
-        <Link to={action.to} className={LINK}>
-          {action.label}
-        </Link>
-      )}
-    </div>
-  );
-}
-
 function QueueList({ items, empty }: { items: readonly QueueItem[]; empty: string }) {
   if (items.length === 0) return <EmptyState title="Nothing here" description={empty} />;
   return (
     <div className="flex flex-col gap-2.5">
       {items.map((item) => (
-        <SuggestionRow key={item.id} item={item} />
+        <SuggestionCard key={item.id} item={item} />
       ))}
     </div>
   );

@@ -54,6 +54,18 @@ describe("which verbs a card may offer", () => {
   it("offers nothing on a done row, because the decision is made", () => {
     expect(idsFor({ id: "r1", storedState: "applied" })).toEqual([]);
   });
+
+  it("offers no ignore on an open item that has nowhere to store the suppression", () => {
+    expect(
+      idsFor({ id: "audit:missing_title", kind: "audit", severity: "critical" }),
+    ).not.toContain("ignore");
+  });
+
+  it("offers no restore on an ignored item that cannot be restored", () => {
+    expect(
+      idsFor({ id: "c1", kind: "change", storedState: "rejected", proposalType: "title_h1" }),
+    ).not.toContain("restore");
+  });
 });
 
 describe("what each verb tells the operator it will do", () => {

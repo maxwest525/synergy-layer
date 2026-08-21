@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
-import { render, screen, within } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { render as rtlRender, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -17,6 +18,12 @@ vi.mock("@tanstack/react-router", () => ({
 }));
 
 const { SiteHealthPage } = await import("./site-health-page");
+
+// The suggestion cards on this page now run mutations through react-query, so
+// every render needs a client, same as the card's own test.
+function render(ui: React.ReactElement) {
+  return rtlRender(<QueryClientProvider client={new QueryClient()}>{ui}</QueryClientProvider>);
+}
 
 const NOW = "2026-08-20T12:00:00.000Z";
 
