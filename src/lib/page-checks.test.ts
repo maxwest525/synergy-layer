@@ -65,6 +65,32 @@ describe("on page checks", () => {
   });
 });
 
+const IMAGE_HTML = `<html><body>
+<img src="a.png" alt="A truck" width="800" height="600">
+<img src="b.png" alt="A van">
+<img src="c.png" alt="A box" width="400">
+</body></html>`;
+
+describe("image dimensions", () => {
+  it("counts images that declare neither width nor height, and partial ones", () => {
+    const facts = extractPageFacts(IMAGE_HTML, "words", "https://a.test/one");
+    expect(facts.imagesMissingDimensions).toBe(2);
+  });
+
+  it("reports the check when any image is missing its size", () => {
+    const facts = extractPageFacts(IMAGE_HTML, "words", "https://a.test/one");
+    const checks = evaluatePages([{ url: "https://a.test/one", facts }]).map((i) => i.check);
+    expect(checks).toContain("image_dimensions_missing");
+  });
+
+  it("says nothing at all when the stored row predates the field", () => {
+    const facts = extractPageFacts(IMAGE_HTML, "words", "https://a.test/one");
+    const older = { ...facts, imagesMissingDimensions: undefined };
+    const checks = evaluatePages([{ url: "https://a.test/one", facts: older }]).map((i) => i.check);
+    expect(checks).not.toContain("image_dimensions_missing");
+  });
+});
+
 describe("url conventions", () => {
   it("reads underscores and query strings out of the address", () => {
     expect(urlDefects("https://a.test/moving_services")).toEqual({

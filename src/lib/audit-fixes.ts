@@ -47,6 +47,7 @@ export const PAGE_CHECK_FIX: Record<CheckId, AuditFixTarget | null> = {
   structured_data_missing: null,
   structured_data_invalid: null,
   image_alt_missing: null,
+  image_dimensions_missing: null,
   thin_content: null,
   no_internal_links: null,
   og_missing: null,

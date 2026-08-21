@@ -2,6 +2,9 @@
  * Pure on page analysis. Everything here reads the rendered HTML of a page and
  * reports what is actually there. Nothing fetches, nothing estimates, nothing
  * scores. A check either found a real defect on a real page or it did not.
+ *
+ * Image file weight is not checked: the render only returns HTML and text, and
+ * no byte size is available to read.
  */
 
 export type PageFacts = {
@@ -16,6 +19,7 @@ export type PageFacts = {
   headingSkips: boolean;
   imageCount: number;
   imagesMissingAlt: number;
+  imagesMissingDimensions?: number | undefined;
   jsonLdTypes: string[];
   jsonLdInvalid: boolean;
   internalLinks: number;
@@ -46,6 +50,7 @@ export type CheckId =
   | "structured_data_missing"
   | "structured_data_invalid"
   | "image_alt_missing"
+  | "image_dimensions_missing"
   | "thin_content"
   | "no_internal_links"
   | "og_missing"
@@ -274,6 +279,19 @@ export const CHECKS: Record<CheckId, CheckDefinition> = {
     instruction: (n) => `Describe the images on ${n} pages so they are readable and searchable.`,
     fixableByWordingProposal: false,
   },
+  // Core Web Vitals doc: Cumulative Layout Shift "Measures visual stability."
+  // Core Web Vitals are metrics Search Console reports on for a site's pages.
+  // An image with no declared size gives the browser nothing to reserve, so
+  // the page moves under the reader as it loads.
+  // https://developers.google.com/search/docs/appearance/core-web-vitals
+  image_dimensions_missing: {
+    check: "image_dimensions_missing",
+    label: "Images with no size declared",
+    severity: "advice",
+    instruction: (n) =>
+      `Declare a width and height on the images on ${n} pages so the page stops jumping while it loads.`,
+    fixableByWordingProposal: false,
+  },
   // SEO starter guide: "The length of the content alone doesn't matter for
   // ranking purposes (there's no magical word count target)." The only
   // defensible reason to flag a near-empty page is that it gives Google
@@ -443,6 +461,11 @@ export function extractPageFacts(html: string, markdown: string, pageUrl: string
     const alt = attr(tag, "alt");
     return alt === null || alt.length === 0;
   }).length;
+  // Both attributes are needed for the browser to reserve the space; one alone
+  // does not give it an aspect ratio to hold.
+  const imagesMissingDimensions = images.filter(
+    (tag) => attr(tag, "width") === null || attr(tag, "height") === null,
+  ).length;
 
   const jsonLdTypes: string[] = [];
   let jsonLdInvalid = false;
@@ -512,6 +535,7 @@ export function extractPageFacts(html: string, markdown: string, pageUrl: string
     headingSkips,
     imageCount: images.length,
     imagesMissingAlt,
+    imagesMissingDimensions,
     jsonLdTypes: [...new Set(jsonLdTypes)],
     jsonLdInvalid,
     internalLinks,
@@ -605,6 +629,17 @@ export function evaluatePages(pages: AnalyzedPage[]): PageIssue[] {
         "image_alt_missing",
         url,
         `${facts.imagesMissingAlt} of ${facts.imageCount} images have no description.`,
+      );
+    }
+
+    // undefined means the row was stored before this was read, which is not the
+    // same as zero images missing a size.
+    const missingDimensions = facts.imagesMissingDimensions;
+    if (missingDimensions !== undefined && missingDimensions > 0) {
+      add(
+        "image_dimensions_missing",
+        url,
+        `${missingDimensions} of ${facts.imageCount} images declare no width and height.`,
       );
     }
 
