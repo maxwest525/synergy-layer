@@ -28,6 +28,13 @@ export const ALL_SEARCH_RULES = [
   "index_coverage_drift",
   "site_visibility_shift",
   "site_clicks_shift",
+  // Targeting family: read from approved keywords and stored SERP evidence
+  // rather than from Search Console. They are listed here because this array
+  // is the registry that forces a plain-words writer below and a bucket
+  // assignment in rule-buckets.ts.
+  "approved_keyword_unobserved",
+  "approved_keyword_no_page",
+  "referring_domain_movement",
 ] as const;
 
 export type SearchRule = (typeof ALL_SEARCH_RULES)[number];
@@ -259,6 +266,53 @@ function siteClicksShift(evidence: Evidence, on: string): FindingCopy {
   };
 }
 
+function keywordUnobserved(evidence: Evidence, on: string): FindingCopy {
+  const keyword = text(evidence["keyword"]);
+  return {
+    claim:
+      keyword === null
+        ? "One of your approved searches has never been checked"
+        : `Nothing has checked where you rank for "${keyword}"`,
+    evidence: keyword === null ? null : `Approved, and no stored result for it as of ${on}`,
+    currentWording: null,
+  };
+}
+
+function keywordWithoutPage(evidence: Evidence, on: string): FindingCopy {
+  const keyword = text(evidence["keyword"]);
+  const pagesRead = num(evidence["pagesRead"]);
+  return {
+    claim:
+      keyword === null
+        ? "One of your approved searches has no page about it"
+        : `No page here is about "${keyword}"`,
+    evidence:
+      pagesRead === null
+        ? null
+        : `Not in the title or heading of any of the ${pagesRead} pages read by ${on}`,
+    currentWording: null,
+  };
+}
+
+function referringDomainMovement(evidence: Evidence, on: string): FindingCopy {
+  const priorCount = num(evidence["priorCount"]);
+  const currentCount = num(evidence["currentCount"]);
+  const priorDate = text(evidence["priorDate"]) ?? on;
+  const gained = Array.isArray(evidence["gained"]) ? evidence["gained"].length : 0;
+  const lost = Array.isArray(evidence["lost"]) ? evidence["lost"].length : 0;
+  return {
+    claim:
+      gained >= lost
+        ? "More other sites link here than they did"
+        : "Fewer other sites link here than they did",
+    evidence:
+      priorCount === null || currentCount === null
+        ? null
+        : `${priorCount} linking sites on ${priorDate}, ${currentCount} on ${on} · ${gained} new, ${lost} gone`,
+    currentWording: null,
+  };
+}
+
 const WRITERS: Record<SearchRule, (evidence: Evidence, on: string) => FindingCopy> = {
   striking_distance_query: strikingDistance,
   position_loss: positionLoss,
@@ -270,6 +324,9 @@ const WRITERS: Record<SearchRule, (evidence: Evidence, on: string) => FindingCop
   index_coverage_drift: coverageDrift,
   site_visibility_shift: siteVisibilityShift,
   site_clicks_shift: siteClicksShift,
+  approved_keyword_unobserved: keywordUnobserved,
+  approved_keyword_no_page: keywordWithoutPage,
+  referring_domain_movement: referringDomainMovement,
 };
 
 export function isSearchRule(value: string): value is SearchRule {

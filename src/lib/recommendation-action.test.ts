@@ -37,3 +37,20 @@ describe("a row that cannot be approved says so, in one sentence", () => {
     }
   });
 });
+
+describe("a proposal to write a page AOOS cannot write", () => {
+  it("says why there is nothing to approve rather than leaving a blank space", () => {
+    const view = describeSuggestedAction({ kind: "write_new_page", target: "piano movers austin" });
+    expect(view.executable).toBe(false);
+    expect(view.unavailableReason).toMatch(/writing the page is yours/i);
+  });
+
+  it("points a keyword nobody has looked up at the keyword workspace", () => {
+    const view = describeSuggestedAction({
+      kind: "observe_keyword",
+      target: "piano movers austin",
+    });
+    expect(view.link?.to).toBe("/keywords");
+    expect(view.executable).toBe(false);
+  });
+});

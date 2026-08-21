@@ -19,7 +19,7 @@ export type SuggestedActionView = {
    */
   unavailableReason: string | null;
   /** Optional safe navigation to the surface where the real decision lives. */
-  link: { to: "/competitors"; label: string; effect: string } | null;
+  link: { to: "/competitors" | "/keywords"; label: string; effect: string } | null;
 };
 
 function readKind(action: unknown): string | null {
@@ -93,6 +93,35 @@ export function describeSuggestedAction(action: unknown): SuggestedActionView {
       unavailableReason:
         "Nothing is connected that could do this yet, so this row is a note rather than something you can set running.",
       link: null,
+    };
+  }
+
+  if (kind === "write_new_page") {
+    return {
+      kind,
+      executable: false,
+      summary:
+        "This names a search nothing on the site is about. AOOS can draft wording for a page that exists; it cannot create the page itself.",
+      unavailableReason:
+        "There is nothing to approve here: writing the page is yours to do. Once it exists and has been read, the wording lane can draft its title and description.",
+      link: null,
+    };
+  }
+
+  if (kind === "observe_keyword") {
+    return {
+      kind,
+      executable: false,
+      summary:
+        "This keyword is approved but no search result has been stored for it. Looking it up is a paid provider call, so it happens on an explicit click in the keyword workspace, never from here.",
+      unavailableReason:
+        "There is nothing to approve here. Looking up a search costs money, so it is started deliberately in the keyword workspace.",
+      link: {
+        to: "/keywords",
+        label: "Open the keyword workspace",
+        effect:
+          "Nothing is spent by opening it. The paid look-up runs only when you click it there, with its cost on the button.",
+      },
     };
   }
 

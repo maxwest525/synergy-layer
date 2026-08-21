@@ -20,7 +20,13 @@ export type RuleBucket = "fact" | "pooled" | "beyond_current_volume";
  * prior window cannot fire at any traffic level until a second collection has
  * run, and an empty screen that explains only volume misnames why it is empty.
  */
-export type Prerequisite = "second_collection" | "page_audit" | "analytics" | "url_inspection";
+export type Prerequisite =
+  | "second_collection"
+  | "page_audit"
+  | "analytics"
+  | "url_inspection"
+  | "approved_keywords"
+  | "backlink_collection";
 
 /** What has actually happened for this tenant, read from facts each page already holds. */
 export type PrerequisiteState = {
@@ -32,6 +38,10 @@ export type PrerequisiteState = {
   readonly analytics: boolean;
   /** At least one stored URL inspection exists to compare against. */
   readonly urlInspection: boolean;
+  /** The operator has approved at least one keyword to target. */
+  readonly approvedKeywords: boolean;
+  /** Two stored backlink readings exist, so there is movement to compare. */
+  readonly backlinkCollection: boolean;
 };
 
 export type RuleAssignment = {
@@ -214,6 +224,27 @@ export const RULE_ASSIGNMENTS: readonly RuleAssignment[] = [
     alsoNeeds: ["second_collection", "analytics"],
     why: "An event that fired reliably and then stopped entirely is a wiring question (a tag or trigger broke), not a statistics question. No threshold makes 'did it stop' more honest than checking whether it fired. detectDisappearedEvents (ga4-rule-checks.ts:158-182) reads `priorByEvent` to know what used to fire, so it cannot say anything before a second GA4 collection, and needs analytics connected to have events at all.",
   },
+  {
+    rule: "approved_keyword_unobserved",
+    bucket: "fact",
+    needsPerTarget: null,
+    alsoNeeds: ["approved_keywords"],
+    why: "Whether a stored SERP exists for an approved keyword is a row lookup, not an estimate: detectUnobservedKeywords (targeting-rules.ts) sets a keyword against the targets of stored serp_organic snapshots. No traffic volume makes that yes/no more or less answerable. It cannot fire before an operator approves a keyword, because tracked_keywords is its entire target set.",
+  },
+  {
+    rule: "approved_keyword_no_page",
+    bucket: "fact",
+    needsPerTarget: null,
+    alsoNeeds: ["approved_keywords", "page_audit"],
+    why: 'Whether any read page carries the approved phrase in its title or H1 is read from page_metadata_observations, not inferred from counts. Google: "Other pages are discovered when Google extracts a link from a known page to a new page: for example, a hub page, such as a category page, links to a new blog post" (developers.google.com/search/docs/fundamentals/how-search-works, fetched 2026-08-21) — a page has to exist and be linked before it can rank, so a phrase with no page is a discovery gap, not a measurement question. detectKeywordsWithoutPage returns nothing when the audit has read no pages, so the page-audit prerequisite is real rather than decorative.',
+  },
+  {
+    rule: "referring_domain_movement",
+    bucket: "pooled",
+    needsPerTarget: null,
+    alsoNeeds: ["backlink_collection", "second_collection"],
+    why: "The count of linking domains is a count, so it takes confidenceInCountChange like every other count-shaped rule rather than a literal: at this property's link volume a move of one or two domains sits inside ordinary variation, and the finding says so instead of being suppressed. It is pooled by construction — the whole property has one referring-domain set, not one per page. detectReferringDomainMovement returns nothing without two stored backlinks_referring_domains snapshots.",
+  },
 ];
 
 const PREREQUISITE_COPY: Record<Prerequisite, string> = {
@@ -222,6 +253,8 @@ const PREREQUISITE_COPY: Record<Prerequisite, string> = {
   page_audit: "the page audit to have run once, so anything has been read from your pages",
   analytics: "analytics connected, so visits can be counted at all",
   url_inspection: "a stored index check to compare against",
+  approved_keywords: "at least one approved keyword, so there is something to target",
+  backlink_collection: "two stored backlink readings, so there is movement to compare",
 };
 
 const PREREQUISITE_STATE_KEY: Record<Prerequisite, keyof PrerequisiteState> = {
@@ -229,6 +262,8 @@ const PREREQUISITE_STATE_KEY: Record<Prerequisite, keyof PrerequisiteState> = {
   page_audit: "pageAudit",
   analytics: "analytics",
   url_inspection: "urlInspection",
+  approved_keywords: "approvedKeywords",
+  backlink_collection: "backlinkCollection",
 };
 
 /** The unmet prerequisites across the given rules, worst-blocking first, as sentences. */

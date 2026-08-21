@@ -114,6 +114,10 @@ export type GettingFoundFacts = {
   readonly coverage: PageCoverage | null;
   /** Null when analytics is not connected, which is not the same as no visits. */
   readonly sessions: number | null;
+  /** Approved keywords on the tenant. Zero means nothing has been chosen to target. */
+  readonly approvedKeywords: number;
+  /** Stored backlinks_referring_domains snapshots. Two or more means movement can be compared. */
+  readonly backlinkSnapshots: number;
 };
 
 /**
@@ -340,6 +344,8 @@ function answerabilityFor(facts: GettingFoundFacts): Answerability | null {
     analytics: facts.sessions !== null,
     // Nothing on this page reads a stored URL inspection yet.
     urlInspection: true,
+    approvedKeywords: facts.approvedKeywords > 0,
+    backlinkCollection: facts.backlinkSnapshots >= 2,
   });
 
   if (facts.comparison.status !== "ready") {

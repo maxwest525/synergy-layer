@@ -50,6 +50,14 @@ const CATEGORY_BY_RULE: Record<string, CategoryId> = {
   index_coverage_drift: "search",
   site_visibility_shift: "search",
   site_clicks_shift: "search",
+
+  // Targeting rules: what to be found for, so they belong with the rest of
+  // Getting found on Google rather than with the competitor questions their
+  // module (dataforseo) otherwise implies.
+  approved_keyword_unobserved: "search",
+  approved_keyword_no_page: "search",
+  // Off-site domains are a competitive question, not a page one.
+  referring_domain_movement: "competition",
 };
 
 const CATEGORY_BY_MODULE: Record<string, CategoryId> = {

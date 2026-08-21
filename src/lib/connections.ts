@@ -17,7 +17,7 @@
  *
  * Stage three is where most of this estate sits. Six paid DataForSEO backlink
  * endpoints run on every baseline into a file whose own header says it produces
- * no recommendations. Umami stores snapshots nothing reads. Three modules in the
+ * no recommendations. Umami stores snapshots nothing reads. Four modules in the
  * whole codebase write a recommendation, so every connector outside their reach,
  * however well wired, stops at stage three.
  *
@@ -68,10 +68,10 @@ export type ConnectionOutput = {
    * connection's table.
    *
    * Empty on most of them. That is not an omission in this file: only
-   * `search-console`, `seo-validation` and `ga4` write a recommendation
-   * anywhere in the codebase, which is why so much of this estate collects and
-   * stops. `connections.registry.test.ts` scans the server modules and fails if
-   * a fourth writer appears without being recorded here.
+   * `search-console`, `seo-validation`, `ga4` and `dataforseo` write a
+   * recommendation anywhere in the codebase, which is why so much of this
+   * estate collects and stops. `connections.registry.test.ts` scans the server
+   * modules and fails if a fifth writer appears without being recorded here.
    *
    * More than one connection may feed the same module, and a connection that
    * shares a module never claims its findings alone.
@@ -130,7 +130,11 @@ export const CONNECTION_OUTPUTS: readonly ConnectionOutput[] = [
     label: "DataForSEO",
     table: "dataforseo_snapshots",
     succeeded: null,
-    findingSources: [],
+    // The targeting pass (dataforseo/targeting-rules.server.ts) reads the
+    // stored SERP snapshots and the approved keyword set and files findings
+    // from them. Until it existed this row was the clearest case of stage
+    // three: paid rows stored, nothing turning them into anything.
+    findingSources: ["dataforseo"],
     promise: "Backlinks, referring domains and anchor text, from a paid provider.",
   },
   {

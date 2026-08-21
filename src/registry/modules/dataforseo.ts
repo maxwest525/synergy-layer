@@ -33,6 +33,24 @@ export const definition: ModuleDefinition = {
           description: "Collect the ranked keyword landscape for a domain.",
           mutates: false,
         },
+        {
+          name: "labs.domain_intersection",
+          description:
+            "Compare the owned domain against one approved competitor and list the searches only they rank for. Operator-triggered; results enter the keyword approval queue.",
+          mutates: false,
+        },
+        {
+          name: "labs.bulk_keyword_difficulty",
+          description:
+            "Score how hard every pending keyword candidate is to win. One task for the whole queue, operator-triggered.",
+          mutates: false,
+        },
+        {
+          name: "labs.search_intent",
+          description:
+            "Classify what each pending keyword candidate is being searched for. One task for the whole queue, operator-triggered.",
+          mutates: false,
+        },
       ],
       config: {
         mutating: false,
@@ -94,6 +112,28 @@ export const definition: ModuleDefinition = {
         source: "stored_serp_snapshots",
         promotesToTracked: false,
         note: "The shortlist is a review queue. Nothing becomes a tracked competitor without operator approval.",
+      },
+    },
+    {
+      key: "serp.targeting",
+      name: "Targeting pass",
+      kind: "internal_module",
+      category: "Organic",
+      description:
+        "Re-reads the approved keyword set against stored SERP snapshots, the pages the audit has read, and the two most recent referring-domain snapshots, and files what it finds as suggestions: an approved search nothing has looked up, an approved search no page is about, and a meaningful change in who links here. Costs nothing and calls no provider.",
+      integrationState: "real",
+      operations: [
+        {
+          name: "targeting.derive",
+          description: "Re-read approved keywords, stored SERPs and read pages, and file findings.",
+          mutates: false,
+        },
+      ],
+      config: {
+        mutating: false,
+        costUsd: 0,
+        evidenceLabel: "observed",
+        source: "stored_keyword_and_serp_rows",
       },
     },
     {
@@ -236,6 +276,17 @@ export const definition: ModuleDefinition = {
       triggerKind: "manual",
       graph: {
         nodes: [{ key: "derive", kind: "capability", ref: "serp.competitors" }],
+        edges: [],
+      },
+    },
+    {
+      key: "dfs-targeting-pass",
+      name: "Targeting pass",
+      description:
+        "Turns the approved keyword set, the stored SERP snapshots, and referring-domain movement into suggestions. Costs nothing, calls no provider, and never approves or tracks anything on its own.",
+      triggerKind: "manual",
+      graph: {
+        nodes: [{ key: "target", kind: "capability", ref: "serp.targeting" }],
         edges: [],
       },
     },

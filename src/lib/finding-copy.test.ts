@@ -220,3 +220,14 @@ describe("index_coverage_drift", () => {
     expect(stale.evidence).toBe("Last crawled 92 days ago");
   });
 });
+
+describe("no rule id can reach the screen through the copy layer", () => {
+  it("writes a claim for every registered rule that never contains its id", () => {
+    for (const rule of ALL_SEARCH_RULES) {
+      const copy = describeFinding(rule, {}, "2026-08-14");
+      expect(copy.claim.length, `${rule} has no claim`).toBeGreaterThan(0);
+      expect(copy.claim, `${rule} leaked its id`).not.toContain(rule);
+      expect(copy.claim, `${rule} left an underscore on screen`).not.toMatch(/[a-z]_[a-z]/);
+    }
+  });
+});

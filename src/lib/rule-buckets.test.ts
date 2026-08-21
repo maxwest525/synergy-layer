@@ -105,6 +105,8 @@ describe("non-volume prerequisites", () => {
         pageAudit: true,
         analytics: true,
         urlInspection: true,
+        approvedKeywords: true,
+        backlinkCollection: true,
       }),
     ).toEqual([]);
   });
@@ -115,6 +117,8 @@ describe("non-volume prerequisites", () => {
       pageAudit: false,
       analytics: true,
       urlInspection: true,
+      approvedKeywords: true,
+      backlinkCollection: true,
     });
     expect(notes).toHaveLength(2);
     expect(notes.join(" ")).toContain("second");
@@ -130,6 +134,8 @@ describe("non-volume prerequisites", () => {
       pageAudit: true,
       analytics: true,
       urlInspection: true,
+      approvedKeywords: true,
+      backlinkCollection: true,
     });
     const held = RULE_ASSIGNMENTS.filter((a) => a.alsoNeeds.includes("second_collection")).length;
     expect(notes[0]).toContain(String(held));
