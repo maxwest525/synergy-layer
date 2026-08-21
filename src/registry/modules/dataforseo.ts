@@ -97,6 +97,28 @@ export const definition: ModuleDefinition = {
       },
     },
     {
+      key: "serp.targeting",
+      name: "Targeting pass",
+      kind: "internal_module",
+      category: "Organic",
+      description:
+        "Re-reads the approved keyword set against stored SERP snapshots and the pages the audit has read, and files what it finds as suggestions: an approved search nothing has looked up, and an approved search no page is about. Costs nothing and calls no provider.",
+      integrationState: "real",
+      operations: [
+        {
+          name: "targeting.derive",
+          description: "Re-read approved keywords, stored SERPs and read pages, and file findings.",
+          mutates: false,
+        },
+      ],
+      config: {
+        mutating: false,
+        costUsd: 0,
+        evidenceLabel: "observed",
+        source: "stored_keyword_and_serp_rows",
+      },
+    },
+    {
       key: "competitor.page_observation",
       name: "Competitor page observation",
       kind: "api",
@@ -236,6 +258,17 @@ export const definition: ModuleDefinition = {
       triggerKind: "manual",
       graph: {
         nodes: [{ key: "derive", kind: "capability", ref: "serp.competitors" }],
+        edges: [],
+      },
+    },
+    {
+      key: "dfs-targeting-pass",
+      name: "Targeting pass",
+      description:
+        "Turns the approved keyword set and the stored SERP snapshots into suggestions. Costs nothing, calls no provider, and never approves or tracks anything on its own.",
+      triggerKind: "manual",
+      graph: {
+        nodes: [{ key: "target", kind: "capability", ref: "serp.targeting" }],
         edges: [],
       },
     },

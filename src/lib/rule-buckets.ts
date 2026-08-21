@@ -229,7 +229,7 @@ export const RULE_ASSIGNMENTS: readonly RuleAssignment[] = [
     bucket: "fact",
     needsPerTarget: null,
     alsoNeeds: ["approved_keywords", "page_audit"],
-    why: 'Whether any read page carries the approved phrase in its title or H1 is read from page_metadata_observations, not inferred from counts. Google: "Other pages are discovered when Google extracts a link from a known page to a new page: for example, a hub page, such as a category page, links to a new blog post" (developers.google.com/search/docs/beginner/how-search-works, fetched 2026-08-21) — a page has to exist and be linked before it can rank, so a phrase with no page is a discovery gap, not a measurement question. detectKeywordsWithoutPage returns nothing when the audit has read no pages, so the page-audit prerequisite is real rather than decorative.',
+    why: 'Whether any read page carries the approved phrase in its title or H1 is read from page_metadata_observations, not inferred from counts. Google: "Other pages are discovered when Google extracts a link from a known page to a new page: for example, a hub page, such as a category page, links to a new blog post" (developers.google.com/search/docs/fundamentals/how-search-works, fetched 2026-08-21) — a page has to exist and be linked before it can rank, so a phrase with no page is a discovery gap, not a measurement question. detectKeywordsWithoutPage returns nothing when the audit has read no pages, so the page-audit prerequisite is real rather than decorative.',
   },
 ];
 

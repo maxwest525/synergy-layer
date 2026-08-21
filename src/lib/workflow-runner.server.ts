@@ -771,7 +771,8 @@ async function runSerpCompetitorNode(client: Client, ref: string): Promise<NodeO
   if (
     ref !== "serp.competitors" &&
     ref !== "serp.competitor_intelligence" &&
-    ref !== "competitor.page_observation"
+    ref !== "competitor.page_observation" &&
+    ref !== "serp.targeting"
   ) {
     return null;
   }
@@ -787,6 +788,12 @@ async function runSerpCompetitorNode(client: Client, ref: string): Promise<NodeO
       .replace(/^https?:\/\//, "")
       .replace(/\/$/, "");
     if (!own) return { ok: false, error: "No owned property is selected." };
+
+    if (ref === "serp.targeting") {
+      const { runTargetingPass } = await import("./dataforseo/targeting-rules.server");
+      const result = await runTargetingPass(client, tenantId);
+      return { ok: true, output: { ...result, costUsd: 0 } };
+    }
 
     if (ref === "serp.competitor_intelligence") {
       const { buildCompetitorProfiles } =
