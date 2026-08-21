@@ -83,9 +83,12 @@ function isGrounded(days: number): days is GroundedWindow {
  * the ratio (a flat site reads as having "risen" ×2 or ×3.21), so both sides
  * are converted to a per-day rate first.
  */
+/** The approval-baseline window's length. Fixed by the lifecycle trigger that cuts window-0 rows. */
+const BASELINE_WINDOW_DAYS = 28;
+
 function siteRatio(trend: OutcomeReading["siteTrend"], windowDays: number): number | null {
   if (trend === null || trend.beforeImpressions < MIN_BASELINE) return null;
-  const beforeRate = trend.beforeImpressions / 28;
+  const beforeRate = trend.beforeImpressions / BASELINE_WINDOW_DAYS;
   const afterRate = trend.afterImpressions / windowDays;
   return afterRate / beforeRate;
 }
@@ -157,12 +160,26 @@ export function outcomeVerdict(reading: OutcomeReading): OutcomeAssessment {
     };
   }
 
-  const scale = reading.windowDays / 28;
+  const scale = reading.windowDays / BASELINE_WINDOW_DAYS;
+  const rawScaledBaselineImpressions = reading.baseline.impressions * scale;
+
+  // Checked against the UNROUNDED scaled value, before any rounding happens.
+  // Rounding first let a 3-impression baseline scaled ×3.21 at 90 days round
+  // 9.64 up to 10 and clear the floor — a threshold moving because of display
+  // rounding, which is exactly the kind of fabricated confidence this module
+  // exists to refuse.
+  if (rawScaledBaselineImpressions < MIN_BASELINE) {
+    return {
+      verdict: "neutral",
+      reason: `Only ${reading.baseline.impressions} in the 28 day baseline, about ${rawScaledBaselineImpressions.toFixed(1)} scaled to ${reading.windowDays} days, so a move to ${reading.impressions} is well inside ordinary variation. Too little happened to tell a change from noise.`,
+    };
+  }
+
   // Rounded once, here, and used everywhere below: an unrounded scaled count
   // (90 / 28 does not divide evenly) would otherwise leak a three-decimal
   // number into copy the operator reads, and into confidenceInCountChange's
   // own reason string, which quotes its "before" argument verbatim.
-  const scaledBaselineImpressions = Math.round(reading.baseline.impressions * scale);
+  const scaledBaselineImpressions = Math.round(rawScaledBaselineImpressions);
   const scaledBaselineClicks = Math.round(reading.baseline.clicks * scale);
   const scalingNote =
     scale === 1
@@ -171,7 +188,7 @@ export function outcomeVerdict(reading: OutcomeReading): OutcomeAssessment {
 
   const confidence = confidenceInCountChange(scaledBaselineImpressions, reading.impressions);
   if (confidence.band === "low") {
-    return { verdict: "neutral", reason: confidence.reason };
+    return { verdict: "neutral", reason: `${confidence.reason}${scalingNote}` };
   }
 
   if (reading.impressions < scaledBaselineImpressions) {
@@ -207,7 +224,7 @@ export function outcomeVerdict(reading: OutcomeReading): OutcomeAssessment {
   if (tide !== null && changeRatio <= tide) {
     return {
       verdict: "neutral",
-      reason: `Rose from ${scaledBaselineImpressions} to ${reading.impressions} impressions, ×${changeRatio.toFixed(1)}, but the whole site rose ×${tide.toFixed(1)} over the same weeks, so this is the tide, not the treatment.`,
+      reason: `Rose from ${scaledBaselineImpressions} to ${reading.impressions} impressions${scalingNote}, ×${changeRatio.toFixed(1)}, but the whole site rose ×${tide.toFixed(1)} over the same weeks, so this is the tide, not the treatment.`,
     };
   }
 

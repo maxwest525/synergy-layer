@@ -352,3 +352,58 @@ describe("no unrounded scaled count reaches the operator", () => {
     }
   });
 });
+
+describe("the MIN_BASELINE floor is checked before rounding, not after", () => {
+  it("never lets a scaled-up baseline round past the floor it never actually cleared", () => {
+    // 3 scaled ×3.214... at 90 days is 9.64, which rounds to 10 and would clear
+    // MIN_BASELINE if the floor were checked on the rounded value.
+    const graded = outcomeVerdict(
+      reading({
+        windowDays: 90,
+        daysSinceLive: 90,
+        impressions: 100,
+        clicks: 5,
+        baseline: { impressions: 3, clicks: 0 },
+        siteTrend: null,
+      }),
+    );
+    expect(graded.verdict).toBe("neutral");
+    expect(graded.verdict).not.toBe("success");
+  });
+});
+
+describe("the scaling note appears in every branch that quotes a scaled number", () => {
+  it("is present on the low-confidence return at 56/90 days", () => {
+    // scaledBaselineImpressions rounds to 321; matching it exactly forces the
+    // "both periods hold the same count" low-confidence branch.
+    const graded = outcomeVerdict(
+      reading({
+        windowDays: 90,
+        daysSinceLive: 90,
+        impressions: 321,
+        clicks: 5,
+        baseline: { impressions: 100, clicks: 5 },
+        siteTrend: null,
+      }),
+    );
+    expect(graded.verdict).toBe("neutral");
+    expect(graded.reason).toMatch(/scaled ×3\.21/);
+  });
+
+  it("is present on the tide-neutral return at 56/90 days", () => {
+    const graded = outcomeVerdict(
+      reading({
+        windowDays: 90,
+        daysSinceLive: 90,
+        impressions: 700,
+        clicks: 50,
+        baseline: { impressions: 100, clicks: 5 },
+        // Rate 10/day before, rate ~22.2/day after: the site outran the page.
+        siteTrend: { beforeImpressions: 280, afterImpressions: 2000 },
+      }),
+    );
+    expect(graded.verdict).toBe("neutral");
+    expect(graded.reason).toMatch(/scaled ×3\.21/);
+    expect(graded.reason).toMatch(/tide/i);
+  });
+});
