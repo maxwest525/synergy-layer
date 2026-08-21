@@ -3,6 +3,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { CommandCenterFacts, Ga4Window } from "./command-center";
 import { categoryForChangeRequest, categoryForFinding, ruleFromMetadata } from "./finding-router";
+import { isObservationOnly } from "./recommendation-action";
 import type { AuditSeverity, QueueSource } from "./suggestion-queue";
 
 /**
@@ -150,6 +151,15 @@ export const getCommandCenterFacts = createServerFn({ method: "POST" })
     ).size;
 
     const audit = await readPageAudit(db, tenantId);
+    const suppressionResult = await db
+      .from("suggestion_suppressions")
+      .select("fingerprint")
+      .eq("tenant_id", tenantId);
+    const suppressed = new Set(
+      (assertRead("Ignored suggestions", suppressionResult).data ?? []).map(
+        (row) => row.fingerprint,
+      ),
+    );
     const pagesNeedingFixes = new Set(
       audit.findings.flatMap((finding) => finding.pages.map((page) => page.url)),
     ).size;
@@ -217,6 +227,7 @@ export const getCommandCenterFacts = createServerFn({ method: "POST" })
       // Carried so the queue can say which constraint this addresses, not only
       // how long it has been waiting.
       rule: ruleFromMetadata(row.metadata),
+      observationOnly: isObservationOnly(row.metadata) || row.state === "observed",
       linkedChangeId: linkedRecommendationIds.has(row.id) ? row.id : null,
       createdAt: row.created_at,
       updatedAt: row.updated_at ?? row.created_at,
@@ -234,6 +245,7 @@ export const getCommandCenterFacts = createServerFn({ method: "POST" })
       fingerprint: `audit:${finding.check}`,
       severity: finding.severity as AuditSeverity,
       linkedChangeId: null,
+      suppressed: suppressed.has(`audit:${finding.check}`),
       createdAt: observedAt,
       updatedAt: observedAt,
     }));
@@ -252,6 +264,7 @@ export const getCommandCenterFacts = createServerFn({ method: "POST" })
       fingerprint: `site:${finding.check}`,
       severity: finding.severity as AuditSeverity,
       linkedChangeId: null,
+      suppressed: suppressed.has(`site:${finding.check}`),
       createdAt: audit.siteObservedAt ?? observedAt,
       updatedAt: audit.siteObservedAt ?? observedAt,
     }));

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { deriveFixTarget, proposalKindForRule } from "./finding-fix-target";
+import { deriveFixTarget, hasGovernedFixPath, proposalKindForRule } from "./finding-fix-target";
 
 const row = (page: string, query: string, impressions: number) => ({
   keys: [page, query],
@@ -58,5 +58,27 @@ describe("proposalKindForRule", () => {
     ]) {
       expect(proposalKindForRule(rule)).toBe("title_h1");
     }
+  });
+});
+
+describe("which rules the governed fix path accepts", () => {
+  it("accepts every rule deriveFixTarget can resolve", () => {
+    for (const rule of [
+      "weak_ctr_page",
+      "visibility_gain",
+      "zero_impression_page",
+      "index_coverage_drift",
+      "striking_distance_query",
+      "position_loss",
+      "possible_query_overlap",
+      "query_coverage_gap",
+    ]) {
+      expect(hasGovernedFixPath(rule)).toBe(true);
+    }
+  });
+
+  it("refuses a rule deriveFixTarget has no path for", () => {
+    expect(hasGovernedFixPath("some_rule_nobody_wired")).toBe(false);
+    expect(deriveFixTarget("some_rule_nobody_wired", "https://x.test/", []).ok).toBe(false);
   });
 });

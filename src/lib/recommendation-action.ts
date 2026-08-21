@@ -12,6 +12,12 @@ export type SuggestedActionView = {
   executable: boolean;
   /** Plain-language description of the action. */
   summary: string;
+  /**
+   * Why approving is not offered, in the operator's words. Non-null exactly
+   * when `executable` is false, so the surface can render the absence of a
+   * button as a stated fact rather than an empty space.
+   */
+  unavailableReason: string | null;
   /** Optional safe navigation to the surface where the real decision lives. */
   link: { to: "/competitors"; label: string; effect: string } | null;
 };
@@ -43,6 +49,8 @@ export function describeSuggestedAction(action: unknown): SuggestedActionView {
       executable: false,
       summary:
         "This observation points at the competitor review queue. The real decision is made there, on the candidate itself.",
+      unavailableReason:
+        "There is nothing to approve here. The decision is made on the candidate itself, in the competitor queue.",
       link: {
         to: "/competitors",
         label: "Review competitor candidates",
@@ -58,6 +66,8 @@ export function describeSuggestedAction(action: unknown): SuggestedActionView {
       executable: false,
       summary:
         "This is a coverage observation drawn from stored SERP evidence. There is nothing to execute; it exists so the gap is visible and dated.",
+      unavailableReason:
+        "There is nothing to approve here. This is a gap we spotted, recorded and dated so it stays visible.",
       link: null,
     };
   }
@@ -68,6 +78,8 @@ export function describeSuggestedAction(action: unknown): SuggestedActionView {
       executable: false,
       summary:
         "Authorising a capability is done in the Capability Registry against the real connection. No handler is wired to this row, so approving it here would record a decision that runs nothing.",
+      unavailableReason:
+        "Turning a capability on is done against the real connection, in the Capability Registry. Approving it here would record a decision that runs nothing.",
       link: null,
     };
   }
@@ -78,6 +90,8 @@ export function describeSuggestedAction(action: unknown): SuggestedActionView {
       executable: false,
       summary:
         "Indexing a knowledge collection has no connected handler yet. This row is a note, not a runnable action.",
+      unavailableReason:
+        "Nothing is connected that could do this yet, so this row is a note rather than something you can set running.",
       link: null,
     };
   }
@@ -87,6 +101,8 @@ export function describeSuggestedAction(action: unknown): SuggestedActionView {
     executable: false,
     summary:
       "No executable handler is connected to this suggested action. AOOS will not offer an approval that cannot do anything.",
+    unavailableReason:
+      "Nothing is connected that could carry this out, so there is no approval to give.",
     link: null,
   };
 }

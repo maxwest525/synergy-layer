@@ -107,6 +107,10 @@ function RecommendationDetailPage() {
                   Reject
                 </Button>
               </>
+            ) : action.unavailableReason && !data.changeRequest && !observation ? (
+              <p className="max-w-sm text-xs leading-snug text-muted-foreground">
+                {action.unavailableReason}
+              </p>
             ) : null}
           </>
         }

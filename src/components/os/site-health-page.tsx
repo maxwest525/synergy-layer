@@ -1,14 +1,14 @@
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { Gauge, Info } from "lucide-react";
+import { Gauge, Info, TriangleAlert } from "lucide-react";
 
 import { useSiteHealth } from "./site-health-facts";
 import { EmptyState } from "./primitives";
-import { actionFor } from "@/lib/command-center";
+import { SuggestionCard } from "./suggestion-card";
 import type { GradedOutcome, StatusTone, TabId, Tile } from "@/lib/site-health";
 import type { OutcomeVerdict } from "@/lib/outcome-verdict";
 import type { SiteFinding } from "@/lib/site-checks";
-import type { QueueItem, UrgencyTone } from "@/lib/suggestion-queue";
+import type { QueueItem } from "@/lib/suggestion-queue";
 import { cn } from "@/lib/utils";
 
 /**
@@ -33,12 +33,6 @@ const SEVERITY_TONE: Record<string, string> = {
   critical: "text-destructive",
   warning: "text-warning",
   advice: "text-info",
-};
-
-const URGENCY_TONE: Record<UrgencyTone, string> = {
-  danger: "text-destructive",
-  warning: "text-warning",
-  info: "text-info",
 };
 
 /** Plain words, not the stored enum. The operator never sees "too_early". */
@@ -130,38 +124,42 @@ function CrawlCard({ finding }: { finding: SiteFinding }) {
   );
 }
 
-function SuggestionRow({ item }: { item: QueueItem }) {
-  const action = actionFor(item);
-  return (
-    <div className="flex items-center justify-between gap-3 rounded-[10px] border border-border bg-card px-4 py-3">
-      <span className="flex min-w-0 flex-col gap-0.5">
-        <span className="truncate text-[13px] font-semibold text-foreground">{item.title}</span>
-        <span className="text-[10.5px] font-bold uppercase tracking-[0.1em] text-subtle">
-          <span className={URGENCY_TONE[item.tone]}>{item.urgencyLabel}</span>
-          {item.targetUrl ? ` · ${item.targetUrl}` : null}
-        </span>
-      </span>
-      {action.params ? (
-        <Link to={action.to} params={action.params} className={LINK}>
-          {action.label}
-        </Link>
-      ) : (
-        <Link to={action.to} className={LINK}>
-          {action.label}
-        </Link>
-      )}
-    </div>
-  );
-}
-
 function QueueList({ items, empty }: { items: readonly QueueItem[]; empty: string }) {
   if (items.length === 0) return <EmptyState title="Nothing here" description={empty} />;
   return (
     <div className="flex flex-col gap-2.5">
       {items.map((item) => (
-        <SuggestionRow key={item.id} item={item} />
+        <SuggestionCard key={item.id} item={item} />
       ))}
     </div>
+  );
+}
+
+/** The never-run state, made loud rather than left to a grey subtitle line. */
+function NeverRunPanel({ notice }: { notice: string | null }) {
+  if (!notice) return null;
+  return (
+    <div className="flex flex-col gap-1.5 rounded-[10px] border border-warning/40 bg-warning/5 px-4 py-3.5">
+      <span className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.12em] text-warning">
+        <TriangleAlert className="h-3 w-3" strokeWidth={1.6} aria-hidden="true" />
+        Nothing has been checked yet
+      </span>
+      <p className="text-[13px] leading-snug text-foreground">{notice}</p>
+      <Link to="/measurement/tools" className={cn(LINK, "self-start")}>
+        Speed readings and runs
+      </Link>
+    </div>
+  );
+}
+
+function WaitingOnList({ waitingOn }: { waitingOn: readonly string[] }) {
+  if (waitingOn.length === 0) return null;
+  return (
+    <ul className="flex flex-col gap-1 text-xs leading-snug text-muted-foreground">
+      {waitingOn.map((entry) => (
+        <li key={entry}>{entry}</li>
+      ))}
+    </ul>
   );
 }
 
@@ -201,11 +199,11 @@ export function SiteHealthPage({ initialTab }: { initialTab?: TabId } = {}) {
             Whether your site loads fast, whether Google can read it, and whether the fixes you
             approved actually worked.
           </p>
-          <p className="text-xs text-subtle">
-            {view.asOf === null
-              ? "The site checks have not run yet, so nothing below has been read from your site."
-              : `Your site was last checked on ${view.asOf.slice(0, 10)}.`}
-          </p>
+          {view.asOf !== null ? (
+            <p className="text-xs text-subtle">
+              Your site was last checked on {view.asOf.slice(0, 10)}.
+            </p>
+          ) : null}
         </div>
         <div className="flex items-center gap-2.5">
           <span
@@ -221,6 +219,8 @@ export function SiteHealthPage({ initialTab }: { initialTab?: TabId } = {}) {
           </Link>
         </div>
       </div>
+
+      <NeverRunPanel notice={view.neverRunNotice} />
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         {view.tiles.map((tile) => (
@@ -303,14 +303,17 @@ export function SiteHealthPage({ initialTab }: { initialTab?: TabId } = {}) {
 
         {tab === "crawl" ? (
           view.crawl.length === 0 ? (
-            <EmptyState
-              title={view.asOf === null ? "Nothing has been checked" : "No crawl problems"}
-              description={
-                view.asOf === null
-                  ? "Run the audit so robots.txt, your sitemap and every page can be read."
-                  : "Google can read robots.txt, your sitemap and every page the audit opened."
-              }
-            />
+            <div className="flex flex-col gap-2.5">
+              <EmptyState
+                title={view.asOf === null ? "Nothing has been checked" : "No crawl problems"}
+                description={
+                  view.asOf === null
+                    ? "Run the audit so robots.txt, your sitemap and every page can be read."
+                    : "Google can read robots.txt, your sitemap and every page the audit opened."
+                }
+              />
+              <WaitingOnList waitingOn={view.waitingOn} />
+            </div>
           ) : (
             <div className="flex flex-col gap-2.5">
               {view.crawl.map((finding) => (

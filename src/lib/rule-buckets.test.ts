@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { RULE_ASSIGNMENTS, type RuleBucket } from "./rule-buckets";
+import { RULE_ASSIGNMENTS, unmetPrerequisites, type RuleBucket } from "./rule-buckets";
 import { SEARCH_CONSOLE_THRESHOLDS, SEO_RULES } from "./rule-thresholds";
 import { ALL_SEARCH_RULES } from "./finding-copy";
 import type { Ga4CheckRule } from "./ga4-rule-checks";
@@ -81,5 +81,57 @@ describe("RULE_ASSIGNMENTS", () => {
     const byRule = new Map(RULE_ASSIGNMENTS.map((a) => [a.rule, a]));
     expect(byRule.get("site_visibility_shift")?.bucket).toBe("pooled" satisfies RuleBucket);
     expect(byRule.get("site_clicks_shift")?.bucket).toBe("pooled" satisfies RuleBucket);
+  });
+});
+
+describe("non-volume prerequisites", () => {
+  it("declares alsoNeeds on every rule, so a new rule cannot ship without an answer", () => {
+    for (const assignment of RULE_ASSIGNMENTS) {
+      expect(Array.isArray(assignment.alsoNeeds)).toBe(true);
+    }
+  });
+
+  it("names a second collection for every rule that compares against a prior window", () => {
+    const byRule = new Map(RULE_ASSIGNMENTS.map((a) => [a.rule, a]));
+    for (const rule of ["declining_clicks", "declining_impressions", "visibility_gain"]) {
+      expect(byRule.get(rule)?.alsoNeeds).toContain("second_collection");
+    }
+  });
+
+  it("says nothing when every prerequisite is met", () => {
+    expect(
+      unmetPrerequisites({
+        secondCollection: true,
+        pageAudit: true,
+        analytics: true,
+        urlInspection: true,
+      }),
+    ).toEqual([]);
+  });
+
+  it("names each unmet prerequisite once, in plain words, with no rule ids", () => {
+    const notes = unmetPrerequisites({
+      secondCollection: false,
+      pageAudit: false,
+      analytics: true,
+      urlInspection: true,
+    });
+    expect(notes).toHaveLength(2);
+    expect(notes.join(" ")).toContain("second");
+    expect(notes.join(" ")).toContain("page audit");
+    for (const assignment of RULE_ASSIGNMENTS) {
+      expect(notes.join(" ")).not.toContain(assignment.rule);
+    }
+  });
+
+  it("counts the rules each unmet prerequisite is holding, from the registry", () => {
+    const notes = unmetPrerequisites({
+      secondCollection: false,
+      pageAudit: true,
+      analytics: true,
+      urlInspection: true,
+    });
+    const held = RULE_ASSIGNMENTS.filter((a) => a.alsoNeeds.includes("second_collection")).length;
+    expect(notes[0]).toContain(String(held));
   });
 });

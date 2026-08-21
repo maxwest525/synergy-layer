@@ -19,6 +19,7 @@
 import { cohortVerdict } from "./cohort-verdict";
 import { GROUNDED_WINDOWS, outcomeVerdict, type OutcomeVerdict } from "./outcome-verdict";
 import type { Severity } from "./page-checks";
+import { unmetPrerequisites } from "./rule-buckets";
 import type { SiteFinding } from "./site-checks";
 import {
   buildQueue,
@@ -144,10 +145,17 @@ export type SiteHealthView = {
    * `cohortVerdict` itself refuses. See `cohort-verdict.ts`.
    */
   readonly cohortNote: string | null;
+  /** Sentences from `unmetPrerequisites`. Empty once every prerequisite this page can see is met. */
+  readonly waitingOn: readonly string[];
+  /** Non-null only when the site checks have never run at all. */
+  readonly neverRunNotice: string | null;
 };
 
 const NOT_CHECKED =
-  "The site checks have not run yet, so nothing has been read from robots.txt or your sitemap.";
+  "The site checks have never run, so nothing has been read from robots.txt or your sitemap.";
+
+const NEVER_RUN =
+  "The site checks have never run. Robots.txt, the sitemap and whether pages render are all blind until you run them once.";
 
 /**
  * Why a stored reading is not graded.
@@ -440,6 +448,15 @@ export function buildSiteHealth(facts: SiteHealthFacts): SiteHealthView {
     truncatedNote: facts.truncated
       ? "More changes are stored than were read for this page, so the counts above are a floor rather than a total."
       : null,
+    // Nothing on this page reads a comparison window, analytics or a stored URL
+    // inspection, so those pass true and say nothing rather than guessing.
+    waitingOn: unmetPrerequisites({
+      secondCollection: true,
+      pageAudit: facts.siteObservedAt !== null,
+      analytics: true,
+      urlInspection: true,
+    }),
+    neverRunNotice: facts.siteObservedAt === null ? NEVER_RUN : null,
   };
 }
 

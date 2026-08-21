@@ -2,6 +2,13 @@
  * Pure on page analysis. Everything here reads the rendered HTML of a page and
  * reports what is actually there. Nothing fetches, nothing estimates, nothing
  * scores. A check either found a real defect on a real page or it did not.
+ *
+ * Three things stated plainly here so the next reader does not re-derive them:
+ * image file weight is not checked, because the render only returns HTML and
+ * text and no byte size is available to read; click depth is not checked,
+ * because no Google document sets a citable maximum; and page speed per page
+ * is not checked here at all — that is the stored PageSpeed reading Site
+ * health renders, not something this module reads from HTML.
  */
 
 export type PageFacts = {
@@ -16,14 +23,17 @@ export type PageFacts = {
   headingSkips: boolean;
   imageCount: number;
   imagesMissingAlt: number;
+  imagesMissingDimensions?: number | undefined;
   jsonLdTypes: string[];
   jsonLdInvalid: boolean;
   internalLinks: number;
   externalLinks: number;
+  internalLinkTargets?: string[] | undefined;
   wordCount: number;
   ogTitle: string | null;
   ogImage: string | null;
   hasFavicon: boolean;
+  hasMetaRefresh?: boolean;
 };
 
 export type CheckId =
@@ -45,10 +55,18 @@ export type CheckId =
   | "lang_missing"
   | "structured_data_missing"
   | "structured_data_invalid"
+  | "structured_data_type_missing"
   | "image_alt_missing"
+  | "image_dimensions_missing"
   | "thin_content"
   | "no_internal_links"
-  | "og_missing";
+  | "og_missing"
+  | "url_underscores"
+  | "url_query_string"
+  | "orphan_page"
+  | "url_redirects"
+  | "canonical_chain"
+  | "meta_refresh";
 
 export type Severity = "critical" | "warning" | "advice";
 
@@ -260,6 +278,18 @@ export const CHECKS: Record<CheckId, CheckDefinition> = {
     instruction: (n) => `Fix unreadable structured data on ${n} pages. Google is ignoring it now.`,
     fixableByWordingProposal: false,
   },
+  // Structured data policy doc: "Using structured data enables a feature to be
+  // present, it does not guarantee that it will be present" — the right type is
+  // what makes the feature possible at all.
+  // https://developers.google.com/search/docs/appearance/structured-data/sd-policies
+  structured_data_type_missing: {
+    check: "structured_data_type_missing",
+    label: "Structured data of the wrong kind",
+    severity: "advice",
+    instruction: (n) =>
+      `Add the kind of structured data machines expect on ${n} pages, so search and AI surfaces can read them correctly.`,
+    fixableByWordingProposal: false,
+  },
   // Google Images doc: "Google uses alt text along with computer vision
   // algorithms and the contents of the page to understand the subject
   // matter of the image," and alt text "also improves accessibility for
@@ -270,6 +300,22 @@ export const CHECKS: Record<CheckId, CheckDefinition> = {
     label: "Images with no description",
     severity: "warning",
     instruction: (n) => `Describe the images on ${n} pages so they are readable and searchable.`,
+    fixableByWordingProposal: false,
+  },
+  // Core Web Vitals doc: Cumulative Layout Shift "Measures visual stability."
+  // Core Web Vitals are metrics Search Console reports on for a site's pages.
+  // An image with no declared size gives the browser nothing to reserve, so
+  // the page moves under the reader as it loads.
+  // https://developers.google.com/search/docs/appearance/core-web-vitals
+  // Checks HTML width/height attributes only; images sized via CSS are not
+  // detected here and may be flagged even when a stylesheet already reserves
+  // their space.
+  image_dimensions_missing: {
+    check: "image_dimensions_missing",
+    label: "Images with no size declared",
+    severity: "advice",
+    instruction: (n) =>
+      `Declare a width and height on the images on ${n} pages so the page stops jumping while it loads.`,
     fixableByWordingProposal: false,
   },
   // SEO starter guide: "The length of the content alone doesn't matter for
@@ -309,6 +355,93 @@ export const CHECKS: Record<CheckId, CheckDefinition> = {
     instruction: (n) => `Add a share title and image to ${n} pages so shared links look right.`,
     fixableByWordingProposal: false,
   },
+  // URL structure doc: "We recommend separating words in your URLs, when
+  // possible. Specifically, we recommend using hyphens (-) instead of
+  // underscores (_) to separate words in your URLs, as it helps users and
+  // search engines better identify concepts in the URL." (the doc says
+  // "search engines", not "Google" — kept as written)
+  // https://developers.google.com/search/docs/crawling-indexing/url-structure
+  url_underscores: {
+    check: "url_underscores",
+    label: "Underscores in the address",
+    severity: "advice",
+    instruction: (n) =>
+      `Separate the words in ${n} page addresses with hyphens instead of underscores.`,
+    fixableByWordingProposal: false,
+  },
+  // URL structure doc, "Use as few parameters as you can": "Whenever
+  // possible, shorten URLs by trimming unnecessary parameters (meaning,
+  // parameters that don't change the content)."
+  // https://developers.google.com/search/docs/crawling-indexing/url-structure
+  // Stated assumption: a parameter on a page the site itself declares indexable
+  // is worth naming; nothing here judges parameters on pages nobody declared.
+  url_query_string: {
+    check: "url_query_string",
+    label: "Address carries parameters",
+    severity: "advice",
+    instruction: (n) =>
+      `Give ${n} pages a plain address without parameters, so one page has one address.`,
+    fixableByWordingProposal: false,
+  },
+  // SEO starter guide: "the vast majority of the new pages Google finds every
+  // day are through links," and links "connect your users and search engines to
+  // other parts of your site."
+  // https://developers.google.com/search/docs/fundamentals/seo-starter-guide
+  orphan_page: {
+    check: "orphan_page",
+    label: "No path to the page from the home page",
+    severity: "warning",
+    instruction: (n) =>
+      `Link to ${n} pages from somewhere a reader can reach from your home page. Nothing on the site points at them today.`,
+    fixableByWordingProposal: false,
+  },
+  // Reference: Screaming Frog's redirects guide — a redirect is an extra hop
+  // between the address you published and the page that answers.
+  // https://www.screamingfrog.co.uk/learn-seo/redirects/
+  // Stated assumption: publishing the address that redirects, instead of the
+  // one that actually answers, makes the site declare that extra hop rather
+  // than the page. Google's canonicalization doc says only that it "chooses
+  // the page that... is objectively the most complete and useful for search
+  // users, and marks it as the canonical" — it does not itself say a redirecting
+  // address is a defect; that inference is this check's own.
+  // https://developers.google.com/search/docs/crawling-indexing/canonicalization
+  url_redirects: {
+    check: "url_redirects",
+    label: "Address redirects instead of answering",
+    severity: "warning",
+    instruction: (n) =>
+      `Publish the address that actually answers on ${n} pages instead of one that redirects to it.`,
+    fixableByWordingProposal: false,
+  },
+  // Reference: Screaming Frog's canonicals guide: "canonicals should be
+  // crawlable and indexable, and not be blocked by robots.txt, redirect, go
+  // to an error page, or be canonicalised to another URL."
+  // https://www.screamingfrog.co.uk/learn-seo/canonicals/
+  // Stated assumption: SF's guide does not discuss chains — it only says a
+  // canonical target should not itself be canonicalized elsewhere. That a
+  // canonical pointing at such a page forms a chain, and that the middle
+  // page's declaration is the one Google has to resolve, is this check's own
+  // inference, not something either source states.
+  canonical_chain: {
+    check: "canonical_chain",
+    label: "Canonical points at another canonical",
+    severity: "warning",
+    instruction: (n) =>
+      `Point the canonical address on ${n} pages straight at the final page instead of another redirect in the chain.`,
+    fixableByWordingProposal: false,
+  },
+  // Reference: Screaming Frog's redirects guide lists meta refresh among the
+  // redirect types, and it is the one that happens in the browser after the
+  // page has already been served.
+  // https://www.screamingfrog.co.uk/learn-seo/redirects/
+  meta_refresh: {
+    check: "meta_refresh",
+    label: "Redirects in the browser, not on the server",
+    severity: "advice",
+    instruction: (n) =>
+      `Replace the meta refresh on ${n} pages with a server redirect, so the redirect happens before the page is served.`,
+    fixableByWordingProposal: false,
+  },
 };
 
 // Stated assumption: display truncation is by pixels and unpublished; these
@@ -323,6 +456,112 @@ export const DESCRIPTION_MIN = 70;
 // derives it — what would settle it is Google publishing any floor, which
 // it says it will not.
 export const THIN_CONTENT_WORDS = 250;
+
+export type PageCategory = "home" | "contact" | "question" | "article" | "service" | "other";
+
+/**
+ * Stated assumption: this is a small, conservative table of path prefixes, not
+ * a rule engine — it feeds one advisory check, so a miss just skips that
+ * check rather than misreporting one. An address that will not parse, or that
+ * matches nothing below, is "other".
+ */
+export function pageCategory(pageUrl: string): PageCategory {
+  let pathname: string;
+  try {
+    pathname = new URL(pageUrl).pathname.toLowerCase();
+  } catch {
+    return "other";
+  }
+  if (pathname === "/" || pathname === "") return "home";
+  if (pathname.includes("contact")) return "contact";
+  if (pathname.includes("faq") || pathname.includes("questions")) return "question";
+  const segments = pathname.split("/").filter((segment) => segment.length > 0);
+  const first = segments[0] ?? "";
+  if (["blog", "news", "articles", "guides"].includes(first)) return "article";
+  if (["services", "service"].includes(first) && segments.length > 1) return "service";
+  return "other";
+}
+
+/**
+ * The structured data type Google's own documentation names for each kind of
+ * page. Only types with a documented Google feature are listed; a page category
+ * with nothing documented maps to an empty list and is never reported.
+ */
+export const EXPECTED_SCHEMA: Record<PageCategory, string[]> = {
+  // Local business doc: "When users search for businesses on Google Search or
+  // Maps, Search results may display a prominent Google knowledge panel with
+  // details about a business that matched the query."
+  // https://developers.google.com/search/docs/appearance/structured-data/local-business
+  home: ["LocalBusiness"],
+  contact: ["LocalBusiness"],
+  // FAQ doc: "A Frequently Asked Question (FAQ) page contains a list of
+  // questions and answers pertaining to a particular topic."
+  // https://developers.google.com/search/docs/appearance/structured-data/faqpage
+  // Stated assumption: Google stopped showing FAQ rich results in Search (May
+  // 2026), so no result-appearance payoff is claimed; the markup is kept
+  // because machine-readable Q&A helps answer engines and AI surfaces parse
+  // the page.
+  question: ["FAQPage"],
+  // Article doc: "Adding Article structured data to your news, blog, and sports
+  // article pages can help Google understand more about the web page."
+  // https://developers.google.com/search/docs/appearance/structured-data/article
+  article: ["Article", "BlogPosting", "NewsArticle"],
+  // Stated assumption: Google documents no Service rich result. Service is
+  // schema.org vocabulary a service page can carry so the offering is machine
+  // readable; what would settle it is Google documenting a Service feature.
+  service: ["Service"],
+  other: [],
+};
+
+/**
+ * Stated assumption: schema.org's own subtype hierarchy is not consulted here
+ * — that would mean guessing which of its many subtypes count. This lists
+ * only the specific subtype this audit has a reason to accept, keyed
+ * lowercase, mapped to the lowercase parent type(s) it satisfies.
+ */
+const ACCEPTED_SCHEMA_SUBTYPES: Record<string, string[]> = {
+  movingcompany: ["localbusiness"],
+};
+
+/** Whether any declared type is the expected type itself, or an accepted subtype of it. */
+function satisfiesExpectedSchema(declaredTypes: string[], expected: string[]): boolean {
+  const expectedLower = expected.map((type) => type.toLowerCase());
+  return declaredTypes.some((declaredType) => {
+    const type = declaredType.toLowerCase();
+    if (expectedLower.includes(type)) return true;
+    return (ACCEPTED_SCHEMA_SUBTYPES[type] ?? []).some((parent) => expectedLower.includes(parent));
+  });
+}
+
+/**
+ * Plain-English gloss for a schema.org type name, keyed lowercase. Only the
+ * types this check itself declares or expects are covered — everything else
+ * has no invented gloss and is shown by its bare name instead.
+ */
+const PLAIN_SCHEMA_LABELS: Record<string, string> = {
+  localbusiness: "a business",
+  faqpage: "a page of questions and answers",
+  article: "an article",
+  blogposting: "an article",
+  newsarticle: "an article",
+  service: "a service",
+  webpage: "a generic web page",
+};
+
+/** Plain words first, the schema.org name in parentheses. A type with no known
+ * gloss reads as "a different kind of structured data" rather than the bare
+ * technical name. */
+function schemaTypeLabel(type: string): string {
+  const plain = PLAIN_SCHEMA_LABELS[type.toLowerCase()] ?? "a different kind of structured data";
+  return `${plain} (${type})`;
+}
+
+/** The expected list for one category shares one plain gloss; only the technical names vary. */
+function expectedSchemaLabel(expected: string[]): string {
+  const first = expected[0] ?? "";
+  const plain = PLAIN_SCHEMA_LABELS[first.toLowerCase()];
+  return plain ? `${plain} (${expected.join(" or ")})` : expected.join(" or ");
+}
 
 function attr(tag: string, name: string): string | null {
   const match = new RegExp(`${name}\\s*=\\s*("([^"]*)"|'([^']*)')`, "i").exec(tag);
@@ -372,6 +611,42 @@ function sameHost(href: string, pageUrl: string): boolean | null {
   }
 }
 
+/**
+ * A link target and a page's own address, reduced to the same key: the
+ * relative href resolved to absolute against the page it was found on, hash
+ * and query string dropped (they name a spot or a variant on the same page,
+ * not a different page), and a trailing slash stripped except on the root.
+ * An href that will not parse is skipped, never guessed at.
+ */
+function linkKey(href: string, base: string): string | null {
+  try {
+    const target = new URL(href, base);
+    return `${target.origin}${target.pathname.replace(/\/+$/, "") || "/"}`;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * What the address itself says. Parsed rather than pattern-matched so an
+ * underscore in the host, which is not a word in a path, is not reported.
+ * An address that will not parse yields nothing: guessing at a malformed URL
+ * would report a defect on a path we invented.
+ * Note: percent-encoded underscores (%5F) are not detected — URL.pathname
+ * does not decode them, and parsed-not-guessed is the point.
+ */
+export function urlDefects(pageUrl: string): { underscores: boolean; queryString: boolean } {
+  try {
+    const parsed = new URL(pageUrl);
+    return {
+      underscores: parsed.pathname.includes("_"),
+      queryString: parsed.search.length > 0,
+    };
+  } catch {
+    return { underscores: false, queryString: false };
+  }
+}
+
 /** Reads the observable facts of one rendered page. Never throws on odd markup. */
 export function extractPageFacts(html: string, markdown: string, pageUrl: string): PageFacts {
   const titleMatch = /<title[^>]*>([\s\S]*?)<\/title>/i.exec(html);
@@ -393,6 +668,11 @@ export function extractPageFacts(html: string, markdown: string, pageUrl: string
     const alt = attr(tag, "alt");
     return alt === null || alt.length === 0;
   }).length;
+  // Both attributes are needed for the browser to reserve the space; one alone
+  // does not give it an aspect ratio to hold.
+  const imagesMissingDimensions = images.filter(
+    (tag) => attr(tag, "width") === null || attr(tag, "height") === null,
+  ).length;
 
   const jsonLdTypes: string[] = [];
   let jsonLdInvalid = false;
@@ -426,12 +706,16 @@ export function extractPageFacts(html: string, markdown: string, pageUrl: string
 
   let internalLinks = 0;
   let externalLinks = 0;
+  const internalLinkTargets = new Set<string>();
   for (const tag of html.match(/<a\b[^>]*>/gi) ?? []) {
     const href = attr(tag, "href");
     if (!href || href.startsWith("#")) continue;
     const internal = sameHost(href, pageUrl);
-    if (internal === true) internalLinks += 1;
-    else if (internal === false) externalLinks += 1;
+    if (internal === true) {
+      internalLinks += 1;
+      const target = linkKey(href, pageUrl);
+      if (target) internalLinkTargets.add(target);
+    } else if (internal === false) externalLinks += 1;
   }
 
   let canonical: string | null = null;
@@ -462,14 +746,19 @@ export function extractPageFacts(html: string, markdown: string, pageUrl: string
     headingSkips,
     imageCount: images.length,
     imagesMissingAlt,
+    imagesMissingDimensions,
     jsonLdTypes: [...new Set(jsonLdTypes)],
     jsonLdInvalid,
     internalLinks,
     externalLinks,
+    internalLinkTargets: [...internalLinkTargets],
     wordCount: words.length,
     ogTitle: metaContent(html, "property", "og:title"),
     ogImage: metaContent(html, "property", "og:image"),
     hasFavicon,
+    hasMetaRefresh: metaTags(html).some(
+      (tag) => attr(tag, "http-equiv")?.toLowerCase() === "refresh",
+    ),
   };
 }
 
@@ -490,20 +779,124 @@ function duplicateKeys(values: (string | null)[]): Set<string> {
   return new Set([...counts.entries()].filter(([, count]) => count > 1).map(([key]) => key));
 }
 
-export type AnalyzedPage = { url: string; facts: PageFacts };
+export type AnalyzedPage = { url: string; facts: PageFacts; finalUrl?: string | null };
+
+type UnreachabilityReport = {
+  readonly unreachable: ReadonlySet<string>;
+  /** Why detection could not run at all, in plain words. Null when it ran. */
+  readonly bailReason: string | null;
+};
+
+/**
+ * Pages no chain of internal links reaches from the home page, and — shared
+ * with `unreachablePagesBailReason` so the two can never disagree — why
+ * detection could not run at all when it bails.
+ *
+ * Bails unless every read page carried its link targets: one page whose links
+ * were never stored would make everything it links to look unreachable, and a
+ * false orphan is worse than a silent one. Likewise, with no home page among
+ * the read pages, or a home page whose links never resolve to another read
+ * page, there is nowhere trustworthy to start, so nothing is said.
+ *
+ * Stated assumption: click depth is computed nowhere here. No Google document
+ * sets a maximum depth from the home page, and inventing one would be a number
+ * chosen only to make this rule fire. Reachable-or-not is threshold-free.
+ */
+function unreachabilityReport(pages: AnalyzedPage[]): UnreachabilityReport {
+  if (pages.some((page) => page.facts.internalLinkTargets === undefined)) {
+    return {
+      unreachable: new Set(),
+      bailReason: "at least one read page did not have its link targets stored",
+    };
+  }
+
+  const byKey = new Map<string, string>();
+  for (const page of pages) {
+    const key = linkKey(page.url, page.url);
+    if (key) byKey.set(key, page.url);
+  }
+
+  const home = [...byKey.entries()].find(([key]) => new URL(key).pathname === "/");
+  if (!home) {
+    return { unreachable: new Set(), bailReason: "no home page is among the pages the audit read" };
+  }
+
+  const reached = new Set<string>([home[0]]);
+  const queue = [home[0]];
+  while (queue.length > 0) {
+    const current = queue.shift() as string;
+    const page = pages.find((p) => linkKey(p.url, p.url) === current);
+    for (const target of page?.facts.internalLinkTargets ?? []) {
+      if (byKey.has(target) && !reached.has(target)) {
+        reached.add(target);
+        queue.push(target);
+      }
+    }
+  }
+
+  // Home's captured links reach no other read page. That can mean a nav the
+  // parser cannot see (JS-rendered), OR a legitimate topology whose nav
+  // targets did not make this audit's capped 100-page sample — the two are
+  // indistinguishable here, so the check stays silent rather than mass-flagging.
+  if (reached.size <= 1) {
+    return {
+      unreachable: new Set(),
+      bailReason: "the home page's links did not reach any other page the audit read",
+    };
+  }
+
+  return {
+    unreachable: new Set(
+      pages
+        .map((page) => ({ url: page.url, key: linkKey(page.url, page.url) }))
+        .filter((page) => page.key && !reached.has(page.key))
+        .map((page) => page.url),
+    ),
+    bailReason: null,
+  };
+}
+
+/** Pages no chain of internal links reaches from the home page. See `unreachabilityReport`. */
+export function unreachablePages(pages: AnalyzedPage[]): Set<string> {
+  return new Set(unreachabilityReport(pages).unreachable);
+}
+
+/**
+ * Why orphan detection could not run at all — a missing field, no home page,
+ * or a home page whose links resolve to nothing — or null when it ran,
+ * whether or not it found an orphan. Read from the same report
+ * `unreachablePages` computes, so the two can never disagree about whether
+ * detection actually ran.
+ */
+export function unreachablePagesBailReason(pages: AnalyzedPage[]): string | null {
+  return unreachabilityReport(pages).bailReason;
+}
 
 /** Every real defect found across every analyzed page. */
 export function evaluatePages(pages: AnalyzedPage[]): PageIssue[] {
   const duplicateTitles = duplicateKeys(pages.map((page) => page.facts.title));
   const duplicateH1s = duplicateKeys(pages.map((page) => page.facts.h1s[0] ?? null));
   const duplicateDescriptions = duplicateKeys(pages.map((page) => page.facts.metaDescription));
+  const unreachable = unreachablePages(pages);
+
+  // Keyed the same way as internalLinkTargets: origin + pathname, trailing
+  // slash stripped, so a slash alone never counts as a different address.
+  const canonicalByAddress = new Map<string, string | null>();
+  for (const page of pages) {
+    const key = linkKey(page.url, page.url);
+    if (key)
+      canonicalByAddress.set(
+        key,
+        page.facts.canonical ? linkKey(page.facts.canonical, page.url) : null,
+      );
+  }
 
   const issues: PageIssue[] = [];
   const add = (check: CheckId, url: string, detail: string): void => {
     issues.push({ check, url, severity: CHECKS[check].severity, detail });
   };
 
-  for (const { url, facts } of pages) {
+  for (const { url, facts, finalUrl } of pages) {
     const title = facts.title;
     if (!title) add("title_missing", url, "The page has no tab title at all.");
     else {
@@ -549,12 +942,34 @@ export function evaluatePages(pages: AnalyzedPage[]): PageIssue[] {
       add("structured_data_invalid", url, "Structured data on the page is not readable JSON.");
     else if (facts.jsonLdTypes.length === 0)
       add("structured_data_missing", url, "No structured data blocks were found.");
+    else {
+      const expected = EXPECTED_SCHEMA[pageCategory(url)];
+      if (expected.length > 0 && !satisfiesExpectedSchema(facts.jsonLdTypes, expected)) {
+        const declaredLabel = facts.jsonLdTypes.map(schemaTypeLabel).join(", ");
+        add(
+          "structured_data_type_missing",
+          url,
+          `This page describes itself as ${declaredLabel}, not ${expectedSchemaLabel(expected)}.`,
+        );
+      }
+    }
 
     if (facts.imagesMissingAlt > 0) {
       add(
         "image_alt_missing",
         url,
         `${facts.imagesMissingAlt} of ${facts.imageCount} images have no description.`,
+      );
+    }
+
+    // undefined means the row was stored before this was read, which is not the
+    // same as zero images missing a size.
+    const missingDimensions = facts.imagesMissingDimensions;
+    if (missingDimensions !== undefined && missingDimensions > 0) {
+      add(
+        "image_dimensions_missing",
+        url,
+        `${missingDimensions} of ${facts.imageCount} images declare no width and height.`,
       );
     }
 
@@ -566,6 +981,42 @@ export function evaluatePages(pages: AnalyzedPage[]): PageIssue[] {
 
     if (!facts.ogTitle || !facts.ogImage)
       add("og_missing", url, "Share title or share image is missing.");
+
+    const address = urlDefects(url);
+    if (address.underscores)
+      add("url_underscores", url, `The address separates words with underscores: ${url}`);
+    if (address.queryString) add("url_query_string", url, `The address carries parameters: ${url}`);
+
+    if (unreachable.has(url))
+      add("orphan_page", url, "No chain of links from the home page reaches this page.");
+
+    if (finalUrl !== undefined && finalUrl !== null) {
+      const from = linkKey(url, url);
+      const to = linkKey(finalUrl, url);
+      if (from && to && from !== to) {
+        add("url_redirects", url, `This address redirects to ${finalUrl}.`);
+      }
+    }
+
+    if (facts.canonical) {
+      const target = linkKey(facts.canonical, url);
+      const targetsOwnCanonical = target ? canonicalByAddress.get(target) : undefined;
+      if (target && targetsOwnCanonical) {
+        add(
+          "canonical_chain",
+          url,
+          `The canonical address, ${facts.canonical}, itself canonicalizes elsewhere.`,
+        );
+      }
+    }
+
+    if (facts.hasMetaRefresh) {
+      add(
+        "meta_refresh",
+        url,
+        "The page redirects with a meta refresh tag instead of a server redirect.",
+      );
+    }
   }
 
   return issues;

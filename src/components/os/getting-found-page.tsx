@@ -4,7 +4,7 @@ import { Search, TriangleAlert } from "lucide-react";
 
 import { useGettingFound } from "./getting-found-facts";
 import { EmptyState } from "./primitives";
-import { actionFor } from "@/lib/command-center";
+import { SuggestionCard } from "./suggestion-card";
 import type {
   Answerability,
   GettingFoundTile,
@@ -14,7 +14,6 @@ import type {
   TabId,
   TileDelta,
 } from "@/lib/getting-found";
-import type { QueueItem, UrgencyTone } from "@/lib/suggestion-queue";
 import { cn } from "@/lib/utils";
 
 /**
@@ -35,12 +34,6 @@ const STATUS_TONE: Record<StatusTone, string> = {
   positive: "border-primary/40 text-primary",
   warning: "border-warning/40 text-warning",
   danger: "border-destructive/40 text-destructive",
-};
-
-const URGENCY_TONE: Record<UrgencyTone, string> = {
-  danger: "text-destructive",
-  warning: "text-warning",
-  info: "text-info",
 };
 
 function DeltaLabel({ delta }: { delta: TileDelta }) {
@@ -101,9 +94,10 @@ function ConstraintBanner({ constraint }: { constraint: GettingFoundView["constr
 
 /**
  * What this volume can and cannot answer, collapsed by default so it does
- * not compete with the diagnosis above it. Renders nothing when the totals
- * behind it are not stored — the tiles already carry that reason, and this
- * is never a second "not measurable" message.
+ * not compete with the diagnosis above it. Renders a degraded form naming
+ * what is missing when only the comparison is absent; renders nothing only
+ * when the page count is unknown — the tiles already carry that reason, and
+ * this is never a second "not measurable" message.
  */
 function AnswerabilityPanel({ answerability }: { answerability: Answerability | null }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -129,38 +123,18 @@ function AnswerabilityPanel({ answerability }: { answerability: Answerability | 
               ))}
             </ul>
           ) : null}
+          {answerability.waitingOn.length > 0 ? (
+            // What is blocking an answer besides volume. Kept beside the volume
+            // line rather than folded into it: "not enough traffic" and "no
+            // second window yet" are different answers.
+            <ul className="flex flex-col gap-1 text-xs leading-snug text-muted-foreground">
+              {answerability.waitingOn.map((entry) => (
+                <li key={entry}>{entry}</li>
+              ))}
+            </ul>
+          ) : null}
         </div>
       ) : null}
-    </div>
-  );
-}
-
-function SuggestionRow({ item }: { item: QueueItem }) {
-  const action = actionFor(item);
-  const link =
-    "shrink-0 rounded-[10px] border border-input bg-secondary px-4 py-2 text-[13px] font-semibold text-foreground transition-colors hover:border-border";
-  return (
-    <div className="flex items-center justify-between gap-3 rounded-[10px] border border-border bg-card px-4 py-3">
-      <span className="flex min-w-0 flex-col gap-0.5">
-        <span className="truncate text-[13px] font-semibold text-foreground">{item.title}</span>
-        <span className="text-[10.5px] font-bold uppercase tracking-[0.1em] text-subtle">
-          <span className={URGENCY_TONE[item.tone]}>{item.urgencyLabel}</span>
-          {item.targetUrl ? ` · ${item.targetUrl}` : null}
-        </span>
-      </span>
-      {/*
-        Every verb opens the review screen that already records the decision.
-        Nothing on this page approves, ignores or writes.
-      */}
-      {action.params ? (
-        <Link to={action.to} params={action.params} className={link}>
-          {action.label}
-        </Link>
-      ) : (
-        <Link to={action.to} className={link}>
-          {action.label}
-        </Link>
-      )}
     </div>
   );
 }
@@ -183,7 +157,7 @@ function SuggestionList({ view }: { view: GettingFoundView }) {
               Real, but not today&rsquo;s problem
             </p>
           ) : null}
-          <SuggestionRow item={item} />
+          <SuggestionCard item={item} />
         </div>
       ))}
     </div>
@@ -233,7 +207,7 @@ function HistoryList({ view }: { view: GettingFoundView }) {
   return (
     <div className="flex flex-col gap-2.5">
       {view.history.map((item) => (
-        <SuggestionRow key={item.id} item={item} />
+        <SuggestionCard key={item.id} item={item} />
       ))}
     </div>
   );

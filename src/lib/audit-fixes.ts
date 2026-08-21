@@ -46,10 +46,18 @@ export const PAGE_CHECK_FIX: Record<CheckId, AuditFixTarget | null> = {
   lang_missing: null,
   structured_data_missing: null,
   structured_data_invalid: null,
+  structured_data_type_missing: null,
   image_alt_missing: null,
+  image_dimensions_missing: null,
   thin_content: null,
   no_internal_links: null,
   og_missing: null,
+  url_underscores: null,
+  url_query_string: null,
+  orphan_page: null,
+  url_redirects: null,
+  canonical_chain: null,
+  meta_refresh: null,
 };
 
 /** Which governed change kind can fix each site level check. */

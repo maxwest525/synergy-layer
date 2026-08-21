@@ -7,6 +7,7 @@ import {
   type YourPagesFacts,
 } from "./your-pages";
 import type { CheckFinding } from "./page-checks";
+import { RULE_ASSIGNMENTS } from "./rule-buckets";
 import type { PeriodComparison } from "./search-console";
 
 const NOW = "2026-08-20T12:00:00.000Z";
@@ -72,6 +73,7 @@ const base: YourPagesFacts = {
   comparison: { status: "insufficient", availableDays: 0, requiredDays: 56, latestDate: null },
   coverage: null,
   sessions: null,
+  orphanBailReason: null,
 };
 
 function withFacts(overrides: Partial<YourPagesFacts>): YourPagesFacts {
@@ -224,11 +226,11 @@ describe("which page is worth opening first", () => {
 });
 
 describe("the honesty invariant", () => {
-  it("says the audit has not run rather than reporting zero pages read", () => {
+  it("says the audit has never run rather than reporting zero pages read", () => {
     const view = buildYourPages(withFacts({ pages: [page("/a", { impressions: 5 })] }));
     const read = view.tiles.find((tile) => tile.label === "Pages read");
     expect(read?.value).toBeNull();
-    expect(read?.missingReason).toMatch(/has not run/i);
+    expect(read?.missingReason).toMatch(/never run/i);
   });
 
   it("reports a real zero once the audit has run", () => {
@@ -450,5 +452,46 @@ describe("defects an adversarial review found before this shipped", () => {
 
   it("names the property the rows belong to", () => {
     expect(buildYourPages(withFacts({})).property).toBe("trumoveinc.com");
+  });
+});
+
+describe("naming what the audit has never run", () => {
+  it("states that the audit has never run, with what it costs", () => {
+    const view = buildYourPages(withFacts({ lastObservedAt: null }));
+    expect(view.neverRunNotice).toContain("never run");
+    expect(view.neverRunNotice).toContain("100");
+    expect(view.waitingOn.join(" ")).toContain("page audit");
+  });
+
+  it("says nothing once the audit has run", () => {
+    expect(buildYourPages(withFacts({ lastObservedAt: NOW })).neverRunNotice).toBeNull();
+  });
+
+  it("says nothing about prerequisites once every one this page can see is met", () => {
+    const view = buildYourPages(
+      withFacts({ lastObservedAt: NOW, comparison: READY, sessions: 40 }),
+    );
+    expect(view.waitingOn).toEqual([]);
+  });
+
+  it("never puts a rule id on screen", () => {
+    const view = buildYourPages(withFacts({ lastObservedAt: null }));
+    for (const assignment of RULE_ASSIGNMENTS) {
+      expect(`${view.neverRunNotice} ${view.waitingOn.join(" ")}`).not.toContain(assignment.rule);
+    }
+  });
+});
+
+describe("naming why orphan detection could not run", () => {
+  it("says why detection could not run, rather than staying silent", () => {
+    const view = buildYourPages(
+      withFacts({ orphanBailReason: "no home page is among the pages the audit read" }),
+    );
+    expect(view.orphanNote).toContain("Orphan detection could not run");
+    expect(view.orphanNote).toContain("no home page");
+  });
+
+  it("says nothing when detection ran, whether or not it found an orphan", () => {
+    expect(buildYourPages(withFacts({ orphanBailReason: null })).orphanNote).toBeNull();
   });
 });

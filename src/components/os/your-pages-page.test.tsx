@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
-import { render, screen, within } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { render as rtlRender, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -15,9 +16,16 @@ vi.mock("@tanstack/react-router", () => ({
   Link: ({ children, to }: { children: React.ReactNode; to: string }) => (
     <a href={to}>{children}</a>
   ),
+  useNavigate: () => vi.fn(),
 }));
 
 const { YourPagesPage } = await import("./your-pages-page");
+
+// The suggestion cards on this page now run mutations through react-query, so
+// every render needs a client, same as the card's own test.
+function render(ui: React.ReactElement) {
+  return rtlRender(<QueryClientProvider client={new QueryClient()}>{ui}</QueryClientProvider>);
+}
 
 const NOW = "2026-08-20T12:00:00.000Z";
 
@@ -83,6 +91,7 @@ function facts(overrides: Partial<YourPagesFacts> = {}): YourPagesFacts {
     comparison: READY,
     coverage: null,
     sessions: null,
+    orphanBailReason: null,
     ...overrides,
   };
 }
@@ -109,10 +118,10 @@ beforeEach(() => {
 });
 
 describe("the honesty invariant, on screen", () => {
-  it("says the audit has not run rather than showing a zero", () => {
+  it("says the audit has never run rather than showing a zero", () => {
     show({ pages: [page("/a", { impressions: 5 })] });
     expect(within(tile("Pages read")).queryByText("0")).not.toBeInTheDocument();
-    expect(screen.getAllByText(/has not run yet/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/never run/i).length).toBeGreaterThan(0);
   });
 
   it("shows a measured zero once the audit has run", () => {
@@ -184,6 +193,17 @@ describe("the page list, which is the point of this page", () => {
     show({ lastObservedAt: NOW });
     await userEvent.click(screen.getByRole("tab", { name: /Pages/ }));
     expect(screen.getByText(/Run the Search Console observation/)).toBeInTheDocument();
+  });
+
+  it("still names why orphan detection could not run when Search Console reported no rows", async () => {
+    show({
+      lastObservedAt: NOW,
+      orphanBailReason: "no home page is among the pages the audit read",
+    });
+    await userEvent.click(screen.getByRole("tab", { name: /Pages/ }));
+    expect(screen.getByText(/Run the Search Console observation/)).toBeInTheDocument();
+    expect(screen.getByText(/Orphan detection could not run/)).toBeInTheDocument();
+    expect(screen.getByText(/no home page/)).toBeInTheDocument();
   });
 });
 

@@ -34,6 +34,11 @@ export type PageAuditView = {
   observations: PageMetadataObservation[];
   duplicates: DuplicateGroup[];
   findings: CheckFinding[];
+  /**
+   * Why orphan detection (`unreachablePagesBailReason`) could not run at all,
+   * or null when it ran, whether or not it found an orphan.
+   */
+  orphanBailReason: string | null;
   /** Whole site crawl defects: robots.txt, sitemap, and pages that would not render. */
   siteFindings: SiteFinding[];
   siteInstruction: string;

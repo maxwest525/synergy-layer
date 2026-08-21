@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { FileText, ListOrdered } from "lucide-react";
+import { FileText, Info, ListOrdered, TriangleAlert } from "lucide-react";
 
 import { useYourPages } from "./your-pages-facts";
 import { EmptyState } from "./primitives";
-import { actionFor } from "@/lib/command-center";
+import { SuggestionCard } from "./suggestion-card";
 import type { PageRow, StatusTone, TabId, Tile, YourPagesView } from "@/lib/your-pages";
-import type { QueueItem, UrgencyTone } from "@/lib/suggestion-queue";
+import type { QueueItem } from "@/lib/suggestion-queue";
 import { cn } from "@/lib/utils";
 
 /**
@@ -32,12 +32,6 @@ const SEVERITY_TONE: Record<string, string> = {
   critical: "text-destructive",
   warning: "text-warning",
   advice: "text-info",
-};
-
-const URGENCY_TONE: Record<UrgencyTone, string> = {
-  danger: "text-destructive",
-  warning: "text-warning",
-  info: "text-info",
 };
 
 const LINK =
@@ -109,30 +103,6 @@ function PageCard({ row }: { row: PageRow }) {
   );
 }
 
-function SuggestionRow({ item }: { item: QueueItem }) {
-  const action = actionFor(item);
-  return (
-    <div className="flex items-center justify-between gap-3 rounded-[10px] border border-border bg-card px-4 py-3">
-      <span className="flex min-w-0 flex-col gap-0.5">
-        <span className="truncate text-[13px] font-semibold text-foreground">{item.title}</span>
-        <span className="text-[10.5px] font-bold uppercase tracking-[0.1em] text-subtle">
-          <span className={URGENCY_TONE[item.tone]}>{item.urgencyLabel}</span>
-          {item.targetUrl ? ` · ${item.targetUrl}` : null}
-        </span>
-      </span>
-      {action.params ? (
-        <Link to={action.to} params={action.params} className={LINK}>
-          {action.label}
-        </Link>
-      ) : (
-        <Link to={action.to} className={LINK}>
-          {action.label}
-        </Link>
-      )}
-    </div>
-  );
-}
-
 function QueueList({ items, empty }: { items: readonly QueueItem[]; empty: string }) {
   if (items.length === 0) {
     return <EmptyState title="Nothing here" description={empty} />;
@@ -140,8 +110,25 @@ function QueueList({ items, empty }: { items: readonly QueueItem[]; empty: strin
   return (
     <div className="flex flex-col gap-2.5">
       {items.map((item) => (
-        <SuggestionRow key={item.id} item={item} />
+        <SuggestionCard key={item.id} item={item} />
       ))}
+    </div>
+  );
+}
+
+/** The never-run state, made loud rather than left to a grey subtitle line. */
+function NeverRunPanel({ notice }: { notice: string | null }) {
+  if (!notice) return null;
+  return (
+    <div className="flex flex-col gap-1.5 rounded-[10px] border border-warning/40 bg-warning/5 px-4 py-3.5">
+      <span className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.12em] text-warning">
+        <TriangleAlert className="h-3 w-3" strokeWidth={1.6} aria-hidden="true" />
+        Nothing has been read yet
+      </span>
+      <p className="text-[13px] leading-snug text-foreground">{notice}</p>
+      <Link to="/pages/tools" className={cn(LINK, "self-start")}>
+        Run the audit and preview pages
+      </Link>
     </div>
   );
 }
@@ -149,14 +136,39 @@ function QueueList({ items, empty }: { items: readonly QueueItem[]; empty: strin
 function PageList({ view }: { view: YourPagesView }) {
   if (view.rows.length === 0) {
     return (
-      <EmptyState
-        title="No pages stored yet"
-        description="Run the Search Console observation to store the 28 day window this list reads from."
-      />
+      <div className="flex flex-col gap-2.5">
+        <EmptyState
+          title="No pages stored yet"
+          description="Run the Search Console observation to store the 28 day window this list reads from."
+        />
+        {view.orphanNote ? (
+          // Named rather than dropped: orphan detection failing to run at all is
+          // worth seeing on its own, distinct from finding no orphans.
+          <p className="flex items-start gap-2 text-xs leading-snug text-muted-foreground">
+            <Info className="mt-0.5 h-3 w-3 shrink-0" strokeWidth={1.6} aria-hidden="true" />
+            {view.orphanNote}
+          </p>
+        ) : null}
+        {view.waitingOn.length > 0 ? (
+          <ul className="flex flex-col gap-1 text-xs leading-snug text-muted-foreground">
+            {view.waitingOn.map((entry) => (
+              <li key={entry}>{entry}</li>
+            ))}
+          </ul>
+        ) : null}
+      </div>
     );
   }
   return (
     <div className="flex flex-col gap-2.5">
+      {view.orphanNote ? (
+        // Named rather than dropped: orphan detection failing to run at all is
+        // worth seeing on its own, distinct from finding no orphans.
+        <p className="flex items-start gap-2 text-xs leading-snug text-muted-foreground">
+          <Info className="mt-0.5 h-3 w-3 shrink-0" strokeWidth={1.6} aria-hidden="true" />
+          {view.orphanNote}
+        </p>
+      ) : null}
       {view.ordering ? (
         <p className="flex items-start gap-2 text-xs leading-snug text-muted-foreground">
           <ListOrdered className="mt-0.5 h-3 w-3 shrink-0" strokeWidth={1.6} aria-hidden="true" />
@@ -207,11 +219,11 @@ export function YourPagesPage() {
             // operator has in mind is visible rather than silent.
             <p className="text-xs text-subtle">Showing {view.property}.</p>
           ) : null}
-          <p className="text-xs text-subtle">
-            {view.asOf === null
-              ? "The page audit has not run yet, so nothing below has been read from your pages."
-              : `Your pages were last read on ${view.asOf.slice(0, 10)}.`}
-          </p>
+          {view.asOf !== null ? (
+            <p className="text-xs text-subtle">
+              Your pages were last read on {view.asOf.slice(0, 10)}.
+            </p>
+          ) : null}
         </div>
         <div className="flex items-center gap-2.5">
           <span
@@ -232,6 +244,8 @@ export function YourPagesPage() {
           </Link>
         </div>
       </div>
+
+      <NeverRunPanel notice={view.neverRunNotice} />
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         {view.tiles.map((tile) => (

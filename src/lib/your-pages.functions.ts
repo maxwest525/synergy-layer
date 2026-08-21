@@ -29,6 +29,8 @@ export type YourPagesExtras = {
   readonly lastObservedAt: string | null;
   /** Null when no property is selected, so nothing was counted. */
   readonly fixesLive: number | null;
+  /** Why orphan detection could not run at all, or null when it ran. */
+  readonly orphanBailReason: string | null;
 };
 
 const EMPTY: YourPagesExtras = {
@@ -42,6 +44,7 @@ const EMPTY: YourPagesExtras = {
   // Not zero: with no property selected nothing was counted, and a nought here
   // would read as "you have published no fixes".
   fixesLive: null,
+  orphanBailReason: null,
 };
 
 function rowsOf(payload: unknown): StoredSearchRow[] {
@@ -168,5 +171,6 @@ export const getYourPagesExtras = createServerFn({ method: "POST" })
       failedPages: audit.failedPages,
       lastObservedAt: audit.lastObservedAt,
       fixesLive,
+      orphanBailReason: audit.orphanBailReason,
     };
   });
