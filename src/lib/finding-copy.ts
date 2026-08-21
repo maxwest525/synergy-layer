@@ -26,6 +26,8 @@ export const ALL_SEARCH_RULES = [
   "zero_impression_page",
   "query_coverage_gap",
   "index_coverage_drift",
+  "site_visibility_shift",
+  "site_clicks_shift",
 ] as const;
 
 export type SearchRule = (typeof ALL_SEARCH_RULES)[number];
@@ -216,6 +218,44 @@ function coverageDrift(evidence: Evidence, on: string): FindingCopy {
   };
 }
 
+/**
+ * Site-wide totals from the last two 28-day windows, pooled across every
+ * page rather than judged one page at a time.
+ */
+function siteVisibilityShift(evidence: Evidence, on: string): FindingCopy {
+  const prior = num(evidence["priorImpressions"]);
+  const curr = num(evidence["currentImpressions"]);
+  const direction = curr !== null && prior !== null ? (curr > prior ? "more" : "less") : null;
+  return {
+    claim:
+      direction === null
+        ? "Your whole site's visibility has changed"
+        : `Your whole site is being shown ${direction} than it was`,
+    evidence:
+      curr === null || prior === null
+        ? null
+        : `Shown ${prior} times last month, ${curr} times in the month through ${on}`,
+    currentWording: null,
+  };
+}
+
+function siteClicksShift(evidence: Evidence, on: string): FindingCopy {
+  const prior = num(evidence["priorClicks"]);
+  const curr = num(evidence["currentClicks"]);
+  const direction = curr !== null && prior !== null ? (curr > prior ? "more" : "fewer") : null;
+  return {
+    claim:
+      direction === null
+        ? "Your whole site's clicks have changed"
+        : `Your whole site is getting ${direction} clicks than it was`,
+    evidence:
+      curr === null || prior === null
+        ? null
+        : `Clicked ${prior} times last month, ${curr} times in the month through ${on}`,
+    currentWording: null,
+  };
+}
+
 const WRITERS: Record<SearchRule, (evidence: Evidence, on: string) => FindingCopy> = {
   striking_distance_query: strikingDistance,
   position_loss: positionLoss,
@@ -225,6 +265,8 @@ const WRITERS: Record<SearchRule, (evidence: Evidence, on: string) => FindingCop
   zero_impression_page: zeroImpressions,
   query_coverage_gap: coverageGap,
   index_coverage_drift: coverageDrift,
+  site_visibility_shift: siteVisibilityShift,
+  site_clicks_shift: siteClicksShift,
 };
 
 export function isSearchRule(value: string): value is SearchRule {

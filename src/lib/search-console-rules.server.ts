@@ -9,9 +9,11 @@ import {
   detectQueryCoverageGaps,
   detectQueryOverlap,
   detectZeroImpressionPages,
+  QUERY_DIMENSION_CAVEAT,
   type InspectionFacts,
   type PageMetaFacts,
 } from "./search-console-rule-checks";
+import { confidenceInCount, confidenceInCountChange } from "./confidence";
 import {
   RULE_WINDOW_DAYS,
   RULE_WINDOW_KIND,
@@ -23,7 +25,17 @@ import {
 
 type Client = SupabaseClient<Database>;
 
-/** Typed thresholds. Every rule reads its numbers from here, never inline. */
+/**
+ * Typed thresholds. Every rule reads its numbers from here, never inline.
+ *
+ * Every rule in this file is bucketed in RULE_ASSIGNMENTS
+ * (search-console-rule-checks.ts) per
+ * docs/handoffs/2026-08-20-rule-thresholds-audit.md: striking_distance_query
+ * and position_loss read the query dimension and are beyond_current_volume
+ * (see QUERY_DIMENSION_CAVEAT); weak_ctr_page and visibility_gain are
+ * pooled, answered honestly only alongside site_visibility_shift and
+ * site_clicks_shift below, which judge the whole property at once.
+ */
 export const SEARCH_CONSOLE_THRESHOLDS = {
   strikingDistance: { minPosition: 8, maxPosition: 20, minImpressions: 50 },
   weakCtr: { minImpressions: 200, maxCtr: 0.01 },
@@ -41,7 +53,9 @@ export type Rule =
   | "possible_query_overlap"
   | "zero_impression_page"
   | "query_coverage_gap"
-  | "index_coverage_drift";
+  | "index_coverage_drift"
+  | "site_visibility_shift"
+  | "site_clicks_shift";
 
 type Observation = {
   rule: Rule;
@@ -84,14 +98,27 @@ function pick(snapshots: SnapshotRow[], dimension: string): SnapshotRow | undefi
   );
 }
 
-function evaluate(current: SnapshotRow[], prior: SnapshotRow[]): Observation[] {
+/** Site-wide totals stored on a `dimensional_rows_window` snapshot. */
+function totalsOf(
+  snapshot: SnapshotRow | undefined,
+): { clicks: number; impressions: number } | null {
+  const totals = snapshot?.totals as { clicks?: unknown; impressions?: unknown } | null | undefined;
+  if (!totals || typeof totals.clicks !== "number" || typeof totals.impressions !== "number") {
+    return null;
+  }
+  return { clicks: totals.clicks, impressions: totals.impressions };
+}
+
+export function evaluate(current: SnapshotRow[], prior: SnapshotRow[]): Observation[] {
   const observations: Observation[] = [];
   const t = SEARCH_CONSOLE_THRESHOLDS;
 
   const queries = rowsOf(pick(current, "query"));
   const priorQueries = rowsOf(pick(prior, "query"));
-  const pages = rowsOf(pick(current, "page"));
-  const priorPages = rowsOf(pick(prior, "page"));
+  const pageSnapshot = pick(current, "page");
+  const priorPageSnapshot = pick(prior, "page");
+  const pages = rowsOf(pageSnapshot);
+  const priorPages = rowsOf(priorPageSnapshot);
 
   for (const row of queries) {
     const term = row.keys?.[0] ?? "";
@@ -100,14 +127,15 @@ function evaluate(current: SnapshotRow[], prior: SnapshotRow[]): Observation[] {
       row.position >= t.strikingDistance.minPosition &&
       row.position <= t.strikingDistance.maxPosition
     ) {
+      const confidence = confidenceInCount(row.impressions, t.strikingDistance.minImpressions);
       observations.push({
         rule: "striking_distance_query",
         target: term,
         title: `Striking distance query: "${term}"`,
-        description: `"${term}" averages position ${row.position.toFixed(1)} on ${row.impressions} impressions. Small relevance gains on the ranking page could move it onto page one.`,
-        evidence: { query: term, ...row },
+        description: `"${term}" averages position ${row.position.toFixed(1)} on ${row.impressions} impressions. Small relevance gains on the ranking page could move it onto page one. ${QUERY_DIMENSION_CAVEAT}`,
+        evidence: { query: term, ...row, confidenceReason: confidence.reason },
         businessImpact: row.impressions > 500 ? "high" : "medium",
-        confidence: 0.7,
+        confidence: confidence.value,
       });
     }
 
@@ -117,14 +145,15 @@ function evaluate(current: SnapshotRow[], prior: SnapshotRow[]): Observation[] {
       row.impressions >= t.positionLoss.minImpressions &&
       row.position - before.position >= t.positionLoss.minPositionDrop
     ) {
+      const confidence = confidenceInCount(row.impressions, t.positionLoss.minImpressions);
       observations.push({
         rule: "position_loss",
         target: term,
         title: `Position loss on "${term}"`,
-        description: `Average position moved from ${before.position.toFixed(1)} to ${row.position.toFixed(1)} on ${row.impressions} impressions.`,
-        evidence: { query: term, before, after: row },
+        description: `Average position moved from ${before.position.toFixed(1)} to ${row.position.toFixed(1)} on ${row.impressions} impressions. ${QUERY_DIMENSION_CAVEAT}`,
+        evidence: { query: term, before, after: row, confidenceReason: confidence.reason },
         businessImpact: "high",
-        confidence: 0.65,
+        confidence: confidence.value,
       });
     }
   }
@@ -133,14 +162,15 @@ function evaluate(current: SnapshotRow[], prior: SnapshotRow[]): Observation[] {
     const page = row.keys?.[0] ?? "";
     const ctr = row.impressions > 0 ? row.clicks / row.impressions : null;
     if (row.impressions >= t.weakCtr.minImpressions && ctr !== null && ctr <= t.weakCtr.maxCtr) {
+      const confidence = confidenceInCount(row.impressions, t.weakCtr.minImpressions);
       observations.push({
         rule: "weak_ctr_page",
         target: page,
         title: `Weak click-through on ${page}`,
         description: `${row.impressions} impressions produced ${row.clicks} clicks (${(ctr * 100).toFixed(2)}% CTR) at average position ${row.position.toFixed(1)}.`,
-        evidence: { page, ...row, ctr },
+        evidence: { page, ...row, ctr, confidenceReason: confidence.reason },
         businessImpact: "medium",
-        confidence: 0.6,
+        confidence: confidence.value,
       });
     }
 
@@ -151,14 +181,62 @@ function evaluate(current: SnapshotRow[], prior: SnapshotRow[]): Observation[] {
       (row.impressions - before.impressions) / before.impressions >=
         t.visibilityGain.minImpressionGrowth
     ) {
+      const confidence = confidenceInCountChange(before.impressions, row.impressions);
       observations.push({
         rule: "visibility_gain",
         target: page,
         title: `Visibility gain on ${page}`,
         description: `Impressions rose from ${before.impressions} to ${row.impressions}. Worth reinforcing while the page is trending.`,
-        evidence: { page, before, after: row },
+        evidence: { page, before, after: row, confidenceReason: confidence.reason },
         businessImpact: "medium",
-        confidence: 0.6,
+        confidence: confidence.value,
+      });
+    }
+  }
+
+  // Pooled site-level rules: twelve pages judged together, off the totals
+  // already stored on the page-dimension window snapshot. A missing prior
+  // window means no comparison exists, not that nothing changed, so both
+  // stay silent rather than reading absence as zero.
+  const currentTotals = totalsOf(pageSnapshot);
+  const priorTotals = totalsOf(priorPageSnapshot);
+  if (currentTotals && priorTotals) {
+    const impressionConfidence = confidenceInCountChange(
+      priorTotals.impressions,
+      currentTotals.impressions,
+    );
+    if (impressionConfidence.band !== "low") {
+      const direction = currentTotals.impressions > priorTotals.impressions ? "more" : "less";
+      observations.push({
+        rule: "site_visibility_shift",
+        target: "site",
+        title: `Your whole site is being shown ${direction} than last month`,
+        description: `Site-wide impressions moved from ${priorTotals.impressions} to ${currentTotals.impressions} across the last two 28-day windows. ${impressionConfidence.reason}`,
+        evidence: {
+          priorImpressions: priorTotals.impressions,
+          currentImpressions: currentTotals.impressions,
+          confidenceReason: impressionConfidence.reason,
+        },
+        businessImpact: "medium",
+        confidence: impressionConfidence.value,
+      });
+    }
+
+    const clickConfidence = confidenceInCountChange(priorTotals.clicks, currentTotals.clicks);
+    if (clickConfidence.band !== "low") {
+      const direction = currentTotals.clicks > priorTotals.clicks ? "more" : "fewer";
+      observations.push({
+        rule: "site_clicks_shift",
+        target: "site",
+        title: `Your whole site is getting ${direction} clicks than last month`,
+        description: `Site-wide clicks moved from ${priorTotals.clicks} to ${currentTotals.clicks} across the last two 28-day windows. ${clickConfidence.reason}`,
+        evidence: {
+          priorClicks: priorTotals.clicks,
+          currentClicks: currentTotals.clicks,
+          confidenceReason: clickConfidence.reason,
+        },
+        businessImpact: "medium",
+        confidence: clickConfidence.value,
       });
     }
   }

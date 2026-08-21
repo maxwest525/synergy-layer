@@ -4,7 +4,14 @@ import { requireTenantId } from "./tenant.server";
 import type { Database } from "@/integrations/supabase/types";
 import { logActivity } from "./os.server";
 import { observationRecommendationRecord } from "./observation-record";
-import { SearchConsoleFailure, checksum, type QueryRow } from "./search-console.server";
+import {
+  RULE_WINDOW_DAYS,
+  RULE_WINDOW_KIND,
+  SearchConsoleFailure,
+  checksum,
+  type QueryRow,
+} from "./search-console.server";
+import { QUERY_DIMENSION_CAVEAT } from "./search-console-rule-checks";
 import { confidenceInCount, confidenceInCountChange, type Confidence } from "./confidence";
 
 type Client = SupabaseClient<Database>;
@@ -12,6 +19,16 @@ type Client = SupabaseClient<Database>;
 /**
  * Typed SEO validation thresholds. Every rule reads its numbers from here so a
  * rule can never trigger on an inline magic number.
+ *
+ * Every rule below is bucketed in RULE_ASSIGNMENTS
+ * (search-console-rule-checks.ts) per
+ * docs/handoffs/2026-08-20-rule-thresholds-audit.md: declining_clicks,
+ * declining_impressions, high_impression_low_ctr, zero_click_page,
+ * significant_period_change, and visibility_gain-equivalents are pooled
+ * (answered honestly only alongside the site-wide rules in
+ * search-console-rules.server.ts); declining_position, possible_query_overlap,
+ * and research_page_traction read the query dimension or a volume the
+ * handoff calls unreachable, and are beyond_current_volume.
  */
 export const SEO_VALIDATION_THRESHOLDS = {
   decliningTraffic: { minPreviousClicks: 10, minClickDropRatio: 0.3 },
@@ -97,6 +114,13 @@ type Finding = {
    */
   confidence: Confidence;
   suggestedAction: Record<string, unknown>;
+  /**
+   * How many days of data this finding's snapshot actually covers. 28 when a
+   * `dimensional_rows_window` snapshot exists; 1 when none does and the rule
+   * fell back to a legacy single-day snapshot instead. `undefined` when the
+   * finding has no snapshot-backed period (the competitor rules).
+   */
+  windowDays?: number;
 };
 
 type SnapshotRow = {
@@ -123,10 +147,32 @@ function rowsOf(snapshot: SnapshotRow | undefined): QueryRow[] {
   return payload.rows ?? [];
 }
 
-function pick(snapshots: SnapshotRow[], dimension: string): SnapshotRow | undefined {
-  return snapshots.find(
+type Pick = { snapshot: SnapshotRow | undefined; windowDays: number };
+
+/**
+ * The snapshot for one dimension, preferring the 28-day rule window over a
+ * legacy single-day snapshot.
+ *
+ * Before this, `pick()` selected by dimension alone, so its "periods" were
+ * whatever single-day snapshot happened to exist for that dimension — the
+ * 28-day rule window fix never reached this family. A window snapshot is now
+ * required unless none exists at all, in which case the legacy daily row is
+ * used and the finding says so via `windowDays: 1` rather than silently
+ * describing one day as if it were the full window.
+ */
+function pick(snapshots: SnapshotRow[], dimension: string): Pick {
+  const windowMatch = snapshots.find(
+    (snapshot) =>
+      snapshot.kind === RULE_WINDOW_KIND &&
+      snapshot.dimensions.length === 1 &&
+      snapshot.dimensions[0] === dimension,
+  );
+  if (windowMatch) return { snapshot: windowMatch, windowDays: RULE_WINDOW_DAYS };
+
+  const legacyMatch = snapshots.find(
     (snapshot) => snapshot.dimensions.length === 1 && snapshot.dimensions[0] === dimension,
   );
+  return { snapshot: legacyMatch, windowDays: 1 };
 }
 
 function ratio(current: number, previous: number): number | null {
@@ -147,10 +193,10 @@ export function evaluateSeoRules(
   const t = SEO_VALIDATION_THRESHOLDS;
   const findings: Finding[] = [];
 
-  const pageSnapshot = pick(current, "page");
-  const priorPageSnapshot = pick(prior, "page");
-  const querySnapshot = pick(current, "query");
-  const priorQuerySnapshot = pick(prior, "query");
+  const { snapshot: pageSnapshot, windowDays: pageWindowDays } = pick(current, "page");
+  const { snapshot: priorPageSnapshot } = pick(prior, "page");
+  const { snapshot: querySnapshot, windowDays: queryWindowDays } = pick(current, "query");
+  const { snapshot: priorQuerySnapshot } = pick(prior, "query");
 
   const pages = rowsOf(pageSnapshot);
   const priorPages = rowsOf(priorPageSnapshot);
@@ -190,6 +236,7 @@ export function evaluateSeoRules(
         priorSnapshotId: priorPageId,
         businessImpact: before.clicks >= 100 ? "high" : "medium",
         confidence: confidenceInCountChange(before.clicks, now.clicks),
+        windowDays: pageWindowDays,
         suggestedAction: { kind: "review", area: "page_traffic_decline", target: page },
       });
     }
@@ -216,6 +263,7 @@ export function evaluateSeoRules(
         priorSnapshotId: priorPageId,
         businessImpact: "medium",
         confidence: confidenceInCountChange(before.impressions, now.impressions),
+        windowDays: pageWindowDays,
         suggestedAction: { kind: "review", area: "page_visibility_decline", target: page },
       });
     }
@@ -240,6 +288,7 @@ export function evaluateSeoRules(
         priorSnapshotId: priorPageId,
         businessImpact: "medium",
         confidence: confidenceInCount(now.impressions, t.highImpressionLowCtr.minImpressions),
+        windowDays: pageWindowDays,
         suggestedAction: { kind: "review", area: "title_and_meta_relevance", target: page },
       });
     }
@@ -261,6 +310,7 @@ export function evaluateSeoRules(
         priorSnapshotId: priorPageId,
         businessImpact: "medium",
         confidence: confidenceInCount(now.impressions, t.zeroClickPage.minImpressions),
+        windowDays: pageWindowDays,
         suggestedAction: { kind: "review", area: "zero_click_page", target: page },
       });
     }
@@ -289,6 +339,7 @@ export function evaluateSeoRules(
         priorSnapshotId: priorPageId,
         businessImpact: "medium",
         confidence: confidenceInCountChange(before.impressions, now.impressions),
+        windowDays: pageWindowDays,
         suggestedAction: { kind: "review", area: "period_change", target: page },
       });
     }
@@ -317,6 +368,7 @@ export function evaluateSeoRules(
         priorSnapshotId: priorPageId,
         businessImpact: "medium",
         confidence: confidenceInCountChange(before.impressions, now.impressions),
+        windowDays: pageWindowDays,
         suggestedAction: { kind: "review", area: "reinforce_trending_page", target: page },
       });
     }
@@ -338,7 +390,7 @@ export function evaluateSeoRules(
         targetKind: "query",
         target: term,
         title: `Average position declining for "${term}"`,
-        description: `Average position moved from ${before.position.toFixed(1)} to ${now.position.toFixed(1)} on ${now.impressions} impressions.`,
+        description: `Average position moved from ${before.position.toFixed(1)} to ${now.position.toFixed(1)} on ${now.impressions} impressions. ${QUERY_DIMENSION_CAVEAT}`,
         current: now,
         previous: before,
         change: {
@@ -349,6 +401,7 @@ export function evaluateSeoRules(
         priorSnapshotId: priorQueryId,
         businessImpact: "high",
         confidence: confidenceInCount(now.impressions, t.decliningPosition.minImpressions),
+        windowDays: queryWindowDays,
         suggestedAction: { kind: "review", area: "ranking_loss", target: term },
       });
     }
@@ -396,7 +449,7 @@ export function evaluateSeoRules(
         targetKind: "query",
         target: term,
         title: `Possible page overlap on "${term}"`,
-        description: `${bucket.length} pages each drew at least ${t.queryOverlap.minImpressionsPerPage} impressions for the same query, in ${t.queryOverlap.minPeriods} consecutive finalized periods. This is a signal worth reviewing, not confirmed cannibalisation.`,
+        description: `${bucket.length} pages each drew at least ${t.queryOverlap.minImpressionsPerPage} impressions for the same query, in ${t.queryOverlap.minPeriods} consecutive finalized periods. This is a signal worth reviewing, not confirmed cannibalisation. ${QUERY_DIMENSION_CAVEAT}`,
         current: { clicks: 0, impressions, ctr: 0, position: 0 },
         previous: null,
         change: { pages: bucket, priorPages: priorBucket, periods: periodsAvailable },
@@ -696,6 +749,9 @@ export async function runSeoValidation(
       // Stored beside the number so the operator can see what it rests on
       // rather than being asked to trust a bare decimal.
       confidenceReason: finding.confidence.reason,
+      // Named explicitly rather than assumed: 28 when a rule window snapshot
+      // backed this finding, 1 when it fell back to a legacy daily snapshot.
+      windowDays: finding.windowDays ?? null,
       suggestedAction: finding.suggestedAction,
       rule: finding.rule,
       thresholds: SEO_VALIDATION_THRESHOLDS,

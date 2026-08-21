@@ -5,6 +5,7 @@ import {
   detectQueryCoverageGaps,
   detectQueryOverlap,
   detectZeroImpressionPages,
+  QUERY_DIMENSION_CAVEAT,
 } from "./search-console-rule-checks";
 
 const row = (keys: string[], impressions: number, position: number, clicks = 0) => ({
@@ -80,6 +81,14 @@ describe("detectQueryCoverageGaps", () => {
     expect(drafts[0]?.target).toBe("https://site.com/moving :: piano transport cost");
   });
 
+  it("discloses that the query dimension is a censored sample", () => {
+    const drafts = detectQueryCoverageGaps(
+      [row(["https://site.com/moving", "piano transport cost"], 50, 11)],
+      meta,
+    );
+    expect(drafts[0]?.description).toContain(QUERY_DIMENSION_CAVEAT);
+  });
+
   it("stays quiet when any query word is covered", () => {
     const drafts = detectQueryCoverageGaps(
       [row(["https://site.com/moving", "moving cost"], 50, 11)],
@@ -125,6 +134,7 @@ describe("detectInspectionDrift", () => {
     );
     expect(drafts).toHaveLength(1);
     expect(drafts[0]?.businessImpact).toBe("high");
+    expect(drafts[0]?.confidence).toBe(0.9);
   });
 
   it("flags a canonical mismatch", () => {

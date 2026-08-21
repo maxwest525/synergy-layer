@@ -58,6 +58,10 @@ function richEvidence(): Record<string, unknown> {
     position: 14.2,
     pageTitle: "Corporate Relocation Services | TruMove",
     pageH1: "Corporate Relocation",
+    priorImpressions: 120,
+    currentImpressions: 155,
+    priorClicks: 40,
+    currentClicks: 55,
     before: { clicks: 9, impressions: 140, ctr: 0.064, position: 8.1 },
     after: { clicks: 2, impressions: 118, ctr: 0.017, position: 14.2 },
     pages: [
@@ -151,6 +155,31 @@ describe("query_coverage_gap", () => {
   it("offers no current wording when none was stored", () => {
     const copy = describeFinding("query_coverage_gap", { query: "x", page: "y" }, ON);
     expect(copy.currentWording).toBeNull();
+  });
+});
+
+describe("site_visibility_shift", () => {
+  it("names the direction and both totals", () => {
+    const copy = describeFinding("site_visibility_shift", richEvidence(), ON);
+    expect(copy.claim).toBe("Your whole site is being shown more than it was");
+    expect(copy.evidence).toBe(
+      "Shown 120 times last month, 155 times in the month through 2026-08-19",
+    );
+  });
+
+  it("drops the evidence line when either total is missing", () => {
+    const copy = describeFinding("site_visibility_shift", { priorImpressions: 120 }, ON);
+    expect(copy.evidence).toBeNull();
+  });
+});
+
+describe("site_clicks_shift", () => {
+  it("names the direction and both totals", () => {
+    const copy = describeFinding("site_clicks_shift", richEvidence(), ON);
+    expect(copy.claim).toBe("Your whole site is getting more clicks than it was");
+    expect(copy.evidence).toBe(
+      "Clicked 40 times last month, 55 times in the month through 2026-08-19",
+    );
   });
 });
 
