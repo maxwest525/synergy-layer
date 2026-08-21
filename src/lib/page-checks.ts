@@ -48,7 +48,9 @@ export type CheckId =
   | "image_alt_missing"
   | "thin_content"
   | "no_internal_links"
-  | "og_missing";
+  | "og_missing"
+  | "url_underscores"
+  | "url_query_string";
 
 export type Severity = "critical" | "warning" | "advice";
 
@@ -309,6 +311,31 @@ export const CHECKS: Record<CheckId, CheckDefinition> = {
     instruction: (n) => `Add a share title and image to ${n} pages so shared links look right.`,
     fixableByWordingProposal: false,
   },
+  // URL structure doc: "Consider using hyphens to separate words in your URLs,
+  // as it helps users and Google identify concepts in the URL more easily. We
+  // recommend that you use hyphens (-) instead of underscores (_) in your URLs."
+  // https://developers.google.com/search/docs/crawling-indexing/url-structure
+  url_underscores: {
+    check: "url_underscores",
+    label: "Underscores in the address",
+    severity: "advice",
+    instruction: (n) =>
+      `Separate the words in ${n} page addresses with hyphens instead of underscores.`,
+    fixableByWordingProposal: false,
+  },
+  // URL structure doc: the same page lists "URLs with unnecessary parameters"
+  // among the URL problems that make addresses harder to read and to crawl.
+  // https://developers.google.com/search/docs/crawling-indexing/url-structure
+  // Stated assumption: a parameter on a page the site itself declares indexable
+  // is worth naming; nothing here judges parameters on pages nobody declared.
+  url_query_string: {
+    check: "url_query_string",
+    label: "Address carries parameters",
+    severity: "advice",
+    instruction: (n) =>
+      `Give ${n} pages a plain address without parameters, so one page has one address.`,
+    fixableByWordingProposal: false,
+  },
 };
 
 // Stated assumption: display truncation is by pixels and unpublished; these
@@ -369,6 +396,24 @@ function sameHost(href: string, pageUrl: string): boolean | null {
     return target.host === base.host;
   } catch {
     return null;
+  }
+}
+
+/**
+ * What the address itself says. Parsed rather than pattern-matched so an
+ * underscore in the host, which is not a word in a path, is not reported.
+ * An address that will not parse yields nothing: guessing at a malformed URL
+ * would report a defect on a path we invented.
+ */
+export function urlDefects(pageUrl: string): { underscores: boolean; queryString: boolean } {
+  try {
+    const parsed = new URL(pageUrl);
+    return {
+      underscores: parsed.pathname.includes("_"),
+      queryString: parsed.search.length > 0,
+    };
+  } catch {
+    return { underscores: false, queryString: false };
   }
 }
 
@@ -566,6 +611,11 @@ export function evaluatePages(pages: AnalyzedPage[]): PageIssue[] {
 
     if (!facts.ogTitle || !facts.ogImage)
       add("og_missing", url, "Share title or share image is missing.");
+
+    const address = urlDefects(url);
+    if (address.underscores)
+      add("url_underscores", url, `The address separates words with underscores: ${url}`);
+    if (address.queryString) add("url_query_string", url, `The address carries parameters: ${url}`);
   }
 
   return issues;

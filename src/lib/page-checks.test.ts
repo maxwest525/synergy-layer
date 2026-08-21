@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { CHECKS, evaluatePages, extractPageFacts, groupFindings } from "./page-checks";
+import { CHECKS, evaluatePages, extractPageFacts, groupFindings, urlDefects } from "./page-checks";
 
 const HTML = `<!doctype html><html lang="en"><head>
 <title>Movers</title>
@@ -62,5 +62,39 @@ describe("on page checks", () => {
 
   it("description checks say they are about the snippet, not the ranking", () => {
     expect(CHECKS.description_too_long.instruction(2)).toMatch(/results|snippet/i);
+  });
+});
+
+describe("url conventions", () => {
+  it("reads underscores and query strings out of the address", () => {
+    expect(urlDefects("https://a.test/moving_services")).toEqual({
+      underscores: true,
+      queryString: false,
+    });
+    expect(urlDefects("https://a.test/moving-services?id=42")).toEqual({
+      underscores: false,
+      queryString: true,
+    });
+    expect(urlDefects("https://a.test/moving-services")).toEqual({
+      underscores: false,
+      queryString: false,
+    });
+  });
+
+  it("ignores underscores in the host, which are not path words", () => {
+    expect(urlDefects("https://my_host.test/movers").underscores).toBe(false);
+  });
+
+  it("does not parse a bare path as a defect it cannot see", () => {
+    expect(urlDefects("not a url")).toEqual({ underscores: false, queryString: false });
+  });
+
+  it("reports both checks from evaluatePages", () => {
+    const facts = extractPageFacts(HTML, "words", "https://a.test/one");
+    const checks = evaluatePages([{ url: "https://a.test/moving_services?ref=9", facts }]).map(
+      (issue) => issue.check,
+    );
+    expect(checks).toContain("url_underscores");
+    expect(checks).toContain("url_query_string");
   });
 });
