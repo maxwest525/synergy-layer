@@ -311,9 +311,11 @@ export const CHECKS: Record<CheckId, CheckDefinition> = {
     instruction: (n) => `Add a share title and image to ${n} pages so shared links look right.`,
     fixableByWordingProposal: false,
   },
-  // URL structure doc: "Consider using hyphens to separate words in your URLs,
-  // as it helps users and Google identify concepts in the URL more easily. We
-  // recommend that you use hyphens (-) instead of underscores (_) in your URLs."
+  // URL structure doc: "We recommend separating words in your URLs, when
+  // possible. Specifically, we recommend using hyphens (-) instead of
+  // underscores (_) to separate words in your URLs, as it helps users and
+  // search engines better identify concepts in the URL." (the doc says
+  // "search engines", not "Google" — kept as written)
   // https://developers.google.com/search/docs/crawling-indexing/url-structure
   url_underscores: {
     check: "url_underscores",
@@ -323,8 +325,9 @@ export const CHECKS: Record<CheckId, CheckDefinition> = {
       `Separate the words in ${n} page addresses with hyphens instead of underscores.`,
     fixableByWordingProposal: false,
   },
-  // URL structure doc: the same page lists "URLs with unnecessary parameters"
-  // among the URL problems that make addresses harder to read and to crawl.
+  // URL structure doc, "Use as few parameters as you can": "Whenever
+  // possible, shorten URLs by trimming unnecessary parameters (meaning,
+  // parameters that don't change the content)."
   // https://developers.google.com/search/docs/crawling-indexing/url-structure
   // Stated assumption: a parameter on a page the site itself declares indexable
   // is worth naming; nothing here judges parameters on pages nobody declared.
@@ -404,6 +407,8 @@ function sameHost(href: string, pageUrl: string): boolean | null {
  * underscore in the host, which is not a word in a path, is not reported.
  * An address that will not parse yields nothing: guessing at a malformed URL
  * would report a defect on a path we invented.
+ * Note: percent-encoded underscores (%5F) are not detected — URL.pathname
+ * does not decode them, and parsed-not-guessed is the point.
  */
 export function urlDefects(pageUrl: string): { underscores: boolean; queryString: boolean } {
   try {
