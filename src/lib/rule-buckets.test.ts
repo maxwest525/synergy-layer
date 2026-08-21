@@ -1,8 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { RULE_ASSIGNMENTS, type RuleBucket } from "./rule-buckets";
-import { SEARCH_CONSOLE_THRESHOLDS } from "./search-console-rules.server";
-import { SEO_RULES } from "./seo-validation.server";
+import { SEARCH_CONSOLE_THRESHOLDS, SEO_RULES } from "./rule-thresholds";
 import { ALL_SEARCH_RULES } from "./finding-copy";
 import type { Ga4CheckRule } from "./ga4-rule-checks";
 

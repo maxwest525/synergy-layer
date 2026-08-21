@@ -1,6 +1,5 @@
 import { RULE_CHECK_THRESHOLDS } from "./search-console-rule-checks";
-import { SEARCH_CONSOLE_THRESHOLDS } from "./search-console-rules.server";
-import { SEO_VALIDATION_THRESHOLDS } from "./seo-validation.server";
+import { SEARCH_CONSOLE_THRESHOLDS, SEO_VALIDATION_THRESHOLDS } from "./rule-thresholds";
 
 /**
  * How much of the property's traffic a rule needs before its answer is

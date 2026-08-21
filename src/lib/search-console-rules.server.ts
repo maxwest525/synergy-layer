@@ -35,15 +35,13 @@ type Client = SupabaseClient<Database>;
  * (see QUERY_DIMENSION_CAVEAT); weak_ctr_page and visibility_gain are
  * pooled, answered honestly only alongside site_visibility_shift and
  * site_clicks_shift below, which judge the whole property at once.
+ *
+ * Defined in the pure `rule-thresholds.ts` and re-exported here so
+ * `rule-buckets.ts` can reference the live numbers without pulling this
+ * .server module (and its database/crypto chain) into client-reachable code.
  */
-export const SEARCH_CONSOLE_THRESHOLDS = {
-  strikingDistance: { minPosition: 8, maxPosition: 20, minImpressions: 50 },
-  weakCtr: { minImpressions: 200, maxCtr: 0.01 },
-  positionLoss: { minImpressions: 100, minPositionDrop: 3 },
-  visibilityGain: { minImpressions: 100, minImpressionGrowth: 0.35 },
-  queryOverlap: { minImpressionsPerPage: 25, minPages: 2 },
-  comparisonWindowDays: 7,
-} as const;
+export { SEARCH_CONSOLE_THRESHOLDS } from "./rule-thresholds";
+import { SEARCH_CONSOLE_THRESHOLDS } from "./rule-thresholds";
 
 export type Rule =
   | "striking_distance_query"
