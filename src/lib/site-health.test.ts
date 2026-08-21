@@ -294,7 +294,7 @@ describe("judging many small changes together", () => {
         ],
       }),
     );
-    expect(view.cohortNote).toContain("3");
+    expect(view.cohortNote).toMatch(/\b3 measured changes\b/);
     expect(view.cohortNote).toMatch(/120 to 155/);
   });
 

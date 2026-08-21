@@ -19,6 +19,7 @@ describe("the pooled exact test", () => {
     expect(cohortVerdict([{ before: 4, after: 9 }])).toBeNull();
   });
 });
+
 describe("the sign test guards against one page doing all the work", () => {
   it("10 of 12 pages moving the same way is unanimous enough, 9 is not", () => {
     const up = { before: 10, after: 14 },
@@ -30,6 +31,40 @@ describe("the sign test guards against one page doing all the work", () => {
       false,
     );
   });
+
+  it("does not call a pooled rise unanimous when it is really one page's doing", () => {
+    // Fix-round receipt: 11 pages fall 10 -> 8, one page rises 10 -> 300. The
+    // pool still reads as a rise (120 -> 388), but only one of twelve members
+    // actually moved that way — measuring "agreement" against the other
+    // members instead of against the pooled direction let this read as
+    // unanimous, which is exactly the lie the sign test exists to catch.
+    const fallen = { before: 10, after: 8 },
+      risen = { before: 10, after: 300 };
+    const verdict = cohortVerdict([...Array(11).fill(fallen), risen]);
+    expect(verdict?.direction).toBe("rise");
+    expect(verdict?.unanimousEnough).toBe(false);
+    expect(verdict?.reason).not.toMatch(/not one page's doing/);
+    expect(verdict?.reason).toMatch(/could be one page's doing/);
+  });
+
+  it("says too few changes to run the check under six members, rather than claiming domination", () => {
+    // A two-sided exact sign test cannot reach p<0.05 below six members no
+    // matter the split, so calling three-of-three "unanimous" or "not
+    // unanimous" both assert something the test was never powered to show.
+    const up = { before: 10, after: 14 };
+    const verdict = cohortVerdict(Array(3).fill(up));
+    expect(verdict?.unanimousEnough).toBe(false);
+    expect(verdict?.reason).toMatch(/too few/);
+    expect(verdict?.reason).not.toMatch(/not one page's doing/);
+    expect(verdict?.reason).not.toMatch(/could be one page's doing/);
+  });
+
+  it("clears the too-few floor at six members and calls a clean sweep unanimous", () => {
+    const up = { before: 10, after: 14 };
+    const verdict = cohortVerdict(Array(6).fill(up));
+    expect(verdict?.unanimousEnough).toBe(true);
+    expect(verdict?.reason).toMatch(/not one page's doing/);
+  });
 });
 
 describe("the pieces the verdict is built from", () => {
@@ -37,18 +72,47 @@ describe("the pieces the verdict is built from", () => {
     expect(cohortVerdict([])).toBeNull();
   });
 
-  it("calls an exact tie flat with a p of 1", () => {
+  it("calls an exact tie flat with a p of 1, never unanimous", () => {
     const verdict = cohortVerdict([{ before: 100, after: 100 }]);
     expect(verdict?.direction).toBe("flat");
     expect(verdict?.p).toBeCloseTo(1, 9);
+    expect(verdict?.unanimousEnough).toBe(false);
+  });
+
+  it("tells apart a pool where every member held level from one that cancelled out", () => {
+    const level = cohortVerdict(Array(3).fill({ before: 10, after: 10 }));
+    expect(level?.reason).toMatch(/nothing to test agreement on/);
+
+    const cancelled = cohortVerdict([
+      { before: 10, after: 14 },
+      { before: 10, after: 6 },
+    ]);
+    expect(cancelled?.direction).toBe("flat");
+    expect(cancelled?.reason).toMatch(/cancelled out/);
+  });
+
+  it("never rounds a tiny p down to a false '0.00'", () => {
+    const verdict = cohortVerdict([{ before: 100, after: 1000 }]);
+    expect(verdict?.reason).toContain("p below 0.01");
+    expect(verdict?.reason).not.toContain("p 0.00");
   });
 
   it("names the pooled counts, the member count and both test outcomes in the reason", () => {
     const up = { before: 10, after: 14 },
       down = { before: 10, after: 7 };
     const verdict = cohortVerdict([...Array(10).fill(up), ...Array(2).fill(down)]);
-    expect(verdict?.reason).toContain("12");
+    // The member count (12), distinct from any digit inside the pooled counts.
+    expect(verdict?.reason).toMatch(/\b12 measured changes\b/);
     expect(verdict?.reason).toMatch(/\d+ to \d+/);
+    // Both test outcomes: the pooled significance clause and the sign-test clause.
+    expect(verdict?.reason).toMatch(/clears the noise|does not clear the noise/);
+    expect(verdict?.reason).toMatch(/not one page's doing|could be one page's doing/);
+  });
+
+  it("uses singular grammar for one measured change", () => {
+    const verdict = cohortVerdict([{ before: 120, after: 155 }]);
+    expect(verdict?.reason).toMatch(/\b1 measured change\b/);
+    expect(verdict?.reason).not.toMatch(/1 measured changes/);
   });
 
   it("pools before-counts across members rather than judging any one alone", () => {

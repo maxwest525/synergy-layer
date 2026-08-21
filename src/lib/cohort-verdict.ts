@@ -17,9 +17,14 @@
  *
  * Pooling has one specific way to lie: a cohort can "clear the noise" because
  * one page had a huge, unrelated swing while the other eleven did nothing.
- * The sign test below is the guard against that — it asks how many members
- * moved in the same direction as the pooled verdict, independent of size, so
- * one page dominating the sum cannot pass as eleven changes working.
+ * The sign test below is the guard against that — it counts how many members
+ * moved in the *same direction as the pooled verdict* (not merely how many
+ * agree with each other — a pooled rise driven by eleven falls and one huge
+ * rise must not read as unanimous), independent of size, so one page
+ * dominating the sum cannot pass as many changes working. Below six members
+ * a two-sided exact sign test cannot reach p<0.05 at all, so under that count
+ * the module says honestly that there are too few changes to run the check,
+ * rather than asserting domination that the test was never powered to find.
  */
 
 import { MIN_BASELINE } from "./confidence";
@@ -55,8 +60,61 @@ export function exactBinomialTwoSidedP(n: number, k: number): number {
   if (n === 0) return 1;
   const observed = binomialPmf(n, k);
   let p = 0;
-  for (let i = 0; i <= n; i += 1) if (binomialPmf(n, i) <= observed + 1e-12) p += binomialPmf(n, i);
+  for (let i = 0; i <= n; i += 1)
+    if (binomialPmf(n, i) <= observed * (1 + 1e-9)) p += binomialPmf(n, i);
   return Math.min(1, p);
+}
+
+/** "p below 0.01" instead of a rounded "p 0.00", which reads as certainty this test never claims. */
+function pClause(p: number): string {
+  return p < 0.01 ? "p below 0.01" : `p ${p.toFixed(2)}`;
+}
+
+/**
+ * The sign-test half of the verdict: how many members moved the same way as
+ * the pooled direction, and whether that count is itself hard to explain by
+ * chance. Below six members the two-sided exact test cannot reach p<0.05 for
+ * any split, so that case is named rather than silently returning false with
+ * copy that implies the check ran.
+ */
+function unanimity(
+  direction: CohortVerdict["direction"],
+  members: readonly CohortMember[],
+): { readonly unanimousEnough: boolean; readonly clause: string } {
+  const nonTied = members.filter((member) => member.after !== member.before).length;
+
+  if (direction === "flat") {
+    // A flat pool can never be unanimous: there is no direction to agree with.
+    // It can still happen two ways worth telling apart — every page held
+    // exactly level, or individual pages moved but cancelled out.
+    return {
+      unanimousEnough: false,
+      clause:
+        nonTied === 0
+          ? "every page held exactly level, so there is nothing to test agreement on"
+          : "individual changes moved in both directions and cancelled out, so this is not one page's doing either",
+    };
+  }
+
+  const agreeing = members.filter((member) =>
+    direction === "rise" ? member.after > member.before : member.after < member.before,
+  ).length;
+
+  if (nonTied < 6) {
+    return {
+      unanimousEnough: false,
+      clause: `${agreeing} of ${nonTied} moved the same way, but ${nonTied} changes are too few for that agreement to rule out chance`,
+    };
+  }
+
+  const signP = exactBinomialTwoSidedP(nonTied, agreeing);
+  const unanimousEnough = agreeing > nonTied / 2 && signP < 0.05;
+  return {
+    unanimousEnough,
+    clause: unanimousEnough
+      ? "and is not one page's doing"
+      : `but only ${agreeing} of ${nonTied} moved the same way, so it could be one page's doing`,
+  };
 }
 
 /**
@@ -76,29 +134,20 @@ export function cohortVerdict(members: readonly CohortMember[]): CohortVerdict |
 
   const p = exactBinomialTwoSidedP(before + after, after);
   const direction = after > before ? "rise" : after < before ? "fall" : "flat";
-
-  const ups = members.filter((member) => member.after > member.before).length;
-  const downs = members.filter((member) => member.after < member.before).length;
-  const nonTied = ups + downs;
-  const signP = exactBinomialTwoSidedP(nonTied, Math.max(ups, downs));
-  const unanimousEnough = nonTied > 0 && signP < 0.05;
+  const { unanimousEnough, clause: unanimityClause } = unanimity(direction, members);
 
   const pooledClause =
     direction === "flat"
       ? `stayed at ${before}`
       : `${direction === "rise" ? "rose" : "fell"} from ${before} to ${after}`;
   const significanceClause =
-    p < 0.05
-      ? `clears the noise (p ${p.toFixed(2)})`
-      : `does not clear the noise (p ${p.toFixed(2)})`;
-  const unanimityClause = unanimousEnough
-    ? "and is not one page's doing"
-    : `but only ${Math.max(ups, downs)} of ${nonTied} moved the same way, so it could be one page's doing`;
+    p < 0.05 ? `clears the noise (${pClause(p)})` : `does not clear the noise (${pClause(p)})`;
+  const changeWord = members.length === 1 ? "change" : "changes";
 
   return {
     direction,
     p,
     unanimousEnough,
-    reason: `Your last ${members.length} measured changes, judged together: impressions ${pooledClause}, which ${significanceClause} ${unanimityClause}.`,
+    reason: `Your ${members.length} measured ${changeWord}, judged together: impressions ${pooledClause}, which ${significanceClause} ${unanimityClause}.`,
   };
 }

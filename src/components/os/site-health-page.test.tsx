@@ -127,7 +127,8 @@ describe("grading the fixes, on screen", () => {
       ],
     });
     await userEvent.click(screen.getByRole("tab", { name: /Did the fixes work/ }));
-    expect(screen.getByText(/judged together/i)).toBeInTheDocument();
+    expect(screen.getByText(/3 measured changes, judged together/)).toBeInTheDocument();
+    expect(screen.getByText(/120 to 155/)).toBeInTheDocument();
   });
 
   it("opens the change a reading measured, never grading from here", async () => {
