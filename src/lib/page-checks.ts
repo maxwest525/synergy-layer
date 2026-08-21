@@ -24,6 +24,7 @@ export type PageFacts = {
   jsonLdInvalid: boolean;
   internalLinks: number;
   externalLinks: number;
+  internalLinkTargets?: string[] | undefined;
   wordCount: number;
   ogTitle: string | null;
   ogImage: string | null;
@@ -55,7 +56,8 @@ export type CheckId =
   | "no_internal_links"
   | "og_missing"
   | "url_underscores"
-  | "url_query_string";
+  | "url_query_string"
+  | "orphan_page";
 
 export type Severity = "critical" | "warning" | "advice";
 
@@ -284,6 +286,9 @@ export const CHECKS: Record<CheckId, CheckDefinition> = {
   // An image with no declared size gives the browser nothing to reserve, so
   // the page moves under the reader as it loads.
   // https://developers.google.com/search/docs/appearance/core-web-vitals
+  // Checks HTML width/height attributes only; images sized via CSS are not
+  // detected here and may be flagged even when a stylesheet already reserves
+  // their space.
   image_dimensions_missing: {
     check: "image_dimensions_missing",
     label: "Images with no size declared",
@@ -357,6 +362,18 @@ export const CHECKS: Record<CheckId, CheckDefinition> = {
       `Give ${n} pages a plain address without parameters, so one page has one address.`,
     fixableByWordingProposal: false,
   },
+  // SEO starter guide: "the vast majority of the new pages Google finds every
+  // day are through links," and links "connect your users and search engines to
+  // other parts of your site."
+  // https://developers.google.com/search/docs/fundamentals/seo-starter-guide
+  orphan_page: {
+    check: "orphan_page",
+    label: "No path to the page from the home page",
+    severity: "warning",
+    instruction: (n) =>
+      `Link to ${n} pages from somewhere a reader can reach from your home page. Nothing on the site points at them today.`,
+    fixableByWordingProposal: false,
+  },
 };
 
 // Stated assumption: display truncation is by pixels and unpublished; these
@@ -415,6 +432,22 @@ function sameHost(href: string, pageUrl: string): boolean | null {
     const target = new URL(href, base);
     if (!target.protocol.startsWith("http")) return null;
     return target.host === base.host;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * A link target and a page's own address, reduced to the same key: the
+ * relative href resolved to absolute against the page it was found on, hash
+ * and query string dropped (they name a spot or a variant on the same page,
+ * not a different page), and a trailing slash stripped except on the root.
+ * An href that will not parse is skipped, never guessed at.
+ */
+function linkKey(href: string, base: string): string | null {
+  try {
+    const target = new URL(href, base);
+    return `${target.origin}${target.pathname.replace(/\/+$/, "") || "/"}`;
   } catch {
     return null;
   }
@@ -499,12 +532,16 @@ export function extractPageFacts(html: string, markdown: string, pageUrl: string
 
   let internalLinks = 0;
   let externalLinks = 0;
+  const internalLinkTargets = new Set<string>();
   for (const tag of html.match(/<a\b[^>]*>/gi) ?? []) {
     const href = attr(tag, "href");
     if (!href || href.startsWith("#")) continue;
     const internal = sameHost(href, pageUrl);
-    if (internal === true) internalLinks += 1;
-    else if (internal === false) externalLinks += 1;
+    if (internal === true) {
+      internalLinks += 1;
+      const target = linkKey(href, pageUrl);
+      if (target) internalLinkTargets.add(target);
+    } else if (internal === false) externalLinks += 1;
   }
 
   let canonical: string | null = null;
@@ -540,6 +577,7 @@ export function extractPageFacts(html: string, markdown: string, pageUrl: string
     jsonLdInvalid,
     internalLinks,
     externalLinks,
+    internalLinkTargets: [...internalLinkTargets],
     wordCount: words.length,
     ogTitle: metaContent(html, "property", "og:title"),
     ogImage: metaContent(html, "property", "og:image"),
@@ -566,11 +604,66 @@ function duplicateKeys(values: (string | null)[]): Set<string> {
 
 export type AnalyzedPage = { url: string; facts: PageFacts };
 
+/**
+ * Pages no chain of internal links reaches from the home page.
+ *
+ * Returns an empty set unless every read page carried its link targets: one
+ * page whose links were never stored would make everything it links to look
+ * unreachable, and a false orphan is worse than a silent one. Likewise, with no
+ * home page among the read pages, or a home page whose links never resolve to
+ * another read page, there is nowhere trustworthy to start, so nothing is said.
+ *
+ * Stated assumption: click depth is computed nowhere here. No Google document
+ * sets a maximum depth from the home page, and inventing one would be a number
+ * chosen only to make this rule fire. Reachable-or-not is threshold-free.
+ */
+export function unreachablePages(pages: AnalyzedPage[]): Set<string> {
+  if (pages.some((page) => page.facts.internalLinkTargets === undefined)) return new Set();
+
+  const byKey = new Map<string, string>();
+  for (const page of pages) {
+    const key = linkKey(page.url, page.url);
+    if (key) byKey.set(key, page.url);
+  }
+
+  const home = [...byKey.entries()].find(([key]) => new URL(key).pathname === "/");
+  if (!home) return new Set();
+
+  const reached = new Set<string>([home[0]]);
+  const queue = [home[0]];
+  while (queue.length > 0) {
+    const current = queue.shift() as string;
+    const page = pages.find((p) => linkKey(p.url, p.url) === current);
+    for (const target of page?.facts.internalLinkTargets ?? []) {
+      if (byKey.has(target) && !reached.has(target)) {
+        reached.add(target);
+        queue.push(target);
+      }
+    }
+  }
+
+  // Stated assumption: a home page whose own stored links never resolve to
+  // another read page (reached grows no further than the home page itself)
+  // is treated the same as having no home page at all — that would call
+  // every other read page an orphan at once, which reads as broken link
+  // capture rather than a broken site, and a false orphan is worse than a
+  // silent one.
+  if (reached.size <= 1) return new Set();
+
+  return new Set(
+    pages
+      .map((page) => ({ url: page.url, key: linkKey(page.url, page.url) }))
+      .filter((page) => page.key && !reached.has(page.key))
+      .map((page) => page.url),
+  );
+}
+
 /** Every real defect found across every analyzed page. */
 export function evaluatePages(pages: AnalyzedPage[]): PageIssue[] {
   const duplicateTitles = duplicateKeys(pages.map((page) => page.facts.title));
   const duplicateH1s = duplicateKeys(pages.map((page) => page.facts.h1s[0] ?? null));
   const duplicateDescriptions = duplicateKeys(pages.map((page) => page.facts.metaDescription));
+  const unreachable = unreachablePages(pages);
 
   const issues: PageIssue[] = [];
   const add = (check: CheckId, url: string, detail: string): void => {
@@ -656,6 +749,9 @@ export function evaluatePages(pages: AnalyzedPage[]): PageIssue[] {
     if (address.underscores)
       add("url_underscores", url, `The address separates words with underscores: ${url}`);
     if (address.queryString) add("url_query_string", url, `The address carries parameters: ${url}`);
+
+    if (unreachable.has(url))
+      add("orphan_page", url, "No chain of links from the home page reaches this page.");
   }
 
   return issues;

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import type { AnalyzedPage } from "./page-checks";
 import { CHECKS, evaluatePages, extractPageFacts, groupFindings, urlDefects } from "./page-checks";
 
 const HTML = `<!doctype html><html lang="en"><head>
@@ -122,5 +123,45 @@ describe("url conventions", () => {
     );
     expect(checks).toContain("url_underscores");
     expect(checks).toContain("url_query_string");
+  });
+});
+
+const linked = (url: string, targets: string[]): AnalyzedPage => ({
+  url,
+  facts: { ...extractPageFacts(HTML, "words", url), internalLinkTargets: targets },
+});
+
+describe("orphan pages", () => {
+  it("collects same-host link targets, normalized, from the rendered html", () => {
+    const facts = extractPageFacts(
+      `<html><body><a href="/two#top">Two</a><a href="/two">Again</a>
+       <a href="https://other.test/x">Away</a><a href="#here">Anchor</a></body></html>`,
+      "words",
+      "https://a.test/one",
+    );
+    expect(facts.internalLinkTargets).toEqual(["https://a.test/two"]);
+  });
+
+  it("reports a page nothing links to as an orphan", () => {
+    const issues = evaluatePages([
+      linked("https://a.test/", ["https://a.test/two"]),
+      linked("https://a.test/two", ["https://a.test/"]),
+      linked("https://a.test/hidden", ["https://a.test/"]),
+    ]);
+    const orphans = issues.filter((issue) => issue.check === "orphan_page").map((i) => i.url);
+    expect(orphans).toEqual(["https://a.test/hidden"]);
+  });
+
+  it("never calls a page an orphan when the graph was not stored", () => {
+    const issues = evaluatePages([
+      { url: "https://a.test/", facts: extractPageFacts(HTML, "words", "https://a.test/") },
+      { url: "https://a.test/hidden", facts: extractPageFacts(HTML, "words", "https://a.test/h") },
+    ]);
+    expect(issues.some((issue) => issue.check === "orphan_page")).toBe(false);
+  });
+
+  it("says nothing when no home page is among the read pages", () => {
+    const issues = evaluatePages([linked("https://a.test/deep/one", [])]);
+    expect(issues.some((issue) => issue.check === "orphan_page")).toBe(false);
   });
 });

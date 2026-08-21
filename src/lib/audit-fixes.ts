@@ -53,6 +53,7 @@ export const PAGE_CHECK_FIX: Record<CheckId, AuditFixTarget | null> = {
   og_missing: null,
   url_underscores: null,
   url_query_string: null,
+  orphan_page: null,
 };
 
 /** Which governed change kind can fix each site level check. */
