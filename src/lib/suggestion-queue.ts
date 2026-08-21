@@ -9,9 +9,10 @@
  * audit severities. That is why this module is pure and exhaustively tested
  * while the surfaces that render it stay thin.
  *
- * Phase 1 adds no table, so an affordance that would need one (ignoring an
- * audit finding, restoring a rejected change request) reports itself as
- * unavailable rather than rendering a button that cannot work.
+ * Ignoring a page-audit finding is stored in `suggestion_suppressions`, keyed
+ * by the fingerprint the queue builds. Restoring a rejected change request
+ * still has nowhere to go, so that verb still reports itself unavailable
+ * rather than rendering a button that cannot work.
  */
 
 import type { CategoryId } from "./categories";
@@ -60,6 +61,8 @@ export type QueueSource = {
    * refuses to decide one, so the queue must not offer the verb.
    */
   readonly observationOnly?: boolean;
+  /** Set when the operator stored a decision to keep this out of the open list. */
+  readonly suppressed?: boolean;
   readonly createdAt: string;
   readonly updatedAt: string;
 };
@@ -96,6 +99,7 @@ const DONE_STATES = new Set(["applied", "verified"]);
  */
 export function queueStateFor(source: QueueSource): QueueState | null {
   if (source.linkedChangeId !== null) return null;
+  if (source.suppressed === true) return "ignored";
   if (OPEN_STATES.has(source.storedState)) return "open";
   if (IGNORED_STATES.has(source.storedState)) return "ignored";
   if (DONE_STATES.has(source.storedState)) return "done";
@@ -169,19 +173,20 @@ export function navToneForUrgency(urgency: UrgencyRank): NavTone {
 
 /**
  * A rejected change request is terminal, so restoring it is not offered, and
- * observed evidence was never a decision to reverse.
+ * observed evidence was never a decision to reverse. A page check set aside is
+ * one stored row, and deleting it puts the check straight back.
  */
 function canRestoreSource(source: QueueSource): boolean {
-  return source.kind !== "change" && source.observationOnly !== true;
+  if (source.observationOnly === true) return false;
+  if (source.kind === "audit") return source.suppressed === true;
+  return source.kind !== "change";
 }
 
-/**
- * Ignoring needs somewhere to store the suppression. Audit findings have none
- * yet, and observed evidence is a fact rather than a suggestion: `decide`
- * refuses it, so offering the verb here would guarantee a failed click.
- */
+/** Ignoring needs somewhere to store the suppression; `suggestion_suppressions` is it. */
 function canIgnoreSource(source: QueueSource): boolean {
-  return source.kind !== "audit" && source.observationOnly !== true;
+  if (source.observationOnly === true) return false;
+  if (source.kind === "audit") return source.suppressed !== true;
+  return true;
 }
 
 /**

@@ -151,6 +151,15 @@ export const getCommandCenterFacts = createServerFn({ method: "POST" })
     ).size;
 
     const audit = await readPageAudit(db, tenantId);
+    const suppressionResult = await db
+      .from("suggestion_suppressions")
+      .select("fingerprint")
+      .eq("tenant_id", tenantId);
+    const suppressed = new Set(
+      (assertRead("Ignored suggestions", suppressionResult).data ?? []).map(
+        (row) => row.fingerprint,
+      ),
+    );
     const pagesNeedingFixes = new Set(
       audit.findings.flatMap((finding) => finding.pages.map((page) => page.url)),
     ).size;
@@ -236,6 +245,7 @@ export const getCommandCenterFacts = createServerFn({ method: "POST" })
       fingerprint: `audit:${finding.check}`,
       severity: finding.severity as AuditSeverity,
       linkedChangeId: null,
+      suppressed: suppressed.has(`audit:${finding.check}`),
       createdAt: observedAt,
       updatedAt: observedAt,
     }));
@@ -254,6 +264,7 @@ export const getCommandCenterFacts = createServerFn({ method: "POST" })
       fingerprint: `site:${finding.check}`,
       severity: finding.severity as AuditSeverity,
       linkedChangeId: null,
+      suppressed: suppressed.has(`site:${finding.check}`),
       createdAt: audit.siteObservedAt ?? observedAt,
       updatedAt: audit.siteObservedAt ?? observedAt,
     }));

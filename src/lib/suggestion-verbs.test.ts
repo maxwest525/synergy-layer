@@ -55,10 +55,10 @@ describe("which verbs a card may offer", () => {
     expect(idsFor({ id: "r1", storedState: "applied" })).toEqual([]);
   });
 
-  it("offers no ignore on an open item that has nowhere to store the suppression", () => {
-    expect(
-      idsFor({ id: "audit:missing_title", kind: "audit", severity: "critical" }),
-    ).not.toContain("ignore");
+  it("offers ignore on a page check, now that the decision is stored", () => {
+    expect(idsFor({ id: "audit:missing_title", kind: "audit", severity: "critical" })).toContain(
+      "ignore",
+    );
   });
 
   it("offers no restore on an ignored item that cannot be restored", () => {

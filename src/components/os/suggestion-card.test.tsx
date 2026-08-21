@@ -73,9 +73,9 @@ describe("a card an operator can act on", () => {
 });
 
 describe("a verb that is not legal is absent, never disabled", () => {
-  it("renders no set-aside control on a page check, which has nowhere to store it", () => {
+  it("offers to set a page check aside, now that the decision is stored", () => {
     show({ id: "audit:missing_title", kind: "audit", severity: "critical" });
-    expect(screen.queryByRole("button", { name: /Not now/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Not now/ })).toBeEnabled();
   });
 
   it("renders no redraft control where no redraft path exists", () => {

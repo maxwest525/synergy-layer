@@ -141,14 +141,6 @@ describe("restore and ignore legality", () => {
     expect(byId.get("finding")).toBe(false);
   });
 
-  it("refuses to offer ignore for an audit finding, which has nowhere to store it", () => {
-    const queue = buildQueue(
-      [source({ id: "a1", kind: "audit", storedState: "proposed", severity: "critical" })],
-      NOW,
-    );
-    expect(queue.open[0]?.canIgnore).toBe(false);
-  });
-
   it("offers ignore for the kinds that do persist it", () => {
     const queue = buildQueue(
       [source({ id: "r1" }), source({ id: "c1", kind: "change", storedState: "proposed" })],
@@ -341,6 +333,33 @@ describe("what an observation may be told to do", () => {
   it("still offers to ignore an ordinary recommendation", () => {
     const queue = buildQueue([source({ id: "r2", storedState: "proposed" })], NOW);
     expect(queue.open[0]?.canIgnore).toBe(true);
+  });
+});
+
+describe("setting a page check aside, now that there is somewhere to store it", () => {
+  it("offers to set a page check aside", () => {
+    const queue = buildQueue(
+      [source({ id: "audit:missing_title", kind: "audit", severity: "critical" })],
+      NOW,
+    );
+    expect(queue.open[0]?.canIgnore).toBe(true);
+  });
+
+  it("moves a suppressed page check out of the open list and offers to put it back", () => {
+    const queue = buildQueue(
+      [
+        source({
+          id: "audit:missing_title",
+          kind: "audit",
+          severity: "critical",
+          suppressed: true,
+        }),
+      ],
+      NOW,
+    );
+    expect(queue.open).toHaveLength(0);
+    expect(queue.ignored[0]?.canRestore).toBe(true);
+    expect(queue.ignored[0]?.canIgnore).toBe(false);
   });
 });
 

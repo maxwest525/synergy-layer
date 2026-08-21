@@ -8,6 +8,7 @@ import { COMMAND_CENTER_QUERY_KEY } from "./command-center-facts";
 import { actionFor } from "@/lib/command-center";
 import { rejectChangeRequest } from "@/lib/change-requests.functions";
 import { setRecommendationQueueState } from "@/lib/os-admin.functions";
+import { ignoreAuditFinding, restoreAuditFinding } from "@/lib/suggestion-suppressions.functions";
 import type { QueueItem, UrgencyTone } from "@/lib/suggestion-queue";
 import { verbsFor, type SuggestionVerb } from "@/lib/suggestion-verbs";
 import { regenerateTitleH1Proposal } from "@/lib/title-h1-proposals.functions";
@@ -46,10 +47,18 @@ export function SuggestionCard({ item }: { item: QueueItem }) {
   const setQueueState = useServerFn(setRecommendationQueueState);
   const rejectChange = useServerFn(rejectChangeRequest);
   const redraft = useServerFn(regenerateTitleH1Proposal);
+  const ignoreAudit = useServerFn(ignoreAuditFinding);
+  const restoreAudit = useServerFn(restoreAuditFinding);
   const describedBy = useId();
 
   const run = useMutation({
     mutationFn: async (verb: SuggestionVerb) => {
+      if (item.kind === "audit") {
+        const fingerprint = item.fingerprint ?? item.id;
+        return verb.id === "ignore"
+          ? ignoreAudit({ data: { fingerprint } })
+          : restoreAudit({ data: { fingerprint } });
+      }
       if (verb.id === "regenerate") return redraft({ data: { id: item.id } });
       if (item.kind === "change") return rejectChange({ data: { id: item.id, notes: null } });
       return setQueueState({ data: { id: item.id, verb: verb.id } });
