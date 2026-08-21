@@ -6,6 +6,7 @@ import {
   evaluatePages,
   groupFindings,
   buildAuditHeadline,
+  unreachablePagesBailReason,
   type PageFacts,
 } from "./page-checks";
 import {
@@ -277,6 +278,7 @@ export async function readPageAudit(client: Client, tenantId: string): Promise<P
       observations: [],
       duplicates: [],
       findings: [],
+      orphanBailReason: null,
       siteFindings: [],
       siteInstruction: "Select a Search Console property before running the technical site checks.",
       siteObservedAt: null,
@@ -304,6 +306,10 @@ export async function readPageAudit(client: Client, tenantId: string): Promise<P
       finalUrl: observation.finalUrl,
     }));
   const findings = groupFindings(evaluatePages(analyzed));
+  // Null when nothing has been read at all: that state is already named by
+  // "the page audit has never run", so this note stays for the case where the
+  // audit ran but the orphan check specifically could not.
+  const orphanBailReason = analyzed.length > 0 ? unreachablePagesBailReason(analyzed) : null;
 
   const site = await latestSiteFacts(client, tenantId, property);
   const siteFindings = site.facts ? evaluateSite(site.facts) : [];
@@ -316,6 +322,7 @@ export async function readPageAudit(client: Client, tenantId: string): Promise<P
     observations,
     duplicates,
     findings,
+    orphanBailReason,
     siteFindings,
     siteInstruction: site.facts
       ? buildSiteHeadline(siteFindings, readable.length)

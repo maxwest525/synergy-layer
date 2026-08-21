@@ -536,11 +536,48 @@ describe("what this volume can and cannot answer", () => {
     expect(view.answerability).toBeNull();
   });
 
-  it("stays null when the comparison behind the tiles is not ready", () => {
+  it("names what is missing, rather than staying null, when only the comparison is not ready", () => {
+    // The page count is known; only the second window is not. That is a real
+    // prerequisite worth naming, not the same silence as knowing nothing at all.
     const view = buildGettingFound(
       withFacts({ coverage: { pagesKnown: 48, pagesWithImpressions: 9 } }),
     );
-    expect(view.answerability).toBeNull();
+    expect(view.answerability).not.toBeNull();
+    expect(view.answerability?.beyond).toEqual([]);
+    expect(view.answerability?.waitingOn.join(" ")).toContain("second collection");
+  });
+});
+
+describe("what still has to happen before this volume can be judged", () => {
+  it("names the prerequisite, not only the volume, when a window is missing", () => {
+    const view = buildGettingFound(
+      withFacts({
+        coverage: { pagesKnown: 48, pagesWithImpressions: 9 },
+        sessions: null,
+      }),
+    );
+    expect(view.answerability?.waitingOn.join(" ")).toContain("second collection");
+    expect(view.answerability?.waitingOn.join(" ")).toContain("analytics");
+  });
+
+  it("says nothing about prerequisites once they are all met", () => {
+    const view = buildGettingFound(
+      withFacts({
+        comparison: READY,
+        coverage: { pagesKnown: 48, pagesWithImpressions: 9 },
+        sessions: 40,
+      }),
+    );
+    expect(view.answerability?.waitingOn).toEqual([]);
+  });
+
+  it("never puts a rule id in a waiting-on sentence", () => {
+    const view = buildGettingFound(
+      withFacts({ coverage: { pagesKnown: 48, pagesWithImpressions: 9 } }),
+    );
+    for (const assignment of RULE_ASSIGNMENTS) {
+      expect(view.answerability?.waitingOn.join(" ")).not.toContain(assignment.rule);
+    }
   });
 });
 

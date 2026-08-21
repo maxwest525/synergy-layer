@@ -10,6 +10,7 @@ import {
   type StoredOutcome,
 } from "./site-health";
 import { GROUNDED_WINDOWS } from "./outcome-verdict";
+import { RULE_ASSIGNMENTS } from "./rule-buckets";
 import type { SiteFinding } from "./site-checks";
 
 const NOW = "2026-08-20T12:00:00.000Z";
@@ -195,11 +196,11 @@ describe("what the page leads with", () => {
 });
 
 describe("the honesty invariant", () => {
-  it("says the checks have not run rather than reporting zero problems", () => {
+  it("says the checks have never run rather than reporting zero problems", () => {
     const view = buildSiteHealth(withFacts({}));
     const tile = view.tiles.find((entry) => entry.label === "Crawl problems");
     expect(tile?.value).toBeNull();
-    expect(tile?.missingReason).toMatch(/have not run/i);
+    expect(tile?.missingReason).toMatch(/never run/i);
   });
 
   it("reports a real zero once the checks have run", () => {
@@ -543,5 +544,29 @@ describe("defects an adversarial review found before this shipped", () => {
     );
     expect(view.status.text).not.toMatch(/can read your site/i);
     expect(view.status.tone).toBe("warning");
+  });
+});
+
+describe("naming what the checks have never run", () => {
+  it("states that the checks have never run, with what it costs", () => {
+    const view = buildSiteHealth(withFacts({ siteObservedAt: null }));
+    expect(view.neverRunNotice).toContain("never run");
+    expect(view.neverRunNotice).toMatch(/robots\.txt/i);
+    expect(view.waitingOn.join(" ")).toContain("page audit");
+  });
+
+  it("says nothing once the checks have run", () => {
+    expect(buildSiteHealth(withFacts({ siteObservedAt: NOW })).neverRunNotice).toBeNull();
+  });
+
+  it("says nothing about prerequisites once the checks have run", () => {
+    expect(buildSiteHealth(withFacts({ siteObservedAt: NOW })).waitingOn).toEqual([]);
+  });
+
+  it("never puts a rule id on screen", () => {
+    const view = buildSiteHealth(withFacts({ siteObservedAt: null }));
+    for (const assignment of RULE_ASSIGNMENTS) {
+      expect(`${view.neverRunNotice} ${view.waitingOn.join(" ")}`).not.toContain(assignment.rule);
+    }
   });
 });

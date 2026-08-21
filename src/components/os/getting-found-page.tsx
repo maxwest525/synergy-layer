@@ -122,6 +122,16 @@ function AnswerabilityPanel({ answerability }: { answerability: Answerability | 
               ))}
             </ul>
           ) : null}
+          {answerability.waitingOn.length > 0 ? (
+            // What is blocking an answer besides volume. Kept beside the volume
+            // line rather than folded into it: "not enough traffic" and "no
+            // second window yet" are different answers.
+            <ul className="flex flex-col gap-1 text-xs leading-snug text-muted-foreground">
+              {answerability.waitingOn.map((entry) => (
+                <li key={entry}>{entry}</li>
+              ))}
+            </ul>
+          ) : null}
         </div>
       ) : null}
     </div>

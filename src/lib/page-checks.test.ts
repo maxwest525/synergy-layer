@@ -7,6 +7,7 @@ import {
   extractPageFacts,
   groupFindings,
   pageCategory,
+  unreachablePagesBailReason,
   urlDefects,
 } from "./page-checks";
 
@@ -170,6 +171,33 @@ describe("orphan pages", () => {
   it("says nothing when no home page is among the read pages", () => {
     const issues = evaluatePages([linked("https://a.test/deep/one", [])]);
     expect(issues.some((issue) => issue.check === "orphan_page")).toBe(false);
+  });
+});
+
+describe("naming why orphan detection could not run", () => {
+  it("says nothing was wrong when it actually ran", () => {
+    const pages = [
+      linked("https://a.test/", ["https://a.test/two"]),
+      linked("https://a.test/two", ["https://a.test/"]),
+    ];
+    expect(unreachablePagesBailReason(pages)).toBeNull();
+  });
+
+  it("names a missing field, rather than staying silent about why", () => {
+    const facts = extractPageFacts(HTML, "words", "https://a.test/");
+    const pages = [{ url: "https://a.test/", facts: { ...facts, internalLinkTargets: undefined } }];
+    expect(unreachablePagesBailReason(pages)).toMatch(/link targets/i);
+  });
+
+  it("names a missing home page", () => {
+    expect(unreachablePagesBailReason([linked("https://a.test/deep/one", [])])).toMatch(
+      /no home page/i,
+    );
+  });
+
+  it("names a home page whose links reach nothing else read", () => {
+    const pages = [linked("https://a.test/", []), linked("https://a.test/hidden", [])];
+    expect(unreachablePagesBailReason(pages)).toMatch(/reach.*any other page/i);
   });
 });
 

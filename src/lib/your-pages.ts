@@ -21,6 +21,7 @@
 import { bindingConstraint, type ConstraintFacts, type Constraint } from "./binding-constraint";
 import type { PageCoverage } from "./getting-found";
 import type { CheckFinding, Severity } from "./page-checks";
+import { unmetPrerequisites } from "./rule-buckets";
 import type { PeriodComparison } from "./search-console";
 import {
   buildQueue,
@@ -94,6 +95,13 @@ export type YourPagesFacts = {
   readonly comparison: PeriodComparison;
   readonly coverage: PageCoverage | null;
   readonly sessions: number | null;
+  /**
+   * Why orphan detection (`unreachablePagesBailReason` in page-checks.ts)
+   * could not run at all, or null when it ran, whether or not it found an
+   * orphan. Never a claim about whether orphans exist — only about whether
+   * the check itself could look.
+   */
+  readonly orphanBailReason: string | null;
 };
 
 export type Tile = {
@@ -127,9 +135,18 @@ export type YourPagesView = {
   readonly asOf: string | null;
   /** Which property these rows belong to, so a cross-property read is visible. */
   readonly property: string | null;
+  /** Sentences from `unmetPrerequisites`. Empty once every prerequisite this page can see is met. */
+  readonly waitingOn: readonly string[];
+  /** Non-null only when the audit has never run at all. */
+  readonly neverRunNotice: string | null;
+  /** Named rather than dropped: orphan detection failing to run is worth seeing on its own. */
+  readonly orphanNote: string | null;
 };
 
-const NOT_AUDITED = "The page audit has not run yet, so nothing has been read from your pages.";
+const NOT_AUDITED = "The page audit has never run, so nothing here has been read from your pages.";
+
+const NEVER_RUN =
+  "The page audit has never run. Every page level check below is blind until you run it once, and one run reads up to 100 pages.";
 
 const SEVERITY_ORDER: Record<Severity, number> = { critical: 0, warning: 1, advice: 2 };
 
@@ -431,5 +448,17 @@ export function buildYourPages(facts: YourPagesFacts): YourPagesView {
     history: [...queue.ignored, ...queue.done],
     asOf: facts.lastObservedAt,
     property: facts.property,
+    waitingOn: unmetPrerequisites({
+      secondCollection: facts.comparison.status === "ready",
+      pageAudit: facts.lastObservedAt !== null,
+      analytics: facts.sessions !== null,
+      // Nothing on this page reads a stored URL inspection yet.
+      urlInspection: true,
+    }),
+    neverRunNotice: facts.lastObservedAt === null ? NEVER_RUN : null,
+    orphanNote:
+      facts.orphanBailReason === null
+        ? null
+        : `Orphan detection could not run: ${facts.orphanBailReason}.`,
   };
 }

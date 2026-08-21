@@ -20,7 +20,7 @@ import {
   type ConstraintFacts,
 } from "./binding-constraint";
 import { MIN_BASELINE } from "./confidence";
-import { RULE_ASSIGNMENTS, type RuleAssignment } from "./rule-buckets";
+import { RULE_ASSIGNMENTS, unmetPrerequisites, type RuleAssignment } from "./rule-buckets";
 import {
   buildQueue,
   compareQueueItems,
@@ -176,6 +176,14 @@ export type ConstraintBanner = {
 export type Answerability = {
   readonly line: string;
   readonly beyond: readonly string[];
+  /**
+   * Sentences from `unmetPrerequisites`: what else is blocking an answer,
+   * besides volume. Empty once every prerequisite this page can see is met.
+   * Kept beside `line` rather than folded into it, because "not enough
+   * traffic" and "no second window yet" are different answers and the
+   * operator needs to know which one applies.
+   */
+  readonly waitingOn: readonly string[];
 };
 
 export type GettingFoundView = {
@@ -183,9 +191,11 @@ export type GettingFoundView = {
   readonly status: GettingFoundStatus;
   /**
    * What this site's traffic volume can and cannot answer, and the lever
-   * that changes it. Null when the totals it rests on are not stored, in
+   * that changes it. Null when the page count behind it is not stored, in
    * which case the tiles' own `missingReason` already says why — this is
-   * never a second "not measurable" message.
+   * never a second "not measurable" message. When only the comparison window
+   * is missing, this stays non-null so `waitingOn` can name that instead of
+   * going quiet.
    */
   readonly answerability: Answerability | null;
   readonly tabs: readonly Tab[];
@@ -308,19 +318,40 @@ export function describeAnswerability(
 }
 
 /**
- * Refused, not guessed at, when either total behind it is not stored: the
- * site-wide impression count the tiles already show, and the page count the
- * coverage diagnosis already reads. Both are read from facts already
- * assembled for those, so this can never disagree with what is on screen.
+ * Refused, not guessed at, when the page count behind it is not stored: the
+ * coverage diagnosis already reads it, so a missing window here means nothing
+ * on this page has anything to say yet, and the tile above already carries
+ * why.
+ *
+ * A missing comparison is different: the page count is known, so there is a
+ * real prerequisite to name (no second collection yet), rather than nothing at
+ * all. `line` and `beyond` still need the site-wide total the comparison
+ * carries, so they stay in a degraded form — `insufficientReason`'s own
+ * sentence, no per-rule volume detail — while `waitingOn` says what is
+ * missing.
  */
 function answerabilityFor(facts: GettingFoundFacts): Answerability | null {
-  if (facts.comparison.status !== "ready") return null;
   if (facts.coverage === null) return null;
-  return describeAnswerability(
+
+  const waitingOn = unmetPrerequisites({
+    secondCollection: facts.comparison.status === "ready",
+    // Coverage being present already means the page audit read something.
+    pageAudit: true,
+    analytics: facts.sessions !== null,
+    // Nothing on this page reads a stored URL inspection yet.
+    urlInspection: true,
+  });
+
+  if (facts.comparison.status !== "ready") {
+    return { line: insufficientReason(facts.comparison) ?? "", beyond: [], waitingOn };
+  }
+
+  const { line, beyond } = describeAnswerability(
     facts.comparison.current.impressions,
     facts.coverage.pagesKnown,
     RULE_ASSIGNMENTS,
   );
+  return { line, beyond, waitingOn };
 }
 
 const NO_PROPERTY =

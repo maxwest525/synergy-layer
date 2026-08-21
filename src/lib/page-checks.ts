@@ -3,8 +3,12 @@
  * reports what is actually there. Nothing fetches, nothing estimates, nothing
  * scores. A check either found a real defect on a real page or it did not.
  *
- * Image file weight is not checked: the render only returns HTML and text, and
- * no byte size is available to read.
+ * Three things stated plainly here so the next reader does not re-derive them:
+ * image file weight is not checked, because the render only returns HTML and
+ * text and no byte size is available to read; click depth is not checked,
+ * because no Google document sets a citable maximum; and page speed per page
+ * is not checked here at all — that is the stored PageSpeed reading Site
+ * health renders, not something this module reads from HTML.
  */
 
 export type PageFacts = {
@@ -777,21 +781,34 @@ function duplicateKeys(values: (string | null)[]): Set<string> {
 
 export type AnalyzedPage = { url: string; facts: PageFacts; finalUrl?: string | null };
 
+type UnreachabilityReport = {
+  readonly unreachable: ReadonlySet<string>;
+  /** Why detection could not run at all, in plain words. Null when it ran. */
+  readonly bailReason: string | null;
+};
+
 /**
- * Pages no chain of internal links reaches from the home page.
+ * Pages no chain of internal links reaches from the home page, and — shared
+ * with `unreachablePagesBailReason` so the two can never disagree — why
+ * detection could not run at all when it bails.
  *
- * Returns an empty set unless every read page carried its link targets: one
- * page whose links were never stored would make everything it links to look
- * unreachable, and a false orphan is worse than a silent one. Likewise, with no
- * home page among the read pages, or a home page whose links never resolve to
- * another read page, there is nowhere trustworthy to start, so nothing is said.
+ * Bails unless every read page carried its link targets: one page whose links
+ * were never stored would make everything it links to look unreachable, and a
+ * false orphan is worse than a silent one. Likewise, with no home page among
+ * the read pages, or a home page whose links never resolve to another read
+ * page, there is nowhere trustworthy to start, so nothing is said.
  *
  * Stated assumption: click depth is computed nowhere here. No Google document
  * sets a maximum depth from the home page, and inventing one would be a number
  * chosen only to make this rule fire. Reachable-or-not is threshold-free.
  */
-export function unreachablePages(pages: AnalyzedPage[]): Set<string> {
-  if (pages.some((page) => page.facts.internalLinkTargets === undefined)) return new Set();
+function unreachabilityReport(pages: AnalyzedPage[]): UnreachabilityReport {
+  if (pages.some((page) => page.facts.internalLinkTargets === undefined)) {
+    return {
+      unreachable: new Set(),
+      bailReason: "at least one read page did not have its link targets stored",
+    };
+  }
 
   const byKey = new Map<string, string>();
   for (const page of pages) {
@@ -800,7 +817,9 @@ export function unreachablePages(pages: AnalyzedPage[]): Set<string> {
   }
 
   const home = [...byKey.entries()].find(([key]) => new URL(key).pathname === "/");
-  if (!home) return new Set();
+  if (!home) {
+    return { unreachable: new Set(), bailReason: "no home page is among the pages the audit read" };
+  }
 
   const reached = new Set<string>([home[0]]);
   const queue = [home[0]];
@@ -819,14 +838,38 @@ export function unreachablePages(pages: AnalyzedPage[]): Set<string> {
   // parser cannot see (JS-rendered), OR a legitimate topology whose nav
   // targets did not make this audit's capped 100-page sample — the two are
   // indistinguishable here, so the check stays silent rather than mass-flagging.
-  if (reached.size <= 1) return new Set();
+  if (reached.size <= 1) {
+    return {
+      unreachable: new Set(),
+      bailReason: "the home page's links did not reach any other page the audit read",
+    };
+  }
 
-  return new Set(
-    pages
-      .map((page) => ({ url: page.url, key: linkKey(page.url, page.url) }))
-      .filter((page) => page.key && !reached.has(page.key))
-      .map((page) => page.url),
-  );
+  return {
+    unreachable: new Set(
+      pages
+        .map((page) => ({ url: page.url, key: linkKey(page.url, page.url) }))
+        .filter((page) => page.key && !reached.has(page.key))
+        .map((page) => page.url),
+    ),
+    bailReason: null,
+  };
+}
+
+/** Pages no chain of internal links reaches from the home page. See `unreachabilityReport`. */
+export function unreachablePages(pages: AnalyzedPage[]): Set<string> {
+  return new Set(unreachabilityReport(pages).unreachable);
+}
+
+/**
+ * Why orphan detection could not run at all — a missing field, no home page,
+ * or a home page whose links resolve to nothing — or null when it ran,
+ * whether or not it found an orphan. Read from the same report
+ * `unreachablePages` computes, so the two can never disagree about whether
+ * detection actually ran.
+ */
+export function unreachablePagesBailReason(pages: AnalyzedPage[]): string | null {
+  return unreachabilityReport(pages).bailReason;
 }
 
 /** Every real defect found across every analyzed page. */

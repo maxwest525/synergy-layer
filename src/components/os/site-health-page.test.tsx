@@ -156,10 +156,10 @@ describe("grading the fixes, on screen", () => {
 });
 
 describe("the honesty invariant, on screen", () => {
-  it("says the checks have not run rather than showing a zero", () => {
+  it("says the checks have never run rather than showing a zero", () => {
     show({ siteObservedAt: null });
     expect(within(tile("Crawl problems")).queryByText("0")).not.toBeInTheDocument();
-    expect(screen.getAllByText(/have not run yet/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/never run/i).length).toBeGreaterThan(0);
   });
 
   it("shows a measured zero once the checks have run", () => {

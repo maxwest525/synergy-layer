@@ -91,6 +91,7 @@ function facts(overrides: Partial<YourPagesFacts> = {}): YourPagesFacts {
     comparison: READY,
     coverage: null,
     sessions: null,
+    orphanBailReason: null,
     ...overrides,
   };
 }
@@ -117,10 +118,10 @@ beforeEach(() => {
 });
 
 describe("the honesty invariant, on screen", () => {
-  it("says the audit has not run rather than showing a zero", () => {
+  it("says the audit has never run rather than showing a zero", () => {
     show({ pages: [page("/a", { impressions: 5 })] });
     expect(within(tile("Pages read")).queryByText("0")).not.toBeInTheDocument();
-    expect(screen.getAllByText(/has not run yet/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/never run/i).length).toBeGreaterThan(0);
   });
 
   it("shows a measured zero once the audit has run", () => {

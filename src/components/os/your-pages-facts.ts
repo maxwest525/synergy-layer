@@ -86,6 +86,7 @@ export function useYourPages(): YourPagesQuery {
       },
       coverage: coverage.data.coverage,
       sessions: coverage.data.sessions,
+      orphanBailReason: extras.data.orphanBailReason,
     }),
     isPending,
     error: null,
