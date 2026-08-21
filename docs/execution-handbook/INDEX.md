@@ -3,7 +3,7 @@ id: 20260814-execution-handbook-index
 title: AOOS Execution Handbook
 tags: [governance, execution, seo]
 created: 2026-08-14
-updated: 2026-08-14
+updated: 2026-08-21
 related: [20260814-execution-handbook-topic, 20260814-source-of-truth]
 summary: Index and operating boundary for AOOS SEO and AEO execution.
 ---
@@ -46,7 +46,9 @@ These labels describe current implementation state. Recommendation certainty use
 
 ## Current handbook boundary
 
-This handbook contains 14 named contracts. It does not assert that all 14 are fully wired. The current thin executable slice is title/H1 proposal handling; other components remain governed detection or design contracts until their adapters and tests exist.
+This handbook contains 14 named contracts. It does not assert that all 14 are fully wired.
+
+Updated 2026-08-21: the executable slice is no longer only title/H1 proposals. Page metadata proposals, the page audit's 30 checks, the bucketed finding rules and the targeting layer all now reach the suggestion queue, and four modules write recommendations. Execution against the real repository remains `BLOCKED` on `GITHUB_EXECUTOR_TOKEN`. Other components remain governed detection or design contracts until their adapters and tests exist. Current state is in [`docs/context/CURRENT_BUILD.md`](../context/CURRENT_BUILD.md).
 
 ## Topic map
 
