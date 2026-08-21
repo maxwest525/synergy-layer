@@ -57,7 +57,14 @@ export const Route = createFileRoute("/keywords")({
   component: KeywordReviewPage,
 });
 
-type Metrics = { search_volume?: number | null; cpc?: number | null; competition?: number | null };
+type Metrics = {
+  search_volume?: number | null;
+  cpc?: number | null;
+  competition?: number | null;
+  keyword_difficulty?: number | null;
+  search_intent?: string | null;
+  competitor?: string | null;
+};
 
 function readMetrics(value: unknown): Metrics {
   return (value ?? {}) as Metrics;
@@ -130,7 +137,18 @@ function KeywordReviewPage() {
   const enrichMutation = useMutation({
     mutationFn: () => enrich(),
     onSuccess: (result) => {
-      toast.success(`${result.enriched} keywords scored.`);
+      const capped = result.pendingTotal > result.sentThisRun;
+      toast.success(
+        `${
+          capped
+            ? `Scored ${result.sentThisRun} of ${result.pendingTotal} pending — run again for the rest`
+            : `${result.enriched} keyword${result.enriched === 1 ? "" : "s"} scored`
+        }${
+          result.unparsed > 0
+            ? ` (${result.unparsed} items skipped: unrecognized response shape)`
+            : ""
+        }.`,
+      );
       void queryClient.invalidateQueries({ queryKey: ["keyword-candidates"] });
     },
     onError: (error: Error) => toast.error(error.message),
@@ -297,9 +315,18 @@ function KeywordReviewPage() {
                                 : "—"
                             }`}
                           />
+                          <StatePill
+                            label={`How hard to win ${fmtNumber(metrics.keyword_difficulty)}`}
+                          />
+                          <StatePill label={`What they want ${metrics.search_intent ?? "—"}`} />
                           <StatePill label={row.source} />
                           {row.seed ? <StatePill label={`Seed: ${row.seed}`} /> : null}
                         </div>
+                        {metrics.competitor ? (
+                          <p className="text-xs text-muted-foreground">
+                            Found because {metrics.competitor} ranks for it and this site does not.
+                          </p>
+                        ) : null}
                         <p className="text-xs text-muted-foreground">
                           {row.language_code}-{row.location_code} · snapshot{" "}
                           {row.snapshot_id ? row.snapshot_id.slice(0, 8) : "none"} · proposed{" "}

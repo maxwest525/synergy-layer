@@ -90,9 +90,9 @@ export const runCompetitorKeywordGap = createServerFn({ method: "POST" })
   });
 
 /**
- * Metered: two DataForSEO Labs tasks over the whole pending queue, fired only
- * by an explicit operator click. Writes scores onto the candidates and changes
- * no review state.
+ * Metered: two DataForSEO Labs tasks over the pending queue, up to the batch
+ * cap, fired only by an explicit operator click. Writes scores onto the
+ * candidates and changes no review state.
  */
 export const runKeywordEnrichment = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])

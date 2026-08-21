@@ -230,6 +230,10 @@ const RULE_LABEL: Record<string, string> = {
   zero_impression_page: "Zero impressions",
   query_coverage_gap: "Coverage gap",
   index_coverage_drift: "Index drift",
+  approved_keyword_unobserved: "Approved searches nobody has checked",
+  approved_keyword_no_page: "Approved searches with no page about them",
+  question_asked_no_page: "Questions Google shows that nothing here answers",
+  referring_domain_movement: "Movement in the sites linking here",
 };
 
 const OPEN_FINDING_STATES = new Set(["draft", "proposed", "under_review", "observed", "scheduled"]);

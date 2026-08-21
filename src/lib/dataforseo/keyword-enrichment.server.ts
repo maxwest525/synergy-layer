@@ -9,9 +9,10 @@ type Client = SupabaseClient<Database>;
 /**
  * Difficulty and intent for the candidates sitting in the approval queue.
  *
- * Both endpoints take the whole list in one task, so the run is two Labs tasks
- * whatever the queue length. Both are metered, so this never fires on a page
- * load or a schedule — only on an operator click with the estimate on it.
+ * Both endpoints take the whole list in one task, so the run is two Labs
+ * tasks regardless of queue length — up to the batch cap below. Both are
+ * metered, so this never fires on a page load or a schedule — only on an
+ * operator click with the estimate on it.
  *
  * It raises no finding and changes no review state. It writes into
  * `keyword_candidates.metrics` so the person deciding sees more than a volume.
@@ -28,6 +29,21 @@ export function estimatedEnrichmentCostUsd(): number {
   return Number((ENRICHMENT_TASK_COUNT * LABS_CONFIG.estimatedUsdPerTask).toFixed(2));
 }
 
+/**
+ * Stated assumption: no Labs-specific batch limit has been fetched from
+ * DataForSEO's docs. The practice reference is the repo's own digest, which
+ * documents the Backlinks family's bulk endpoint as capped "up to 1000
+ * domains" (docs/superpowers/research/2026-08-21-dataforseo-recipe-catalog.md:19).
+ * The two Labs bulk calls here are capped at the same order of magnitude
+ * until a Labs-specific limit is confirmed against a live response.
+ */
+export const ENRICHMENT_BATCH_CAP = 1000;
+
+/** The first N pending candidates when the queue exceeds the cap. */
+export function selectEnrichmentBatch<T>(pending: readonly T[]): T[] {
+  return pending.slice(0, ENRICHMENT_BATCH_CAP);
+}
+
 export type Enrichment = {
   readonly keywordDifficulty: number | null;
   readonly searchIntent: string | null;
@@ -35,6 +51,12 @@ export type Enrichment = {
 
 function num(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+/** Count of rows whose response shape didn't carry a keyword to key off — skipped rather than guessed at. */
+export function countUnparsedEnrichmentItems(rows: readonly Record<string, unknown>[]): number {
+  return rows.filter((row) => typeof row["keyword"] !== "string" || row["keyword"].trim() === "")
+    .length;
 }
 
 export function mergeEnrichment(
@@ -85,20 +107,28 @@ async function snapshotRows(
 export async function enrichPendingCandidates(
   client: Client,
   tenantId: string,
-): Promise<{ enriched: number; costUsd: number }> {
-  const { data: pending, error } = await client
+): Promise<{
+  enriched: number;
+  costUsd: number;
+  sentThisRun: number;
+  pendingTotal: number;
+  unparsed: number;
+}> {
+  const { data: allPending, error } = await client
     .from("keyword_candidates")
     .select("id, keyword, metrics")
     .eq("tenant_id", tenantId)
     .eq("review_state", "pending");
   if (error) throw new Error(error.message);
 
-  const keywords = (pending ?? []).map((row) => row.keyword);
-  if (keywords.length === 0) {
+  if ((allPending ?? []).length === 0) {
     throw new Error(
       "No keyword candidates are waiting for a decision, so there is nothing to score.",
     );
   }
+
+  const pending = selectEnrichmentBatch(allPending ?? []);
+  const keywords = pending.map((row) => row.keyword);
 
   const difficulty = await labsCall(
     client,
@@ -122,13 +152,14 @@ export async function enrichPendingCandidates(
     { keywords, language_code: KEYWORD_CONFIG.languageCode },
   );
 
-  const merged = mergeEnrichment(
-    await snapshotRows(client, difficulty.snapshotId),
-    await snapshotRows(client, intent.snapshotId),
-  );
+  const difficultyRows = await snapshotRows(client, difficulty.snapshotId);
+  const intentRows = await snapshotRows(client, intent.snapshotId);
+  const unparsed =
+    countUnparsedEnrichmentItems(difficultyRows) + countUnparsedEnrichmentItems(intentRows);
+  const merged = mergeEnrichment(difficultyRows, intentRows);
 
   let enriched = 0;
-  for (const candidate of pending ?? []) {
+  for (const candidate of pending) {
     const scores = merged.get(candidate.keyword.trim().toLowerCase());
     if (scores === undefined) continue;
     const { error: updateError } = await client
@@ -145,5 +176,11 @@ export async function enrichPendingCandidates(
     if (!updateError) enriched += 1;
   }
 
-  return { enriched, costUsd: difficulty.costUsd + intent.costUsd };
+  return {
+    enriched,
+    costUsd: difficulty.costUsd + intent.costUsd,
+    sentThisRun: pending.length,
+    pendingTotal: (allPending ?? []).length,
+    unparsed,
+  };
 }
