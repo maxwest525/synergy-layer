@@ -394,8 +394,12 @@ export const CHECKS: Record<CheckId, CheckDefinition> = {
   // Reference: Screaming Frog's redirects guide — a redirect is an extra hop
   // between the address you published and the page that answers.
   // https://www.screamingfrog.co.uk/learn-seo/redirects/
-  // Canonicalization doc: Google picks one address per page, so publishing the
-  // address that redirects makes the site declare the hop rather than the page.
+  // Stated assumption: publishing the address that redirects, instead of the
+  // one that actually answers, makes the site declare that extra hop rather
+  // than the page. Google's canonicalization doc says only that it "chooses
+  // the page that... is objectively the most complete and useful for search
+  // users, and marks it as the canonical" — it does not itself say a redirecting
+  // address is a defect; that inference is this check's own.
   // https://developers.google.com/search/docs/crawling-indexing/canonicalization
   url_redirects: {
     check: "url_redirects",
@@ -405,10 +409,15 @@ export const CHECKS: Record<CheckId, CheckDefinition> = {
       `Publish the address that actually answers on ${n} pages instead of one that redirects to it.`,
     fixableByWordingProposal: false,
   },
-  // Reference: Screaming Frog's canonicals guide — a canonical pointing at a
-  // page that itself canonicalizes elsewhere is a chain, and the middle page's
-  // declaration is the one Google has to resolve.
+  // Reference: Screaming Frog's canonicals guide: "canonicals should be
+  // crawlable and indexable, and not be blocked by robots.txt, redirect, go
+  // to an error page, or be canonicalised to another URL."
   // https://www.screamingfrog.co.uk/learn-seo/canonicals/
+  // Stated assumption: SF's guide does not discuss chains — it only says a
+  // canonical target should not itself be canonicalized elsewhere. That a
+  // canonical pointing at such a page forms a chain, and that the middle
+  // page's declaration is the one Google has to resolve, is this check's own
+  // inference, not something either source states.
   canonical_chain: {
     check: "canonical_chain",
     label: "Canonical points at another canonical",
