@@ -94,13 +94,21 @@ npm run lint && npm run typecheck && npm test && npm run build
 All four run in CI on every pull request and the job fails on the first one that
 fails. Green on `main` at `2a2e87f`: 1168 tests in 118 files.
 
-**Run lint after build, not before.** `npm run build` rewrites four files in
-place — `src/routes/mcp.ts`, `src/routes/[.mcp]/list-tools.ts`,
+**Never run `npm run format`.** It is `prettier --write .` over the whole
+repository and reformats 40+ documents, designs and plans that nobody asked you
+to touch. Format only the files you changed: `npx prettier --write <paths>`.
+
+**Four route files belong to a generator, not to you.**
+`src/routes/mcp.ts`, `src/routes/[.mcp]/list-tools.ts`,
 `src/routes/[.mcp]/invoke-tool/$tool.ts` and
-`src/routes/[.well-known]/oauth-protected-resource.ts` — collapsing their
-formatting, which then fails prettier. Reproduced at `2a2e87f`. It is a build
-side effect and not your change: `git checkout -- src/routes/` after building,
-and do not commit those four files unless you actually edited them.
+`src/routes/[.well-known]/oauth-protected-resource.ts` are written by
+`@lovable.dev/mcp-js`'s Vite plugin on every build, from its own template, and
+each one says so in an `AUTO-GENERATED` banner on line 1. They are committed in
+exactly the form the plugin emits and are listed in `.prettierignore`, so a
+build leaves the tree clean. Do not reformat them: prettier reflows them, the
+next build writes the template back, and the tree is dirty again with a lint
+error nobody introduced. To take ownership of one, delete its banner line — the
+plugin then leaves that file alone.
 
 ## Session start, on the web
 

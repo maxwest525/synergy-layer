@@ -7,3 +7,7 @@ package-lock.json
 bun.lock
 routeTree.gen.ts
 src/integrations/supabase/types.ts
+src/routes/mcp.ts
+src/routes/\[.mcp\]/list-tools.ts
+src/routes/\[.mcp\]/invoke-tool/$tool.ts
+src/routes/\[.well-known\]/oauth-protected-resource.ts
