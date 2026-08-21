@@ -1,18 +1,27 @@
 import { createServerFn } from "@tanstack/react-start";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { CONNECTION_OUTPUTS, type ConnectionFacts } from "./connections";
+import {
+  CONNECTION_OUTPUTS,
+  FINDING_SOURCES,
+  type ConnectionFacts,
+  type SuccessFilter,
+} from "./connections";
 
 /**
  * One tenant-scoped read of how far each connection's evidence travels.
  *
- * Three questions per connection, and the third is the one nothing has asked
- * before: are its credentials present, has it stored anything, and has any of
- * that become a finding the operator sees.
+ * Four questions per connection, and the last two are the ones nothing has
+ * asked before: are its credentials present, has it stored a successful row,
+ * how many attempts failed, and has any of it become a finding the operator
+ * sees.
  *
- * Counted with `head: true` so the database returns the total rather than a
- * page of rows. An earlier page in this project reported a truncated read as a
- * total; counting server-side removes the possibility.
+ * Every number here is a `head: true` count, so the database returns the total
+ * rather than a page of rows this process then has to count. That matters
+ * twice over: an earlier page in this project reported a truncated read as a
+ * total, and the first draft of this file counted findings by pulling 2000
+ * recommendation rows - which, past 2000, would have reported a working
+ * connector as reaching nobody.
  *
  * No provider is called. Every number is a count of stored rows, so this read
  * is free and safe on every visit.
@@ -21,57 +30,116 @@ export const getConnectionFacts = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<readonly ConnectionFacts[]> => {
     const { requireTenantId } = await import("./tenant.server");
-    const { assertRead } = await import("./essentials");
+    const { assertRead, EssentialsReadError } = await import("./essentials");
     const { describeConnectorReadiness } = await import("./connectors/catalog");
 
     const tenantId = await requireTenantId(context.supabase);
     const db = context.supabase;
+
+    /**
+     * A count with no error but no number is a read that did not answer. It
+     * must not become a zero: "nothing is stored" and "we could not tell" are
+     * different sentences, and only one of them is an accusation.
+     */
+    function exactly<T extends { error: { message: string } | null; count: number | null }>(
+      label: string,
+      result: T,
+    ): number {
+      const checked = assertRead(label, result);
+      if (typeof checked.count !== "number") {
+        throw new EssentialsReadError(label, "the database returned no count");
+      }
+      return checked.count;
+    }
+
+    function scoped(table: string) {
+      return db
+        .from(table as "search_console_snapshots")
+        .select("id", { count: "exact", head: true })
+        .eq("tenant_id", tenantId);
+    }
+
+    /** The same count, narrowed to the rows that record a success. */
+    function narrowed(table: string, filter: SuccessFilter, matching: boolean) {
+      const query = scoped(table);
+      if (filter.kind === "is-null") {
+        return matching ? query.is(filter.column, null) : query.not(filter.column, "is", null);
+      }
+      return matching
+        ? query.eq(filter.column, filter.value)
+        : query.neq(filter.column, filter.value);
+    }
+
+    const withTable = CONNECTION_OUTPUTS.filter(
+      (output): output is (typeof CONNECTION_OUTPUTS)[number] & { table: string } =>
+        output.table !== null,
+    );
+
+    const [tableCounts, findingCounts] = await Promise.all([
+      Promise.all(
+        withTable.map(
+          async (output): Promise<readonly [string, { stored: number; failed: number | null }]> => {
+            // A table with no failure marker stores only successes, so one count
+            // answers both questions and the second read is not worth making.
+            if (output.succeeded === null) {
+              const total = exactly(`${output.table} rows`, await scoped(output.table));
+              return [output.key, { stored: total, failed: null }] as const;
+            }
+            const [stored, failed] = await Promise.all([
+              narrowed(output.table, output.succeeded, true),
+              narrowed(output.table, output.succeeded, false),
+            ]);
+            return [
+              output.key,
+              {
+                stored: exactly(`${output.table} successful rows`, stored),
+                failed: exactly(`${output.table} failed attempts`, failed),
+              },
+            ] as const;
+          },
+        ),
+      ),
+      // One count per module that can write a recommendation. There are three,
+      // so this is three cheap reads rather than one capped page of rows.
+      //
+      // Every state counts, rejected included: a suggestion the operator turned
+      // down still reached them, and reaching them is the only question here.
+      Promise.all(
+        FINDING_SOURCES.map(async (source) => {
+          const result = await db
+            .from("recommendations")
+            .select("id", { count: "exact", head: true })
+            .eq("tenant_id", tenantId)
+            .eq("source_module", source);
+          return [source, exactly(`${source} findings`, result)] as const;
+        }),
+      ),
+    ]);
 
     const configured = new Set(
       describeConnectorReadiness(process.env)
         .filter((connector) => connector.state === "configured")
         .map((connector) => connector.key as string),
     );
+    const countsByKey = new Map(tableCounts);
+    const findingsBySource = new Map(findingCounts);
 
-    // One count per distinct table, so two connections sharing a store are not
-    // charged two reads for the same number.
-    const tables = [
-      ...new Set(
-        CONNECTION_OUTPUTS.map((output) => output.table).filter(
-          (table): table is string => table !== null,
-        ),
-      ),
-    ];
-
-    const [rowCounts, findingResult] = await Promise.all([
-      Promise.all(
-        tables.map(async (table) => {
-          const result = await db
-            .from(table as "search_console_snapshots")
-            .select("id", { count: "exact", head: true })
-            .eq("tenant_id", tenantId);
-          return [table, assertRead(`${table} rows`, result).count ?? 0] as const;
-        }),
-      ),
-      db.from("recommendations").select("source_module").eq("tenant_id", tenantId).limit(2000),
-    ]);
-
-    const storedByTable = new Map(rowCounts);
-
-    const findingsBySource = new Map<string, number>();
-    for (const row of assertRead("Recommendations", findingResult).data ?? []) {
-      const source = row.source_module;
-      if (typeof source !== "string") continue;
-      findingsBySource.set(source, (findingsBySource.get(source) ?? 0) + 1);
-    }
-
-    return CONNECTION_OUTPUTS.map((output) => ({
-      key: output.key,
-      configured: configured.has(output.key),
-      // Null, not zero, when the connection has no store at all: that is a
-      // different fact from a store that is empty.
-      storedRows: output.table === null ? null : (storedByTable.get(output.table) ?? 0),
-      findings:
-        output.findingSource === null ? null : (findingsBySource.get(output.findingSource) ?? 0),
-    }));
+    return CONNECTION_OUTPUTS.map((output) => {
+      const counts = countsByKey.get(output.key);
+      return {
+        key: output.key,
+        configured: configured.has(output.key),
+        // Null, not zero, when the connection has no store at all: that is a
+        // different fact from a store that is empty.
+        storedRows: counts?.stored ?? null,
+        failedRows: counts?.failed ?? null,
+        findings:
+          output.findingSources.length === 0
+            ? null
+            : output.findingSources.reduce(
+                (total, source) => total + (findingsBySource.get(source) ?? 0),
+                0,
+              ),
+      };
+    });
   });

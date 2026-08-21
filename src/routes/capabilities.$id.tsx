@@ -144,7 +144,10 @@ function CapabilityDetailPage() {
         )}
       </GlassCard>
 
-      <Link to="/capabilities" className="text-sm text-primary underline-offset-4 hover:underline">
+      <Link
+        to="/capabilities/registry"
+        className="text-sm text-primary underline-offset-4 hover:underline"
+      >
         Back to capabilities
       </Link>
     </div>

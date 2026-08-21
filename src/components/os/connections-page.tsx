@@ -3,7 +3,6 @@ import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { Plug, TriangleAlert } from "lucide-react";
 
-import { EmptyState } from "./primitives";
 import { useOperatorSession } from "@/hooks/use-operator-session";
 import { buildConnections, type ConnectionRow, type ConnectionStage } from "@/lib/connections";
 import { getConnectionFacts } from "@/lib/connections.functions";
@@ -57,6 +56,57 @@ function ConnectionCard({ row }: { row: ConnectionRow }) {
   );
 }
 
+/**
+ * The heading and the way out, rendered in every state including the failed
+ * one.
+ *
+ * An earlier draft returned a bare error card, so the moment the counts could
+ * not be read the operator also lost the link to the registry - the one screen
+ * that could have told them which credential was missing.
+ */
+function PageHead({ status }: { status?: ReturnType<typeof buildConnections>["status"] }) {
+  return (
+    <div className="flex flex-wrap items-start justify-between gap-3">
+      <div className="flex flex-col gap-1">
+        <h1 className="flex items-center gap-2 text-[19px] font-bold text-foreground">
+          <Plug className="h-[17px] w-[17px]" strokeWidth={1.5} aria-hidden="true" />
+          Connections
+        </h1>
+        <p className="text-[13px] text-muted-foreground">
+          The accounts this system reads from, and how far what they collect actually travels.
+        </p>
+      </div>
+      <div className="flex items-center gap-2.5">
+        {status ? (
+          <span
+            className={cn(
+              "rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-[0.1em]",
+              status.tone === "positive"
+                ? "border-primary/40 text-primary"
+                : status.tone === "danger"
+                  ? "border-destructive/40 text-destructive"
+                  : "border-warning/40 text-warning",
+            )}
+          >
+            {status.text}
+          </span>
+        ) : null}
+        {/*
+          The capability registry, which lists every credential, module and
+          skill. It is the developer-facing inventory; this page is the
+          operator-facing question.
+        */}
+        <Link
+          to="/capabilities/registry"
+          className="rounded-[10px] border border-input bg-secondary px-3.5 py-1.5 text-[13px] font-semibold text-foreground transition-colors hover:border-border"
+        >
+          Full registry
+        </Link>
+      </div>
+    </div>
+  );
+}
+
 export function ConnectionsPage() {
   const session = useOperatorSession();
   const load = useServerFn(getConnectionFacts);
@@ -70,17 +120,38 @@ export function ConnectionsPage() {
 
   if (query.error) {
     return (
-      <EmptyState
-        title="Connections could not load"
-        description={query.error.message || "The read failed. Try again in a moment."}
-      />
+      <div className="flex flex-col gap-[18px]">
+        <PageHead />
+        <div className="rounded-[10px] border border-destructive/40 bg-destructive/5 px-4 py-3.5">
+          <p className="text-[13px] font-semibold text-destructive">Connections could not load</p>
+          <p className="mt-1 text-xs leading-snug text-muted-foreground">
+            {query.error.message || "The read failed. Try again in a moment."}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!session.signedIn) {
+    // A disabled query stays pending forever, so without this the page would
+    // say "counting" to a signed-out operator until they navigated away.
+    return (
+      <div className="flex flex-col gap-[18px]">
+        <PageHead />
+        <p className="text-sm text-muted-foreground">
+          Sign in to count what each connection holds.
+        </p>
+      </div>
     );
   }
 
   if (query.isPending || !query.data) {
     return (
-      <div role="status" aria-busy="true" className="text-sm text-muted-foreground">
-        Counting what each connection has stored…
+      <div className="flex flex-col gap-[18px]">
+        <PageHead />
+        <div role="status" aria-busy="true" className="text-sm text-muted-foreground">
+          Counting what each connection has stored…
+        </div>
       </div>
     );
   }
@@ -89,77 +160,46 @@ export function ConnectionsPage() {
 
   return (
     <div className="flex flex-col gap-[18px]">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex flex-col gap-1">
-          <h1 className="flex items-center gap-2 text-[19px] font-bold text-foreground">
-            <Plug className="h-[17px] w-[17px]" strokeWidth={1.5} aria-hidden="true" />
-            Connections
-          </h1>
-          <p className="text-[13px] text-muted-foreground">
-            The accounts this system reads from, and how far what they collect actually travels.
-          </p>
-        </div>
-        <div className="flex items-center gap-2.5">
-          <span
-            className={cn(
-              "rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-[0.1em]",
-              view.status.tone === "positive"
-                ? "border-primary/40 text-primary"
-                : view.status.tone === "danger"
-                  ? "border-destructive/40 text-destructive"
-                  : "border-warning/40 text-warning",
-            )}
-          >
-            {view.status.text}
-          </span>
-          {/*
-            The capability registry, which lists every credential, module and
-            skill. It is the developer-facing inventory; this page is the
-            operator-facing question.
-          */}
-          <Link
-            to="/capabilities/registry"
-            className="rounded-[10px] border border-input bg-secondary px-3.5 py-1.5 text-[13px] font-semibold text-foreground transition-colors hover:border-border"
-          >
-            Full registry
-          </Link>
-        </div>
-      </div>
+      <PageHead status={view.status} />
 
       {view.headline ? (
-        <div className="flex flex-col gap-1.5 rounded-[10px] border border-destructive/40 bg-destructive/5 px-4 py-3.5">
-          <span className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.12em] text-destructive">
+        <section
+          aria-labelledby="connections-alarm"
+          className="flex flex-col gap-1.5 rounded-[10px] border border-destructive/40 bg-destructive/5 px-4 py-3.5"
+        >
+          <h2
+            id="connections-alarm"
+            className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.12em] text-destructive"
+          >
             <TriangleAlert className="h-3 w-3" strokeWidth={1.6} aria-hidden="true" />
             Collected, and reaching nobody
-          </span>
+          </h2>
           <p className="text-[13px] leading-snug text-foreground">{view.headline}</p>
-        </div>
+        </section>
       ) : null}
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <section
+        aria-label="How far the estate gets"
+        className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
+      >
         {view.tiles.map((tile) => (
           <div
             key={tile.label}
             className="flex flex-col gap-2 rounded-[10px] border border-border bg-card px-4 py-3.5"
           >
-            <span className="text-[10.5px] font-bold uppercase tracking-[0.12em] text-subtle">
+            <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-subtle">
               {tile.label}
             </span>
-            {tile.value === null ? (
-              <p className="text-[13px] leading-snug text-muted-foreground">{tile.missingReason}</p>
-            ) : (
-              <>
-                <span className="text-[26px] font-bold tabular-nums text-foreground">
-                  {tile.value}
-                </span>
-                <p className="text-xs leading-snug text-muted-foreground">{tile.explanation}</p>
-              </>
-            )}
+            <span className="text-[26px] font-bold tabular-nums text-foreground">{tile.value}</span>
+            <p className="text-xs leading-snug text-muted-foreground">{tile.explanation}</p>
           </div>
         ))}
-      </div>
+      </section>
 
-      <ul className="flex flex-col gap-px overflow-hidden rounded-[10px] border border-border">
+      <ul
+        aria-label="Every connection, worst first"
+        className="flex flex-col gap-px overflow-hidden rounded-[10px] border border-border"
+      >
         {view.rows.map((row) => (
           <ConnectionCard key={row.key} row={row} />
         ))}

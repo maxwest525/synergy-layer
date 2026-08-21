@@ -88,10 +88,14 @@ export const WORKSPACE_GROUP: Readonly<Record<string, TaxonomyGroupKey>> = {
   "/openai-ads": "run_work",
   "/agents": "run_work",
 
-  // The category front door. Its inventory workspace is /capabilities/registry,
-  // which stays under system health below.
-  "/capabilities": "decisions",
-  "/capabilities/registry": "system_health",
+  // The whole /capabilities subtree - the Connections category page, the
+  // capability registry under it, the per-capability detail and the systems
+  // workspaces - is system health by this taxonomy's own definition:
+  // "Connections, costs, and access. Only when something breaks."
+  //
+  // One entry, deliberately. Resolution is longest-matching-prefix, so a
+  // narrower entry here would silently re-home every path below it.
+  "/capabilities": "system_health",
   "/spend": "system_health",
   "/operators": "system_health",
 };

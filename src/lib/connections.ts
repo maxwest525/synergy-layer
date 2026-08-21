@@ -9,21 +9,41 @@
  * which no screen has ever shown:
  *
  *   1. Not configured. The credentials are not set.
- *   2. Configured, and nothing calls it. A key with no code behind it.
+ *   2. Configured, and nothing calls it. A key with no code behind it, or an
+ *      account that has never stored a successful row.
  *   3. Collecting, and reaching nobody. Rows are stored - some of them paid
  *      for - and nothing turns them into anything the operator sees.
  *   4. Reaching you. Its evidence becomes findings in the queue.
  *
  * Stage three is where most of this estate sits. Six paid DataForSEO backlink
  * endpoints run on every baseline into a file whose own header says it produces
- * no recommendations. Umami stores snapshots nothing reads. Only two modules in
- * the whole codebase write a recommendation, so every other connector, however
- * well wired, stops at stage three.
+ * no recommendations. Umami stores snapshots nothing reads. Three modules in the
+ * whole codebase write a recommendation, so every connector outside their reach,
+ * however well wired, stops at stage three.
  *
  * The page exists to say that out loud, per connection, with the row counts
  * behind it. "Configured is not connected" was already the rule here; this adds
  * "collected is not delivered".
+ *
+ * Two rules keep the claims honest, both of them learned from getting this
+ * wrong:
+ *
+ * - A row recording a failed attempt is not collection. Three of these tables
+ *   store the failures alongside the successes, so a dead key would otherwise
+ *   render as "the reading is happening" fifty times over.
+ * - A connection is credited with a finding only through the modules that
+ *   actually read its table, and when a module reads several connections none
+ *   of them may claim its findings alone.
  */
+
+/**
+ * How to tell a stored success from a stored failure.
+ *
+ * Null for a table that only ever stores successes.
+ */
+export type SuccessFilter =
+  | { readonly column: string; readonly kind: "is-null" }
+  | { readonly column: string; readonly kind: "equals"; readonly value: string };
 
 /** How far a connection's evidence actually travels. */
 export type ConnectionStage = "not_configured" | "configured" | "collecting" | "reaching_you";
@@ -39,14 +59,24 @@ export type ConnectionOutput = {
    */
   readonly table: string | null;
   /**
-   * The `recommendations.source_module` that turns its evidence into something
-   * the operator sees, or null when nothing does.
-   *
-   * Null on all but two. That is not an omission in this file: only
-   * `search-console` and `seo-validation` write a recommendation anywhere in
-   * the codebase, which is why so much of this estate collects and stops.
+   * How a stored failure is marked in that table, or null when the table
+   * stores only successes.
    */
-  readonly findingSource: string | null;
+  readonly succeeded: SuccessFilter | null;
+  /**
+   * The `recommendations.source_module` values whose rules actually read this
+   * connection's table.
+   *
+   * Empty on most of them. That is not an omission in this file: only
+   * `search-console`, `seo-validation` and `ga4` write a recommendation
+   * anywhere in the codebase, which is why so much of this estate collects and
+   * stops. `connections.registry.test.ts` scans the server modules and fails if
+   * a fourth writer appears without being recorded here.
+   *
+   * More than one connection may feed the same module, and a connection that
+   * shares a module never claims its findings alone.
+   */
+  readonly findingSources: readonly string[];
   /** What it would give the operator if it reached them. Plain words. */
   readonly promise: string;
 };
@@ -56,82 +86,121 @@ export const CONNECTION_OUTPUTS: readonly ConnectionOutput[] = [
     key: "google_search_console",
     label: "Google Search Console",
     table: "search_console_snapshots",
-    findingSource: "search-console",
+    succeeded: null,
+    // Both rule modules read the snapshot tables: `search-console` for the
+    // window rules, `seo-validation` for the wording and competitor checks.
+    findingSources: ["search-console", "seo-validation"],
     promise: "What people searched, what Google showed, and which pages it has indexed.",
   },
   {
     key: "google_analytics_4",
     label: "Google Analytics 4",
     table: "ga4_snapshots",
-    findingSource: null,
+    succeeded: null,
+    findingSources: ["ga4"],
     promise: "What visitors did once they arrived.",
   },
   {
     key: "firecrawl",
     label: "Firecrawl",
     table: "page_metadata_observations",
-    findingSource: "seo-validation",
+    // A page that could not be read is stored with the error on it. Those rows
+    // are attempts, not evidence.
+    succeeded: { column: "error", kind: "is-null" },
+    // Its page reads are consumed by the Search Console rules, not by
+    // `seo-validation`, which never opens this table.
+    findingSources: ["search-console"],
     promise: "The live wording of every page, read as a crawler sees it.",
   },
   {
     key: "selfhosted_firecrawl",
     label: "Firecrawl, self hosted",
-    table: "page_metadata_observations",
-    findingSource: "seo-validation",
+    // Deliberately null. The page audit hardcodes the hosted endpoint, so
+    // nothing in this repository has ever sent a request to a self-hosted
+    // deployment, and none of the rows in `page_metadata_observations` can have
+    // come from one. Pointing this at that table would credit it with another
+    // connector's work.
+    table: null,
+    succeeded: null,
+    findingSources: [],
     promise: "The same page reads, on your own machine instead of the vendor's.",
   },
   {
     key: "dataforseo",
     label: "DataForSEO",
     table: "dataforseo_snapshots",
-    findingSource: null,
+    succeeded: null,
+    findingSources: [],
     promise: "Backlinks, referring domains and anchor text, from a paid provider.",
   },
   {
     key: "pagespeed_insights",
     label: "PageSpeed Insights",
     table: "pagespeed_snapshots",
-    findingSource: null,
+    succeeded: null,
+    findingSources: [],
     promise: "Google's own speed score for a page.",
   },
   {
     key: "serpapi",
     label: "SerpAPI",
     table: "serpapi_requests",
-    findingSource: null,
+    // A row is written before the provider is called and settled afterwards, so
+    // an unsettled or failed attempt sits in this table looking like a result.
+    succeeded: { column: "state", kind: "equals", value: "succeeded" },
+    findingSources: [],
     promise: "What the results page actually looks like for a search.",
   },
   {
     key: "umami",
     label: "Umami",
     table: "umami_snapshots",
-    findingSource: null,
+    succeeded: null,
+    findingSources: [],
     promise: "Visits, without handing the data to anyone else.",
   },
   {
     key: "openseo",
     label: "OpenSEO",
     table: "openseo_tool_runs",
-    findingSource: null,
+    succeeded: { column: "status", kind: "equals", value: "succeeded" },
+    findingSources: [],
     promise: "Its own audit of the site, already flagging issues.",
   },
   {
     key: "google_ads",
     label: "Google Ads",
     table: null,
-    findingSource: null,
+    succeeded: null,
+    findingSources: [],
     promise: "What the paid side is spending and returning.",
   },
 ];
+
+/** Every module that can turn a connection's evidence into a finding. */
+export const FINDING_SOURCES: readonly string[] = [
+  ...new Set(CONNECTION_OUTPUTS.flatMap((output) => output.findingSources)),
+].sort();
 
 /** What one connection is, from the reads. */
 export type ConnectionFacts = {
   readonly key: string;
   /** Whether the credentials it needs are present. */
   readonly configured: boolean;
-  /** Rows stored in its table. Null when it has no table at all. */
+  /** Rows recording a success. Null when it has no table at all. */
   readonly storedRows: number | null;
-  /** Findings its evidence has produced. Null when nothing could produce one. */
+  /**
+   * Rows recording a failed attempt. Null when the table has no way to mark
+   * one, which is not the same as zero failures.
+   */
+  readonly failedRows: number | null;
+  /**
+   * Findings produced by the modules that read its table. Null when no module
+   * reads it.
+   *
+   * Every state counts, including rejected: a suggestion the operator turned
+   * down still reached them, which is the only question this page asks.
+   */
   readonly findings: number | null;
 };
 
@@ -143,9 +212,8 @@ export type ConnectionRow = ConnectionOutput & {
 
 export type Tile = {
   readonly label: string;
-  readonly value: string | null;
+  readonly value: string;
   readonly explanation: string;
-  readonly missingReason: string | null;
 };
 
 export type ConnectionsView = {
@@ -170,36 +238,83 @@ const STAGE_ORDER: Record<ConnectionStage, number> = {
 
 function stageOf(facts: ConnectionFacts, output: ConnectionOutput): ConnectionStage {
   if (!facts.configured) return "not_configured";
+  // Nowhere to write, or nothing successfully written. Either way it has not
+  // collected anything, so it cannot be reaching anyone - however many findings
+  // the modules it feeds have produced from some other connection's rows.
+  if (output.table === null) return "configured";
+  if ((facts.storedRows ?? 0) === 0) return "configured";
   if ((facts.findings ?? 0) > 0) return "reaching_you";
-  if ((facts.storedRows ?? 0) > 0) return "collecting";
-  return "configured";
+  return "collecting";
+}
+
+/** "Google Search Console and Firecrawl", "A, B and C". */
+function listOf(names: readonly string[]): string {
+  if (names.length <= 1) return names[0] ?? "";
+  return `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
+}
+
+/** The failures, mentioned only when there are some. */
+function failureNote(facts: ConnectionFacts): string {
+  const failed = facts.failedRows ?? 0;
+  if (failed === 0) return "";
+  return failed === 1
+    ? " One other attempt failed."
+    : ` ${failed} other attempts failed and stored nothing.`;
 }
 
 function reasonFor(
   stage: ConnectionStage,
   facts: ConnectionFacts,
   output: ConnectionOutput,
+  /** The other connections whose evidence feeds the same modules. */
+  sharesWith: readonly string[],
 ): string {
   if (stage === "not_configured") {
     return output.table === null
       ? "No credentials, and nothing in this system reads it yet either."
       : "Its credentials are not set, so nothing has been read from it.";
   }
+
   if (stage === "reaching_you") {
-    return `${facts.findings} findings have come from it. This one is doing its job.`;
+    return sharesWith.length > 0
+      ? `It feeds checks that have produced ${facts.findings} findings, alongside ${listOf(sharesWith)}.${failureNote(facts)}`
+      : `${facts.findings} findings have come from it. This one is doing its job.${failureNote(facts)}`;
   }
+
   if (stage === "collecting") {
-    return output.findingSource === null
-      ? `${facts.storedRows} rows stored, and nothing turns any of them into something you see. The reading is happening; the telling is not.`
-      : `${facts.storedRows} rows stored, and no finding has come from them yet.`;
+    return output.findingSources.length === 0
+      ? `${facts.storedRows} rows stored, and nothing turns any of them into something you see. The reading is happening; the telling is not.${failureNote(facts)}`
+      : `${facts.storedRows} rows stored, and no finding has come from them yet.${failureNote(facts)}`;
   }
-  return output.table === null
-    ? "Set up, but nothing in this system calls it. A credential with no code behind it."
-    : "Set up, and nothing has been stored from it yet. Run its observation to see whether it answers.";
+
+  // Configured, and nothing stored.
+  if (output.table === null) {
+    return "Set up, but nothing in this system calls it. A credential with no code behind it.";
+  }
+  const failed = facts.failedRows ?? 0;
+  if (failed > 0) {
+    return failed === 1
+      ? "Nothing has been stored, and its one attempt failed. The credentials are present but the call is not succeeding."
+      : `Nothing has been stored, and ${failed} attempts failed. The credentials are present but the calls are not succeeding.`;
+  }
+  return "Set up, and nothing has been stored from it yet. Run its observation to see whether it answers.";
 }
 
+/**
+ * The pill above the page, which must never reassure over a body that does not
+ * agree with it.
+ *
+ * The first draft went green whenever the queue of problems was empty, which on
+ * a fresh install meant a green "every connection reaches you" sitting on top of
+ * four zeroes and ten rows reading "not set up". It was vacuously true - all
+ * zero of them did reach you - and it read as an all-clear.
+ *
+ * So green now requires the only state that earns it: every connection in the
+ * registry reaching the operator. Anything short of that says how far short.
+ */
 function statusFor(rows: readonly ConnectionRow[]): ConnectionsView["status"] {
-  const silent = rows.filter((row) => row.stage === "collecting").length;
+  const at = (stage: ConnectionStage) => rows.filter((row) => row.stage === stage).length;
+  const silent = at("collecting");
   if (silent > 0) {
     return {
       text:
@@ -209,21 +324,38 @@ function statusFor(rows: readonly ConnectionRow[]): ConnectionsView["status"] {
       tone: "danger",
     };
   }
-  const idle = rows.filter((row) => row.stage === "configured").length;
+  const idle = at("configured");
   if (idle > 0) {
     return {
       text: idle === 1 ? "1 connection has never run" : `${idle} connections have never run`,
       tone: "warning",
     };
   }
-  return { text: "Every connection you set up reaches you", tone: "positive" };
+  const reaching = at("reaching_you");
+  if (reaching === 0) {
+    return { text: "No account is set up yet", tone: "warning" };
+  }
+  // Green, but never as a bare all-clear: it always says how many of how many,
+  // so it cannot be read as "the estate is wired" when eight of ten are dark.
+  //
+  // "Every connection reaches you" is deliberately not a state. Two connectors
+  // have no table by design - a credential with no code behind it cannot
+  // collect - so a rule requiring all ten would be a branch that never runs.
+  return { text: `${reaching} of ${rows.length} connections reach you`, tone: "positive" };
 }
+
+/** "two", "three" - the count is part of a sentence, not a statistic. */
+const WORD_FOR = ["no", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"];
 
 function headlineFor(rows: readonly ConnectionRow[]): string | null {
   const silent = rows.filter((row) => row.stage === "collecting");
   if (silent.length === 0) return null;
   const named = silent.map((row) => row.label).join(", ");
-  return `${named} ${silent.length === 1 ? "is storing evidence" : "are storing evidence"} that never becomes anything you see. Only two parts of this system turn evidence into a suggestion, so everything outside them collects and stops. That is a wiring gap, not a fault in the tool.`;
+  // Counted from the registry rather than written down, because the number was
+  // wrong the first time this sentence was written.
+  const count = FINDING_SOURCES.length;
+  const parts = `${WORD_FOR[count] ?? count} parts`;
+  return `${named} ${silent.length === 1 ? "is storing evidence" : "are storing evidence"} that never becomes anything you see. Only ${parts} of this system turn evidence into a suggestion, so everything outside them collects and stops. That is a wiring gap, not a fault in the tool.`;
 }
 
 function tilesFor(rows: readonly ConnectionRow[]): Tile[] {
@@ -233,25 +365,21 @@ function tilesFor(rows: readonly ConnectionRow[]): Tile[] {
       label: "Accounts set up",
       value: String(rows.length - at("not_configured")),
       explanation: "Connections whose credentials are present.",
-      missingReason: null,
     },
     {
       label: "Actually collecting",
       value: String(at("collecting") + at("reaching_you")),
-      explanation: "Of those, the ones that have stored at least one row.",
-      missingReason: null,
+      explanation: "Of those, the ones that have stored at least one successful row.",
     },
     {
       label: "Reaching you",
       value: String(at("reaching_you")),
       explanation: "Of those, the ones whose evidence becomes something you see.",
-      missingReason: null,
     },
     {
       label: "Collecting in silence",
       value: String(at("collecting")),
       explanation: "Storing rows, some of them paid for, that reach nobody.",
-      missingReason: null,
     },
   ];
 }
@@ -264,10 +392,18 @@ export function buildConnections(facts: readonly ConnectionFacts[]): Connections
       key: output.key,
       configured: false,
       storedRows: null,
+      failedRows: null,
       findings: null,
     };
     const stage = stageOf(entry, output);
-    return { ...output, stage, reason: reasonFor(stage, entry, output) };
+    // Every other connection whose table feeds one of the same modules. When
+    // this is non-empty the findings are not this connection's to claim.
+    const sharesWith = CONNECTION_OUTPUTS.filter(
+      (other) =>
+        other.key !== output.key &&
+        other.findingSources.some((source) => output.findingSources.includes(source)),
+    ).map((other) => other.label);
+    return { ...output, stage, reason: reasonFor(stage, entry, output, sharesWith) };
   }).sort(
     (left, right) =>
       STAGE_ORDER[left.stage] - STAGE_ORDER[right.stage] || left.label.localeCompare(right.label),
