@@ -4,10 +4,12 @@ import {
   buildGettingFound,
   countOf,
   countShownPages,
+  describeAnswerability,
   LIST_LIMIT,
   topRows,
   type GettingFoundFacts,
 } from "./getting-found";
+import { RULE_ASSIGNMENTS } from "./rule-buckets";
 import type { PeriodComparison } from "./search-console";
 
 const READY: PeriodComparison = {
@@ -430,6 +432,58 @@ describe("the search term and page lists", () => {
     expect(topRows(many)).toHaveLength(LIST_LIMIT);
     // The cut keeps the biggest, not the first stored.
     expect(topRows(many)[0]?.clicks).toBe(LIST_LIMIT + 9);
+  });
+});
+
+describe("what this volume can and cannot answer", () => {
+  it("names the observed volume and lists what the query dimension needs, in plain words", () => {
+    const { line, beyond } = describeAnswerability(500, 48, RULE_ASSIGNMENTS);
+    expect(line).toContain("500");
+    expect(line).toContain("48");
+    expect(line).not.toMatch(/\brule\b/i);
+    for (const rule of RULE_ASSIGNMENTS) {
+      expect(line).not.toContain(rule.rule);
+    }
+    // 500 / 48 rounds to 10.
+    expect(beyond.some((entry) => entry.includes("about 10 a month"))).toBe(true);
+    expect(beyond.some((entry) => /position/i.test(entry))).toBe(true);
+    expect(beyond.every((entry) => !RULE_ASSIGNMENTS.some((a) => entry.includes(a.rule)))).toBe(
+      true,
+    );
+  });
+
+  it("names the lever that changes the volume, so absence never reads as a dead end", () => {
+    const { line } = describeAnswerability(500, 48, RULE_ASSIGNMENTS);
+    expect(line).toMatch(/internal links first/);
+    expect(line).toMatch(/sitemap second/);
+    expect(line).toMatch(/recrawl request third/);
+  });
+
+  it("carries one entry per beyond_current_volume rule, needing its live threshold", () => {
+    const { beyond } = describeAnswerability(500, 48, RULE_ASSIGNMENTS);
+    const beyondCount = RULE_ASSIGNMENTS.filter((a) => a.bucket === "beyond_current_volume").length;
+    expect(beyond).toHaveLength(beyondCount);
+  });
+
+  it("is null on the view model until both the volume and the page count are stored", () => {
+    const view = buildGettingFound(
+      withFacts({ comparison: READY, coverage: { pagesKnown: 48, pagesWithImpressions: 9 } }),
+    );
+    expect(view.answerability).not.toBeNull();
+    expect(view.answerability?.line).toContain(String(READY.current.impressions));
+    expect(view.answerability?.line).toContain("48");
+  });
+
+  it("stays null when the coverage window was never collected, leaving the tile's own reason as the only message", () => {
+    const view = buildGettingFound(withFacts({ comparison: READY, coverage: null }));
+    expect(view.answerability).toBeNull();
+  });
+
+  it("stays null when the comparison behind the tiles is not ready", () => {
+    const view = buildGettingFound(
+      withFacts({ coverage: { pagesKnown: 48, pagesWithImpressions: 9 } }),
+    );
+    expect(view.answerability).toBeNull();
   });
 });
 

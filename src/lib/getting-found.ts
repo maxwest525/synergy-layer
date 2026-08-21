@@ -19,6 +19,7 @@ import {
   partitionByConstraint,
   type ConstraintFacts,
 } from "./binding-constraint";
+import { RULE_ASSIGNMENTS, type RuleAssignment } from "./rule-buckets";
 import {
   buildQueue,
   compareQueueItems,
@@ -171,9 +172,21 @@ export type ConstraintBanner = {
   readonly parked: number;
 };
 
+export type Answerability = {
+  readonly line: string;
+  readonly beyond: readonly string[];
+};
+
 export type GettingFoundView = {
   readonly tiles: readonly GettingFoundTile[];
   readonly status: GettingFoundStatus;
+  /**
+   * What this site's traffic volume can and cannot answer, and the lever
+   * that changes it. Null when the totals it rests on are not stored, in
+   * which case the tiles' own `missingReason` already says why — this is
+   * never a second "not measurable" message.
+   */
+  readonly answerability: Answerability | null;
   readonly tabs: readonly Tab[];
   /**
    * The diagnosis that has to precede the ranking. Null when the stored rows
@@ -206,6 +219,82 @@ export type GettingFoundView = {
   /** The pages behind the totals, biggest first. */
   readonly pages: readonly SearchListRow[];
 };
+
+/**
+ * Plain-words names for the beyond_current_volume rules, written for the
+ * operator screen. `RuleAssignment.rule` ids are developer-facing and must
+ * never reach this page directly.
+ */
+const BEYOND_RULE_NAMES: Record<string, string> = {
+  striking_distance_query: "Near-miss search terms (page 2 rankings)",
+  declining_position: "Position-slip warnings",
+  position_loss: "Position-loss alerts",
+  possible_query_overlap: "Overlapping search-term signals",
+  query_coverage_gap: "Search-term coverage gaps",
+  research_page_traction: "Research-page traction signals",
+};
+
+/**
+ * The lever that changes what this volume can answer, so "not measurable
+ * yet" never reads as a dead end. Discovery order per
+ * docs/superpowers/research/2026-08-20-small-site-growth-research.md:
+ * internal links first, the sitemap second, one recrawl request third, then
+ * weeks of patience.
+ */
+const GROWTH_LEVER_LINE =
+  "More pages earning appearances is what changes this. Google finds pages mainly " +
+  "through links from pages it already crawled, in this order: internal links first, " +
+  "the sitemap second, one recrawl request third, then weeks of patience.";
+
+/**
+ * What this site's traffic volume can and cannot answer, in plain words, and
+ * the lever that changes it.
+ *
+ * `beyond` names, per beyond_current_volume rule, the per-target evidence it
+ * would need against what a page here actually earns today — never the rule
+ * id, never developer-facing `why` text.
+ */
+export function describeAnswerability(
+  siteImpressions28d: number,
+  pageCount: number,
+  assignments: readonly RuleAssignment[],
+): { line: string; beyond: string[] } {
+  const perPage = Math.round(siteImpressions28d / pageCount);
+
+  const line =
+    `Your site earned ~${siteImpressions28d} appearances over the last four weeks across ` +
+    `${pageCount} pages: enough for the site-wide checks and the yes/no facts, not enough ` +
+    `for per-page click judgements. That is a statement about traffic, not about the ` +
+    `site's quality. ${GROWTH_LEVER_LINE}`;
+
+  const beyond = assignments
+    .filter((assignment) => assignment.bucket === "beyond_current_volume")
+    .map((assignment) => {
+      const name = BEYOND_RULE_NAMES[assignment.rule] ?? assignment.rule;
+      return (
+        `${name} need about ${assignment.needsPerTarget} appearances on a single search ` +
+        `term; your busiest page earns about ${perPage} a month.`
+      );
+    });
+
+  return { line, beyond };
+}
+
+/**
+ * Refused, not guessed at, when either total behind it is not stored: the
+ * site-wide impression count the tiles already show, and the page count the
+ * coverage diagnosis already reads. Both are read from facts already
+ * assembled for those, so this can never disagree with what is on screen.
+ */
+function answerabilityFor(facts: GettingFoundFacts): Answerability | null {
+  if (facts.comparison.status !== "ready") return null;
+  if (facts.coverage === null) return null;
+  return describeAnswerability(
+    facts.comparison.current.impressions,
+    facts.coverage.pagesKnown,
+    RULE_ASSIGNMENTS,
+  );
+}
 
 const NO_PROPERTY =
   "No Search Console property is selected, so there is nothing to read these numbers from.";
@@ -373,6 +462,7 @@ export function buildGettingFound(facts: GettingFoundFacts): GettingFoundView {
       positionTile(facts.comparison, reason),
     ],
     status: statusFor(open),
+    answerability: answerabilityFor(facts),
     tabs: [
       { id: "suggestions", label: "Suggestions", count: open.length },
       { id: "queries", label: "Searches", count: null },

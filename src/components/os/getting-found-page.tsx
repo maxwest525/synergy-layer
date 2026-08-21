@@ -6,6 +6,7 @@ import { useGettingFound } from "./getting-found-facts";
 import { EmptyState } from "./primitives";
 import { actionFor } from "@/lib/command-center";
 import type {
+  Answerability,
   GettingFoundTile,
   GettingFoundView,
   SearchListRow,
@@ -94,6 +95,42 @@ function ConstraintBanner({ constraint }: { constraint: GettingFoundView["constr
           ? `${constraint.parked} more are real, but they are not today's problem.`
           : null}
       </p>
+    </div>
+  );
+}
+
+/**
+ * What this volume can and cannot answer, collapsed by default so it does
+ * not compete with the diagnosis above it. Renders nothing when the totals
+ * behind it are not stored — the tiles already carry that reason, and this
+ * is never a second "not measurable" message.
+ */
+function AnswerabilityPanel({ answerability }: { answerability: Answerability | null }) {
+  const [isOpen, setIsOpen] = useState(false);
+  if (!answerability) return null;
+  return (
+    <div className="flex flex-col gap-2 rounded-[10px] border border-border bg-card px-4 py-3.5">
+      <button
+        type="button"
+        onClick={() => setIsOpen((open) => !open)}
+        aria-expanded={isOpen}
+        className="flex items-center gap-2 text-left text-[10.5px] font-bold uppercase tracking-[0.12em] text-subtle"
+      >
+        <span aria-hidden className="size-1.5 shrink-0 rounded-full bg-current" />
+        What your traffic can answer
+      </button>
+      {isOpen ? (
+        <div className="flex flex-col gap-2">
+          <p className="text-[13px] leading-snug text-foreground">{answerability.line}</p>
+          {answerability.beyond.length > 0 ? (
+            <ul className="flex flex-col gap-1 text-xs leading-snug text-muted-foreground">
+              {answerability.beyond.map((entry) => (
+                <li key={entry}>{entry}</li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -278,6 +315,8 @@ export function GettingFoundPage() {
           <StatTile key={tile.label} tile={tile} />
         ))}
       </div>
+
+      <AnswerabilityPanel answerability={view.answerability} />
 
       <div role="tablist" aria-label="Getting found views" className="flex flex-wrap gap-1.5">
         {view.tabs.map((entry) => (
