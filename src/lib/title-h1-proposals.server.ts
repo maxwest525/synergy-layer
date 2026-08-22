@@ -3,11 +3,12 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import {
   GOVERNED_BRANCH,
-  GOVERNED_FILE,
   GOVERNED_PROJECT_ID,
   GOVERNED_REPO,
+  changeKindForFile,
 } from "./execution/allowlist";
 import { createGithubApi, createRenderedVerifier } from "./execution/execute.server";
+import { resolvePageSource } from "./execution/page-source-map";
 import { applyExactReplacements, countOccurrences } from "./execution/source-change";
 import { generateTitleH1Wording } from "./gemini.server";
 import { retrieveKnowledgeGuidance } from "./knowledge-retrieval.server";
@@ -18,10 +19,13 @@ import {
   buildProposalEvidenceGroups,
   buildTitleH1Changes,
   buildTitleH1Prompt,
+  describeEvidenceMode,
+  describeEvidenceRowsUsed,
   requireProposalTarget,
   selectGscProposalEvidence,
   selectRelevantCompetitorEvidence,
   type CompetitorSnapshotInput,
+  type EvidenceMode,
   type GscSnapshotInput,
   type ProposalEvidence,
   type ProposalOptionalContext,
@@ -63,8 +67,12 @@ export async function prepareTitleH1Proposal(
   client: Client,
   tenantId: string,
   rawTargetUrl: string,
-  options: { wordingMode?: "gemini" | "deterministic_dev" } = {},
+  options: {
+    wordingMode?: "gemini" | "deterministic_dev";
+    evidenceMode?: EvidenceMode;
+  } = {},
 ): Promise<PreparedTitleH1Proposal> {
+  const evidenceMode = options.evidenceMode ?? "wording";
   const targetUrl = requireProposalTarget(rawTargetUrl);
   const observedAt = new Date().toISOString();
 
@@ -161,7 +169,7 @@ export async function prepareTitleH1Proposal(
   }
 
   const evidenceInput = { livePage, gsc, competitors };
-  assertCompleteEvidence(evidenceInput);
+  assertCompleteEvidence(evidenceInput, evidenceMode);
   const evidence: ProposalEvidence = evidenceInput;
   const competitorEvidenceMode = evidence.competitors.some(
     (row) => row.query.trim().toLowerCase() !== row.matchedGscQuery.trim().toLowerCase(),
@@ -241,16 +249,26 @@ export async function prepareTitleH1Proposal(
       "An executable source baseline cannot be proven: GITHUB_EXECUTOR_TOKEN is not configured.",
     );
   }
+  // Which file renders this page, rather than assuming the service data file.
+  // Assuming it meant a finding on any other page drafted against a file that
+  // does not render it, then failed on the uniqueness check below — a refusal
+  // that described the wrong problem.
+  const resolved = resolvePageSource(targetUrl);
+  if (!resolved.ok) throw new Error(resolved.reason);
+  const sourceFile = resolved.source.filePath;
+
   const head = await github.branchHead(GOVERNED_REPO, GOVERNED_BRANCH);
-  const source = await github.readFile(GOVERNED_REPO, GOVERNED_FILE, head);
+  const source = await github.readFile(GOVERNED_REPO, sourceFile, head);
   if (countOccurrences(source.content, evidence.livePage.title) !== 1) {
     throw new Error(
-      "The rendered live title is not one unique literal in the allowlisted source file.",
+      `The rendered live title is not one unique literal in ${sourceFile}, ` +
+        `where ${resolved.source.because}.`,
     );
   }
   if (countOccurrences(source.content, evidence.livePage.h1) !== 1) {
     throw new Error(
-      "The rendered live H1 is not one unique literal in the allowlisted source file.",
+      `The rendered live H1 is not one unique literal in ${sourceFile}, ` +
+        `where ${resolved.source.because}.`,
     );
   }
 
@@ -294,8 +312,9 @@ export async function prepareTitleH1Proposal(
       optionalContext,
       guidance,
       competitorEvidenceMode,
+      evidenceMode,
     ),
-    evidenceSummary: `The current rendered title and H1 were observed at ${observedAt}; ${evidence.gsc.length} exact-page GSC page/query rows and ${evidence.competitors.length} active-tracked-competitor DataForSEO organic rows (${competitorEvidenceMode === "exact_query" ? "exact query" : "strict related-query fallback"}) informed the wording.`,
+    evidenceSummary: `The current rendered title and H1 were observed at ${observedAt}; ${describeEvidenceRowsUsed(evidence, competitorEvidenceMode)} ${describeEvidenceMode(evidenceMode)}`,
     evidenceLimitations:
       "Search Console rows are finalized historical observations, competitor rankings do not prove causation, and publication or performance improvement is not guaranteed.",
     riskNote:
@@ -306,6 +325,7 @@ export async function prepareTitleH1Proposal(
       provider: wordingMode === "deterministic_dev" ? "deterministic_dev" : "google_gemini_direct",
       model: wordingMode === "deterministic_dev" ? null : model,
       wordingMode,
+      evidenceMode,
       generatedAt: new Date().toISOString(),
       competitorEvidenceMode,
       sourceRoles: {
@@ -328,7 +348,7 @@ export async function prepareTitleH1Proposal(
     },
     sourceRepo: GOVERNED_REPO,
     sourceBranch: GOVERNED_BRANCH,
-    sourceFile: GOVERNED_FILE,
+    sourceFile,
     sourceProjectId: GOVERNED_PROJECT_ID,
     sourceRevisionBefore: head,
   };
@@ -336,6 +356,8 @@ export async function prepareTitleH1Proposal(
 
 export async function proveEditedWordingAgainstSource(input: {
   baseRevision: string;
+  /** The file this draft was based on, as recorded on the change request. */
+  sourceFile: string;
   liveTitle: string;
   liveH1: string;
   seoTitle: string;
@@ -350,7 +372,13 @@ export async function proveEditedWordingAgainstSource(input: {
       `Revision drift: source is at ${head.slice(0, 10)} but this draft was based on ${input.baseRevision.slice(0, 10)}. Regenerate from fresh evidence.`,
     );
   }
-  const source = await github.readFile(GOVERNED_REPO, GOVERNED_FILE, head);
+  // Re-read the file this draft was actually based on. Re-reading the service
+  // data file regardless would prove an edit against a file that does not
+  // render the page, and pass.
+  if (changeKindForFile(input.sourceFile) === null) {
+    throw new Error(`${input.sourceFile} is not a file any governed change kind may write.`);
+  }
+  const source = await github.readFile(GOVERNED_REPO, input.sourceFile, head);
   const changes = buildTitleH1Changes(
     {
       url: "",

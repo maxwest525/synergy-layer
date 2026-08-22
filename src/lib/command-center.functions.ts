@@ -243,6 +243,11 @@ export const getCommandCenterFacts = createServerFn({ method: "POST" })
       targetUrl: finding.pages[0]?.url ?? null,
       storedState: "proposed",
       fingerprint: `audit:${finding.check}`,
+      // The check id is what decides whether a governed lane can draft this
+      // finding's fix, so it travels with the row. Without it the card can
+      // only ever offer "Not now", which is why every audit suggestion read
+      // as a dead end.
+      rule: finding.check,
       severity: finding.severity as AuditSeverity,
       linkedChangeId: null,
       suppressed: suppressed.has(`audit:${finding.check}`),

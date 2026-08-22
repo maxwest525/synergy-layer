@@ -24,7 +24,10 @@ import {
   selectGscProposalEvidence,
   selectRelevantCompetitorEvidence,
   buildProposalEvidenceGroups,
+  describeEvidenceMode,
+  describeEvidenceRowsUsed,
   type CompetitorSnapshotInput,
+  type EvidenceMode,
   type GscSnapshotInput,
   type ProposalEvidence,
   type ProposalOptionalContext,
@@ -59,8 +62,9 @@ export async function preparePageMetadataProposal(
   client: Client,
   tenantId: string,
   rawTargetUrl: string,
-  options: { wordingMode?: "gemini" } = {},
+  options: { wordingMode?: "gemini"; evidenceMode?: EvidenceMode } = {},
 ): Promise<PreparedPageMetadataProposal> {
+  const evidenceMode = options.evidenceMode ?? "wording";
   const targetUrl = requireProposalTarget(rawTargetUrl);
   const observedAt = new Date().toISOString();
 
@@ -161,7 +165,7 @@ export async function preparePageMetadataProposal(
   }
 
   const evidenceInput = { livePage, gsc, competitors };
-  assertCompleteEvidence(evidenceInput);
+  assertCompleteEvidence(evidenceInput, evidenceMode);
   const evidence: ProposalEvidence = evidenceInput;
   const competitorEvidenceMode = evidence.competitors.some(
     (row) => row.query.trim().toLowerCase() !== row.matchedGscQuery.trim().toLowerCase(),
@@ -299,9 +303,15 @@ export async function preparePageMetadataProposal(
         observedAt,
         renderedBy: rendered.renderedBy,
       },
-      ...buildProposalEvidenceGroups(evidence, optionalContext, guidance, competitorEvidenceMode),
+      ...buildProposalEvidenceGroups(
+        evidence,
+        optionalContext,
+        guidance,
+        competitorEvidenceMode,
+        evidenceMode,
+      ),
     ],
-    evidenceSummary: `The current rendered meta description was observed at ${observedAt}; ${evidence.gsc.length} exact-page GSC page/query rows and ${evidence.competitors.length} active-tracked-competitor DataForSEO organic rows (${competitorEvidenceMode === "exact_query" ? "exact query" : "strict related-query fallback"}) informed the wording.`,
+    evidenceSummary: `The current rendered meta description was observed at ${observedAt}; ${describeEvidenceRowsUsed(evidence, competitorEvidenceMode)} ${describeEvidenceMode(evidenceMode)}`,
     evidenceLimitations:
       "Search Console rows are finalized historical observations, competitor rankings do not prove causation, and publication or performance improvement is not guaranteed.",
     riskNote: sitewideDefault
@@ -311,6 +321,7 @@ export async function preparePageMetadataProposal(
       provider: "google_gemini_direct",
       model,
       wordingMode,
+      evidenceMode,
       generatedAt: new Date().toISOString(),
       editScope: sitewideDefault ? "sitewide_default" : "single_page",
       competitorEvidenceMode,

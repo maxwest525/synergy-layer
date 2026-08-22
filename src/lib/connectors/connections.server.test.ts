@@ -98,6 +98,26 @@ describe("fetchConnectorReadiness", () => {
     expect(result.healthyCount).toBe(0);
   });
 
+  it("does not count a stored health with no probe behind it as healthy", async () => {
+    vi.stubEnv("N8N_WEBHOOK_SECRET", "configured-secret");
+    const unprobed = { ...persistedHealthyConnection("n8n"), config: {} };
+    const order = vi.fn().mockResolvedValue({ data: [unprobed], error: null });
+    const db = {
+      from: vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({ order }),
+        }),
+      }),
+    };
+    createRequestClient.mockReturnValue({ db, authenticated: true });
+
+    const result = await fetchConnectorReadiness();
+    const n8n = result.connections.find((connection) => connection.key === "n8n");
+
+    expect(n8n).toMatchObject({ state: "configured", health: "never_checked" });
+    expect(result.healthyCount).toBe(0);
+  });
+
   it("uses persisted proof as health only while the connector remains configured", async () => {
     vi.stubEnv("N8N_WEBHOOK_SECRET", "configured-secret");
     const order = vi.fn().mockResolvedValue({

@@ -6,6 +6,8 @@ import {
   buildDeterministicDevWording,
   buildProposalEvidenceGroups,
   buildTitleH1Prompt,
+  describeEvidenceMode,
+  describeEvidenceRowsUsed,
   selectRelevantCompetitorEvidence,
   type ProposalEvidence,
 } from "./title-h1-proposals";
@@ -48,6 +50,36 @@ describe("title/H1 proposal evidence contract", () => {
       expect(() => assertCompleteEvidence(evidence)).toThrow(/required/i);
     },
   );
+
+  it("accepts a rendered live page with no GSC or competitor rows in defect mode", () => {
+    const defectOnly = { ...complete, gsc: [], competitors: [] };
+
+    expect(() => assertCompleteEvidence(defectOnly, "defect")).not.toThrow();
+    expect(() => assertCompleteEvidence(defectOnly, "wording")).toThrow(/search console/i);
+    expect(() => assertCompleteEvidence(defectOnly)).toThrow(/search console/i);
+  });
+
+  it("still requires a rendered live page in defect mode", () => {
+    expect(() => assertCompleteEvidence({ ...complete, livePage: null }, "defect")).toThrow(
+      /live-page title and H1/i,
+    );
+  });
+
+  it("records the evidence mode that gated the proposal", () => {
+    const wordingGroups = buildProposalEvidenceGroups(complete);
+    const defectGroups = buildProposalEvidenceGroups(
+      { ...complete, gsc: [], competitors: [] },
+      undefined,
+      undefined,
+      undefined,
+      "defect",
+    );
+
+    expect(wordingGroups[0]).toMatchObject({ source: "live_page", evidenceMode: "wording" });
+    expect(defectGroups[0]).toMatchObject({ source: "live_page", evidenceMode: "defect" });
+    expect(describeEvidenceMode("defect")).toMatch(/only the rendered live page was required/i);
+    expect(describeEvidenceMode("wording")).toMatch(/all required/i);
+  });
 
   it("keeps only active tracked competitors from exact GSC queries", () => {
     const rows = selectRelevantCompetitorEvidence({
@@ -171,6 +203,32 @@ describe("title/H1 proposal evidence contract", () => {
     });
     expect(wording.seoTitle).not.toBe(complete.livePage.title);
     expect(wording.h1).not.toBe(complete.livePage.h1);
+    expect(wording.rationale).toContain("employee relocation movers");
+  });
+
+  it("refuses a deterministic dev draft when no GSC query backs its rationale", () => {
+    expect(() => buildDeterministicDevWording({ ...complete, gsc: [] })).toThrow(
+      /requires exact-page Google Search Console evidence/i,
+    );
+  });
+
+  it("names no row counts or competitor match mode when nothing was read", () => {
+    const empty = describeEvidenceRowsUsed(
+      { ...complete, gsc: [], competitors: [] },
+      "exact_query",
+    );
+
+    expect(empty).toBe(
+      "no exact-page Search Console or active-tracked-competitor rows were available to inform the wording.",
+    );
+    expect(empty).not.toMatch(/exact query/);
+
+    expect(describeEvidenceRowsUsed({ ...complete, competitors: [] }, "exact_query")).toBe(
+      "1 exact-page GSC page/query rows and 0 active-tracked-competitor DataForSEO organic rows informed the wording.",
+    );
+    expect(describeEvidenceRowsUsed(complete, "related_query_fallback")).toContain(
+      "1 active-tracked-competitor DataForSEO organic rows (strict related-query fallback)",
+    );
   });
 
   it("builds a wording-only prompt with explicit roles and optional-source absence", () => {

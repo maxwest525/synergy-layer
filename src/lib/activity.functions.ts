@@ -122,6 +122,30 @@ export const listActivityFeed = createServerFn({ method: "GET" }).handler(
       }
     }
 
+    // Looked up per change rather than read out of the truncated execution
+    // window above: a busy tenant would otherwise be told no revert commit
+    // exists purely because its row fell outside the last 300.
+    const revertByChange = new Map<string, { commitSha: string; commitUrl: string | null }>();
+    const rolledBackIds = changes.filter((change) => change.rolled_back_at).map((c) => c.id);
+    if (rolledBackIds.length > 0) {
+      const { data: reverts } = await db
+        .from("change_request_executions")
+        .select("change_request_id, commit_sha, commit_url")
+        .eq("tenant_id", tenantId)
+        .eq("kind", "source_revert")
+        .in("status", ["reverted", "reconciled"])
+        .not("commit_sha", "is", null)
+        .in("change_request_id", rolledBackIds)
+        .order("created_at", { ascending: false });
+      for (const row of reverts ?? []) {
+        if (revertByChange.has(row.change_request_id) || !row.commit_sha) continue;
+        revertByChange.set(row.change_request_id, {
+          commitSha: row.commit_sha,
+          commitUrl: row.commit_url,
+        });
+      }
+    }
+
     const recById = new Map(recommendations.map((rec) => [rec.id, rec]));
     const linkedRecIds = new Set<string>();
 
@@ -256,16 +280,23 @@ export const listActivityFeed = createServerFn({ method: "GET" }).handler(
         });
       }
       if (change.rolled_back_at) {
+        // Only a recorded revert commit can carry the claim that the source was
+        // put back. Without one this line says what it knows and nothing more.
+        const revert = revertByChange.get(change.id);
         events.push({
           id: `rolledback-${change.id}`,
           stage: "deployed",
           at: change.rolled_back_at,
           title: "Rolled back",
-          detail: change.rollback_notes ?? "Reverted to the previous revision",
+          detail:
+            change.rollback_notes ??
+            (revert
+              ? `Previous values committed back in ${revert.commitSha.slice(0, 10)}`
+              : "No revert commit is recorded for this rollback"),
           state: "rolled_back",
           linkTo: "/changes/$id",
           linkId: change.id,
-          externalUrl: null,
+          externalUrl: revert?.commitUrl ?? null,
         });
       }
 

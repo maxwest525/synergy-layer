@@ -60,7 +60,13 @@ export function buildDeterministicDevWording(evidence: ProposalEvidence): TitleH
   const observedQuery = [...evidence.gsc]
     .sort((a, b) => b.impressions - a.impressions || a.position - b.position)[0]
     ?.query.trim();
-  const normalized = (observedQuery || "corporate relocation movers")
+  // The wording and its rationale are both derived from this query, so without
+  // one there is nothing to build that does not invent a keyword and claim a
+  // Search Console source for it.
+  if (!observedQuery) {
+    throw new Error("Development-mode wording requires exact-page Google Search Console evidence.");
+  }
+  const normalized = observedQuery
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, " ")
     .trim();
@@ -75,9 +81,7 @@ export function buildDeterministicDevWording(evidence: ProposalEvidence): TitleH
   return validateTitleH1Wording({
     seoTitle: `${lead} | Corporate Relocation | TruMove`,
     h1: `${lead} & Corporate Relocation Services`,
-    rationale: `Development-mode wording uses the highest-impression exact-page GSC query${
-      observedQuery ? `, “${observedQuery},”` : ""
-    } while preserving the page's observed corporate-relocation intent. It bypasses only Gemini generation; all evidence, source-proof, review, and approval gates remain active.`,
+    rationale: `Development-mode wording uses the highest-impression exact-page GSC query, “${observedQuery},” while preserving the page's observed corporate-relocation intent. It bypasses only Gemini generation; all evidence, source-proof, review, and approval gates remain active.`,
   });
 }
 
@@ -275,12 +279,24 @@ export function selectRelevantCompetitorEvidence(input: {
     .slice(0, input.limit ?? 20);
 }
 
+export type EvidenceMode = "wording" | "defect";
+
+/**
+ * Search Console and competitor rows are what justifies inventing new
+ * competitive wording, so "wording" demands them. Removing an observed defect
+ * is justified by the rendered page alone: demanding impressions from a page
+ * whose broken metadata is the reason it has none refuses every page that most
+ * needs the fix. "defect" therefore keeps only the live-page gate and leaves
+ * the other sources as recorded context.
+ */
 export function assertCompleteEvidence(
   input: ProposalEvidenceInput,
+  mode: EvidenceMode = "wording",
 ): asserts input is ProposalEvidence {
   if (!input.livePage?.title || !input.livePage.h1) {
     throw new Error("Required live-page title and H1 evidence is missing.");
   }
+  if (mode === "defect") return;
   if (input.gsc.length === 0) {
     throw new Error("Required exact-page Google Search Console evidence is missing.");
   }
@@ -321,15 +337,20 @@ export type CompetitorEvidenceMode = "exact_query" | "related_query_fallback";
  * The database proposal RPC accepts exactly three required evidence groups.
  * Optional sources remain auditable beneath the competitor context group, but
  * cannot change proposal eligibility or the persisted top-level contract.
+ *
+ * The evidence mode is recorded beside the live page — the one source that
+ * gates in either mode — so a reviewer reading a persisted proposal can always
+ * tell whether the other groups were required or merely context.
  */
 export function buildProposalEvidenceGroups(
   evidence: ProposalEvidence,
   optional: ProposalOptionalContext = emptyOptionalContext,
   guidance: KnowledgeWritingGuidance[] = [],
   competitorEvidenceMode: CompetitorEvidenceMode = "exact_query",
+  evidenceMode: EvidenceMode = "wording",
 ): Record<string, unknown>[] {
   return [
-    { source: "live_page", role: "source_of_truth", ...evidence.livePage },
+    { source: "live_page", role: "source_of_truth", evidenceMode, ...evidence.livePage },
     { source: "google_search_console", role: "source_of_truth", rows: evidence.gsc },
     {
       source: "dataforseo_competitors",
@@ -355,6 +376,32 @@ export function buildProposalEvidenceGroups(
       },
     },
   ];
+}
+
+/**
+ * Zero rows informed nothing, and the competitor match mode describes rows that
+ * exist — `some` on an empty array reports "exact query" by default, not by
+ * observation. Neither is stated unless something was actually read.
+ */
+export function describeEvidenceRowsUsed(
+  evidence: ProposalEvidence,
+  competitorEvidenceMode: CompetitorEvidenceMode,
+): string {
+  if (evidence.gsc.length === 0 && evidence.competitors.length === 0) {
+    return "no exact-page Search Console or active-tracked-competitor rows were available to inform the wording.";
+  }
+  const matchMode =
+    evidence.competitors.length > 0
+      ? ` (${competitorEvidenceMode === "exact_query" ? "exact query" : "strict related-query fallback"})`
+      : "";
+  return `${evidence.gsc.length} exact-page GSC page/query rows and ${evidence.competitors.length} active-tracked-competitor DataForSEO organic rows${matchMode} informed the wording.`;
+}
+
+/** Reviewer-facing record of which evidence bar the proposal actually cleared. */
+export function describeEvidenceMode(mode: EvidenceMode): string {
+  return mode === "defect"
+    ? "Evidence mode: defect — only the rendered live page was required; Search Console and competitor rows are recorded as context, not as gates."
+    : "Evidence mode: wording — live-page, exact-page Search Console, and active-tracked-competitor evidence were all required.";
 }
 
 export function buildTitleH1Prompt(

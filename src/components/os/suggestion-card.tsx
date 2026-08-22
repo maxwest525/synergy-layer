@@ -5,6 +5,7 @@ import { useId } from "react";
 import { toast } from "sonner";
 
 import { COMMAND_CENTER_QUERY_KEY } from "./command-center-facts";
+import { proposeAuditFix } from "@/lib/audit-proposals.functions";
 import { actionFor } from "@/lib/command-center";
 import { rejectChangeRequest } from "@/lib/change-requests.functions";
 import { setRecommendationQueueState } from "@/lib/os-admin.functions";
@@ -52,11 +53,30 @@ export function SuggestionCard({ item }: { item: QueueItem }) {
   const ignoreAudit = useServerFn(ignoreAuditFinding);
   const restoreAudit = useServerFn(restoreAuditFinding);
   const draftFix = useServerFn(proposeFixFromFinding);
+  const draftAuditFix = useServerFn(proposeAuditFix);
   const describedBy = useId();
 
   const run = useMutation({
     mutationFn: async (verb: SuggestionVerb) => {
       if (verb.id === "draft") {
+        // An audit finding is not a recommendation row, so it cannot be drafted
+        // by id — it is drafted from its check and the page it names. Both
+        // lanes file a governed proposal and return the same shape.
+        if (item.kind === "audit") {
+          if (!item.targetUrl) {
+            throw new Error(
+              "This finding names no page yet, so there is nothing to draft against.",
+            );
+          }
+          return draftAuditFix({
+            data: {
+              scope: "page",
+              check: item.rule ?? undefined,
+              targetUrl: item.targetUrl,
+              idempotencyKey: crypto.randomUUID(),
+            },
+          });
+        }
         return draftFix({
           data: { recommendationId: item.id, idempotencyKey: crypto.randomUUID() },
         });

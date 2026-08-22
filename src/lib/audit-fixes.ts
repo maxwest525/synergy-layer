@@ -23,8 +23,11 @@ export type AuditFixTarget = {
 const WORDING_FILE = GOVERNED_CHANGE_KINDS["service.title_h1"][0];
 const ROBOTS_FILE = GOVERNED_CHANGE_KINDS["site.crawl_directives"][0];
 
+const METADATA_FILE = GOVERNED_CHANGE_KINDS["page.metadata"][0];
+
 const wording: AuditFixTarget = { changeKind: "service.title_h1", filePath: WORDING_FILE };
 const crawl: AuditFixTarget = { changeKind: "site.crawl_directives", filePath: ROBOTS_FILE };
+const metadata: AuditFixTarget = { changeKind: "page.metadata", filePath: METADATA_FILE };
 
 /** Which governed change kind can fix each page level check. */
 export const PAGE_CHECK_FIX: Record<CheckId, AuditFixTarget | null> = {
@@ -35,10 +38,10 @@ export const PAGE_CHECK_FIX: Record<CheckId, AuditFixTarget | null> = {
   h1_missing: wording,
   h1_multiple: wording,
   h1_duplicate: wording,
-  description_missing: null,
-  description_too_long: null,
-  description_too_short: null,
-  description_duplicate: null,
+  description_missing: metadata,
+  description_too_long: metadata,
+  description_too_short: metadata,
+  description_duplicate: metadata,
   canonical_missing: null,
   noindex: null,
   nofollow: null,

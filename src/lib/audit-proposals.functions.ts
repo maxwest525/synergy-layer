@@ -53,10 +53,37 @@ export const proposeAuditFix = createServerFn({ method: "POST" })
       throw new Error("That finding has no governed fix yet, so it stays a manual fix.");
     }
 
+    // A description defect is a snippet problem, not a heading problem. Sending
+    // it down the title/H1 lane would draft the wrong field and the operator
+    // would approve a change that never answers the finding.
+    if (target.changeKind === "page.metadata") {
+      const { preparePageMetadataProposal } = await import("./page-metadata-proposals.server");
+      const { fileGovernedProposal } = await import("./audit-fixes.server");
+      // An audit finding is a defect the audit already observed on the rendered
+      // page, so the rendered page is what justifies removing it. Demanding
+      // impressions from a page whose broken metadata is the reason it has none
+      // refuses every page that most needs the fix.
+      const proposal = await preparePageMetadataProposal(
+        context.supabase,
+        tenantId,
+        data.targetUrl,
+        {
+          evidenceMode: "defect",
+        },
+      );
+      return fileGovernedProposal({
+        tenantId,
+        actorId: context.userId,
+        idempotencyKey: `audit:${data.check ?? "page"}:${data.idempotencyKey}`,
+        proposal,
+      });
+    }
+
     const { prepareTitleH1Proposal } = await import("./title-h1-proposals.server");
     const { serviceRpc } = await import("./title-h1-proposals.functions");
     const proposal = await prepareTitleH1Proposal(context.supabase, tenantId, data.targetUrl, {
       wordingMode: "gemini",
+      evidenceMode: "defect",
     });
     const result = await serviceRpc("create_title_h1_proposal", {
       _tenant_id: tenantId,

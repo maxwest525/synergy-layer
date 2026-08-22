@@ -214,8 +214,9 @@ function SystemsPage() {
             <h2 className="text-sm font-semibold text-foreground">Runtime connector ledger</h2>
             <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
               Secrets stay server-side. Configured means the required environment names are present;
-              healthy requires a dated, bounded probe. Providers without a safe free probe remain
-              degraded until real operational evidence exists.
+              healthy requires a dated, bounded probe. A stored health with no probe outcome behind
+              it reads as never checked. Providers without a safe free probe remain degraded until
+              real operational evidence exists.
             </p>
           </div>
           <Button disabled={check.isPending} onClick={() => check.mutate()}>
@@ -224,13 +225,8 @@ function SystemsPage() {
         </div>
         <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {connectorLedger.data.connections.map((connection) => {
-            const health = connection.persisted?.health ?? connection.health;
-            const outcome =
-              connection.persisted?.config &&
-              typeof connection.persisted.config === "object" &&
-              !Array.isArray(connection.persisted.config)
-                ? String(connection.persisted.config["probe_outcome"] ?? "not checked")
-                : "not checked";
+            const health = connection.health;
+            const outcome = connection.probeOutcome ?? "never_checked";
             return (
               <div key={connection.key} className="rounded-xl border border-border/60 p-3">
                 <div className="flex items-start justify-between gap-2">
@@ -239,7 +235,7 @@ function SystemsPage() {
                     <p className="text-xs text-muted-foreground">{connection.provider}</p>
                   </div>
                   <StatePill
-                    label={health}
+                    label={health.replaceAll("_", " ")}
                     {...(health === "healthy"
                       ? { tone: "success" }
                       : health === "failing"

@@ -48,37 +48,6 @@ function activeFor(pathname: string, entry: NavEntry): boolean {
   return pathname.startsWith(entry.to);
 }
 
-function IconRail({ pathname }: { pathname: string }) {
-  return (
-    <nav
-      aria-label="Sections"
-      className="hidden w-[52px] shrink-0 flex-col items-center gap-1.5 border-r border-sidebar-border py-3 md:flex"
-    >
-      {navEntries().map((entry) => {
-        const Icon = categoryIcon(entry.icon);
-        const active = activeFor(pathname, entry);
-        // `mt-auto` pins settings to the foot of the rail, as the boards show.
-        return (
-          <div key={entry.to} className={cn(entry.kind === "settings" && "mt-auto")}>
-            <Link
-              to={entry.to}
-              title={entry.title}
-              aria-label={entry.title}
-              aria-current={active ? "page" : undefined}
-              className={cn(
-                "flex h-[34px] w-[34px] items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground",
-                active && "border border-primary/30 bg-accent text-primary",
-              )}
-            >
-              <Icon className="h-[17px] w-[17px]" strokeWidth={1.6} aria-hidden="true" />
-            </Link>
-          </div>
-        );
-      })}
-    </nav>
-  );
-}
-
 function WaitingBadge({ count, tone }: { count: number; tone: NavTone | null }) {
   if (count === 0 || tone === null) return null;
   return (
@@ -95,7 +64,7 @@ function NavPanel({ pathname, onNavigate }: { pathname: string; onNavigate?: () 
   const waitingFor = (id: string) => view?.categories.find((row) => row.category.id === id) ?? null;
 
   return (
-    <div className="flex w-full flex-col gap-1 px-3 py-3.5">
+    <div className="flex h-full w-full flex-col gap-1 px-3 py-3.5">
       <div className="flex items-center gap-2 px-2.5 pb-2.5 pt-1">
         <HeadingIcon
           className="h-[15px] w-[15px] text-primary"
@@ -144,6 +113,31 @@ function NavPanel({ pathname, onNavigate }: { pathname: string; onNavigate?: () 
           </Link>
         );
       })}
+
+      {/* Settings sat at the foot of the icon rail. The rail is gone, so it
+          keeps that position here — `mt-auto` pins it to the bottom. */}
+      {navEntries()
+        .filter((entry) => entry.kind === "settings")
+        .map((entry) => {
+          const Icon = categoryIcon(entry.icon);
+          const active = activeFor(pathname, entry);
+          return (
+            <Link
+              key={entry.to}
+              to={entry.to}
+              onClick={onNavigate}
+              aria-current={active ? "page" : undefined}
+              className={cn(
+                "mt-auto flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-[13px] text-sidebar-foreground transition-colors hover:text-foreground",
+                active &&
+                  "rounded-l-none border-l-2 border-primary bg-accent font-semibold text-primary",
+              )}
+            >
+              <Icon className="h-3.5 w-3.5" strokeWidth={1.6} aria-hidden="true" />
+              {entry.title}
+            </Link>
+          );
+        })}
     </div>
   );
 }
@@ -249,8 +243,6 @@ export function AppShell({ children }: { children: ReactNode }) {
       <TopBar pathname={pathname} />
 
       <div className="flex min-h-0 flex-1">
-        <IconRail pathname={pathname} />
-
         <aside
           aria-label="Section navigation"
           className="hidden w-[208px] shrink-0 border-r border-sidebar-border md:block"
