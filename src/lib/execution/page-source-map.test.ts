@@ -20,23 +20,66 @@ describe("resolvePageSource", () => {
     expect(result.source.filePath).toBe(GOVERNED_CHANGE_KINDS["content.blog_post"][0]);
   });
 
-  it("does not resolve the blog index, which is a component and not a record", () => {
-    // /blog is the one real public page with a missing title, H1 and description.
-    // Claiming a lane owns it would draft against the posts file, which renders
-    // the articles and not the page that lists them.
+  it("resolves the blog index to its own component, never to the posts file", () => {
+    // /blog is the page that lists the articles; posts.ts renders the articles
+    // themselves. Drafting its title against posts.ts would edit the wrong page,
+    // which is why the index resolves to its component and not to the record.
     const result = resolvePageSource("https://trumoveinc.com/blog");
-    expect(result.ok).toBe(false);
-    if (result.ok) return;
-    expect(result.reason).toContain("/blog");
-    expect(result.reason).toContain("page component");
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.source.changeKind).toBe("page.wording");
+    expect(result.source.filePath).toBe("src/pages/blog/BlogIndexPage.tsx");
+    expect(result.source.filePath).not.toBe(GOVERNED_CHANGE_KINDS["content.blog_post"][0]);
   });
 
-  it.each(["/plan-variants", "/showcase", "/dictate", "/", "/contact"])(
-    "does not claim a lane for %s",
-    (path) => {
-      expect(hasPageSource(`https://trumoveinc.com${path}`)).toBe(false);
-    },
-  );
+  it.each([
+    ["/", "src/pages/Index.tsx"],
+    // A second address for the same component, declared by the router. It adds
+    // no governed file, but a finding that named it must not report no lane
+    // while the identical finding on / reports one.
+    ["/index", "src/pages/Index.tsx"],
+    ["/contact", "src/pages/ContactPage.tsx"],
+    ["/privacy", "src/pages/legal/PrivacyPage.tsx"],
+    // The component name does not follow from the address, which is why the map
+    // is transcribed from the client's router rather than derived from the URL.
+    ["/saferweb", "src/pages/SafetyWebPage.tsx"],
+    // Two addresses, one component. Both must resolve, or a finding on the
+    // second reports no lane while the first reports one.
+    ["/sms-policy", "src/pages/legal/SmsPolicyPage.tsx"],
+    ["/legal/sms", "src/pages/legal/SmsPolicyPage.tsx"],
+  ])("resolves the static page %s to %s", (path, file) => {
+    const result = resolvePageSource(`https://trumoveinc.com${path}`);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.source.changeKind).toBe("page.wording");
+    expect(result.source.filePath).toBe(file);
+  });
+
+  it("ignores a trailing slash, so one page is not two answers", () => {
+    expect(hasPageSource("https://trumoveinc.com/contact/")).toBe(true);
+    expect(hasPageSource("https://trumoveinc.com/")).toBe(true);
+  });
+
+  it.each([
+    // Staff gated: not public, so no search finding can name them.
+    "/plan-variants",
+    "/showcase",
+    "/docs",
+    // Marked noindex by the client's own DefaultSeo. The site has said it does
+    // not want these found; a lane that edits their wording acts against that.
+    "/dictate",
+    "/scanner",
+    "/live-walkthrough",
+    // Never a public page at all.
+    "/portal/quotes",
+    "/admin/json-ld",
+    "/login",
+    // A real public page that genuinely has no lane yet, which is the state
+    // this resolver exists to say out loud.
+    "/research/some-report",
+  ])("does not claim a lane for %s", (path) => {
+    expect(hasPageSource(`https://trumoveinc.com${path}`)).toBe(false);
+  });
 
   it("refuses a URL on another origin before naming any file", () => {
     const result = resolvePageSource("https://example.com/services/corporate-relocation");

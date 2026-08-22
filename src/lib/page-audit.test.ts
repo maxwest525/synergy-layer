@@ -4,6 +4,7 @@ import {
   buildAuditInstruction,
   findDuplicateWording,
   normalizeHeadline,
+  rateLimitDelayMs,
   selectLatestObservations,
   type PageMetadataObservation,
 } from "./page-audit";
@@ -66,5 +67,29 @@ describe("page wording audit", () => {
     expect(buildAuditInstruction({ observedPages: 0, failedPages: 0, duplicates: [] })).toContain(
       "Run the page wording audit",
     );
+  });
+});
+
+describe("waiting out a rate limited renderer", () => {
+  it("waits exactly as long as the server asked", () => {
+    expect(rateLimitDelayMs("5", 0)).toBe(5000);
+  });
+
+  it("backs off further each time when the server says nothing", () => {
+    expect(rateLimitDelayMs(null, 0)).toBe(1000);
+    expect(rateLimitDelayMs(null, 1)).toBe(2000);
+    expect(rateLimitDelayMs(null, 2)).toBe(4000);
+  });
+
+  it("caps the wait, so one bad header cannot stall the whole run", () => {
+    expect(rateLimitDelayMs("86400", 0)).toBe(30_000);
+    expect(rateLimitDelayMs(null, 20)).toBe(30_000);
+  });
+
+  it("falls back to backing off when the header is a date or nonsense", () => {
+    // Retry-After may carry an HTTP date. Rather than parse one, treat anything
+    // that is not a plain number of seconds as absent and back off instead.
+    expect(rateLimitDelayMs("Wed, 21 Oct 2026 07:28:00 GMT", 1)).toBe(2000);
+    expect(rateLimitDelayMs("-3", 1)).toBe(2000);
   });
 });

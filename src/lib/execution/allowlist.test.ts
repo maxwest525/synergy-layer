@@ -34,7 +34,10 @@ describe("governed change kinds", () => {
   });
 
   it("refuses a file no kind owns", () => {
-    const outcome = target("src/pages/Index.tsx");
+    // A staff-gated page the client's own routing keeps out of the public site.
+    // It is a page component like the governed ones, which is the point: being
+    // the same kind of file is not what admits it.
+    const outcome = target("src/pages/ShowcasePage.tsx");
     expect(outcome.ok).toBe(false);
     if (!outcome.ok) expect(outcome.reason).toContain("no governed change kind owns");
   });

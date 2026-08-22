@@ -15,7 +15,24 @@
  * other pages are React components no lane owns yet.
  */
 
-import { GOVERNED_CHANGE_KINDS, GOVERNED_ORIGIN, type GovernedChangeKind } from "./allowlist";
+import {
+  GOVERNED_CHANGE_KINDS,
+  GOVERNED_ORIGIN,
+  GOVERNED_PAGE_SOURCES,
+  type GovernedChangeKind,
+} from "./allowlist";
+
+/**
+ * One spelling per address, so `/privacy/` and `/privacy` resolve alike. The
+ * site's own canonical for the home page is `/`, which is why an emptied path
+ * stays `/` rather than becoming the empty string.
+ */
+function normalizePath(pathname: string): string {
+  const trimmed = pathname.replace(/\/+$/, "");
+  return trimmed === "" ? "/" : trimmed;
+}
+
+const PAGE_SOURCE_BY_PATH: Readonly<Record<string, string | undefined>> = GOVERNED_PAGE_SOURCES;
 
 export type PageSource = {
   changeKind: GovernedChangeKind;
@@ -70,6 +87,21 @@ export function resolvePageSource(rawUrl: string): PageSourceResolution {
     return {
       ok: false,
       reason: `${parsed.origin} is not the allowlisted site, so no source file here renders it.`,
+    };
+  }
+
+  // A page whose wording lives in its own component. Matched on the exact path
+  // the client's router declares, because the component name does not follow
+  // from the address: /saferweb is SafetyWebPage.tsx.
+  const component = PAGE_SOURCE_BY_PATH[normalizePath(parsed.pathname)];
+  if (component !== undefined) {
+    return {
+      ok: true,
+      source: {
+        changeKind: "page.wording",
+        filePath: component,
+        because: "this page's wording is written in the component that renders it",
+      },
     };
   }
 

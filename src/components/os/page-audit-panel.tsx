@@ -7,7 +7,7 @@ import { toast } from "sonner";
 
 import { EmptyNote, GlassCard, StatePill, formatWhen } from "@/components/os/primitives";
 import { Button } from "@/components/ui/button";
-import { fixTargetForPageCheck, fixTargetForSiteCheck } from "@/lib/audit-fixes";
+import { fixTargetForPage, fixTargetForSiteCheck, noFixReasonForPage } from "@/lib/audit-fixes";
 import { proposeAuditFix } from "@/lib/audit-proposals.functions";
 import { getPageAudit, runPageWordingAudit } from "@/lib/page-audit.functions";
 import type { CheckFinding, Severity } from "@/lib/page-checks";
@@ -165,7 +165,7 @@ export function PageAuditPanel() {
                           <p className="break-all text-xs text-foreground">{page.url}</p>
                           <p className="text-xs text-muted-foreground">{page.detail}</p>
                         </div>
-                        {fixTargetForPageCheck(finding.check) ? (
+                        {fixTargetForPage(finding.check, page.url) ? (
                           <Button
                             variant="outline"
                             size="sm"
@@ -181,7 +181,9 @@ export function PageAuditPanel() {
                             Propose the fix
                           </Button>
                         ) : (
-                          <span className="text-xs text-muted-foreground">Manual fix for now</span>
+                          <span className="max-w-md text-xs text-muted-foreground">
+                            {noFixReasonForPage(finding.check, page.url) ?? "Manual fix for now"}
+                          </span>
                         )}
                       </li>
                     ))}

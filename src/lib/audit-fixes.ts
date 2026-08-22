@@ -9,6 +9,7 @@
 
 import type { GovernedChangeKind } from "./execution/allowlist";
 import { GOVERNED_CHANGE_KINDS } from "./execution/allowlist";
+import { resolvePageSource } from "./execution/page-source-map";
 import type { FieldChange } from "./execution/source-change";
 import type { CheckId } from "./page-checks";
 import { isRobotsPathAllowed } from "./robots-rules";
@@ -81,6 +82,75 @@ export const SITE_CHECK_FIX: Record<SiteCheckId, AuditFixTarget | null> = {
 
 export function fixTargetForPageCheck(check: string): AuditFixTarget | null {
   return PAGE_CHECK_FIX[check as CheckId] ?? null;
+}
+
+/**
+ * Change kinds whose file renders one specific page, as opposed to a sitewide
+ * component every page shares.
+ *
+ * The distinction is the whole point of `fixTargetForPage`. A description
+ * defect is drafted against the sitewide metadata components, so it can be
+ * offered on any page. A title or headline defect has to be edited where that
+ * page's wording actually lives, so it can only be offered when some governed
+ * file renders that page.
+ */
+const PAGE_SCOPED_KINDS: ReadonlySet<GovernedChangeKind> = new Set([
+  "service.title_h1",
+  "content.blog_post",
+]);
+
+/**
+ * The fix target for a finding at a specific address, or null when nothing can
+ * draft it.
+ *
+ * `fixTargetForPageCheck` answers from the check id alone, which is enough to
+ * say which lane owns a defect but not whether that lane can reach the page.
+ * Every page-scoped check mapped to the service wording lane whatever address
+ * it carried, so a title finding on `/privacy` drew a Draft button and then
+ * died inside the proposal lane at the source resolver — the operator saw a
+ * control that ran, failed, and blamed the page. Asking the resolver here, before
+ * the button exists, is what keeps that from being offered at all.
+ *
+ * It also returns the resolved kind and file rather than the map's default, so
+ * a blog post's title fix reports the posts data file it will really write.
+ *
+ * Known residual gap, stated rather than implied. This answers "does a governed
+ * file render this page", which is a question about routing. It cannot answer
+ * "is this page's wording editable", which is a question about that file's
+ * contents: `prepareTitleH1Proposal` additionally requires the live title and
+ * the live H1 to each occur exactly once in the source. Two of the governed
+ * components fail that today, both checked against the client repository on
+ * 2026-08-22:
+ *   - ContactPage.tsx repeats "Contact a TruMove Specialist" in the SeoHead
+ *     title and again in a visually hidden <h1>.
+ *   - ServicesPage.tsx repeats "Moving Services | TruMove" in the SeoHead title
+ *     and again in a structured-data name field.
+ * Answering this here would mean reading every governed component out of the
+ * client repository on each render of the audit panel, so it stays where it is.
+ * The refusal names the file and the reason, so the operator is told what is
+ * wrong rather than that the page is at fault -- but it is still a button that
+ * errors, on those two pages.
+ */
+export function fixTargetForPage(check: string, targetUrl: string | null): AuditFixTarget | null {
+  const target = fixTargetForPageCheck(check);
+  if (!target || !PAGE_SCOPED_KINDS.has(target.changeKind)) return target;
+  if (targetUrl === null) return null;
+  const resolved = resolvePageSource(targetUrl);
+  if (!resolved.ok) return null;
+  return { changeKind: resolved.source.changeKind, filePath: resolved.source.filePath };
+}
+
+/**
+ * Why no fix is offered for this finding, in the operator's words, or null when
+ * one is. An absent button is only honest if the absence is stated.
+ */
+export function noFixReasonForPage(check: string, targetUrl: string | null): string | null {
+  if (fixTargetForPage(check, targetUrl) !== null) return null;
+  const target = fixTargetForPageCheck(check);
+  if (!target) return "No governed lane owns this check yet, so it stays a manual fix.";
+  if (targetUrl === null) return "This finding names no page address, so nothing can be drafted.";
+  const resolved = resolvePageSource(targetUrl);
+  return resolved.ok ? null : resolved.reason;
 }
 
 export function fixTargetForSiteCheck(check: string): AuditFixTarget | null {
