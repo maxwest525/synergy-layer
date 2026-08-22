@@ -23,6 +23,46 @@ export const GOVERNED_ORIGIN = "https://trumoveinc.com";
 export const GOVERNED_FILE = "src/pages/services/servicesData.ts";
 
 /**
+ * Public pages whose wording lives in their own component rather than in a data
+ * file, and the component that renders each.
+ *
+ * Transcribed from the client application's router, not inferred from the URL:
+ * `/saferweb` is `SafetyWebPage.tsx` and `/sms-policy` shares a component with
+ * `/legal/sms`, neither of which a naming convention would predict.
+ *
+ * Deliberately absent, and each absence is a decision:
+ *   - anything behind the staff gate or the portal, and every auth route. They
+ *     are not public, so no search finding can name them.
+ *   - every page the client's own DefaultSeo marks noindex — /showcase,
+ *     /plan-variants, /live-walkthrough, /scanner, /dictate. The site has
+ *     already said it does not want these found; editing their wording would
+ *     act against that.
+ *   - /services/:slug, /blog/:slug and /research/:slug. Their wording is a data
+ *     record or a database row, and the first two already have their own kinds.
+ */
+export const GOVERNED_PAGE_SOURCES = {
+  "/": "src/pages/Index.tsx",
+  "/why-trumove": "src/pages/WhyTruMovePage.tsx",
+  "/saferweb": "src/pages/SafetyWebPage.tsx",
+  "/carrier-approval": "src/pages/CarrierApprovalPage.tsx",
+  "/inventory-builder": "src/pages/InventoryBuilderPage.tsx",
+  "/route-planning": "src/pages/RoutePlanningPage.tsx",
+  "/contact": "src/pages/ContactPage.tsx",
+  "/franchise": "src/pages/FranchisePage.tsx",
+  "/careers": "src/pages/CareersPage.tsx",
+  "/services": "src/pages/ServicesPage.tsx",
+  "/blog": "src/pages/blog/BlogIndexPage.tsx",
+  "/research": "src/pages/research/ResearchIndexPage.tsx",
+  "/resources/moving-cost-estimator": "src/pages/resources/MovingCostEstimatorPage.tsx",
+  "/terms": "src/pages/legal/TermsPage.tsx",
+  "/privacy": "src/pages/legal/PrivacyPage.tsx",
+  "/sms-policy": "src/pages/legal/SmsPolicyPage.tsx",
+  "/legal/sms": "src/pages/legal/SmsPolicyPage.tsx",
+  "/compliance": "src/pages/legal/CompliancePage.tsx",
+  "/accessibility": "src/pages/legal/AccessibilityPage.tsx",
+} as const satisfies Record<string, string>;
+
+/**
  * Every change kind the executor can write, and the exact files each may touch.
  * A kind is executable only while this map lists at least one file for it.
  */
@@ -32,6 +72,7 @@ export const GOVERNED_CHANGE_KINDS = {
   "site.crawl_directives": ["public/robots.txt", "public/sitemap.xml"],
   "site.structured_data": ["src/platform/content/schema/index.ts"],
   "content.blog_post": ["src/pages/blog/posts.ts"],
+  "page.wording": [...new Set(Object.values(GOVERNED_PAGE_SOURCES))],
 } as const satisfies Record<string, readonly string[]>;
 
 export type GovernedChangeKind = keyof typeof GOVERNED_CHANGE_KINDS;

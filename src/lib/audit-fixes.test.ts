@@ -143,6 +143,9 @@ describe("which page a fix can actually be drafted for", () => {
   const SERVICE = "https://trumoveinc.com/services/packing";
   const POST = "https://trumoveinc.com/blog/true-cost-of-a-move";
   const PLAIN = "https://trumoveinc.com/privacy";
+  // A published research report. Its wording is a database row, so no file in
+  // the client repository carries it and no lane can draft against one.
+  const UNOWNED = "https://trumoveinc.com/research/how-carriers-are-vetted";
 
   it("offers the wording lane on a service page, whose wording is a data record", () => {
     expect(fixTargetForPage("title_too_short", SERVICE)).toEqual({
@@ -164,8 +167,15 @@ describe("which page a fix can actually be drafted for", () => {
 
   it("offers nothing on a page no governed file renders, rather than a button that dies", () => {
     expect(fixTargetForPageCheck("title_too_short")).not.toBeNull();
-    expect(fixTargetForPage("title_too_short", PLAIN)).toBeNull();
-    expect(noFixReasonForPage("title_too_short", PLAIN)).toContain("No governed lane renders");
+    expect(fixTargetForPage("title_too_short", UNOWNED)).toBeNull();
+    expect(noFixReasonForPage("title_too_short", UNOWNED)).toContain("No governed lane renders");
+  });
+
+  it("draws a static page's wording from the component that renders it", () => {
+    expect(fixTargetForPage("title_too_short", PLAIN)).toEqual({
+      changeKind: "page.wording",
+      filePath: "src/pages/legal/PrivacyPage.tsx",
+    });
   });
 
   it("still offers the description lane there, because it edits the sitewide components", () => {
