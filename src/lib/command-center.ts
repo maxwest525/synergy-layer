@@ -66,13 +66,17 @@ export type CommandCenterFacts = {
     readonly pagesNeedingFixes: number;
   };
   /**
-   * What the top bar's status is allowed to claim. Both are counts of stored
-   * rows: connections whose last verification failed, and measurement runs that
-   * ended in failure.
+   * What the top bar's status is allowed to claim: connections whose last
+   * verification failed, and measurement providers whose most recent run
+   * failed.
+   *
+   * Both describe the state right now. A provider that failed for a week and
+   * then succeeded is not failing, so counting historical failures would keep
+   * the bar lit long after the cause was fixed.
    */
   readonly health: {
     readonly brokenConnections: number;
-    readonly failedRuns: number;
+    readonly failingProviders: number;
   };
   readonly queueSources: readonly QueueSource[];
 };
@@ -394,9 +398,12 @@ function statusLineFor(health: CommandCenterFacts["health"]): StatusLine {
       tone: "danger",
     };
   }
-  if (health.failedRuns > 0) {
+  if (health.failingProviders > 0) {
     return {
-      text: health.failedRuns === 1 ? "1 run failed" : `${health.failedRuns} runs failed`,
+      text:
+        health.failingProviders === 1
+          ? "1 measurement provider is failing"
+          : `${health.failingProviders} measurement providers are failing`,
       tone: "warning",
     };
   }

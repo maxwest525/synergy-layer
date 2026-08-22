@@ -89,7 +89,7 @@ export const getCommandCenterFacts = createServerFn({ method: "POST" })
           .eq("visible_in_aoos", true),
         db
           .from("measurement_runs")
-          .select("status, started_at")
+          .select("status, started_at, provider")
           .eq("tenant_id", tenantId)
           .order("started_at", { ascending: false })
           .limit(50),
@@ -170,8 +170,19 @@ export const getCommandCenterFacts = createServerFn({ method: "POST" })
       (row) => row.verification_state === "failed",
     ).length;
 
-    const failedRuns = (assertRead("Measurement runs", runResult).data ?? []).filter(
-      (row) => row.status === "failed",
+    // A provider is failing when its most recent run failed, not when it has
+    // ever failed. Rows arrive newest first, so the first row seen for a
+    // provider is its current state; later rows are that provider's history and
+    // say nothing about now. Counting every stored failure kept the bar lit for
+    // days after a quota reset or a fixed credential.
+    const latestRunByProvider = new Map<string, string>();
+    for (const row of assertRead("Measurement runs", runResult).data ?? []) {
+      if (row.provider === null) continue;
+      if (latestRunByProvider.has(row.provider)) continue;
+      latestRunByProvider.set(row.provider, row.status);
+    }
+    const failingProviders = [...latestRunByProvider.values()].filter(
+      (status) => status === "failed",
     ).length;
 
     // --- The queue ----------------------------------------------------------
@@ -285,7 +296,7 @@ export const getCommandCenterFacts = createServerFn({ method: "POST" })
       },
       changes: { fixesLive, pagesImproved },
       audit: { hasRun: audit.lastObservedAt !== null, pagesNeedingFixes },
-      health: { brokenConnections, failedRuns },
+      health: { brokenConnections, failingProviders },
       queueSources: [...changeSources, ...recommendationSources, ...auditSources, ...siteSources],
     };
   });
