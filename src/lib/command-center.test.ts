@@ -16,7 +16,7 @@ const facts: CommandCenterFacts = {
   ga4: { connectionStatement: "GA4 is connected.", windowDays: 28, snapshots: [] },
   changes: { fixesLive: 0, pagesImproved: 0 },
   audit: { hasRun: false, pagesNeedingFixes: 0 },
-  health: { brokenConnections: 0, failedRuns: 0 },
+  health: { brokenConnections: 0, failingProviders: 0 },
   queueSources: [],
 };
 
@@ -407,17 +407,36 @@ describe("top bar status", () => {
   });
 
   it("names a broken connection rather than staying green", () => {
-    const view = buildCommandCenter(withFacts({ health: { brokenConnections: 1, failedRuns: 0 } }));
+    const view = buildCommandCenter(
+      withFacts({ health: { brokenConnections: 1, failingProviders: 0 } }),
+    );
     expect(view.statusLine).toEqual({ text: "1 connection needs attention", tone: "danger" });
   });
 
-  it("names failed runs when every connection verifies", () => {
-    const view = buildCommandCenter(withFacts({ health: { brokenConnections: 0, failedRuns: 3 } }));
-    expect(view.statusLine).toEqual({ text: "3 runs failed", tone: "warning" });
+  it("names the providers that are failing now, not every failure ever stored", () => {
+    const view = buildCommandCenter(
+      withFacts({ health: { brokenConnections: 0, failingProviders: 3 } }),
+    );
+    expect(view.statusLine).toEqual({
+      text: "3 measurement providers are failing",
+      tone: "warning",
+    });
+  });
+
+  it("says provider in the singular when only one is failing", () => {
+    const view = buildCommandCenter(
+      withFacts({ health: { brokenConnections: 0, failingProviders: 1 } }),
+    );
+    expect(view.statusLine).toEqual({
+      text: "1 measurement provider is failing",
+      tone: "warning",
+    });
   });
 
   it("leads with the broken connection when both are wrong", () => {
-    const view = buildCommandCenter(withFacts({ health: { brokenConnections: 2, failedRuns: 5 } }));
+    const view = buildCommandCenter(
+      withFacts({ health: { brokenConnections: 2, failingProviders: 5 } }),
+    );
     expect(view.statusLine).toEqual({ text: "2 connections need attention", tone: "danger" });
   });
 
