@@ -24,7 +24,8 @@ export const proposeAuditFix = createServerFn({ method: "POST" })
   .handler(async ({ data, context }): Promise<AuditFixResult> => {
     const { assertOperator } = await import("./os-admin.server");
     const { requireTenantId } = await import("./tenant.server");
-    const { fixTargetForPageCheck, fixTargetForSiteCheck } = await import("./audit-fixes");
+    const { fixTargetForPage, fixTargetForSiteCheck, noFixReasonForPage } =
+      await import("./audit-fixes");
     const { fileGovernedProposal, prepareSiteFixProposal } = await import("./audit-fixes.server");
     await assertOperator(context.supabase, context.userId);
     const tenantId = await requireTenantId(context.supabase);
@@ -46,11 +47,18 @@ export const proposeAuditFix = createServerFn({ method: "POST" })
       });
     }
 
+    // Asked of the address, not only the check id. A page-scoped lane can only
+    // draft a page some governed file renders; refusing here says so in the
+    // resolver's own words instead of failing later with a uniqueness error
+    // that describes the wrong problem.
     const target = data.check
-      ? fixTargetForPageCheck(data.check)
+      ? fixTargetForPage(data.check, data.targetUrl ?? null)
       : { changeKind: "service.title_h1" as const };
     if (!target || !data.targetUrl) {
-      throw new Error("That finding has no governed fix yet, so it stays a manual fix.");
+      throw new Error(
+        (data.check ? noFixReasonForPage(data.check, data.targetUrl ?? null) : null) ??
+          "That finding has no governed fix yet, so it stays a manual fix.",
+      );
     }
 
     // A description defect is a snippet problem, not a heading problem. Sending

@@ -9,7 +9,7 @@
  * Pure, so the three category pages cannot drift from one another.
  */
 
-import { fixTargetForPageCheck } from "./audit-fixes";
+import { fixTargetForPage } from "./audit-fixes";
 import { hasGovernedFixPath } from "./finding-fix-target";
 import type { QueueItem } from "./suggestion-queue";
 
@@ -90,7 +90,7 @@ export function verbsFor(item: QueueItem): readonly SuggestionVerb[] {
       item.kind === "recommendation"
         ? hasGovernedFixPath(item.rule)
         : item.kind === "audit"
-          ? fixTargetForPageCheck(item.rule) !== null
+          ? fixTargetForPage(item.rule, item.targetUrl) !== null
           : false;
     if (drafts) verbs.push(DRAFT);
   }

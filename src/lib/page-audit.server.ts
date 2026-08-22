@@ -12,6 +12,7 @@ import {
 import {
   buildAuditInstruction,
   findDuplicateWording,
+  rateLimitDelayMs,
   selectLatestObservations,
   type PageAuditView,
   type PageMetadataObservation,
@@ -29,23 +30,55 @@ import { isRobotsPathAllowed } from "./robots-rules";
 
 const FIRECRAWL_URL = "https://api.firecrawl.dev/v2/scrape";
 
+/**
+ * How many times a rate-limited page is asked for again before it is recorded
+ * as unread.
+ *
+ * The audit renders every known page in one sequential pass, which is bursty
+ * enough to trip Firecrawl's rate limit part way through. A 429 is not a fact
+ * about the page — nothing was served — but the run stored it as the page's
+ * observation anyway, and `readPageAudit` drops errored observations, so a
+ * rate-limited page silently left the audit until the next run. On 2026-08-22
+ * that removed 18 of 30 pages, every service page among them, which starved the
+ * one fix lane that can complete.
+ *
+ * Retrying costs nothing extra: a 429 is not billed, and a page that succeeds
+ * on the second ask is a page the run was always going to pay to render.
+ */
+const RATE_LIMIT_RETRIES = 3;
+
+const sleep = (ms: number): Promise<void> =>
+  new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+
 /** Renders one live page and returns its raw HTML and text. Throws with the real reason. */
 async function scrapePage(
   url: string,
   key: string,
 ): Promise<{ html: string; markdown: string; finalUrl: string }> {
-  const response = await fetch(FIRECRAWL_URL, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      url,
-      formats: ["rawHtml", "markdown"],
-      onlyMainContent: false,
-      waitFor: 3000,
-      maxAge: 0,
-    }),
-  });
+  let response: Response;
+  for (let attempt = 0; ; attempt += 1) {
+    response = await fetch(FIRECRAWL_URL, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        url,
+        formats: ["rawHtml", "markdown"],
+        onlyMainContent: false,
+        waitFor: 3000,
+        maxAge: 0,
+      }),
+    });
+    if (response.status !== 429 || attempt >= RATE_LIMIT_RETRIES) break;
+    await sleep(rateLimitDelayMs(response.headers.get("retry-after"), attempt));
+  }
   const text = await response.text();
+  if (response.status === 429) {
+    throw new Error(
+      `Firecrawl rate limited this page ${RATE_LIMIT_RETRIES + 1} times, so nothing was read.`,
+    );
+  }
   if (!response.ok) throw new Error(`Firecrawl responded ${response.status}, so nothing was read.`);
   let parsed: {
     success?: boolean;

@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { buildCrawlDirectiveFix, fixTargetForSiteCheck } from "./audit-fixes";
+import {
+  buildCrawlDirectiveFix,
+  fixTargetForPage,
+  fixTargetForPageCheck,
+  fixTargetForSiteCheck,
+  noFixReasonForPage,
+} from "./audit-fixes";
 
 const SITEMAP = "Sitemap: https://example.com/sitemap.xml";
 
@@ -130,5 +136,50 @@ describe("the fixes that were already here", () => {
     });
     if ("error" in fix) throw new Error(fix.error);
     expect(fix.changes[0]?.after).toContain("Sitemap: https://example.com/sitemap.xml");
+  });
+});
+
+describe("which page a fix can actually be drafted for", () => {
+  const SERVICE = "https://trumoveinc.com/services/packing";
+  const POST = "https://trumoveinc.com/blog/true-cost-of-a-move";
+  const PLAIN = "https://trumoveinc.com/privacy";
+
+  it("offers the wording lane on a service page, whose wording is a data record", () => {
+    expect(fixTargetForPage("title_too_short", SERVICE)).toEqual({
+      changeKind: "service.title_h1",
+      filePath: "src/pages/services/servicesData.ts",
+    });
+  });
+
+  it("names the posts file for a blog post, not the service data file", () => {
+    // fixTargetForPageCheck maps every title check to the service lane. Asking
+    // the resolver is what stops a post being drafted against a file that does
+    // not contain it.
+    expect(fixTargetForPageCheck("title_too_long")?.changeKind).toBe("service.title_h1");
+    expect(fixTargetForPage("title_too_long", POST)).toEqual({
+      changeKind: "content.blog_post",
+      filePath: "src/pages/blog/posts.ts",
+    });
+  });
+
+  it("offers nothing on a page no governed file renders, rather than a button that dies", () => {
+    expect(fixTargetForPageCheck("title_too_short")).not.toBeNull();
+    expect(fixTargetForPage("title_too_short", PLAIN)).toBeNull();
+    expect(noFixReasonForPage("title_too_short", PLAIN)).toContain("No governed lane renders");
+  });
+
+  it("still offers the description lane there, because it edits the sitewide components", () => {
+    expect(fixTargetForPage("description_missing", PLAIN)?.changeKind).toBe("page.metadata");
+    expect(noFixReasonForPage("description_missing", PLAIN)).toBeNull();
+  });
+
+  it("refuses a finding that carries no address", () => {
+    expect(fixTargetForPage("title_missing", null)).toBeNull();
+    expect(noFixReasonForPage("title_missing", null)).toContain("names no page address");
+  });
+
+  it("says a check no lane owns is manual, whatever page it names", () => {
+    expect(fixTargetForPage("thin_content", SERVICE)).toBeNull();
+    expect(noFixReasonForPage("thin_content", SERVICE)).toContain("manual fix");
   });
 });

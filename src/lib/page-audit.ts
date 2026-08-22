@@ -109,3 +109,15 @@ export function buildAuditInstruction(input: {
   const pageCount = input.duplicates.reduce((total, group) => total + group.urls.length, 0);
   return `${pageCount} pages share wording with another page. Start with the ${label} "${worst.value}" used on ${worst.urls.length} pages, then propose a distinct title and H1 for each.`;
 }
+
+/**
+ * How long to wait before asking a rate-limited renderer again, preferring the
+ * server's own `Retry-After` over guessing, and capped so one hostile or
+ * mistaken header cannot stall a whole audit run.
+ */
+export function rateLimitDelayMs(retryAfter: string | null, attempt: number): number {
+  const MAX_MS = 30_000;
+  const seconds = retryAfter === null ? Number.NaN : Number(retryAfter);
+  if (Number.isFinite(seconds) && seconds >= 0) return Math.min(seconds * 1000, MAX_MS);
+  return Math.min(1000 * 2 ** attempt, MAX_MS);
+}
