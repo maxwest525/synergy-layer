@@ -113,6 +113,23 @@ const PAGE_SCOPED_KINDS: ReadonlySet<GovernedChangeKind> = new Set([
  *
  * It also returns the resolved kind and file rather than the map's default, so
  * a blog post's title fix reports the posts data file it will really write.
+ *
+ * Known residual gap, stated rather than implied. This answers "does a governed
+ * file render this page", which is a question about routing. It cannot answer
+ * "is this page's wording editable", which is a question about that file's
+ * contents: `prepareTitleH1Proposal` additionally requires the live title and
+ * the live H1 to each occur exactly once in the source. Two of the governed
+ * components fail that today, both checked against the client repository on
+ * 2026-08-22:
+ *   - ContactPage.tsx repeats "Contact a TruMove Specialist" in the SeoHead
+ *     title and again in a visually hidden <h1>.
+ *   - ServicesPage.tsx repeats "Moving Services | TruMove" in the SeoHead title
+ *     and again in a structured-data name field.
+ * Answering this here would mean reading every governed component out of the
+ * client repository on each render of the audit panel, so it stays where it is.
+ * The refusal names the file and the reason, so the operator is told what is
+ * wrong rather than that the page is at fault -- but it is still a button that
+ * errors, on those two pages.
  */
 export function fixTargetForPage(check: string, targetUrl: string | null): AuditFixTarget | null {
   const target = fixTargetForPageCheck(check);

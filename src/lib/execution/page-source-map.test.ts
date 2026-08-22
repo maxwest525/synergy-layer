@@ -34,6 +34,10 @@ describe("resolvePageSource", () => {
 
   it.each([
     ["/", "src/pages/Index.tsx"],
+    // A second address for the same component, declared by the router. It adds
+    // no governed file, but a finding that named it must not report no lane
+    // while the identical finding on / reports one.
+    ["/index", "src/pages/Index.tsx"],
     ["/contact", "src/pages/ContactPage.tsx"],
     ["/privacy", "src/pages/legal/PrivacyPage.tsx"],
     // The component name does not follow from the address, which is why the map

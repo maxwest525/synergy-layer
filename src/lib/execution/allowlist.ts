@@ -42,6 +42,11 @@ export const GOVERNED_FILE = "src/pages/services/servicesData.ts";
  */
 export const GOVERNED_PAGE_SOURCES = {
   "/": "src/pages/Index.tsx",
+  // The router declares /index as a second address for the same component. It
+  // adds no file to the governed set, but leaving it out would mean a finding
+  // that named it reported no lane while the identical finding on / reported
+  // one.
+  "/index": "src/pages/Index.tsx",
   "/why-trumove": "src/pages/WhyTruMovePage.tsx",
   "/saferweb": "src/pages/SafetyWebPage.tsx",
   "/carrier-approval": "src/pages/CarrierApprovalPage.tsx",
