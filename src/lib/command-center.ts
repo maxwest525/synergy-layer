@@ -30,10 +30,18 @@ const TOP_CARDS = 3;
 /**
  * What the audit actually does, on the button.
  *
- * Firecrawl is self-hosted here, so this is not a per-call vendor charge and is
- * not worded as one. It stays behind an explicit click regardless: reading a
- * hundred pages is a real action against the operator's own site and their own
- * server, and it should never happen because someone opened a page.
+ * The audit renders on the self-hosted Crawl4AI box when it is configured, so
+ * this is not worded as a per-call vendor charge. That was written here long
+ * before it was true: the comment claimed it while `page-audit.server.ts` sent
+ * every page to the metered Firecrawl API, and the claim is why nobody checked.
+ * If the self-hosted crawler is unconfigured or fails, the audit still falls
+ * back to Firecrawl and that page is billed -- the stored observation records
+ * which renderer actually read it, so the answer is in the data rather than in
+ * this comment.
+ *
+ * It stays behind an explicit click regardless: reading a hundred pages is a
+ * real action against the operator's own site and their own server, and it
+ * should never happen because someone opened a page.
  */
 const PAGE_AUDIT_COST = "reads up to 100 pages";
 

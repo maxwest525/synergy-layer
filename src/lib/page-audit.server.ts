@@ -26,6 +26,7 @@ import {
   sitemapLocations,
   type SiteFacts,
 } from "./site-checks";
+import { scrapePageWithVps, vpsScraperConfigured } from "./connectors/vps-scraper.server";
 import { isRobotsPathAllowed } from "./robots-rules";
 
 const FIRECRAWL_URL = "https://api.firecrawl.dev/v2/scrape";
@@ -51,6 +52,41 @@ const sleep = (ms: number): Promise<void> =>
   new Promise((resolve) => {
     setTimeout(resolve, ms);
   });
+
+/**
+ * Render one page, on the self-hosted crawler wherever it can do the job.
+ *
+ * Crawl4AI runs on Max's own box, so a page it renders costs nothing. Firecrawl
+ * is metered per page, and until now every one of the site's pages went through
+ * it on every audit — while `scrapeWithVps` sat in the tree with no caller and
+ * `surface-inventory.ts` recorded the gap in writing.
+ *
+ * The fallback is deliberately narrow and deliberately loud. It is taken only
+ * when the self-hosted crawler is not configured, or when it fails on a page,
+ * and the reason it failed is carried into the stored observation so a box that
+ * has quietly stopped working cannot masquerade as a working one while the
+ * metered account absorbs the cost again.
+ */
+async function renderPage(
+  url: string,
+  firecrawlKey: string | undefined,
+  selfHosted: boolean,
+): Promise<{ html: string; markdown: string; finalUrl: string; renderedBy: string }> {
+  if (selfHosted) {
+    try {
+      const rendered = await scrapePageWithVps(url);
+      return { ...rendered, renderedBy: "Crawl4AI" };
+    } catch (error) {
+      if (!firecrawlKey) throw error;
+      const reason = error instanceof Error ? error.message : String(error);
+      const rendered = await scrapePage(url, firecrawlKey);
+      return { ...rendered, renderedBy: `Firecrawl (self-hosted crawler failed: ${reason})` };
+    }
+  }
+  if (!firecrawlKey) throw new Error("No renderer is configured.");
+  const rendered = await scrapePage(url, firecrawlKey);
+  return { ...rendered, renderedBy: "Firecrawl" };
+}
 
 /** Renders one live page and returns its raw HTML and text. Throws with the real reason. */
 async function scrapePage(
@@ -408,9 +444,14 @@ export async function runPageAudit(
   const property = await selectedProperty(client, tenantId);
   if (!property) throw new Error("Select a Search Console property before auditing page wording.");
 
+  // The self-hosted crawler is preferred and the metered one is the fallback,
+  // never the other way round. Either alone is enough to run the audit.
+  const selfHosted = vpsScraperConfigured(process.env);
   const key = process.env["FIRECRAWL_API_KEY"];
-  if (!key) {
-    throw new Error("Pages cannot be read: FIRECRAWL_API_KEY is not configured.");
+  if (!key && !selfHosted) {
+    throw new Error(
+      "Pages cannot be read: configure VPS_SCRAPER_BASE_URL and VPS_SCRAPER_API_KEY for the self-hosted crawler, or FIRECRAWL_API_KEY for the metered one.",
+    );
   }
 
   const origin = originForProperty(property);
@@ -454,7 +495,7 @@ export async function runPageAudit(
       continue;
     }
     try {
-      const rendered = await scrapePage(url, key);
+      const rendered = await renderPage(url, key, selfHosted);
       const facts = extractPageFacts(rendered.html, rendered.markdown, rendered.finalUrl);
       rows.push({
         tenant_id: tenantId,
@@ -463,7 +504,7 @@ export async function runPageAudit(
         final_url: rendered.finalUrl,
         title: facts.title,
         h1: facts.h1s[0] ?? null,
-        rendered_by: "Firecrawl",
+        rendered_by: rendered.renderedBy,
         details: JSON.parse(
           JSON.stringify(facts),
         ) as Database["public"]["Tables"]["page_metadata_observations"]["Row"]["details"],
