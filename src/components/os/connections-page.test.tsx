@@ -98,7 +98,9 @@ describe("the pill never reassures over a body that disagrees", () => {
 
   it("says how far short it is when only some connections reach you", () => {
     show([facts("google_search_console", { storedRows: 900, findings: 14 })]);
-    expect(screen.getByText("1 of 10 connections reach you")).toBeInTheDocument();
+    expect(
+      screen.getByText(`1 of ${CONNECTION_OUTPUTS.length} connections reach you`),
+    ).toBeInTheDocument();
   });
 });
 

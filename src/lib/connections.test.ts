@@ -113,14 +113,20 @@ describe("who is credited with a finding", () => {
     expect(row(view, "google_search_console").reason).toMatch(/alongside Firecrawl/);
   });
 
-  it("gives the self-hosted crawler no table and no findings of another's", () => {
-    // It shares neither. The page audit only ever calls the hosted endpoint, so
-    // not one row in `page_metadata_observations` can have come from it.
+  it("lets the self-hosted crawler claim its own page reads and only its own", () => {
+    // This asserted `table: null` while the page audit hardcoded the vendor's
+    // endpoint, so no row could have come from a self-hosted deployment.
+    // `firecrawlEndpoint()` now prefers it, and `rendered_by` records which
+    // renderer read each page, so the honest answer is a scoped share rather
+    // than no table at all.
     const output = CONNECTION_OUTPUTS.find((entry) => entry.key === "selfhosted_firecrawl");
-    expect(output?.table).toBeNull();
-    expect(output?.findingSources).toEqual([]);
-    const view = buildConnections([facts("selfhosted_firecrawl")]);
-    expect(row(view, "selfhosted_firecrawl").reason).toMatch(/nothing in this system calls it/i);
+    expect(output?.table).toBe("page_metadata_observations");
+    expect(output?.scope?.column).toBe("rendered_by");
+    expect(output?.scope?.prefix).toBe("Firecrawl (self-hosted)");
+
+    // And the vendor's row must not swallow it back.
+    const vendor = CONNECTION_OUTPUTS.find((entry) => entry.key === "firecrawl");
+    expect(vendor?.scope?.notPrefix).toBe("Firecrawl (self-hosted)");
   });
 });
 
@@ -183,7 +189,10 @@ describe("the pill never reassures over a body that disagrees", () => {
     const view = buildConnections([
       facts("google_search_console", { storedRows: 900, findings: 14 }),
     ]);
-    expect(view.status.text).toBe("1 of 10 connections reach you");
+    // Derived, not hardcoded: the count is the size of the registry, and a
+    // literal here breaks every time a connection is added, which teaches the
+    // next person to re-baseline the number instead of reading the claim.
+    expect(view.status.text).toBe(`1 of ${CONNECTION_OUTPUTS.length} connections reach you`);
   });
 
   it("goes green only with a count beside it, never as a bare all-clear", () => {
@@ -192,7 +201,7 @@ describe("the pill never reassures over a body that disagrees", () => {
       facts("google_analytics_4", { storedRows: 90, findings: 6 }),
     ]);
     expect(view.status.tone).toBe("positive");
-    expect(view.status.text).toBe("2 of 10 connections reach you");
+    expect(view.status.text).toBe(`2 of ${CONNECTION_OUTPUTS.length} connections reach you`);
   });
 
   it("has no state that claims the whole estate is wired", () => {
@@ -246,13 +255,42 @@ describe("the tiles narrow the same set each time", () => {
     expect(at("Collecting in silence")).toBe("1");
   });
 
-  it("counts one store once, however many connections point at it", () => {
+  it("never counts one stored row for two connections", () => {
     // Both Firecrawls once shared a table, so a single set of page reads
-    // rendered as two collecting connections and inflated every tile.
-    const tables = CONNECTION_OUTPUTS.map((output) => output.table).filter(
-      (table): table is string => table !== null,
-    );
-    expect(new Set(tables).size).toBe(tables.length);
+    // rendered as two collecting connections and inflated every tile. The old
+    // guard here was "no two connections may name the same table", which held
+    // only while one renderer existed. Three write to
+    // `page_metadata_observations` now, so the invariant that actually matters
+    // is the one being restated: a shared table is allowed exactly when every
+    // sharer claims a disjoint slice of it.
+    const byTable = new Map<string, typeof CONNECTION_OUTPUTS>();
+    for (const output of CONNECTION_OUTPUTS) {
+      if (output.table === null) continue;
+      byTable.set(output.table, [...(byTable.get(output.table) ?? []), output]);
+    }
+
+    for (const [table, sharers] of byTable) {
+      if (sharers.length === 1) continue;
+
+      for (const sharer of sharers) {
+        expect(sharer.scope, `${sharer.key} shares ${table} without a scope`).toBeTruthy();
+      }
+
+      // Disjoint means no sharer's prefix is a prefix of another's, unless the
+      // broader one explicitly excludes it. "Firecrawl" would otherwise swallow
+      // every "Firecrawl (self-hosted)" row.
+      for (const one of sharers) {
+        for (const other of sharers) {
+          if (one === other) continue;
+          const overlaps = other.scope!.prefix.startsWith(one.scope!.prefix);
+          if (!overlaps) continue;
+          expect(
+            one.scope!.notPrefix,
+            `${one.key} would also count ${other.key}'s rows in ${table}`,
+          ).toBe(other.scope!.prefix);
+        }
+      }
+    }
   });
 
   it("treats a connection with no facts at all as not configured", () => {

@@ -5,6 +5,7 @@ import {
   CONNECTION_OUTPUTS,
   FINDING_SOURCES,
   type ConnectionFacts,
+  type ConnectionOutput,
   type SuccessFilter,
 } from "./connections";
 
@@ -52,16 +53,29 @@ export const getConnectionFacts = createServerFn({ method: "POST" })
       return checked.count;
     }
 
-    function scoped(table: string) {
-      return db
+    function scoped(table: string, scope?: ConnectionOutput["scope"]) {
+      const query = db
         .from(table as "search_console_snapshots")
         .select("id", { count: "exact", head: true })
         .eq("tenant_id", tenantId);
+      if (!scope) return query;
+      // Three renderers write to `page_metadata_observations`. Without this each
+      // would be counted the others' rows, which is the misreport this scope
+      // exists to prevent.
+      const narrowedToOwner = query.like(scope.column, `${scope.prefix}%`);
+      return scope.notPrefix === undefined
+        ? narrowedToOwner
+        : narrowedToOwner.not(scope.column, "like", `${scope.notPrefix}%`);
     }
 
     /** The same count, narrowed to the rows that record a success. */
-    function narrowed(table: string, filter: SuccessFilter, matching: boolean) {
-      const query = scoped(table);
+    function narrowed(
+      table: string,
+      filter: SuccessFilter,
+      matching: boolean,
+      scope?: ConnectionOutput["scope"],
+    ) {
+      const query = scoped(table, scope);
       if (filter.kind === "is-null") {
         return matching ? query.is(filter.column, null) : query.not(filter.column, "is", null);
       }
@@ -82,12 +96,15 @@ export const getConnectionFacts = createServerFn({ method: "POST" })
             // A table with no failure marker stores only successes, so one count
             // answers both questions and the second read is not worth making.
             if (output.succeeded === null) {
-              const total = exactly(`${output.table} rows`, await scoped(output.table));
+              const total = exactly(
+                `${output.table} rows`,
+                await scoped(output.table, output.scope),
+              );
               return [output.key, { stored: total, failed: null }] as const;
             }
             const [stored, failed] = await Promise.all([
-              narrowed(output.table, output.succeeded, true),
-              narrowed(output.table, output.succeeded, false),
+              narrowed(output.table, output.succeeded, true, output.scope),
+              narrowed(output.table, output.succeeded, false, output.scope),
             ]);
             return [
               output.key,

@@ -64,6 +64,23 @@ export type ConnectionOutput = {
    */
   readonly succeeded: SuccessFilter | null;
   /**
+   * Which rows in a shared table belong to this connection, or null when it
+   * owns the table outright.
+   *
+   * `page_metadata_observations` is written by three renderers now: the cloud
+   * Firecrawl, the self-hosted one, and Crawl4AI. Counting the whole table for
+   * each of them would credit every connection with the others' work, which is
+   * precisely what the old `table: null` was avoiding. `rendered_by` records
+   * which renderer read each page and its name is the first token, so a prefix
+   * match claims exactly the right rows.
+   */
+  readonly scope?: {
+    readonly column: string;
+    readonly prefix: string;
+    /** Excluded prefix, for a name that is also the start of another's. */
+    readonly notPrefix?: string;
+  } | null;
+  /**
    * The `recommendations.source_module` values whose rules actually read this
    * connection's table.
    *
@@ -107,6 +124,13 @@ export const CONNECTION_OUTPUTS: readonly ConnectionOutput[] = [
     // A page that could not be read is stored with the error on it. Those rows
     // are attempts, not evidence.
     succeeded: { column: "error", kind: "is-null" },
+    // The vendor's deployment only. "Firecrawl (self-hosted)" starts with the
+    // same word, so it is excluded rather than counted here.
+    scope: {
+      column: "rendered_by",
+      prefix: "Firecrawl",
+      notPrefix: "Firecrawl (self-hosted)",
+    },
     // Its page reads are consumed by the Search Console rules, not by
     // `seo-validation`, which never opens this table.
     findingSources: ["search-console"],
@@ -115,15 +139,28 @@ export const CONNECTION_OUTPUTS: readonly ConnectionOutput[] = [
   {
     key: "selfhosted_firecrawl",
     label: "Firecrawl, self hosted",
-    // Deliberately null. The page audit hardcodes the hosted endpoint, so
-    // nothing in this repository has ever sent a request to a self-hosted
-    // deployment, and none of the rows in `page_metadata_observations` can have
-    // come from one. Pointing this at that table would credit it with another
-    // connector's work.
-    table: null,
-    succeeded: null,
-    findingSources: [],
+    // This was deliberately null while the page audit hardcoded the vendor's
+    // endpoint: no row could have come from a self-hosted deployment, and
+    // pointing it at the table would have credited it with another connector's
+    // work. `firecrawlEndpoint()` now prefers the self-hosted deployment, and
+    // `rendered_by` says which one read each page, so it can claim its own rows
+    // and only its own.
+    table: "page_metadata_observations",
+    succeeded: { column: "error", kind: "is-null" },
+    scope: { column: "rendered_by", prefix: "Firecrawl (self-hosted)" },
+    findingSources: ["search-console"],
     promise: "The same page reads, on your own machine instead of the vendor's.",
+  },
+  {
+    key: "vps_scraper",
+    label: "Crawl4AI",
+    // Absent from this registry entirely until now, so the page audit's
+    // preferred renderer did not appear on the connections screen at all.
+    table: "page_metadata_observations",
+    succeeded: { column: "error", kind: "is-null" },
+    scope: { column: "rendered_by", prefix: "Crawl4AI" },
+    findingSources: ["search-console"],
+    promise: "Every page read on your own box, at no cost per page.",
   },
   {
     key: "dataforseo",
