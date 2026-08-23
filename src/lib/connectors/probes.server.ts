@@ -1,4 +1,5 @@
 import { GOVERNED_REPO } from "../execution/allowlist";
+import { GITHUB_USER_AGENT } from "../execution/execute.server";
 import {
   CONNECTOR_CATALOG,
   describeConnectorReadiness,
@@ -109,6 +110,12 @@ function configuredRequest(
           Accept: "application/vnd.github+json",
           Authorization: `Bearer ${env["GITHUB_EXECUTOR_TOKEN"]}`,
           "X-GitHub-Api-Version": "2022-11-28",
+          // Without this the deployed worker runtime sends no User-Agent and
+          // GitHub answers 403, which this probe then reported as a failing
+          // credential. The executor itself has sent one since the same problem
+          // was found there; the probe was left behind, so a working token has
+          // been shown as failing on the connector screen ever since.
+          "User-Agent": GITHUB_USER_AGENT,
         },
       };
     case "serpapi":
