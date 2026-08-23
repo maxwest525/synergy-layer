@@ -87,9 +87,12 @@ async function renderPage(
       if (!firecrawl) throw error;
       const reason = error instanceof Error ? error.message : String(error);
       const rendered = await scrapePage(url, firecrawl);
+      // The renderer's name stays the first token and the reason follows it, so
+      // a connection can claim exactly the rows it rendered by matching a
+      // prefix. Three connectors write to this one table now.
       return {
         ...rendered,
-        renderedBy: `${firecrawlName(firecrawl)} (self-hosted crawler failed: ${reason})`,
+        renderedBy: `${firecrawlName(firecrawl)} after Crawl4AI failed: ${reason}`,
       };
     }
   }
