@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { firecrawlEndpoint } from "./firecrawl-endpoint";
 import { requireTenantId } from "./tenant.server";
 
 import type { Database } from "@/integrations/supabase/types";
@@ -18,7 +19,6 @@ export type WebResearchResult = {
 type PerplexityAnswer = { answer: string; citations: string[] };
 
 const PERPLEXITY_URL = "https://api.perplexity.ai/chat/completions";
-const FIRECRAWL_URL = "https://api.firecrawl.dev/v2/scrape";
 const MAX_SCRAPES = 3;
 
 function requireKey(name: "PERPLEXITY_API_KEY" | "FIRECRAWL_API_KEY"): string {
@@ -72,10 +72,15 @@ async function searchPerplexity(objective: string): Promise<PerplexityAnswer> {
 export async function scrapeFirecrawl(
   url: string,
 ): Promise<{ title: string; markdown: string } | null> {
-  const response = await fetch(FIRECRAWL_URL, {
+  // Self-hosted Firecrawl when it is configured, the metered cloud only as a
+  // fallback. Research reads scrape up to three sources per question, so this
+  // was a steady per-call charge against an API the operator also runs himself.
+  const endpoint = firecrawlEndpoint(process.env);
+  if (!endpoint) throw new Error("FIRECRAWL_API_KEY is not configured for this project.");
+  const response = await fetch(endpoint.url, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${requireKey("FIRECRAWL_API_KEY")}`,
+      Authorization: `Bearer ${endpoint.key}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({ url, formats: ["markdown"], onlyMainContent: true }),

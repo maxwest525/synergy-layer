@@ -8,6 +8,7 @@ import type {
   GithubApi,
   RenderedVerifier,
 } from "./execute";
+import { firecrawlEndpoint } from "../firecrawl-endpoint";
 import { GithubStatusError, readGithubResponseSignals } from "./github-error";
 import {
   extractDocumentTitle,
@@ -262,8 +263,6 @@ export function createGithubApi(): GithubApi | null {
   };
 }
 
-const FIRECRAWL_URL = "https://api.firecrawl.dev/v2/scrape";
-
 /**
  * The target site renders its title and H1 in the browser, so the origin's raw
  * HTML is only an application shell. Proof therefore needs a renderer.
@@ -281,16 +280,19 @@ export function buildRenderedScrapeRequest(url: string) {
 }
 
 export function createRenderedVerifier(): RenderedVerifier | null {
-  const key = process.env["FIRECRAWL_API_KEY"];
-  if (!key) return null;
+  // Self-hosted first. Proving a change went live renders the page again, so
+  // this ran against the metered cloud on every publish while the operator's
+  // own Firecrawl sat unused.
+  const endpoint = firecrawlEndpoint(process.env);
+  if (!endpoint) return null;
 
   return {
-    name: "Firecrawl",
+    name: endpoint.selfHosted ? "Firecrawl (self-hosted)" : "Firecrawl",
     async render(url) {
-      const response = await boundedFetch(FIRECRAWL_URL, {
+      const response = await boundedFetch(endpoint.url, {
         method: "POST",
         label: "Firecrawl",
-        headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+        headers: { Authorization: `Bearer ${endpoint.key}`, "Content-Type": "application/json" },
         body: JSON.stringify(buildRenderedScrapeRequest(url)),
       });
       if (response.status < 200 || response.status >= 300) {

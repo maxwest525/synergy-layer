@@ -27,9 +27,8 @@ import {
   type SiteFacts,
 } from "./site-checks";
 import { scrapePageWithVps, vpsScraperConfigured } from "./connectors/vps-scraper.server";
+import { firecrawlEndpoint, type FirecrawlEndpoint } from "./firecrawl-endpoint";
 import { isRobotsPathAllowed } from "./robots-rules";
-
-const FIRECRAWL_URL = "https://api.firecrawl.dev/v2/scrape";
 
 /**
  * How many times a rate-limited page is asked for again before it is recorded
@@ -54,6 +53,14 @@ const sleep = (ms: number): Promise<void> =>
   });
 
 /**
+ * Which renderer read a page, recorded on the observation so the operator can
+ * tell a free read from a billed one without inspecting an invoice.
+ */
+function firecrawlName(endpoint: FirecrawlEndpoint): string {
+  return endpoint.selfHosted ? "Firecrawl (self-hosted)" : "Firecrawl";
+}
+
+/**
  * Render one page, on the self-hosted crawler wherever it can do the job.
  *
  * Crawl4AI runs on Max's own box, so a page it renders costs nothing. Firecrawl
@@ -69,7 +76,7 @@ const sleep = (ms: number): Promise<void> =>
  */
 async function renderPage(
   url: string,
-  firecrawlKey: string | undefined,
+  firecrawl: FirecrawlEndpoint | null,
   selfHosted: boolean,
 ): Promise<{ html: string; markdown: string; finalUrl: string; renderedBy: string }> {
   if (selfHosted) {
@@ -77,27 +84,30 @@ async function renderPage(
       const rendered = await scrapePageWithVps(url);
       return { ...rendered, renderedBy: "Crawl4AI" };
     } catch (error) {
-      if (!firecrawlKey) throw error;
+      if (!firecrawl) throw error;
       const reason = error instanceof Error ? error.message : String(error);
-      const rendered = await scrapePage(url, firecrawlKey);
-      return { ...rendered, renderedBy: `Firecrawl (self-hosted crawler failed: ${reason})` };
+      const rendered = await scrapePage(url, firecrawl);
+      return {
+        ...rendered,
+        renderedBy: `${firecrawlName(firecrawl)} (self-hosted crawler failed: ${reason})`,
+      };
     }
   }
-  if (!firecrawlKey) throw new Error("No renderer is configured.");
-  const rendered = await scrapePage(url, firecrawlKey);
-  return { ...rendered, renderedBy: "Firecrawl" };
+  if (!firecrawl) throw new Error("No renderer is configured.");
+  const rendered = await scrapePage(url, firecrawl);
+  return { ...rendered, renderedBy: firecrawlName(firecrawl) };
 }
 
 /** Renders one live page and returns its raw HTML and text. Throws with the real reason. */
 async function scrapePage(
   url: string,
-  key: string,
+  endpoint: FirecrawlEndpoint,
 ): Promise<{ html: string; markdown: string; finalUrl: string }> {
   let response: Response;
   for (let attempt = 0; ; attempt += 1) {
-    response = await fetch(FIRECRAWL_URL, {
+    response = await fetch(endpoint.url, {
       method: "POST",
-      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      headers: { Authorization: `Bearer ${endpoint.key}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         url,
         formats: ["rawHtml", "markdown"],
@@ -447,8 +457,8 @@ export async function runPageAudit(
   // The self-hosted crawler is preferred and the metered one is the fallback,
   // never the other way round. Either alone is enough to run the audit.
   const selfHosted = vpsScraperConfigured(process.env);
-  const key = process.env["FIRECRAWL_API_KEY"];
-  if (!key && !selfHosted) {
+  const firecrawl = firecrawlEndpoint(process.env);
+  if (!firecrawl && !selfHosted) {
     throw new Error(
       "Pages cannot be read: configure VPS_SCRAPER_BASE_URL and VPS_SCRAPER_API_KEY for the self-hosted crawler, or FIRECRAWL_API_KEY for the metered one.",
     );
@@ -495,7 +505,7 @@ export async function runPageAudit(
       continue;
     }
     try {
-      const rendered = await renderPage(url, key, selfHosted);
+      const rendered = await renderPage(url, firecrawl, selfHosted);
       const facts = extractPageFacts(rendered.html, rendered.markdown, rendered.finalUrl);
       rows.push({
         tenant_id: tenantId,

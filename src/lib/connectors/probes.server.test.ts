@@ -265,4 +265,21 @@ describe("connector probes", () => {
     );
     expect(JSON.stringify(result)).not.toContain("temporary");
   });
+
+  it("sends a User-Agent to GitHub, because without one it answers 403", () => {
+    // The deployed worker runtime supplies no User-Agent of its own and GitHub
+    // rejects the request. The executor has sent one since that was found there;
+    // this probe did not, so a working token was reported as a failing
+    // credential on the connector screen. Asserted here so it cannot regress
+    // into the same misdiagnosis.
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response("{}", { status: 200 }));
+
+    return probeConnector("github_executor", {
+      env: { GITHUB_EXECUTOR_TOKEN: "token" },
+      fetcher,
+    }).then(() => {
+      const headers = (fetcher.mock.calls[0]?.[1]?.headers ?? {}) as Record<string, string>;
+      expect(headers["User-Agent"]).toBeTruthy();
+    });
+  });
 });

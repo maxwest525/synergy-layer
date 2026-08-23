@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database } from "@/integrations/supabase/types";
+import { firecrawlEndpoint, type FirecrawlEndpoint } from "../firecrawl-endpoint";
 import type { CompetitorProfile } from "./competitor-intelligence.server";
 
 type Client = SupabaseClient<Database>;
@@ -12,7 +13,6 @@ type Client = SupabaseClient<Database>;
  * copy, and never asserts why a page ranks. Recommendations are produced later,
  * by the reasoning layer, from these observations.
  */
-const FIRECRAWL_URL = "https://api.firecrawl.dev/v2/scrape";
 
 export type PageObservation = {
   domain: string;
@@ -61,19 +61,22 @@ const TOPIC_TERMS: { label: string; pattern: RegExp }[] = [
   { label: "commercial / office moving", pattern: /office mov|commercial mov/i },
 ];
 
-function requireFirecrawlKey(): string {
-  const value = process.env["FIRECRAWL_API_KEY"];
-  if (!value) throw new Error("FIRECRAWL_API_KEY is not configured for this project.");
-  return value;
+function requireFirecrawl(): FirecrawlEndpoint {
+  const endpoint = firecrawlEndpoint(process.env);
+  if (!endpoint) throw new Error("FIRECRAWL_API_KEY is not configured for this project.");
+  return endpoint;
 }
 
 type ScrapeResult = { markdown: string; html: string; title: string };
 
 async function scrapePage(url: string): Promise<ScrapeResult | null> {
-  const response = await fetch(FIRECRAWL_URL, {
+  // Competitor pages are scraped in batches, so this was one of the heavier
+  // metered callers. Self-hosted first, cloud only as a fallback.
+  const endpoint = requireFirecrawl();
+  const response = await fetch(endpoint.url, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${requireFirecrawlKey()}`,
+      Authorization: `Bearer ${endpoint.key}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({ url, formats: ["markdown", "rawHtml"], onlyMainContent: false }),
