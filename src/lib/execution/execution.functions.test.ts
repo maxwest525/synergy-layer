@@ -63,3 +63,33 @@ describe("buildReadiness source-file fact", () => {
     expect(found.detail).toContain("no file");
   });
 });
+
+describe("buildReadiness rendered-page fact", () => {
+  it("names the self-hosted deployment when that is what would answer", () => {
+    const found = fact(
+      buildReadiness({ ...base, rendererSelfHosted: true }),
+      "Rendered-page verification",
+    );
+    expect(found.state).toBe("configured");
+    expect(found.detail).toContain("self-hosted");
+    expect(found.detail).not.toContain("paid");
+  });
+
+  it("says the metered cloud would answer when no self-hosted deployment is configured", () => {
+    const found = fact(
+      buildReadiness({ ...base, rendererSelfHosted: false }),
+      "Rendered-page verification",
+    );
+    expect(found.detail).toContain("metered");
+  });
+
+  it("blocks only when no deployment at all is configured", () => {
+    const found = fact(
+      buildReadiness({ ...base, rendererCredentialPresent: false }),
+      "Rendered-page verification",
+    );
+    expect(found.state).toBe("blocked");
+    expect(found.detail).toContain("self-hosted or cloud");
+  });
+});
+
