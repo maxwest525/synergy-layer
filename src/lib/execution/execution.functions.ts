@@ -158,9 +158,12 @@ export function buildReadiness(input: {
       label: "Rendered-page verification",
       state: input.rendererCredentialPresent ? "configured" : "blocked",
       detail: input.rendererCredentialPresent
-        ? `A Firecrawl credential is configured and unproven. No paid render call has been authorized, so proof from ${GOVERNED_ORIGIN} has not been attempted.`
-        : "No Firecrawl credential is configured. Raw HTML from this site is an application shell, so a change could not be proven live.",
+        ? input.rendererSelfHosted
+          ? `The self-hosted Firecrawl is configured and unproven. No render call has been made, so proof from ${GOVERNED_ORIGIN} has not been attempted.`
+          : `The metered Firecrawl cloud is configured and unproven. No paid render call has been authorized, so proof from ${GOVERNED_ORIGIN} has not been attempted.`
+        : "No Firecrawl deployment is configured, self-hosted or cloud. Raw HTML from this site is an application shell, so a change could not be proven live.",
     },
+
     {
       label: "Allowlisted public page",
       state: originOk ? "stored" : "blocked",
