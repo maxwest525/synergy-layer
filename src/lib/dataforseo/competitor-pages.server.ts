@@ -64,7 +64,9 @@ const TOPIC_TERMS: { label: string; pattern: RegExp }[] = [
 function requireFirecrawl(): FirecrawlEndpoint {
   const endpoint = firecrawlEndpoint(process.env);
   if (!endpoint)
-    throw new Error("No Firecrawl deployment is configured for this project, self-hosted or cloud.");
+    throw new Error(
+      "No Firecrawl deployment is configured for this project, self-hosted or cloud.",
+    );
   return endpoint;
 }
 

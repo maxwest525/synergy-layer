@@ -92,4 +92,3 @@ describe("buildReadiness rendered-page fact", () => {
     expect(found.detail).toContain("self-hosted or cloud");
   });
 });
-

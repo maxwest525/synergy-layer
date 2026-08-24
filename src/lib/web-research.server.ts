@@ -77,7 +77,9 @@ export async function scrapeFirecrawl(
   // was a steady per-call charge against an API the operator also runs himself.
   const endpoint = firecrawlEndpoint(process.env);
   if (!endpoint)
-    throw new Error("No Firecrawl deployment is configured for this project, self-hosted or cloud.");
+    throw new Error(
+      "No Firecrawl deployment is configured for this project, self-hosted or cloud.",
+    );
   const response = await fetch(endpoint.url, {
     method: "POST",
     headers: {
