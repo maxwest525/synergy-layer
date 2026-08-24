@@ -39,6 +39,13 @@ const noSafeProbe = new Set<ConnectorKey>([
   "selfhosted_firecrawl",
 ]);
 const MAX_SCHEMA_PROBE_BODY_BYTES = 32 * 1024;
+// DataForSEO's /v3/appendix/user_data returns rates, limits, statistics, money
+// and the per-endpoint price list for their entire catalogue. That body is much
+// larger than the default cap, so a valid HTTP 200 read as `schema_error` and
+// the connector reported "Degraded" while working normally. The cap exists to
+// stop a probe buffering an unbounded response, so it is raised for this one
+// endpoint rather than removed.
+const DATAFORSEO_SCHEMA_PROBE_BODY_BYTES = 1024 * 1024;
 
 type DataForSeoEnvelope = {
   status_code: number;
@@ -171,10 +178,13 @@ function redactedEndpoint(rawUrl: string): string {
   return `${url.origin}${url.pathname}`;
 }
 
-async function readBoundedResponseBody(response: Response): Promise<string | null> {
+async function readBoundedResponseBody(
+  response: Response,
+  limitBytes: number = MAX_SCHEMA_PROBE_BODY_BYTES,
+): Promise<string | null> {
   const body = response.body;
   const declaredLength = response.headers.get("content-length");
-  if (declaredLength && Number(declaredLength) > MAX_SCHEMA_PROBE_BODY_BYTES) {
+  if (declaredLength && Number(declaredLength) > limitBytes) {
     try {
       await body?.cancel();
     } catch {
@@ -193,7 +203,7 @@ async function readBoundedResponseBody(response: Response): Promise<string | nul
       const { done, value } = await reader.read();
       if (done) break;
       totalBytes += value.byteLength;
-      if (totalBytes > MAX_SCHEMA_PROBE_BODY_BYTES) {
+      if (totalBytes > limitBytes) {
         try {
           await reader.cancel();
         } catch {
@@ -247,7 +257,7 @@ function isDataForSeoSuccessStatus(statusCode: unknown): statusCode is number {
 
 async function hasDataForSeoSuccessEnvelope(response: Response): Promise<boolean> {
   try {
-    const body = await readBoundedResponseBody(response);
+    const body = await readBoundedResponseBody(response, DATAFORSEO_SCHEMA_PROBE_BODY_BYTES);
     return body !== null && isDataForSeoSuccessEnvelope(JSON.parse(body));
   } catch {
     return false;
