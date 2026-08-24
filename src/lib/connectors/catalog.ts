@@ -218,7 +218,14 @@ export const CONNECTOR_CATALOG = [
     key: "umami",
     label: "Umami analytics",
     provider: "Self-hosted",
-    credentialStrategies: [["UMAMI_API_TOKEN"]],
+    // Mirrors the three auth paths umamiAuthHeaders() actually accepts. This
+    // previously read UMAMI_API_TOKEN, a name no other file in the repo uses, so
+    // a working Umami integration reported itself as missing a credential.
+    credentialStrategies: [
+      ["UMAMI_BEARER_TOKEN"],
+      ["UMAMI_API_KEY"],
+      ["UMAMI_USERNAME", "UMAMI_PASSWORD"],
+    ],
     configRequirements: ["UMAMI_BASE_URL"],
     safeConfig: { baseUrl: "UMAMI_BASE_URL" },
   }),

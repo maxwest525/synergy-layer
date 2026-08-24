@@ -91,4 +91,22 @@ describe("connector catalog", () => {
     expect(gemini.state).toBe("configured");
     expect(gemini.safeConfig).toEqual({ model: "gemini-3.6-flash" });
   });
+
+  // Regression: the catalog asked for UMAMI_API_TOKEN, a name no other file in
+  // the repo reads, while umamiAuthHeaders() authenticates with
+  // UMAMI_BEARER_TOKEN / UMAMI_API_KEY / username+password. A fully working
+  // Umami therefore reported "missing UMAMI_API_TOKEN" on the systems page.
+  it("accepts every Umami credential the client actually authenticates with", () => {
+    const umami = (env: Record<string, string>) =>
+      describeConnectorReadiness(env).find((item) => item.key === "umami")!;
+
+    const base = { UMAMI_BASE_URL: "https://umami.example" };
+    expect(umami({ ...base, UMAMI_BEARER_TOKEN: "t" }).state).toBe("configured");
+    expect(umami({ ...base, UMAMI_API_KEY: "k" }).state).toBe("configured");
+    expect(umami({ ...base, UMAMI_USERNAME: "u", UMAMI_PASSWORD: "p" }).state).toBe("configured");
+
+    // No credential at all is still missing, and the base URL alone is not enough.
+    expect(umami(base).state).toBe("missing");
+    expect(umami({ UMAMI_BEARER_TOKEN: "t" }).state).toBe("missing");
+  });
 });

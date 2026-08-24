@@ -146,11 +146,24 @@ function configuredRequest(
     case "umami":
       return {
         url: `${env["UMAMI_BASE_URL"]!.replace(/\/+$/, "")}/api/heartbeat`,
-        headers: { Authorization: `Bearer ${env["UMAMI_API_TOKEN"]}` },
+        headers: umamiProbeAuth(env),
       };
     default:
       return null;
   }
+}
+
+/**
+ * The same precedence umamiAuthHeaders() uses at call time: bearer, then API
+ * key, then basic. The probe must authenticate the way the client does, or a
+ * working instance is reported as failing.
+ */
+function umamiProbeAuth(env: Record<string, string | undefined>): Record<string, string> {
+  const bearer = env["UMAMI_BEARER_TOKEN"];
+  if (bearer) return { Authorization: `Bearer ${bearer}` };
+  const apiKey = env["UMAMI_API_KEY"];
+  if (apiKey) return { "x-umami-api-key": apiKey };
+  return { Authorization: basic(env["UMAMI_USERNAME"], env["UMAMI_PASSWORD"]) };
 }
 
 function redactedEndpoint(rawUrl: string): string {
