@@ -92,7 +92,9 @@ describe("connector probes", () => {
 
   it("cancels an oversized streamed DataForSEO body without exposing it", async () => {
     const cancel = vi.fn();
-    const oversizedBody = `provider-body-${"x".repeat(32 * 1024)}`;
+    // Sized against the DataForSEO budget (1 MB), not the 32 KB default: the cap
+    // was raised for this endpoint, not removed, and it must still cancel.
+    const oversizedBody = `provider-body-${"x".repeat(1024 * 1024)}`;
     const response = new Response(
       new ReadableStream<Uint8Array>({
         start(controller) {
@@ -116,7 +118,7 @@ describe("connector probes", () => {
     const cancel = vi.fn();
     const response = new Response(new ReadableStream<Uint8Array>({ cancel }), {
       status: 200,
-      headers: { "content-length": "32769" },
+      headers: { "content-length": "1048577" },
     });
     const result = await probeConnector("dataforseo", {
       env: dataForSeoEnv,
@@ -281,5 +283,50 @@ describe("connector probes", () => {
       const headers = (fetcher.mock.calls[0]?.[1]?.headers ?? {}) as Record<string, string>;
       expect(headers["User-Agent"]).toBeTruthy();
     });
+  });
+
+  // Regression: /v3/appendix/user_data returns DataForSEO's rates, limits,
+  // statistics, money and per-endpoint price list for their whole catalogue.
+  // That body is far larger than the 32 KB schema-probe cap, so a perfectly
+  // valid HTTP 200 was being recorded as `schema_error` and the connector read
+  // "Degraded" on /capabilities/systems while it was working normally.
+  it("accepts a valid DataForSEO envelope that is larger than the small-body cap", async () => {
+    const bigButValid = {
+      version: "0.1.20260101",
+      status_code: 20000,
+      status_message: "Ok.",
+      time: "0.0123 sec.",
+      cost: 0,
+      tasks_count: 1,
+      tasks_error: 0,
+      tasks: [
+        {
+          id: "task-1",
+          status_code: 20000,
+          status_message: "Ok.",
+          result: [
+            {
+              login: "operator@example.test",
+              // Stand-in for the real price list: many endpoints, each priced.
+              price: Object.fromEntries(
+                Array.from({ length: 900 }, (_, i) => [
+                  `endpoint_family_${i}_with_a_realistically_long_name`,
+                  { live: 0.006, task_post: 0.0006, priority: 0.012 },
+                ]),
+              ),
+            },
+          ],
+        },
+      ],
+    };
+    const body = JSON.stringify(bigButValid);
+    expect(body.length).toBeGreaterThan(32 * 1024);
+
+    const result = await probeConnector("dataforseo", {
+      env: dataForSeoEnv,
+      fetcher: async () => new Response(body, { status: 200 }),
+    });
+
+    expect(result).toMatchObject({ health: "healthy", outcome: "success" });
   });
 });
