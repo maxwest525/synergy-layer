@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { firecrawlEndpoint } from "../firecrawl-endpoint";
 import { parseUuidInput } from "../server-input";
 import {
   changeKindForFile,
@@ -280,6 +281,7 @@ export const getExecutionState = createServerFn({ method: "GET" })
       readiness: buildReadiness({
         executorCredentialPresent,
         rendererCredentialPresent,
+        rendererSelfHosted: renderer?.selfHosted ?? false,
         repo: text("source_repo"),
         branch: text("source_branch"),
         filePath: row.source_file,
