@@ -71,7 +71,7 @@ export async function preparePageMetadataProposal(
   const renderer = createRenderedVerifier();
   if (!renderer) {
     throw new Error(
-      "Required live-page evidence is unavailable: FIRECRAWL_API_KEY is not configured.",
+      "Required live-page evidence is unavailable: no Firecrawl deployment is configured, self-hosted or cloud.",
     );
   }
   const rendered = await renderer.render(targetUrl);

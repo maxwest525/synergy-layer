@@ -613,7 +613,7 @@ describe("checkPublishedPage", () => {
       actorId: "operator",
     });
     expect(outcome.status).toBe("refused");
-    expect(outcome.message).toContain("FIRECRAWL_API_KEY");
+    expect(outcome.message).toContain("SELFHOSTED_FIRECRAWL_API_KEY");
   });
 
   it("refuses a target URL outside the allowlisted site", async () => {

@@ -21,7 +21,7 @@ type PerplexityAnswer = { answer: string; citations: string[] };
 const PERPLEXITY_URL = "https://api.perplexity.ai/chat/completions";
 const MAX_SCRAPES = 3;
 
-function requireKey(name: "PERPLEXITY_API_KEY" | "FIRECRAWL_API_KEY"): string {
+function requireKey(name: "PERPLEXITY_API_KEY"): string {
   const value = process.env[name];
   if (!value) throw new Error(`${name} is not configured for this project.`);
   return value;
@@ -76,7 +76,8 @@ export async function scrapeFirecrawl(
   // fallback. Research reads scrape up to three sources per question, so this
   // was a steady per-call charge against an API the operator also runs himself.
   const endpoint = firecrawlEndpoint(process.env);
-  if (!endpoint) throw new Error("FIRECRAWL_API_KEY is not configured for this project.");
+  if (!endpoint)
+    throw new Error("No Firecrawl deployment is configured for this project, self-hosted or cloud.");
   const response = await fetch(endpoint.url, {
     method: "POST",
     headers: {

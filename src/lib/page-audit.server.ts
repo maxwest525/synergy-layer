@@ -463,7 +463,7 @@ export async function runPageAudit(
   const firecrawl = firecrawlEndpoint(process.env);
   if (!firecrawl && !selfHosted) {
     throw new Error(
-      "Pages cannot be read: configure VPS_SCRAPER_BASE_URL and VPS_SCRAPER_API_KEY for the self-hosted crawler, or FIRECRAWL_API_KEY for the metered one.",
+      "Pages cannot be read: configure VPS_SCRAPER_BASE_URL and VPS_SCRAPER_API_KEY for Crawl4AI, or SELFHOSTED_FIRECRAWL_BASE_URL and SELFHOSTED_FIRECRAWL_API_KEY for the self-hosted Firecrawl fallback.",
     );
   }
 
