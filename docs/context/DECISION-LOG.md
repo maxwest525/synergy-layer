@@ -7,9 +7,70 @@ transcripts (UTC). User instructions are verbatim, truncated at 300 characters.
 Credentials, tokens, and anything credential-shaped have been replaced with
 `[REDACTED]`. Some ordinary long filenames were caught by the same filter.
 
-Sessions covered: 5. The currently running `rescue-stranded` session is not included.
+Sessions covered: 6.
 
 ---
+
+## 2026-08-24 19:00 → 21:40 — `d3ed18f0` (main repo)
+
+Started as Claude-config repair in the home directory and moved into this repo. Three PRs
+merged and the app deployed.
+
+### Asked
+
+- `2026-08-24T20:15Z` — "yes. but you can have my credentials for anything"
+- `2026-08-24T20:45Z` — "so merge them. dont wait on me. and how could you possibly say something like the unreachabkle firecrawl token is on me. and what about the github execturor token? if you tell me to put it back after telling me it was wrong twice already"
+- `2026-08-24T21:35Z` — "were just leaving github broken?"
+- `2026-08-24T21:50Z` — "what i care about is when the project doesnt have context because of it"
+
+### Shipped
+
+- **#59** Umami asked for `UMAMI_API_TOKEN`, a name no other file in this repo reads.
+  `umamiAuthHeaders()` uses `UMAMI_BEARER_TOKEN`, then `UMAMI_API_KEY`, then username+password.
+  A working Umami reported "missing UMAMI_API_TOKEN" and its probe sent `Bearer undefined`.
+  Catalog now mirrors all three paths; the probe authenticates the way the client does.
+  Found by reading the deployed secret list against the code — neither file is wrong alone.
+- **#60** `/v3/appendix/user_data` returns DataForSEO's per-endpoint price list for their whole
+  catalogue, always larger than the 32 KB schema-probe cap. `readBoundedResponseBody` returned
+  null, so a valid HTTP 200 was recorded as `schema_error` — the same outcome a malformed
+  response produces. Cap raised to 1 MB for that endpoint only and passed as a parameter; the
+  two existing guard tests were resized, not weakened, and confirmed to still fail with the cap
+  removed.
+- **#61** CI had been red on `main` since `79ab38d`. `src/integrations/supabase/previewAuthStorage.ts`
+  was added by the Lovable agent in single quotes; the repo's prettier config rejects it. 23
+  errors, all in that one file, failing `verify` on main and every branch cut from it.
+- `.env.example` — 45 names derived from `process.env.*` in `src/` and `server/` plus the
+  catalog. Names only.
+- Deployed the project. `main` is `0c0fca7`, CI green.
+
+### Corrected
+
+- **The metered `FIRECRAWL_API_KEY` was never in Project Secrets or in Connectors.** Max had
+  deleted the connector; the variable it injected survived in the RUNNING deployment's
+  environment. `state` reads live `process.env` of that deployment, so the connector kept
+  reporting `configured` and looked like a stale dashboard when it was not. **A redeploy
+  removed it** — there was nothing to delete. Same for `GOOGLE_SEARCH_CONSOLE_API_KEY` and
+  `PERPLEXITY_API_KEY`. Max said repeatedly that he had deleted these and was right each time.
+- **Lovable does not deploy on git merge.** Merging three PRs to `main` left the live
+  `x-deployment-id` byte-identical. Publishing is a separate step. Budget for it after any merge
+  or the app keeps serving the old build, including its old environment.
+- The probe's missing-User-Agent bug was already fixed on 2026-08-22 in `1900f1a` (#56); it is
+  not the cause of the remaining GitHub executor failure.
+
+### Handed back to Max
+
+- `GITHUB_EXECUTOR_TOKEN` — executor still reports `http error`. The repo
+  `maxwest525/brittmove-829a7519` is correct and the User-Agent bug is already fixed, so an
+  expired token is the leading explanation, but this was NOT confirmed and Max was explicitly
+  not asked to replace it.
+- `OPENSEO_USERNAME` / `OPENSEO_PASSWORD` — `seo.marky.systems/api/health` answers 401
+  unauthenticated, which is the correct shape, and Caddy accepts exactly two users, `max` and
+  `aoos`. So the stored credential does not match one of those, or `OPENSEO_BASE_URL` is wrong.
+- **Unresolved:** the operator "Check connections" action does not rewrite stored probe
+  outcomes. After the deploy, Umami reads `configured · missing configuration` and DataForSEO
+  reads `configured · schema error` — live `state` correct, stored outcome stale. Do not read
+  those outcome strings as current evidence until this is understood.
+- This repository still has no `<!-- BOUNDARY: builds=… | not=… -->` line in `CLAUDE.md`.
 
 ## 2026-08-20 23:06 → 2026-08-21 16:28 — `b6cd1d00` (worktree `rule-thresholds`)
 
