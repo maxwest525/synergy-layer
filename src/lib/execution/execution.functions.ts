@@ -213,7 +213,11 @@ export const getExecutionState = createServerFn({ method: "GET" })
     const { createRequestClient } = await import("../tenant.server");
     const { fetchExecutionAttempts } = await import("./execute.server");
     const executorCredentialPresent = Boolean(process.env["GITHUB_EXECUTOR_TOKEN"]);
-    const rendererCredentialPresent = Boolean(process.env["FIRECRAWL_API_KEY"]);
+    // The shared chooser, not the cloud key: the self-hosted deployment renders
+    // this proof, and reading FIRECRAWL_API_KEY here reported it as absent.
+    const renderer = firecrawlEndpoint(process.env);
+    const rendererCredentialPresent = renderer !== null;
+
     const empty: ExecutionStateView = {
       isOperator: false,
       operatorCheckFailed: false,
