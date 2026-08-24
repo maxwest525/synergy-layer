@@ -66,6 +66,8 @@ export type ExecutionStateView = {
 export function buildReadiness(input: {
   executorCredentialPresent: boolean;
   rendererCredentialPresent: boolean;
+  /** Which Firecrawl deployment would answer, so a proven read is not credited to the wrong one. */
+  rendererSelfHosted?: boolean;
   repo: string | null;
   branch: string | null;
   filePath: string | null;
@@ -75,6 +77,7 @@ export function buildReadiness(input: {
   changeCount: number;
   preflight: PreflightView | null;
 }): ReadinessFact[] {
+
   const repoOk =
     input.repo === GOVERNED_REPO &&
     input.branch === GOVERNED_BRANCH &&
