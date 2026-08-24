@@ -31,15 +31,15 @@ seven-slot category navigation, defined once in `src/lib/categories.ts` and
 capped permanently. The Command center and four of the six category pages are
 built:
 
-| Category | Page | Route it renders at | Reserved slug |
-| --- | --- | --- | --- |
-| Command center | `command-center-page.tsx` | `/` | — |
-| Getting found on Google | `getting-found-page.tsx` | `/search` | `/getting-found-on-google` |
-| Your pages | `your-pages-page.tsx` | `/pages` | `/your-pages` |
-| Site health | `site-health-page.tsx` | `/measurement` | `/site-health` |
-| Connections | `connections-page.tsx` | `/capabilities` | `/connections` |
-| Who visits your site | not built | `/ga4` (absorbed) | `/who-visits-your-site` |
-| Your competition | not built | `/competitors` (absorbed) | `/your-competition` |
+| Category                | Page                      | Route it renders at       | Reserved slug              |
+| ----------------------- | ------------------------- | ------------------------- | -------------------------- |
+| Command center          | `command-center-page.tsx` | `/`                       | —                          |
+| Getting found on Google | `getting-found-page.tsx`  | `/search`                 | `/getting-found-on-google` |
+| Your pages              | `your-pages-page.tsx`     | `/pages`                  | `/your-pages`              |
+| Site health             | `site-health-page.tsx`    | `/measurement`            | `/site-health`             |
+| Connections             | `connections-page.tsx`    | `/capabilities`           | `/connections`             |
+| Who visits your site    | not built                 | `/ga4` (absorbed)         | `/who-visits-your-site`    |
+| Your competition        | not built                 | `/competitors` (absorbed) | `/your-competition`        |
 
 **Deviation from the redesign plan, recorded deliberately.** The plan said each
 category's `to` would move to `/${slug}` when its page landed. It has not: the
@@ -100,8 +100,11 @@ Approve still routes only through `/changes/$id`.
 
 ### The page audit
 
-`src/lib/page-checks.ts` runs 30 checks over the HTML a single Firecrawl scrape
-already returned, up to 100 pages per run. The structure-enforcement lane added
+`src/lib/page-checks.ts` runs 30 checks over the HTML a single render already
+returned, up to 100 pages per run. Crawl4AI at `crawl.marky.systems` is the
+primary renderer; self-hosted Firecrawl at `fire.marky.systems` is its fallback
+and is only called if Crawl4AI throws. A live audit on 2026-08-24 read 30/30
+pages entirely through Crawl4AI with zero Firecrawl calls. The structure-enforcement lane added
 URL conventions (underscores, parameters), missing image width/height, orphan
 pages no internal link path reaches, expected schema type per page kind, and
 redirect / canonical-chain / meta-refresh checks. `PAGE_CHECK_FIX` in
@@ -165,7 +168,6 @@ likely to waste someone's afternoon:
   revalidating. All ads schedules remain disabled.
 - Two categories have no page yet: Who visits your site, and Your competition.
 
-
 ## 1. What AOOS is
 
 An internal marketing operating system for the company. It is **not** the public
@@ -193,20 +195,20 @@ operator surfaces for Keywords and Competitors.
 
 ## 3. Live integrations (real, not simulated)
 
-| Capability | State | Notes |
-| --- | --- | --- |
-| PageSpeed Insights (Measurement workspace) | implemented, provider-blocked, manual only | `/measurement/tools`. One click, one v5 request. No schedule. Runs and immutable snapshots are stored in `measurement_runs` / `pagespeed_snapshots`. The configured provider project is returning HTTP 429 daily-quota failures: 5 stored attempts, 0 stored measurements. Missing data is not reported as zero. |
-| GA4 Data API | real | Property `properties/536830122`. First successful immutable snapshot stored 2026-08-18: 124 returned rows, 48 pages, 135 sessions, and 748 events for the 28-day window. Daily read-only schedule is enabled. |
-| Umami (self-hosted) | real | Credentials, property listing, and the first authenticated 28-day read are proven. Four immutable rows were stored on 2026-08-18 for TruMove. The provider returned zero pageviews, visitors, visits, and bounces for that window; this is a real provider result, not substituted missing data. The deployed instance accepts `metrics type=path`, not `type=url`. |
-| Google Search Console | real | Idempotent daily site / page / query snapshots. |
-| DataForSEO Labs | real | Keyword ideas, competitor derivation. |
-| DataForSEO SERP (Standard queue) | real | Postback hook at `/api/public/hooks/dataforseo-postback`. |
-| DataForSEO Backlinks | real | Pay-as-you-go pricing as of 2026-07-01. |
-| Firecrawl / Web Research (Perplexity) | real | Page inspection and cited research. |
-| Competitor intelligence | real | Built on 39 completed SERP snapshots, 71 observed domains. |
-| MCP read tools | real | Guarded by `src/lib/mcp/guard.ts` (auth + audit). |
-| SerpAPI Ads Transparency | pending gate, proven canary history | Direct account/canary code exists and 11 successful canary ledger rows are stored. The free provider gate must be revalidated; creative and live paid-SERP stages remain pending. |
-| GitHub (`cap.github`) | not connected | Blocks `wf.publish`. Do not connect without approval. |
+| Capability                                          | State                                      | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| --------------------------------------------------- | ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| PageSpeed Insights (Measurement workspace)          | implemented, provider-blocked, manual only | `/measurement/tools`. One click, one v5 request. No schedule. Runs and immutable snapshots are stored in `measurement_runs` / `pagespeed_snapshots`. The configured provider project is returning HTTP 429 daily-quota failures: 5 stored attempts, 0 stored measurements. Missing data is not reported as zero.                                                                                                                                                                                                                               |
+| GA4 Data API                                        | real                                       | Property `properties/536830122`. First successful immutable snapshot stored 2026-08-18: 124 returned rows, 48 pages, 135 sessions, and 748 events for the 28-day window. Daily read-only schedule is enabled.                                                                                                                                                                                                                                                                                                                                  |
+| Umami (self-hosted)                                 | real                                       | Credentials, property listing, and the first authenticated 28-day read are proven. Four immutable rows were stored on 2026-08-18 for TruMove. The provider returned zero pageviews, visitors, visits, and bounces for that window; this is a real provider result, not substituted missing data. The deployed instance accepts `metrics type=path`, not `type=url`.                                                                                                                                                                            |
+| Google Search Console                               | real                                       | Idempotent daily site / page / query snapshots.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| DataForSEO Labs                                     | real                                       | Keyword ideas, competitor derivation.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| DataForSEO SERP (Standard queue)                    | real                                       | Postback hook at `/api/public/hooks/dataforseo-postback`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| DataForSEO Backlinks                                | real                                       | Pay-as-you-go pricing as of 2026-07-01.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| Firecrawl (self-hosted) / Web Research (Perplexity) | real                                       | Page inspection and cited research. Rendering resolves through `firecrawlEndpoint()`, which prefers the self-hosted deployment; the metered cloud is a fallback only. Rendered-page verification in `execution.functions.ts` now reads that same chooser rather than `FIRECRAWL_API_KEY`, so it no longer reports itself unconnected when only the self-hosted deployment is configured. `FIRECRAWL_API_KEY` is not a project secret and could not be deleted from the project layer; if it is still injected it sits in workspace Connectors. |
+| Competitor intelligence                             | real                                       | Built on 39 completed SERP snapshots, 71 observed domains.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| MCP read tools                                      | real                                       | Guarded by `src/lib/mcp/guard.ts` (auth + audit).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| SerpAPI Ads Transparency                            | pending gate, proven canary history        | Direct account/canary code exists and 11 successful canary ledger rows are stored. The free provider gate must be revalidated; creative and live paid-SERP stages remain pending.                                                                                                                                                                                                                                                                                                                                                              |
+| GitHub (`cap.github`)                               | not connected                              | Blocks `wf.publish`. Do not connect without approval.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 
 Spend controls: DataForSEO ceiling **$300/month**, ledgered per request, alerts at
 50/75/90/100%. Spend to date is far below ceiling (cents, not dollars).
@@ -358,6 +360,7 @@ marked callable; AdLoop and OpenSEO read "Installed locally, not connected to AO
 secret paths are stored.
 
 ## Tool estate correction (2026-08-11)
+
 - SearchAtlas excluded by operator policy: systems, operations, aliases, and all UI results removed. Search returns zero.
 - Vault represented as remote, metadata-only, not AOOS-callable: "25 metadata records checked, 20 active records mapped to 16 providers, secret values never copied." No credential names, labels, IDs, hosts, paths, or values are stored or shown.
 - Readiness is six independent facts: available to enable, enabled, credentialed, implemented in AOOS, callable from AOOS, visible. Credential metadata never promotes enabled or callable.
@@ -374,7 +377,6 @@ secret paths are stored.
 - Migration: `change_requests.source_repo/source_branch/source_commit_*/published_proof_*` and `public.change_request_executions` (tenant read, server write).
 - Applied now means proven live on the public URL; the manual "Mark applied" button is gone. Verification still requires finalized post-change Search Console rows.
 - Blocker: `GITHUB_EXECUTOR_TOKEN` is not configured, so no real commit has been attempted. The UI names this exactly and refuses without writing.
-
 
 ## Direct measurement truth (2026-08-14)
 
