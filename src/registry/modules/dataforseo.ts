@@ -1,8 +1,8 @@
 import type { ModuleDefinition } from "../types";
 
 /**
- * DataForSEO enters AOOS as three separate observation capabilities, one per
- * data family, so the registry keeps stating exactly what is wired. All are
+ * DataForSEO enters AOOS as one observation capability per data family, so the
+ * registry keeps stating exactly what is wired. All are
  * read-only: nothing here can change a site, a SERP, or a link.
  */
 export const definition: ModuleDefinition = {
@@ -233,6 +233,115 @@ export const definition: ModuleDefinition = {
         monthlyBudgetUsd: 300,
       },
     },
+    {
+      key: "cap.dataforseo_onpage",
+      name: "DataForSEO OnPage",
+      kind: "api",
+      category: "Technical",
+      description:
+        "Site-wide technical crawl of the owned property: status codes, redirect chains, duplicate titles and descriptions, and non-indexable pages. Basic crawl only and capped at 100 pages, because the crawl is billed per page and every quality multiplier costs more than the crawl itself.",
+      integrationState: "real",
+      authKind: "basic",
+      operations: [
+        {
+          name: "onpage.task_post",
+          description: "Queue a capped basic crawl of the owned property.",
+          mutates: false,
+        },
+        {
+          name: "onpage.collect",
+          description: "Poll tasks_ready and store finished crawls as immutable snapshots.",
+          mutates: false,
+        },
+        {
+          name: "onpage.force_stop",
+          description: "Operator control that aborts a runaway crawl.",
+          mutates: false,
+        },
+      ],
+      config: {
+        mutating: false,
+        scope: "owned_properties_only",
+        scheduledMode: "standard",
+        maxCrawlPages: 100,
+        costPerCrawledPageUsd: 0.00015,
+        // The digest names crawling everything with a multiplier on as the
+        // expensive mistake: resources x3, JavaScript x10, Lighthouse x34,
+        // keyword density x2. All four stay unsent, so enabling one is a code
+        // change somebody has to read, not a flag somebody can flip.
+        multipliersEnabled: [],
+        monthlyBudgetUsd: 300,
+      },
+    },
+    {
+      key: "cap.dataforseo_domain_analytics",
+      name: "DataForSEO Domain Analytics",
+      kind: "api",
+      category: "Technical",
+      description:
+        "Technology stack, host country and domain rank for one domain. Whois overview is implemented but deliberately not scheduled: it is defined by its filters, and no filter set follows from the owned property.",
+      integrationState: "real",
+      authKind: "basic",
+      operations: [
+        {
+          name: "domain_analytics.technologies",
+          description: "Tech stack and domain rank for the owned property.",
+          mutates: false,
+        },
+        {
+          name: "domain_analytics.whois_overview",
+          description:
+            "Filtered read of the registered-domain index. Operator-triggered; an unfiltered read is refused before a request is made.",
+          mutates: false,
+        },
+      ],
+      config: {
+        mutating: false,
+        mode: "live",
+        // Live-only family: there is no Standard queue to move a scheduled read
+        // onto, so cadence is the only cost control available here.
+        cadence: "monthly",
+        // The digest publishes no price row for this family; the guard uses the
+        // largest cost in the vendor's own documented examples.
+        estimatedUsdPerRequest: 0.15,
+        monthlyBudgetUsd: 300,
+      },
+    },
+    {
+      key: "cap.dataforseo_content_analysis",
+      name: "DataForSEO Content Analysis",
+      kind: "api",
+      category: "Authority",
+      description:
+        "Where the brand is cited across the web and how those citations read. Evidence only: it files nothing and never claims a mention caused anything. The search term is the owned domain label, the same brand derivation the backlink evidence pass uses.",
+      // "pending", not "real". The endpoint path, request parameters and
+      // response shape are all assumed: digest section 8 gives this family one
+      // sentence and section 11 defers it, and the sentiment field in
+      // particular was read from a key the author could not confirm exists.
+      // The code is written and callable, but calling it would be spending on
+      // a guess. Promote to "real" after the first live snapshot is diffed
+      // against the fixture.
+      integrationState: "pending",
+      authKind: "basic",
+      operations: [
+        {
+          name: "content_analysis.search",
+          description: "Brand mentions with the sentiment the provider reported.",
+          mutates: false,
+        },
+      ],
+      config: {
+        mutating: false,
+        mode: "live",
+        evidenceLabel: "observed",
+        mentionLimit: 100,
+        // The digest's cost model covers Backlinks, Labs, SERP and OnPage only.
+        // Until an invoice line exists this borrows the Backlinks per-request
+        // figure, so the budget guard has a real number to stop on.
+        estimatedUsdPerRequest: 0.05,
+        monthlyBudgetUsd: 300,
+      },
+    },
   ],
   workflows: [
     {
@@ -306,6 +415,41 @@ export const definition: ModuleDefinition = {
           { from: "profile", to: "observe" },
           { from: "observe", to: "validate" },
         ],
+      },
+    },
+    {
+      key: "dfs-onpage-audit",
+      name: "DataForSEO OnPage audit",
+      description:
+        "Collects any crawl that has finished since the last pass, then queues a capped basic crawl of the owned property. Manual, because a crawl is billed per page: re-running it on the same day costs nothing, but a schedule would buy a new crawl every tick.",
+      triggerKind: "manual",
+      graph: {
+        nodes: [{ key: "crawl", kind: "capability", ref: "cap.dataforseo_onpage" }],
+        edges: [],
+      },
+    },
+    {
+      key: "dfs-domain-technologies",
+      name: "DataForSEO domain technologies",
+      description:
+        "Records the technology stack, host country and domain rank of the owned property as immutable evidence. One row, one charge.",
+      triggerKind: "manual",
+      graph: {
+        nodes: [
+          { key: "technologies", kind: "capability", ref: "cap.dataforseo_domain_analytics" },
+        ],
+        edges: [],
+      },
+    },
+    {
+      key: "dfs-brand-mentions",
+      name: "DataForSEO brand mentions",
+      description:
+        "Searches the provider's content index for citations of the owned brand and stores them with the sentiment the provider reported. Read-only: it files no finding and proposes no action.",
+      triggerKind: "manual",
+      graph: {
+        nodes: [{ key: "mentions", kind: "capability", ref: "cap.dataforseo_content_analysis" }],
+        edges: [],
       },
     },
   ],

@@ -151,7 +151,7 @@ function readRateLimit(response: Response): Record<string, string> {
 export type PostOptions = {
   tenantId: string;
   capabilityKey: string;
-  family: "labs" | "serp" | "backlinks";
+  family: "labs" | "serp" | "backlinks" | "onpage" | "domain_analytics" | "content_analysis";
   endpoint: string;
   tasks: Record<string, unknown>[];
   mode?: "live" | "standard";
