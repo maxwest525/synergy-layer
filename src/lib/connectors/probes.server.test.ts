@@ -329,4 +329,31 @@ describe("connector probes", () => {
 
     expect(result).toMatchObject({ health: "healthy", outcome: "success" });
   });
+
+  // The self-hosted Firecrawl box exposes /is-production, a free liveness
+  // endpoint that performs no crawl. It was listed as having no safe probe, so
+  // Max's own deployment could never read better than "Degraded" — the one
+  // connector he most needs proof for, since everything is meant to route there
+  // instead of the metered cloud.
+  it("probes the self-hosted Firecrawl box at its free liveness endpoint", async () => {
+    let seenUrl = "";
+    let seenAuth = "";
+    const result = await probeConnector("selfhosted_firecrawl", {
+      env: {
+        SELFHOSTED_FIRECRAWL_BASE_URL: "https://fire.example.test/",
+        SELFHOSTED_FIRECRAWL_API_KEY: "token",
+      },
+      fetcher: async (url, init) => {
+        seenUrl = String(url);
+        seenAuth = String((init?.headers as Record<string, string>)["Authorization"] ?? "");
+        return new Response("true", { status: 200 });
+      },
+    });
+
+    // No crawl endpoint: a probe must never cost a page render.
+    expect(seenUrl).toBe("https://fire.example.test/is-production");
+    expect(seenUrl).not.toContain("/v2/scrape");
+    expect(seenAuth).toBe("Bearer token");
+    expect(result).toMatchObject({ health: "healthy", outcome: "success" });
+  });
 });

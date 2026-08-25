@@ -36,7 +36,6 @@ const noSafeProbe = new Set<ConnectorKey>([
   "google_analytics_4",
   "pagespeed_insights",
   "perplexity",
-  "selfhosted_firecrawl",
 ]);
 const MAX_SCHEMA_PROBE_BODY_BYTES = 32 * 1024;
 // DataForSEO's /v3/appendix/user_data returns rates, limits, statistics, money
@@ -149,6 +148,16 @@ function configuredRequest(
       return {
         url: `${env["OPENSEO_BASE_URL"]!.replace(/\/+$/, "")}/api/health`,
         headers: { Authorization: basic(env["OPENSEO_USERNAME"], env["OPENSEO_PASSWORD"]) },
+      };
+    case "selfhosted_firecrawl":
+      // /is-production is Firecrawl's liveness endpoint: free, instant, and it
+      // renders nothing. Never probe /v2/scrape — a health check must not cost a
+      // page fetch. Caddy in front of this box gates on the Authorization header
+      // for every path, not per route, so the same bearer that scrapes also
+      // reaches this endpoint.
+      return {
+        url: `${env["SELFHOSTED_FIRECRAWL_BASE_URL"]!.replace(/\/+$/, "")}/is-production`,
+        headers: { Authorization: `Bearer ${env["SELFHOSTED_FIRECRAWL_API_KEY"]}` },
       };
     case "umami":
       return {
