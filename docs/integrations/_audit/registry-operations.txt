@@ -1,0 +1,18 @@
+brief.create  —  Draft a brief.
+chat.completion  —  Generate text or structured output.
+embeddings.create  —  Embed content for retrieval.
+heartbeat  —  Check the instance answers before any read.
+knowledge.file  —  File the briefing and sources into kb.research.
+list_assets  —  Read the marketing asset registry.
+list_capabilities  —  Read capability integration state and health.
+list_inbox  —  Read inbox items by lane.
+list_recommendations  —  Read recommendations by state or module.
+list_workflow_runs  —  Read recent workflow run history.
+metrics.read  —  Read top pages and referrers for a window.
+pageviews.read  —  Read the daily pageview and session series.
+rules.evaluate  —  Score stored snapshots against typed thresholds.
+scan.run  —  Produce scored opportunities.
+seo.validate  —  Evaluate typed SEO rules over stored snapshots.
+sitemaps.status  —  Read reported sitemap status. No submission.
+source.scrape  —  Read a cited source page through Firecrawl.
+websites.list  —  List the properties the credentials can read.

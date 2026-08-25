@@ -10,6 +10,14 @@ truth for provider behaviour and must never be overwritten by this file.
 
 Last updated: 2026-08-21, at `2a2e87f` (PR #48).
 
+> **This file has not been updated since `2a2e87f` and the build has moved on.**
+> Section 0's baseline (1168 tests in 118 files) is superseded: at `cb586dd` it is
+> 1256 tests in 123 files. For a verified read of the connector subsystem, the
+> Firecrawl call path, module boundaries and entrypoints as of 2026-08-25, see
+> [`docs/handoffs/2026-08-25-restored-context-verification-and-map.md`](../handoffs/2026-08-25-restored-context-verification-and-map.md).
+> That handoff also lists which parts of the previous session's saved working
+> state turned out to be stale, superseded or unverifiable.
+
 **How to read this file.** Section 0 is the current state and supersedes anything
 below it that disagrees. The later sections are kept in the order they were
 written, as a dated record of how the build got here. Where an older section

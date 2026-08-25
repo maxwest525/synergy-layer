@@ -1,0 +1,48 @@
+--- src/lib/mcp/tools/call-openseo-free-read.ts
+40:  name: "call_openseo_free_read",
+41:  title: "Call a free OpenSEO read",
+42:  description:
+44:  inputSchema: {
+48:  annotations: { readOnlyHint: true, idempotentHint: false, openWorldHint: true },
+--- src/lib/mcp/tools/get-recommendation.ts
+43:  name: "get_recommendation",
+44:  title: "Get recommendation detail",
+45:  description:
+47:  inputSchema: { id: z.string().uuid().describe("The recommendation id.") },
+48:  annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
+--- src/lib/mcp/tools/list-assets.ts
+8:  name: "list_assets",
+9:  title: "List marketing assets",
+10:  description:
+12:  inputSchema: {
+19:  annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
+--- src/lib/mcp/tools/list-capabilities.ts
+8:  name: "list_capabilities",
+9:  title: "List capabilities",
+10:  description:
+12:  inputSchema: {
+18:  annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
+--- src/lib/mcp/tools/list-inbox.ts
+8:  name: "list_inbox",
+9:  title: "List inbox items",
+10:  description:
+12:  inputSchema: {
+20:  annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
+--- src/lib/mcp/tools/list-openseo-tools.ts
+8:  name: "list_openseo_tools",
+9:  title: "List live OpenSEO tools",
+10:  description:
+12:  inputSchema: {},
+13:  annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
+--- src/lib/mcp/tools/list-recommendations.ts
+8:  name: "list_recommendations",
+9:  title: "List recommendations",
+10:  description:
+12:  inputSchema: {
+34:  annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
+--- src/lib/mcp/tools/list-workflow-runs.ts
+8:  name: "list_workflow_runs",
+9:  title: "List workflow runs",
+10:  description:
+12:  inputSchema: {
+19:  annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },

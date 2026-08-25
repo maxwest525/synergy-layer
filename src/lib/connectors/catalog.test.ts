@@ -21,7 +21,6 @@ describe("connector catalog", () => {
       "n8n",
       "vps_scraper",
       "selfhosted_firecrawl",
-      "searxng",
       "openseo",
       "umami",
     ]);
