@@ -16,7 +16,8 @@ export type ConnectorKey =
   | "vps_scraper"
   | "selfhosted_firecrawl"
   | "openseo"
-  | "umami";
+  | "umami"
+  | "openai_ads";
 
 export type ConnectorCatalogItem = {
   key: ConnectorKey;
@@ -219,6 +220,20 @@ export const CONNECTOR_CATALOG = [
     ],
     configRequirements: ["UMAMI_BASE_URL"],
     safeConfig: { baseUrl: "UMAMI_BASE_URL" },
+  }),
+  item({
+    key: "openai_ads",
+    label: "OpenAI Ads conversions",
+    provider: "OpenAI",
+    // The only connector on this screen that writes at the provider, so the
+    // ledger could not see it at all until it had a row. Both halves are needed
+    // for a conversion to leave this project: the bridge secret the website
+    // authenticates the webhook with, and the key the outbound send carries.
+    // The two strategies mirror the fallback openai-ads-conversions.ts performs.
+    credentialStrategies: [
+      ["OPENAI_ADS_CAPI_BRIDGE_SECRET", "OPENAI_ADS_CAPI_API_KEY"],
+      ["OPENAI_ADS_BRIDGE_SECRET", "OPENAI_ADS_CAPI_API_KEY"],
+    ],
   }),
 ] as const satisfies readonly ConnectorCatalogItem[];
 

@@ -79,6 +79,11 @@ export const rejectChangeRequest = createServerFn({ method: "POST" })
     runTransition(context.supabase, context.userId, "reject", data),
   );
 
+// Do not delete this because nothing calls it. `mark_applied` is the only action
+// ALLOWED out of `approved` (change-request-state.ts), so this is the sole
+// gateway into applied, verified and rolled_back -- the entire rest of the
+// lifecycle. It has no UI caller yet, which is a missing wire, not dead code:
+// removing it would make the gap permanent and silent.
 export const markChangeRequestApplied = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(parseChangeTransitionInput)

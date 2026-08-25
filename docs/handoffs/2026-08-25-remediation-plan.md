@@ -325,6 +325,67 @@ entry — the second is fine and honest if no free endpoint exists, and is what
 
 ---
 
+## 8. The change-request lifecycle cannot complete through the UI
+
+**Found 2026-08-25 while vetting an agent's deletion — the most consequential
+finding of the audit, and it was nearly deleted rather than discovered.**
+
+`src/lib/change-request-state.ts` `ALLOWED` (lines 31-38) makes `mark_applied`
+the **only** action permitted out of `approved`:
+
+```
+proposed --approve--> approved --mark_applied--> applied --verify--> verified
+    |                                              |                    |
+  reject                                       roll_back            roll_back
+```
+
+Every action has exactly one server function in `change-requests.functions.ts`.
+Counting UI callers across `src/**/*.tsx`:
+
+| Action | Server function | `.tsx` callers |
+| --- | --- | --- |
+| approve | `approveChangeRequest` | 3 |
+| reject | `rejectChangeRequest` | 4 |
+| verify | `verifyChangeRequest` | 1 |
+| roll_back | `rollBackChangeRequest` | 1 |
+| bulk decide | `decideChangeRequestsBulk` | 1 |
+| **mark_applied** | **`markChangeRequestApplied`** | **0** |
+
+`transitionChangeRequest` is called from exactly one place — `runTransition` in
+that same file — and nothing anywhere writes `state = "applied"` directly.
+Therefore:
+
+- **An approved change can never reach `applied`.** No code path exists.
+- It can never reach `verified` or `rolled_back` either, since both require
+  `applied` first.
+- `execute.ts:347` refuses a revert for anything not `applied` or `verified`, so
+  **the rollback safety path is unreachable for every change that went through
+  the product.**
+- The Verify and Roll back controls on `/changes/$id` act on states no change can
+  attain — colliding with `AGENTS.md`: *"No lying controls. A verb that is not
+  legal renders nothing."* Not deliberate; the wire is simply missing.
+
+**Why it nearly got worse.** Having no callers, `markChangeRequestApplied` was
+flagged by a dead-code pass and deleted. That would have made the gap permanent
+*and* silent — the endpoint is the only remaining evidence the transition was
+ever intended. It is restored, with a comment saying why being uncalled is not a
+reason to delete it.
+
+**What to do — needs Max; this is a product decision, not a cleanup.**
+
+1. **Wire it.** Add the control to `/changes/$id` beside Verify and Roll back.
+   Simplest, and matches the four siblings.
+2. **Or make it automatic.** If "applied" is a fact about the repo rather than an
+   operator's opinion, `execute.server.ts` should perform the transition itself
+   on a successful publish. Arguably truer, but it moves a state write into the
+   execution path, which `AGENTS.md` guards carefully — design it deliberately.
+
+**Verification either way:** a test driving proposed → approved → applied →
+verified through the real transition function. Today that test cannot get past
+the second arrow.
+
+---
+
 # Part 2 — What the Firecrawl argument was actually about
 
 Reconstructed from `git log` and `docs/context/DECISION-LOG.md`, not from
@@ -440,22 +501,39 @@ The 18 declared capability operations are inventoried at
 [`../integrations/_audit/registry-operations.txt`](../integrations/_audit/registry-operations.txt);
 5 are marked `mutates: true`.
 
-## 3.3 AOOS's own MCP server
+## 3.3 AOOS's own MCP server — measured, and the answer is zero
 
 Eight tools, all `readOnlyHint: true`, listed in `src/lib/mcp/index.ts`. They are
-**not consumed by AOOS's own UI** — that is by design; they exist for external
-MCP clients (Claude, and anything else Max points at `/mcp`). So "unused" here
-means something different: the surface is available and its usage is *measurable*
-but was not measured in this audit.
+not consumed by AOOS's own UI, which is by design — they exist for external MCP
+clients pointed at `/mcp`.
 
-It is measurable because `guard.ts:43` files every call to `activity_events` with
-`actor_kind: "mcp_client"`. **A single query against that table would show which
-of the eight tools have ever actually been called.** Worth running — if some have
-never been invoked, that is real evidence about which parts of the OS an outside
-agent finds useful.
+The audit originally said usage was *measurable but unmeasured*, because
+`guard.ts:43` files every call to `activity_events` with
+`actor_kind: "mcp_client"`. **It has now been measured:**
 
-`call_openseo_free_read` is the one to watch: it is the only tool with
-`openWorldHint: true`, and it proxies to another MCP server.
+```sql
+select actor_kind, count(*), max(occurred_at) from activity_events group by 1;
+--  system  245   2026-08-25 03:23
+--  user    128   2026-08-25 04:41
+--  (no mcp_client row at all)
+```
+
+373 audited events, **zero from an MCP client, ever**. The trail is demonstrably
+working — it recorded activity today — so this is a real absence, not a gap in
+logging.
+
+**What that means, precisely.** The server is built, OAuth-protected against the
+Supabase issuer, rate-limited to 60 calls/minute per caller, and audits every
+invocation. None of that has been exercised by a real caller. No tool has proven
+itself end to end, and no assumption inside them has been tested by use.
+
+**What it does not mean.** It is not an argument for deleting the server. It was
+built so an outside agent could read the OS, and nothing has been pointed at it
+yet. The gap is adoption, not code.
+
+**Cheapest verification in this whole catalog:** point one MCP client at
+`https://trumove.marky.systems/mcp`, authenticate, and call `list_inbox`. One
+successful call moves eight tools from "written" to "works".
 
 ## 3.4 OpenSEO's tools, filtered by policy
 

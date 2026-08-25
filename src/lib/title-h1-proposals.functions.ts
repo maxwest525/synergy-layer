@@ -5,11 +5,6 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { validateTitleH1Wording } from "./title-h1-proposals";
 
 const id = z.string().uuid();
-const createInput = z.object({
-  targetUrl: z.string().url().max(500),
-  idempotencyKey: z.string().uuid(),
-  mode: z.enum(["gemini", "deterministic_dev"]).default("gemini"),
-});
 const editInput = z.object({
   id,
   seoTitle: z.string().min(1).max(200),
@@ -66,39 +61,6 @@ function liveEvidence(evidence: unknown): { title: string; h1: string } {
   }
   return { title: row["title"], h1: row["h1"] };
 }
-
-export const generateTitleH1Proposal = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((value: unknown) => createInput.parse(value))
-  .handler(async ({ data, context }) => {
-    const { assertOperator } = await import("./os-admin.server");
-    const { requireTenantId } = await import("./tenant.server");
-    const { prepareTitleH1Proposal } = await import("./title-h1-proposals.server");
-    await assertOperator(context.supabase, context.userId);
-    const tenantId = await requireTenantId(context.supabase);
-    const proposal = await prepareTitleH1Proposal(context.supabase, tenantId, data.targetUrl, {
-      wordingMode: data.mode,
-    });
-    return serviceRpc("create_title_h1_proposal", {
-      _tenant_id: tenantId,
-      _actor: context.userId,
-      _idempotency_key: `title-h1:${data.idempotencyKey}`,
-      _target_url: proposal.targetUrl,
-      _title: proposal.title,
-      _changes: proposal.changes,
-      _rationale: proposal.rationale,
-      _evidence: proposal.evidence,
-      _evidence_summary: proposal.evidenceSummary,
-      _evidence_limitations: proposal.evidenceLimitations,
-      _risk_note: proposal.riskNote,
-      _generation_context: proposal.generationContext,
-      _source_repo: proposal.sourceRepo,
-      _source_branch: proposal.sourceBranch,
-      _source_file: proposal.sourceFile,
-      _source_project_id: proposal.sourceProjectId,
-      _source_revision_before: proposal.sourceRevisionBefore,
-    });
-  });
 
 export const regenerateTitleH1Proposal = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])

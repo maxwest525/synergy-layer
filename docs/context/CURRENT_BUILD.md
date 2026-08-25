@@ -8,15 +8,34 @@ It is not authoritative documentation. Provider digests under
 `docs/integrations/<provider>/DIGEST.md` and their PLAN files remain the source of
 truth for provider behaviour and must never be overwritten by this file.
 
-Last updated: 2026-08-21, at `2a2e87f` (PR #48).
+Last updated: 2026-08-25, at `3143f88` (PR #65) plus the branch that follows it.
+Section 0 below still describes 2026-08-21 and has NOT been rewritten; the
+current-state block immediately below supersedes it.
 
-> **This file has not been updated since `2a2e87f` and the build has moved on.**
-> Section 0's baseline (1168 tests in 118 files) is superseded: at `cb586dd` it is
-> 1256 tests in 123 files. For a verified read of the connector subsystem, the
-> Firecrawl call path, module boundaries and entrypoints as of 2026-08-25, see
-> [`docs/handoffs/2026-08-25-restored-context-verification-and-map.md`](../handoffs/2026-08-25-restored-context-verification-and-map.md).
-> That handoff also lists which parts of the previous session's saved working
-> state turned out to be stale, superseded or unverifiable.
+## 0a. Current state, 2026-08-25
+
+Measured on this branch, not recalled: `npm run typecheck` clean, `npm test`
+**1259 passing in 123 files**, `npx eslint .` **0 errors and the same 14
+pre-existing react-refresh warnings**. Section 0's figures (1168 tests in 118
+files, at `2a2e87f`) are superseded and left in place as a dated record.
+
+**Connector ledger: 19 rows.** SearXNG was removed in #65 (catalogued, probed,
+read by nothing, and not wanted), and OpenAI Ads conversions was added here --
+it was the only outbound-write integration the ledger could not see. GA4 gained
+a real probe in #65 using the JWT signing that already existed in
+`measurement/ga4.server.ts`; four connectors remain in `noSafeProbe`
+(`google_search_console`, `pagespeed_insights`, `perplexity`, `openai_ads`),
+each because it has no free read-only endpoint, which is stated rather than
+papered over with an invented probe.
+
+**Known gap, found 2026-08-25 and not yet fixed:** the change-request lifecycle
+cannot complete through the UI. `mark_applied` is the only action ALLOWED out of
+`approved` (`change-request-state.ts`), and `markChangeRequestApplied`
+(`change-requests.functions.ts`) is the only code that performs it -- with no UI
+caller, while its four sibling transitions all have one. So an approved change
+can never reach `applied`, and therefore never `verified` or `rolled_back`
+either. Detail and the full audit: `docs/integrations/CATALOG.md`,
+`docs/context/CODEBASE-MAP.md` and the handoffs dated 2026-08-25.
 
 **How to read this file.** Section 0 is the current state and supersedes anything
 below it that disagrees. The later sections are kept in the order they were

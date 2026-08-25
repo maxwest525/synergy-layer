@@ -243,6 +243,20 @@ describe("connector probes", () => {
     expect(fetcher).not.toHaveBeenCalled();
   });
 
+  // The OpenAI Ads credential can only write. A probe that reached the provider
+  // at all would be delivering a conversion, so the honest health reading is
+  // "configured, unprovable" and no request may leave.
+  it("never calls the provider to health check the OpenAI Ads conversions bridge", async () => {
+    const fetcher = vi.fn();
+    const result = await probeConnector("openai_ads", {
+      env: { OPENAI_ADS_CAPI_BRIDGE_SECRET: "bridge", OPENAI_ADS_CAPI_API_KEY: "key" },
+      fetcher,
+    });
+
+    expect(result).toMatchObject({ health: "degraded", outcome: "configured_no_safe_probe" });
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
   it("refreshes Google Ads OAuth and probes the current read-only v25 endpoint", async () => {
     const fetcher = vi
       .fn()
