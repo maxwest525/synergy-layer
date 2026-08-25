@@ -314,19 +314,15 @@ export const definition: ModuleDefinition = {
       category: "Authority",
       description:
         "Where the brand is cited across the web and how those citations read. Evidence only: it files nothing and never claims a mention caused anything. The search term is the owned domain label, the same brand derivation the backlink evidence pass uses.",
-      // "pending", not "real". The endpoint path, request parameters and
-      // response shape are all assumed: digest section 8 gives this family one
-      // sentence and section 11 defers it, and the sentiment field in
-      // particular was read from a key the author could not confirm exists.
-      // The code is written and callable, but calling it would be spending on
-      // a guess. Promote to "real" after the first live snapshot is diffed
-      // against the fixture.
-      integrationState: "pending",
+      // Path, request parameters and every response field the parser reads are
+      // grounded in https://docs.dataforseo.com/v3/content_analysis/search/live/.
+      integrationState: "real",
       authKind: "basic",
       operations: [
         {
           name: "content_analysis.search",
-          description: "Brand mentions with the sentiment the provider reported.",
+          description:
+            "Brand mentions with every sentiment connotation the provider reported, uncollapsed.",
           mutates: false,
         },
       ],
