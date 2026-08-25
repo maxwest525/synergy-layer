@@ -35,6 +35,11 @@ const noSafeProbe = new Set<ConnectorKey>([
   "google_search_console",
   "pagespeed_insights",
   "perplexity",
+  // Every call this credential can make is a conversion write. AOOS has no
+  // authenticated read against an OpenAI Ads account, and the validate-only
+  // contract is still unconfirmed against authoritative documentation, so there
+  // is nothing to probe that would not deliver an event.
+  "openai_ads",
 ]);
 const MAX_SCHEMA_PROBE_BODY_BYTES = 32 * 1024;
 // DataForSEO's /v3/appendix/user_data returns rates, limits, statistics, money

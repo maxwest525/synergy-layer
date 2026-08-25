@@ -221,6 +221,35 @@ only**, never values.
 authenticating against the deployed app as an operator, which was out of scope
 for a read-only local audit.
 
+### Measured 2026-08-25: nobody has ever called any of them
+
+`guard.ts:43` files every MCP tool call to `activity_events` with
+`actor_kind: "mcp_client"`, so usage is a query rather than a guess. Run against
+the live database through the Lovable MCP:
+
+```sql
+select actor_kind, count(*), max(occurred_at) from activity_events group by 1;
+--  system  245   2026-08-25 03:23
+--  user    128   2026-08-25 04:41
+--  (no mcp_client row)
+```
+
+**373 audited events, zero from an MCP client.** The audit trail demonstrably
+works — it is recording system and operator activity as recently as today — so
+the absence is real, not a logging failure.
+
+So the AOOS MCP server is fully built, OAuth-protected, rate-limited, audited,
+and **has never been used**. That is not an argument for deleting it: it was
+built so an outside agent *could* read the OS, and nothing has been pointed at
+`/mcp` yet. But it does mean none of the eight tools has ever proven itself
+end to end against a real caller, and no design assumption in them has been
+tested by use. Treat `EXPOSED_AS_TOOL` here as its literal self and nothing more.
+
+**Next action:** point one MCP client at `https://trumove.marky.systems/mcp` and
+call `list_inbox`. One successful call moves eight tools from "written" to
+"works", and would be the cheapest verification available anywhere in this
+catalog.
+
 ---
 
 ## Per-integration catalog

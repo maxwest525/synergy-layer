@@ -23,6 +23,7 @@ describe("connector catalog", () => {
       "selfhosted_firecrawl",
       "openseo",
       "umami",
+      "openai_ads",
     ]);
   });
 

@@ -14,13 +14,6 @@ import {
   type ProposalRepairAdminClient,
 } from "./proposal-event.server";
 
-const createInput = z.object({
-  targetUrl: z.string().url().max(500),
-  queryClass: z
-    .enum(["community", "local_service", "professional_b2b", "ymyl", "general"])
-    .default("local_service"),
-  idempotencyKey: z.string().uuid(),
-});
 const runInput = z.object({ id: z.string().uuid() });
 const createBatchInput = z.object({
   targets: z
@@ -155,55 +148,6 @@ export const createSeoRuns = createServerFn({ method: "POST" })
       throw new Error(eventError.message);
     }
     return runs;
-  });
-
-export const createSeoRun = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((value: unknown) => createInput.parse(value))
-  .handler(async ({ data, context }) => {
-    const { assertOperator } = await import("../os-admin.server");
-    const { requireTenantId } = await import("../tenant.server");
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    await assertOperator(context.supabase, context.userId);
-    const tenantId = await requireTenantId(context.supabase);
-    const { data: run, error } = await supabaseAdmin
-      .from("seo_runs")
-      .upsert(
-        {
-          tenant_id: tenantId,
-          target_url: requireProposalTarget(data.targetUrl),
-          query_class: data.queryClass,
-          idempotency_key: data.idempotencyKey,
-          created_by: context.userId,
-        },
-        { onConflict: "tenant_id,idempotency_key", ignoreDuplicates: true },
-      )
-      .select("*")
-      .maybeSingle();
-    if (error) throw new Error(error.message);
-    if (run) {
-      const { error: eventError } = await supabaseAdmin.from("seo_run_events").upsert(
-        {
-          tenant_id: tenantId,
-          run_id: run.id,
-          event_key: "run_created",
-          state: "draft",
-          summary: "SEO run created. No proposal has been generated or approved.",
-          actor_id: context.userId,
-        },
-        { onConflict: "tenant_id,run_id,event_key", ignoreDuplicates: true },
-      );
-      if (eventError) throw new Error(eventError.message);
-      return run;
-    }
-    const { data: existing, error: existingError } = await supabaseAdmin
-      .from("seo_runs")
-      .select("*")
-      .eq("tenant_id", tenantId)
-      .eq("idempotency_key", data.idempotencyKey)
-      .single();
-    if (existingError) throw new Error(existingError.message);
-    return existing;
   });
 
 export const evaluateSeoRun = createServerFn({ method: "POST" })
