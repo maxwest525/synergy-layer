@@ -133,6 +133,51 @@ mismatch, the fix is to sync the lockfile in a commit, not to loosen the hook.
 - `.env` is committed and holds public Supabase config only. Secrets go where
   the deployment keeps its secrets.
 
+### Where a value lives, and why
+
+**If leaking it costs nothing, put it in code or `.env`. If it authenticates you
+to somebody's API or database, it goes in the secret store and is only ever read
+inside a `createServerFn` handler or a server route.**
+
+Public identifiers are fine committed: `SELFHOSTED_FIRECRAWL_BASE_URL`,
+`N8N_BASE_URL`, `seo.marky.systems`, the Supabase publishable key, a GA4
+measurement ID. Anything prefixed `VITE_` ships to the browser on purpose.
+
+A key cannot live in the app, for three reasons:
+
+1. This builds to a browser bundle plus a server worker. Anything in a
+   component, a hook, or a `VITE_` variable is downloadable by any visitor —
+   view source and the key is theirs. **There is no private part of a frontend.**
+2. `.env` is committed, so a key added to it enters GitHub history, and history
+   is not rewritable on `main`.
+3. Server code reads `process.env` at request time. The value has to be injected
+   by the platform at that moment.
+
+The secret store is not an extra hoop. It is the only place that is server-only,
+out of git, and readable by `process.env` inside a handler. Same value, different
+blast radius.
+
+### The layer that keeps costing hours
+
+**A key placed by a Lovable connector lives at the deployment env layer, not in
+the project secret list.** The two are different stores and they fail in
+opposite directions:
+
+- A connector's variable can be **absent from the secret list and still answer a
+  live probe**, because the running deployment already holds it. That is why
+  `FIRECRAWL_API_KEY` read as unset in settings while the connector reported
+  healthy.
+- Deleting that connector does **not** take the variable away. It survives inside
+  the running deployment until the next publish, so everything keeps working and
+  nothing looks wrong — until a publish rebuilds the environment and it vanishes.
+  That is exactly how Search Console collection died on 2026-08-24: the connector
+  was deleted a day earlier, and the next publish cleared it.
+
+The consequence for both directions: **a newly placed secret is not live until
+you publish, and a deleted one is not gone until you publish.** Never conclude a
+credential is present or missing from the settings screen alone — check after a
+publish, or check what the running deployment actually answers.
+
 ## When you finish
 
 Update the record you invalidated, in the same change:
