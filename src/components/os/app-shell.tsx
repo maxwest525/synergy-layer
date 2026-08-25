@@ -276,7 +276,11 @@ export function AppShell({ children }: { children: ReactNode }) {
       <div className="flex min-h-0 flex-1">
         <aside
           aria-label="Section navigation"
-          className="hidden w-[208px] shrink-0 border-r border-sidebar-border md:block"
+          // overflow-y-auto because the directory below the categories makes this
+          // list taller than the viewport on a short screen. Without it the
+          // bottom entries -- System health, and the settings link pinned by
+          // mt-auto -- are simply unreachable.
+          className="hidden w-[208px] shrink-0 overflow-y-auto border-r border-sidebar-border md:block"
         >
           <NavPanel pathname={pathname} />
         </aside>
