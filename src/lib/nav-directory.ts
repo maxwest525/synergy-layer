@@ -32,8 +32,6 @@ export const NAV_EXEMPT: Readonly<Record<string, string>> = {
   "/today": "the same queue as the Command center",
   "/ads/advertisers": "a view inside Competitor ads",
   "/knowledge/manual": "a form reached from Knowledge",
-  "/capabilities/registry": "a tab inside Connections",
-  "/capabilities/systems": "a tab inside Connections",
 };
 
 const ENTRIES: readonly NavEntry[] = [
@@ -108,6 +106,22 @@ const ENTRIES: readonly NavEntry[] = [
   { to: "/openai-ads", label: "OpenAI Ads", hint: "Pixel instrumentation", group: "run_work" },
 
   // System health — connections, costs and access.
+  // Both were exempted as "a tab inside Connections". They are not: /capabilities
+  // links to neither, so the only route to Systems was a link on Registry, which
+  // was itself unreachable. "Check connections" and "Sync registry" both live on
+  // these two pages, and an operator was told to do both with no way to get there.
+  {
+    to: "/capabilities/systems",
+    label: "Connection health",
+    hint: "Check every connector and see what it answered",
+    group: "system_health",
+  },
+  {
+    to: "/capabilities/registry",
+    label: "Capability registry",
+    hint: "Sync capabilities, agents and workflows from code",
+    group: "system_health",
+  },
   {
     to: "/gaps",
     label: "Connection gaps",
