@@ -86,7 +86,15 @@ export const CONNECTOR_CATALOG = [
     key: "google_search_console",
     label: "Google Search Console",
     provider: "Google",
-    credentialStrategies: [["LOVABLE_API_KEY", "GOOGLE_SEARCH_CONSOLE_API_KEY"]],
+    // Direct to Google first, the Lovable connector gateway second. The gateway
+    // route dies with the connector: deleting it leaves the injected variable
+    // alive in the running deployment until the next publish, which is how
+    // collection stopped on 2026-08-24 with nothing to point at.
+    credentialStrategies: [
+      ["GSC_SERVICE_ACCOUNT_JSON"],
+      ["GSC_OAUTH_CLIENT_ID", "GSC_OAUTH_CLIENT_SECRET", "GSC_OAUTH_REFRESH_TOKEN"],
+      ["LOVABLE_API_KEY", "GOOGLE_SEARCH_CONSOLE_API_KEY"],
+    ],
   }),
   item({
     key: "google_analytics_4",

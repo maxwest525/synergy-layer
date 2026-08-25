@@ -4,7 +4,12 @@ import { requireTenantId } from "./tenant.server";
 
 import type { Database } from "@/integrations/supabase/types";
 import { logActivity } from "./os.server";
-import { readSearchConsoleCredentialPresence } from "./search-console-connection";
+import { googleAccessToken, GoogleTokenError } from "./google-token.server";
+import {
+  SEARCH_CONSOLE_CREDENTIAL_NAMES,
+  SEARCH_CONSOLE_SCOPE,
+  searchConsoleRoute,
+} from "./search-console-transport";
 import {
   materializeDailyTotals,
   normalizeInspection,
@@ -14,7 +19,6 @@ import {
 
 type Client = SupabaseClient<Database>;
 
-const GATEWAY = "https://connector-gateway.lovable.dev/google_search_console";
 const REPORTING_TIMEZONE = "America/Los_Angeles";
 const API_QUERY_VERSION = "webmasters/v3";
 
@@ -37,22 +41,48 @@ export class SearchConsoleFailure extends Error {
   }
 }
 
-function credentials(): { lovableApiKey: string; connectionApiKey: string } {
-  const lovableApiKey = process.env["LOVABLE_API_KEY"];
-  const connectionApiKey = process.env["GOOGLE_SEARCH_CONSOLE_API_KEY"];
-  const presence = readSearchConsoleCredentialPresence(process.env);
-  if (
-    !presence.lovableApiKey ||
-    !presence.connectionApiKey ||
-    !lovableApiKey ||
-    !connectionApiKey
-  ) {
+/**
+ * The origin to call and the headers that authenticate it. Direct to Google when
+ * a Google credential is configured, otherwise through the Lovable connector
+ * gateway. Both speak the same `webmasters/v3` paths, so only these two values
+ * differ between the routes.
+ */
+async function transport(): Promise<{ origin: string; headers: Record<string, string> }> {
+  const route = searchConsoleRoute(process.env);
+  if (!route) {
     throw new SearchConsoleFailure(
       "missing_credentials",
       "Search Console credentials are not available to the server.",
     );
   }
-  return { lovableApiKey, connectionApiKey };
+
+  if (route.kind === "lovable_gateway") {
+    return {
+      origin: route.origin,
+      headers: {
+        Authorization: `Bearer ${route.lovableApiKey}`,
+        "X-Connection-Api-Key": route.connectionApiKey,
+      },
+    };
+  }
+
+  try {
+    const { token } = await googleAccessToken({
+      env: process.env,
+      names: SEARCH_CONSOLE_CREDENTIAL_NAMES,
+      scope: SEARCH_CONSOLE_SCOPE,
+    });
+    return { origin: route.origin, headers: { Authorization: `Bearer ${token}` } };
+  } catch (error) {
+    // A rejected credential is an auth fault, not a transport blip: retrying it
+    // would spend three more attempts reaching the same answer.
+    throw new SearchConsoleFailure(
+      "missing_credentials",
+      error instanceof GoogleTokenError
+        ? error.message
+        : `Google would not issue a Search Console token: ${String(error)}`,
+    );
+  }
 }
 
 /** Read-only Search Console calls are safe to retry, so a transient upstream
@@ -65,10 +95,9 @@ function isTransientStatus(status: number): boolean {
 }
 
 async function gateway<T>(path: string, init?: RequestInit): Promise<T> {
-  const { lovableApiKey, connectionApiKey } = credentials();
+  const route = await transport();
   const headers = new Headers(init?.headers);
-  headers.set("Authorization", `Bearer ${lovableApiKey}`);
-  headers.set("X-Connection-Api-Key", connectionApiKey);
+  for (const [name, value] of Object.entries(route.headers)) headers.set(name, value);
   if (init?.body) headers.set("Content-Type", "application/json");
 
   let lastFailure: SearchConsoleFailure | null = null;
@@ -76,7 +105,7 @@ async function gateway<T>(path: string, init?: RequestInit): Promise<T> {
   for (let attempt = 1; attempt <= TRANSIENT_ATTEMPTS; attempt += 1) {
     let response: Response;
     try {
-      response = await fetch(`${GATEWAY}${path}`, { ...init, headers });
+      response = await fetch(`${route.origin}${path}`, { ...init, headers });
     } catch (error) {
       lastFailure = new SearchConsoleFailure(
         "transport",
