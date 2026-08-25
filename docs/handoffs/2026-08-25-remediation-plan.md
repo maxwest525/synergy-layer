@@ -119,12 +119,31 @@ same change. `.env` stays tracked, deliberately.
 **Verification.** `git status --porcelain` no longer lists `.serena/`; `.env`
 remains tracked and unchanged; the deployed build is untouched.
 
-**Still open for Max.** If you want `.env` genuinely out of the repo, the
-question to settle first is whether the Lovable build injects `VITE_SUPABASE_URL`
-and `VITE_SUPABASE_PUBLISHABLE_KEY` into the build environment on its own. If it
-does, untracking is safe and I will do it. If it does not, untracking breaks the
-published client and the file has to stay. I could not determine this from
-outside the deployment.
+**CLOSED 2026-08-25 — `.env` stays tracked, and there is now direct evidence.**
+The published client bundle at
+`https://trumove.marky.systems/assets/index-DY68C5IC.js` (578 KB) was fetched and
+searched: it contains the Supabase project ref `zrfzllupoccmztyweznq` **and** an
+`sb_publishable_` key, inlined. So Vite did resolve `VITE_SUPABASE_URL` and
+`VITE_SUPABASE_PUBLISHABLE_KEY` at build time and bake them into the shipped
+JavaScript.
+
+Combined with the three facts already established — `.env` is tracked and holds
+exactly those two values, `.env.example` declares no `VITE_` names at all, and
+Lovable's own bot committed `.env` — the mechanism is that Lovable builds from
+the checkout and Vite reads `.env`. Removing it would remove the only in-repo
+source of two values the client cannot start without.
+
+**Do not untrack `.env`.** Treat it as Lovable-owned generated infrastructure,
+like `src/routes/mcp.ts` and `previewAuthStorage.ts`. The protection that matters
+is already in place: `.env.local` and `.env.*.local` are gitignored at higher
+Vite precedence, and the gitignore comment states that `.env` must never receive
+a secret.
+
+*Note on a related-sounding thing that is not related:* `GITHUB_EXECUTOR_TOKEN`
+targets `GOVERNED_REPO = "maxwest525/brittmove-829a7519"`
+(`src/lib/execution/allowlist.ts:17`) — the customer site AOOS commits approved
+page changes to. It is not part of how AOOS itself is built or deployed, and says
+nothing about the build environment either way.
 
 **Note on history.** The values in git history are publishable, so there is
 nothing to rotate and no reason to rewrite history — which would break Lovable's
