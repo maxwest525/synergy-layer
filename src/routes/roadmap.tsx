@@ -381,6 +381,7 @@ function RoadmapPage() {
         <EmptyNote>Loading the roadmap…</EmptyNote>
       ) : total === 0 ? (
         <EmptyState
+          gapless
           title="No roadmap items yet"
           description="Add the first one above and it will show up here as Requested."
         />

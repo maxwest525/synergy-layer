@@ -139,6 +139,7 @@ function NotesPage() {
         <GlassCard className="p-5 text-sm text-muted-foreground">Loading your notes...</GlassCard>
       ) : notes.length === 0 ? (
         <EmptyState
+          gapless
           title="No notes yet"
           description="Write your first note above. Start with the one thing you keep meaning to fix on the site."
         />
