@@ -709,16 +709,17 @@ export function Shell({ children }: { children: ReactNode }) {
           </div>
 
           {navCollapsed ? null : (
-            <div className="pb-4">
+            <div className="shrink-0 pb-4">
               <TenantSwitcher session={session} />
             </div>
           )}
 
           {session.signedIn ? (
-            <div className={cn("pb-4", navCollapsed && "flex justify-center")}>
+            <div className={cn("shrink-0 pb-4", navCollapsed && "flex justify-center")}>
               <SuggestionsPanel collapsed={navCollapsed} />
             </div>
           ) : null}
+
 
           {/* shrink-0, not flex-1: inside a scrolling flex column a flex-1 child
               collapses to a zero basis and its links get clipped instead of
