@@ -709,18 +709,22 @@ export function Shell({ children }: { children: ReactNode }) {
           </div>
 
           {navCollapsed ? null : (
-            <div className="pb-4">
+            <div className="shrink-0 pb-4">
               <TenantSwitcher session={session} />
             </div>
           )}
 
           {session.signedIn ? (
-            <div className={cn("pb-4", navCollapsed && "flex justify-center")}>
+            <div className={cn("shrink-0 pb-4", navCollapsed && "flex justify-center")}>
               <SuggestionsPanel collapsed={navCollapsed} />
             </div>
           ) : null}
 
-          <div className="flex-1 border-t border-border/50 pt-4">
+
+          {/* shrink-0, not flex-1: inside a scrolling flex column a flex-1 child
+              collapses to a zero basis and its links get clipped instead of
+              extending the rail's scroll height. */}
+          <div className="shrink-0 border-t border-border/50 pt-4">
             <NavList pathname={pathname} collapsed={navCollapsed} />
           </div>
 
@@ -728,12 +732,13 @@ export function Shell({ children }: { children: ReactNode }) {
             to="/auth"
             title={navCollapsed ? accountLabel : undefined}
             className={cn(
-              "mt-4 block truncate border-t border-border/50 pt-4 text-sm font-medium text-foreground transition-colors hover:text-primary",
+              "mt-auto block shrink-0 truncate border-t border-border/50 pt-4 text-sm font-medium text-foreground transition-colors hover:text-primary",
               navCollapsed ? "text-center text-xs" : "px-2.5",
             )}
           >
             {navCollapsed ? "Account" : accountLabel}
           </Link>
+
         </nav>
 
         <div className="flex min-w-0 flex-1 flex-col">
@@ -749,22 +754,23 @@ export function Shell({ children }: { children: ReactNode }) {
                 side="left"
                 className="scrollbar-none flex w-[21rem] flex-col overflow-y-auto border-border/60 bg-sidebar px-4 py-6"
               >
-                <div className="mb-5 px-2.5">
+                <div className="mb-5 shrink-0 px-2.5">
                   <BrandMark />
                 </div>
-                <div className="pb-4">
+                <div className="shrink-0 pb-4">
                   <TenantSwitcher session={session} />
                 </div>
-                <div className="flex-1 border-t border-border/50 pt-4">
+                <div className="shrink-0 border-t border-border/50 pt-4">
                   <NavList pathname={pathname} onNavigate={() => setMenuOpen(false)} />
                 </div>
                 <Link
                   to="/auth"
                   onClick={() => setMenuOpen(false)}
-                  className="mt-4 block truncate border-t border-border/50 px-2.5 pt-4 text-sm font-medium text-foreground/80 transition-colors hover:text-foreground"
+                  className="mt-auto block shrink-0 truncate border-t border-border/50 px-2.5 pt-4 text-sm font-medium text-foreground/80 transition-colors hover:text-foreground"
                 >
                   {accountLabel}
                 </Link>
+
               </SheetContent>
             </Sheet>
 
