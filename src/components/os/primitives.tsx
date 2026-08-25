@@ -271,17 +271,34 @@ export function toneForState(state: string | null | undefined): Tone {
   }
 }
 
+/**
+ * An absence, stated in words, with a way out of it.
+ *
+ * A screen that says a number is missing and offers nothing to click teaches
+ * the operator to stop reading the screen. So when a caller passes no `action`,
+ * the card falls back to the evidence gap: the one page that lists every
+ * operation and says which of them is wired. That is an honest control — it
+ * does not claim a run exists, it takes you to where you can see whether one
+ * does. A caller with a real run behind the absence passes its own button and
+ * that wins; a caller where nothing is missing at all (an empty notes pad)
+ * passes `gapless`.
+ */
 export function EmptyState({
   title,
   description,
   action,
+  gapless,
   className,
 }: {
   title: string;
   description: string;
   action?: ReactNode;
+  /** Nothing is missing here, so no gap link. Use for an empty personal list. */
+  gapless?: boolean;
   className?: string;
 }) {
+  const fallback =
+    action ?? (gapless ? null : <GapLink label="See what would fill this gap" />);
   return (
     <div
       role="status"
@@ -292,10 +309,27 @@ export function EmptyState({
     >
       <h3 className="text-sm font-medium text-foreground">{title}</h3>
       <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">{description}</p>
-      {action ? <div className="mt-4 flex justify-center">{action}</div> : null}
+      {fallback ? <div className="mt-4 flex justify-center">{fallback}</div> : null}
     </div>
   );
 }
+
+/**
+ * The outlined link to Connection gaps, which lists every operation and whether
+ * it is wired. Exported so a page with its own absence layout can offer the
+ * same exit as the shared empty card.
+ */
+export function GapLink({ label = "Evidence gap", to = "/gaps" }: { label?: string; to?: string }) {
+  return (
+    <Link
+      to={to}
+      className="inline-flex items-center rounded-xl border border-primary/45 px-3.5 py-2 text-xs font-medium text-primary transition-colors hover:border-primary hover:bg-primary/10"
+    >
+      {label}
+    </Link>
+  );
+}
+
 
 /**
  * Empty messaging for a block that already sits inside a card, where a second
