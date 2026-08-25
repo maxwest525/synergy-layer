@@ -34,3 +34,14 @@ dist-ssr
 # Git worktrees of this repo live here. Their node_modules symlinks back to
 # the root, so committing or scanning them doubles everything.
 .claude/worktrees/
+
+# `.env` itself is committed and is Lovable's file — gpt-engineer-app[bot] added it,
+# and Vite bakes VITE_SUPABASE_* into the client at build time, so untracking it
+# risks the deployed build. It must therefore never receive a secret: put local
+# overrides in .env.local, which Vite loads with higher precedence and which is
+# ignored here.
+.env.local
+.env.*.local
+
+# Serena's per-project index. Regenerated on activation; nothing here is authored.
+.serena/

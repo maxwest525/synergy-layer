@@ -560,8 +560,8 @@ export const CONNECTION_SURFACES: SurfaceConnection[] = [
     ],
   },
   {
-    key: "searxng_openseo",
-    label: "SearXNG and OpenSEO",
+    key: "openseo",
+    label: "OpenSEO",
     provider: "Self-hosted",
     auth: "Basic auth",
     operations: [
@@ -571,13 +571,6 @@ export const CONNECTION_SURFACES: SurfaceConnection[] = [
         purpose: "One off manual SEO tool calls.",
         status: "wired",
         evidence: "src/lib/openseo/runtime.server.ts",
-      }),
-      op({
-        id: "searxng.search",
-        operation: "GET /search",
-        purpose: "Unmetered SERP style reads for research.",
-        status: "not_built",
-        gap: "Reachable and probed, but no code queries it. Every research read still costs money elsewhere.",
       }),
     ],
   },

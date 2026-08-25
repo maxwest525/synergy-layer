@@ -33,7 +33,6 @@ type RequestDescriptor = {
 
 const noSafeProbe = new Set<ConnectorKey>([
   "google_search_console",
-  "google_analytics_4",
   "pagespeed_insights",
   "perplexity",
 ]);
@@ -138,11 +137,6 @@ function configuredRequest(
       return {
         url: `${env["VPS_SCRAPER_BASE_URL"]!.replace(/\/+$/, "")}/health`,
         headers: { Authorization: `Bearer ${env["VPS_SCRAPER_API_KEY"]}` },
-      };
-    case "searxng":
-      return {
-        url: `${env["SEARXNG_BASE_URL"]!.replace(/\/+$/, "")}/healthz`,
-        headers: { Authorization: basic(env["SEARXNG_USERNAME"], env["SEARXNG_PASSWORD"]) },
       };
     case "openseo":
       return {
@@ -302,6 +296,10 @@ export async function probeConnector(
   if (key === "google_ads") {
     const { probeGoogleAds } = await import("./google-ads.server");
     return probeGoogleAds(options);
+  }
+  if (key === "google_analytics_4") {
+    const { probeGa4 } = await import("./ga4.server");
+    return probeGa4(options);
   }
   const env = withConnectorDefaults(options.env ?? process.env);
   const checkedAt = new Date().toISOString();

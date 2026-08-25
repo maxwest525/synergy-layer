@@ -268,6 +268,74 @@ describe("connector probes", () => {
     expect(JSON.stringify(result)).not.toContain("temporary");
   });
 
+  // The GA4 probe exchanges a credential for a token and stops there. It takes
+  // no fetcher because it reuses the measurement module's own credential path,
+  // which is the point: the probe proves the same credential the Data API reads
+  // use. Google charges nothing for the exchange, while a runReport would need
+  // a property the probe has no claim on and would spend GA4 quota.
+  it("proves the GA4 credential at the token endpoint and never calls the Data API", async () => {
+    const originalFetch = globalThis.fetch;
+    const fetcher = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(new Response('{"access_token":"temporary"}', { status: 200 }));
+    globalThis.fetch = fetcher;
+    try {
+      const result = await probeConnector("google_analytics_4", {
+        env: {
+          GA4_OAUTH_CLIENT_ID: "client",
+          GA4_OAUTH_CLIENT_SECRET: "secret",
+          GA4_OAUTH_REFRESH_TOKEN: "refresh",
+        },
+      });
+
+      expect(result).toMatchObject({
+        health: "healthy",
+        outcome: "success",
+        proof: {
+          endpoint: "https://oauth2.googleapis.com/token",
+          credentialKind: "oauth_refresh_token",
+        },
+      });
+      expect(fetcher).toHaveBeenCalledTimes(1);
+      expect(
+        fetcher.mock.calls.some(([url]) => String(url).includes("analyticsdata.googleapis.com")),
+      ).toBe(false);
+      expect(JSON.stringify(result)).not.toContain("temporary");
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it("separates a rejected GA4 credential from an authenticated refusal", async () => {
+    const originalFetch = globalThis.fetch;
+    const env = {
+      GA4_OAUTH_CLIENT_ID: "client",
+      GA4_OAUTH_CLIENT_SECRET: "secret",
+      GA4_OAUTH_REFRESH_TOKEN: "refresh",
+    };
+    try {
+      globalThis.fetch = vi
+        .fn<typeof fetch>()
+        .mockResolvedValue(new Response("{}", { status: 401 }));
+      expect(await probeConnector("google_analytics_4", { env })).toMatchObject({
+        health: "failing",
+        outcome: "http_error",
+        proof: { statusCode: 401 },
+      });
+
+      globalThis.fetch = vi
+        .fn<typeof fetch>()
+        .mockResolvedValue(new Response("{}", { status: 403 }));
+      expect(await probeConnector("google_analytics_4", { env })).toMatchObject({
+        health: "degraded",
+        outcome: "http_error",
+        proof: { statusCode: 403 },
+      });
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
   it("sends a User-Agent to GitHub, because without one it answers 403", () => {
     // The deployed worker runtime supplies no User-Agent of its own and GitHub
     // rejects the request. The executor has sent one since that was found there;

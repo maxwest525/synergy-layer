@@ -230,7 +230,7 @@ async function oauthRefreshToken(env: Record<string, string | undefined>): Promi
   );
 }
 
-async function accessToken(env: Record<string, string | undefined>): Promise<{
+export async function ga4AccessToken(env: Record<string, string | undefined>): Promise<{
   token: string;
   credentialKind: Exclude<Ga4CredentialKind, null>;
 }> {
@@ -260,7 +260,7 @@ export async function fetchGa4Inventory(
   credentialKind: Exclude<Ga4CredentialKind, null>;
   httpStatus: number;
 }> {
-  const auth = await accessToken(env);
+  const auth = await ga4AccessToken(env);
   const response = await fetch(`${DATA_ENDPOINT}/${property}:runReport`, {
     method: "POST",
     headers: {

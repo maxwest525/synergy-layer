@@ -15,7 +15,6 @@ export type ConnectorKey =
   | "n8n"
   | "vps_scraper"
   | "selfhosted_firecrawl"
-  | "searxng"
   | "openseo"
   | "umami";
 
@@ -197,14 +196,6 @@ export const CONNECTOR_CATALOG = [
     credentialStrategies: [["SELFHOSTED_FIRECRAWL_API_KEY"]],
     configRequirements: ["SELFHOSTED_FIRECRAWL_BASE_URL"],
     safeConfig: { baseUrl: "SELFHOSTED_FIRECRAWL_BASE_URL" },
-  }),
-  item({
-    key: "searxng",
-    label: "SearXNG",
-    provider: "Self-hosted",
-    credentialStrategies: [["SEARXNG_USERNAME", "SEARXNG_PASSWORD"]],
-    configRequirements: ["SEARXNG_BASE_URL"],
-    safeConfig: { baseUrl: "SEARXNG_BASE_URL" },
   }),
   item({
     key: "openseo",
