@@ -51,6 +51,36 @@ describe("projectCurrentConnectorReadiness", () => {
     expect(n8n).toMatchObject({ state: "configured", health: "never_checked", persisted: null });
   });
 
+  it("surfaces the status code and endpoint the probe saw", () => {
+    const n8n = projectN8n(
+      n8nRow(
+        {
+          probe_outcome: "http_error",
+          proof: { statusCode: 401, endpoint: "https://n8n.example.com/healthz" },
+        },
+        "failing",
+      ),
+    );
+
+    expect(n8n.probeProof).toEqual({
+      statusCode: 401,
+      endpoint: "https://n8n.example.com/healthz",
+    });
+  });
+
+  it("withholds proof from a stored row no probe outcome stands behind", () => {
+    const n8n = projectN8n(n8nRow({ proof: { statusCode: 200 } }, "healthy"));
+
+    expect(n8n.probeOutcome).toBeNull();
+    expect(n8n.probeProof).toBeNull();
+  });
+
+  it("reports no proof rather than an empty one when the probe recorded neither field", () => {
+    const n8n = projectN8n(n8nRow({ probe_outcome: "configured_no_safe_probe", proof: {} }));
+
+    expect(n8n.probeProof).toBeNull();
+  });
+
   it("leaves an unconfigured connector unknown rather than never checked", () => {
     const n8n = projectCurrentConnectorReadiness([n8nRow({ probe_outcome: "success" })], {}).find(
       (item) => item.key === "n8n",
