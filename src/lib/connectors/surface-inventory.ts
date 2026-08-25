@@ -239,8 +239,9 @@ export const CONNECTION_SURFACES: SurfaceConnection[] = [
         operation: "OnPage API",
         purpose:
           "Full technical crawl: status codes, redirects, duplicate content, broken links, page weight.",
-        status: "not_built",
-        gap: "Not built. Technical crawl evidence currently comes only from single page scrapes, so site wide redirect chains and broken links are never seen.",
+        status: "partial",
+        evidence: "src/lib/dataforseo/onpage.server.ts",
+        gap: "Crawl, pages, duplicate titles and descriptions, redirect chains and non indexable pages are collected, capped at 100 pages because the crawl is billed per page. Lighthouse, JavaScript rendering, resource loading and keyword density are deliberately off: each is a priced multiplier, so page speed and rendered DOM evidence is not collected here.",
       }),
       op({
         id: "dfs.keywords_data",
@@ -260,8 +261,23 @@ export const CONNECTION_SURFACES: SurfaceConnection[] = [
         id: "dfs.content_analysis",
         operation: "Content Analysis",
         purpose: "Brand mentions and sentiment across the web.",
-        status: "not_built",
-        gap: "Not built.",
+        status: "wired",
+        evidence: "src/lib/dataforseo/content-analysis.server.ts",
+      }),
+      op({
+        id: "dfs.domain_analytics.technologies",
+        operation: "Domain Analytics technologies",
+        purpose: "Technology stack, host country and domain rank for a domain.",
+        status: "wired",
+        evidence: "src/lib/dataforseo/domain-analytics.server.ts",
+      }),
+      op({
+        id: "dfs.domain_analytics.whois",
+        operation: "Domain Analytics whois overview",
+        purpose: "Registered domains matching backlink and rank filters.",
+        status: "partial",
+        evidence: "src/lib/dataforseo/domain-analytics.server.ts",
+        gap: "Callable, but nothing invokes it. The read is defined entirely by its filters and no filter set follows from the owned property, so a cohort has to be chosen by hand before it runs at all.",
       }),
       op({
         id: "dfs.merchant",

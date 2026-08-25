@@ -754,6 +754,66 @@ async function runDataForSeoNode(
       };
     }
 
+    if (ref === "cap.dataforseo_onpage") {
+      const { collectReadyCrawls, startCrawl } = await import("./dataforseo/onpage.server");
+      // Harvest before posting. A crawl already paid for and finished is free to
+      // read, and collecting it first means the node reports finished evidence
+      // on the same pass that queues the next crawl.
+      const collected = await collectReadyCrawls(client, tenantId);
+      const crawl = await startCrawl(client, tenantId, target, {
+        runId,
+        key: "dfs-onpage-audit",
+      });
+      return {
+        ok: true,
+        output: {
+          target,
+          costUsd: collected.costUsd + crawl.costUsd,
+          queued: crawl.created,
+          providerTaskId: crawl.providerTaskId,
+          outstanding: collected.outstanding,
+          collected: collected.collected,
+          stillCrawling: collected.stillCrawling,
+        },
+      };
+    }
+
+    if (ref === "cap.dataforseo_domain_analytics") {
+      // Technologies only. whois/overview is defined by its filters and there is
+      // no cohort the owned property implies, so it stays operator-driven rather
+      // than running here on a filter set nobody chose.
+      const { collectDomainTechnologies } = await import("./dataforseo/domain-analytics.server");
+      const result = await collectDomainTechnologies(client, tenantId, target, {
+        runId,
+        key: "dfs-domain-technologies",
+      });
+      return { ok: true, output: { target, ...result } };
+    }
+
+    if (ref === "cap.dataforseo_content_analysis") {
+      const { searchBrandMentions } = await import("./dataforseo/content-analysis.server");
+      // The domain label without its TLD, the same brand derivation
+      // backlink-evidence.server.ts already uses to classify anchors. Nothing
+      // else in AOOS records a brand name, so inventing one is not an option.
+      const brand = target.replace(/\.[a-z.]+$/, "");
+      if (!brand) return { ok: false, error: `No brand term can be derived from "${target}".` };
+      const result = await searchBrandMentions(client, tenantId, brand, {
+        runId,
+        key: "dfs-brand-mentions",
+      });
+      return {
+        ok: true,
+        output: {
+          target,
+          brand,
+          costUsd: result.costUsd,
+          mentions: result.mentions.length,
+          totalCount: result.totalCount,
+          unparsed: result.unparsed,
+        },
+      };
+    }
+
     return { ok: true, output: { target } };
   } catch (error) {
     return {
