@@ -720,7 +720,6 @@ export function Shell({ children }: { children: ReactNode }) {
             </div>
           ) : null}
 
-
           {/* shrink-0, not flex-1: inside a scrolling flex column a flex-1 child
               collapses to a zero basis and its links get clipped instead of
               extending the rail's scroll height. */}
@@ -738,7 +737,6 @@ export function Shell({ children }: { children: ReactNode }) {
           >
             {navCollapsed ? "Account" : accountLabel}
           </Link>
-
         </nav>
 
         <div className="flex min-w-0 flex-1 flex-col">
@@ -770,7 +768,6 @@ export function Shell({ children }: { children: ReactNode }) {
                 >
                   {accountLabel}
                 </Link>
-
               </SheetContent>
             </Sheet>
 

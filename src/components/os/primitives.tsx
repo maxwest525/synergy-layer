@@ -297,8 +297,7 @@ export function EmptyState({
   gapless?: boolean;
   className?: string;
 }) {
-  const fallback =
-    action ?? (gapless ? null : <GapLink label="See what would fill this gap" />);
+  const fallback = action ?? (gapless ? null : <GapLink label="See what would fill this gap" />);
   return (
     <div
       role="status"
@@ -329,7 +328,6 @@ export function GapLink({ label = "Evidence gap", to = "/gaps" }: { label?: stri
     </Link>
   );
 }
-
 
 /**
  * Empty messaging for a block that already sits inside a card, where a second
