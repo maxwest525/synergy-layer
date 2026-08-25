@@ -28,14 +28,14 @@ a real probe in #65 using the JWT signing that already existed in
 each because it has no free read-only endpoint, which is stated rather than
 papered over with an invented probe.
 
-**Known gap, found 2026-08-25 and not yet fixed:** the change-request lifecycle
-cannot complete through the UI. `mark_applied` is the only action ALLOWED out of
-`approved` (`change-request-state.ts`), and `markChangeRequestApplied`
-(`change-requests.functions.ts`) is the only code that performs it -- with no UI
-caller, while its four sibling transitions all have one. So an approved change
-can never reach `applied`, and therefore never `verified` or `rolled_back`
-either. Detail and the full audit: `docs/integrations/CATALOG.md`,
-`docs/context/CODEBASE-MAP.md` and the handoffs dated 2026-08-25.
+**Correction, 2026-08-25:** an earlier version of this block claimed the
+change-request lifecycle could not complete through the UI. **It was wrong.**
+`transition_change_request` is a Postgres RPC granted to `authenticated`
+(`supabase/migrations/20260811180753_*.sql`), so the state machine is enforced in
+SQL and reachable without the TypeScript wrapper. The database has rows in
+`applied` and `rolled_back`. See item 8 of
+`docs/handoffs/2026-08-25-remediation-plan.md` for the retraction and the method
+error behind it.
 
 **How to read this file.** Section 0 is the current state and supersedes anything
 below it that disagrees. The later sections are kept in the order they were

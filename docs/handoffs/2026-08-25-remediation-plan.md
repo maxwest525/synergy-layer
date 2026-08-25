@@ -325,66 +325,45 @@ entry — the second is fine and honest if no free endpoint exists, and is what
 
 ---
 
-## 8. The change-request lifecycle cannot complete through the UI
+## 8. RETRACTED — the lifecycle completes fine; I traced only TypeScript
 
-**Found 2026-08-25 while vetting an agent's deletion — the most consequential
-finding of the audit, and it was nearly deleted rather than discovered.**
+**This item claimed an approved change could never reach `applied`, so the
+rollback path was unreachable. That is false.** Max said he had already rolled
+back the first change he executed, and the database agrees:
 
-`src/lib/change-request-state.ts` `ALLOWED` (lines 31-38) makes `mark_applied`
-the **only** action permitted out of `approved`:
-
+```sql
+select state, count(*), max(updated_at) from change_requests group by 1;
+--  approved     2   2026-08-25
+--  applied      1   2026-08-14
+--  rolled_back  1   2026-08-13
 ```
-proposed --approve--> approved --mark_applied--> applied --verify--> verified
-    |                                              |                    |
-  reject                                       roll_back            roll_back
-```
 
-Every action has exactly one server function in `change-requests.functions.ts`.
-Counting UI callers across `src/**/*.tsx`:
+**The mechanism I missed.** The state machine is not only in TypeScript — it is
+*also* implemented in Postgres. `supabase/migrations/20260811180753_*.sql`
+defines `public.transition_change_request(uuid, text, text, text)`, which maps
+`mark_applied -> applied` and enforces the same allowed transitions, and the
+migration `GRANT`s `EXECUTE` on it `TO authenticated`.
 
-| Action | Server function | `.tsx` callers |
-| --- | --- | --- |
-| approve | `approveChangeRequest` | 3 |
-| reject | `rejectChangeRequest` | 4 |
-| verify | `verifyChangeRequest` | 1 |
-| roll_back | `rollBackChangeRequest` | 1 |
-| bulk decide | `decideChangeRequestsBulk` | 1 |
-| **mark_applied** | **`markChangeRequestApplied`** | **0** |
+So the RPC is the real interface. `change-requests.server.ts:261` calls it, and
+the TS server functions are *one* caller among possible others — any
+authenticated client can invoke it directly. "No `.tsx` caller for
+`markChangeRequestApplied`" therefore says nothing about whether the transition
+is reachable. It is, and it has been used.
 
-`transitionChangeRequest` is called from exactly one place — `runTransition` in
-that same file — and nothing anywhere writes `state = "applied"` directly.
-Therefore:
+**What is actually left, and it is small:** there is no button in the AOOS UI for
+`mark_applied`, while its four siblings have one. That is a UI asymmetry worth a
+glance, not a broken lifecycle. `markChangeRequestApplied` still should not be
+deleted for being uncalled — but the reason is ordinary (it is a thin wrapper
+over a live RPC), not the dramatic one this item claimed.
 
-- **An approved change can never reach `applied`.** No code path exists.
-- It can never reach `verified` or `rolled_back` either, since both require
-  `applied` first.
-- `execute.ts:347` refuses a revert for anything not `applied` or `verified`, so
-  **the rollback safety path is unreachable for every change that went through
-  the product.**
-- The Verify and Roll back controls on `/changes/$id` act on states no change can
-  attain — colliding with `AGENTS.md`: *"No lying controls. A verb that is not
-  legal renders nothing."* Not deliberate; the wire is simply missing.
-
-**Why it nearly got worse.** Having no callers, `markChangeRequestApplied` was
-flagged by a dead-code pass and deleted. That would have made the gap permanent
-*and* silent — the endpoint is the only remaining evidence the transition was
-ever intended. It is restored, with a comment saying why being uncalled is not a
-reason to delete it.
-
-**What to do — needs Max; this is a product decision, not a cleanup.**
-
-1. **Wire it.** Add the control to `/changes/$id` beside Verify and Roll back.
-   Simplest, and matches the four siblings.
-2. **Or make it automatic.** If "applied" is a fact about the repo rather than an
-   operator's opinion, `execute.server.ts` should perform the transition itself
-   on a successful publish. Arguably truer, but it moves a state write into the
-   execution path, which `AGENTS.md` guards carefully — design it deliberately.
-
-**Verification either way:** a test driving proposed → approved → applied →
-verified through the real transition function. Today that test cannot get past
-the second arrow.
-
----
+**The error, stated plainly, because it is the third of its kind today.** I
+traced TypeScript and concluded about a system whose rules also live in SQL
+migrations and in the deployment environment. The same mistake produced the
+withdrawn item 3b (grepped `formats:`, concluded about `maxAge`) and the claim
+that GA4 has no route (checked the code, not the account). **Anything in this
+repo that looks like a rule may be enforced in Postgres as well as in
+TypeScript — check `supabase/migrations/` before claiming a path does not
+exist.**
 
 # Part 2 — What the Firecrawl argument was actually about
 
