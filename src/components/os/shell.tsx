@@ -753,22 +753,23 @@ export function Shell({ children }: { children: ReactNode }) {
                 side="left"
                 className="scrollbar-none flex w-[21rem] flex-col overflow-y-auto border-border/60 bg-sidebar px-4 py-6"
               >
-                <div className="mb-5 px-2.5">
+                <div className="mb-5 shrink-0 px-2.5">
                   <BrandMark />
                 </div>
-                <div className="pb-4">
+                <div className="shrink-0 pb-4">
                   <TenantSwitcher session={session} />
                 </div>
-                <div className="flex-1 border-t border-border/50 pt-4">
+                <div className="shrink-0 border-t border-border/50 pt-4">
                   <NavList pathname={pathname} onNavigate={() => setMenuOpen(false)} />
                 </div>
                 <Link
                   to="/auth"
                   onClick={() => setMenuOpen(false)}
-                  className="mt-4 block truncate border-t border-border/50 px-2.5 pt-4 text-sm font-medium text-foreground/80 transition-colors hover:text-foreground"
+                  className="mt-auto block shrink-0 truncate border-t border-border/50 px-2.5 pt-4 text-sm font-medium text-foreground/80 transition-colors hover:text-foreground"
                 >
                   {accountLabel}
                 </Link>
+
               </SheetContent>
             </Sheet>
 
