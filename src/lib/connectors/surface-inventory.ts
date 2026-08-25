@@ -253,9 +253,14 @@ export const CONNECTION_SURFACES: SurfaceConnection[] = [
       op({
         id: "dfs.business_data",
         operation: "Business Data (Google Business Profile, reviews)",
-        purpose: "Local pack presence and review evidence for a mover.",
+        purpose: "Local pack presence and review evidence.",
         status: "not_built",
-        gap: "Not built. No local search evidence at all, which matters more than national rank for this business.",
+        // Ruled out by the operator on 2026-08-25, not merely unbuilt: this is
+        // not a local business and is not going to be one. The previous wording
+        // here claimed local search "matters more than national rank for this
+        // business", which was the inventory asserting a strategy the operator
+        // does not hold. A gap the operator has closed by decision is not a gap.
+        gap: "Deliberately not built. The operator has ruled out local search: this is not a local business.",
       }),
       op({
         id: "dfs.content_analysis",
@@ -377,9 +382,10 @@ export const CONNECTION_SURFACES: SurfaceConnection[] = [
       op({
         id: "serpapi.google_local",
         operation: "GET /search (google_local, maps)",
-        purpose: "Local pack and map rankings for moving queries.",
+        purpose: "Local pack and map rankings.",
         status: "not_built",
-        gap: "Not built. No local rank evidence.",
+        // Same decision as dfs.business_data above.
+        gap: "Deliberately not built. The operator has ruled out local search: this is not a local business.",
       }),
       op({
         id: "serpapi.google_paid",

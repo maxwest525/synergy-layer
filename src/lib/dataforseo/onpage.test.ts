@@ -4,6 +4,7 @@ vi.mock("../os.server", () => ({ fileInboxItem: vi.fn(), logActivity: vi.fn() })
 
 import {
   buildCrawlTask,
+  collectDuplicateContent,
   collectReadyCrawls,
   crawlReads,
   forceStopCrawl,
@@ -435,6 +436,77 @@ describe("collecting a crawl the provider reports ready", () => {
 
     expect(calls()).toHaveLength(1);
     expect(result).toMatchObject({ outstanding: 1, ready: 0, collected: 0, stillCrawling: 1 });
+  });
+});
+
+describe("comparing one page against the crawl", () => {
+  const PAGE_URL = `https://${HOST}/services`;
+
+  function duplicateContentFingerprint(): string {
+    return fingerprint(
+      "/on_page/duplicate_content",
+      { id: CRAWL_ID, url: PAGE_URL, limit: RESULT_ROW_LIMIT },
+      today(),
+    );
+  }
+
+  it("sends the page url, because the provider cannot run this as a site-wide sweep", async () => {
+    fetcher.mockResolvedValue(itemsResult([{ url: `https://${HOST}/services-2` }]));
+    const { client } = fakeClient();
+
+    await collectDuplicateContent(client, TENANT, CRAWL_ID, PAGE_URL);
+
+    expect(calls()[0]?.path).toBe("/on_page/duplicate_content");
+    expect(postedBody(0)).toEqual([{ id: CRAWL_ID, url: PAGE_URL, limit: RESULT_ROW_LIMIT }]);
+  });
+
+  it("files the snapshot against the page, not the domain the crawl covered", async () => {
+    fetcher.mockResolvedValue(itemsResult([{ url: `https://${HOST}/services-2` }]));
+    const { client, tables } = fakeClient();
+
+    await collectDuplicateContent(client, TENANT, CRAWL_ID, PAGE_URL);
+
+    const snapshot = (tables["dataforseo_snapshots"] ?? [])[0];
+    expect(snapshot?.["kind"]).toBe("onpage_duplicate_content");
+    expect(snapshot?.["target"]).toBe(PAGE_URL);
+  });
+
+  it("reports the row count the snapshot holds, not the count this response carried", async () => {
+    fetcher.mockResolvedValue(itemsResult([{ url: `https://${HOST}/services-2` }]));
+    const { client } = fakeClient([
+      {
+        id: "snap-dupe",
+        tenant_id: TENANT,
+        request_fingerprint: duplicateContentFingerprint(),
+        returned_row_count: 7,
+      },
+    ]);
+
+    expect(await collectDuplicateContent(client, TENANT, CRAWL_ID, PAGE_URL)).toMatchObject({
+      rows: 7,
+    });
+  });
+
+  it("flags a full page of rows as possibly truncated", async () => {
+    const full = Array.from({ length: RESULT_ROW_LIMIT }, (_, index) => ({
+      url: `https://${HOST}/dupe-${index}`,
+    }));
+    fetcher.mockResolvedValue(itemsResult(full));
+    const { client, tables } = fakeClient();
+
+    const result = await collectDuplicateContent(client, TENANT, CRAWL_ID, PAGE_URL);
+
+    expect(result.rows).toBe(RESULT_ROW_LIMIT);
+    expect((tables["dataforseo_snapshots"] ?? [])[0]?.["possibly_truncated"]).toBe(true);
+  });
+
+  it("leaves a short result unflagged", async () => {
+    fetcher.mockResolvedValue(itemsResult([{ url: `https://${HOST}/services-2` }]));
+    const { client, tables } = fakeClient();
+
+    await collectDuplicateContent(client, TENANT, CRAWL_ID, PAGE_URL);
+
+    expect((tables["dataforseo_snapshots"] ?? [])[0]?.["possibly_truncated"]).toBe(false);
   });
 });
 
