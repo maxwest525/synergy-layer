@@ -3,6 +3,7 @@ import { Menu, Search } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 
 import { categoryIcon } from "./category-icons";
+import { navDirectory } from "@/lib/nav-directory";
 import { useCommandCenter } from "./command-center-facts";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useOperatorSession } from "@/hooks/use-operator-session";
@@ -113,6 +114,36 @@ function NavPanel({ pathname, onNavigate }: { pathname: string; onNavigate?: () 
           </Link>
         );
       })}
+
+      {/* Everything else, grouped. The categories above are the front door, not
+          the whole product: these routes existed with no link, reachable only by
+          typing the URL. */}
+      {navDirectory().map((group) => (
+        <div key={group.key} className="flex flex-col">
+          <p className="px-2.5 pb-0.5 pt-2.5 text-[10px] font-bold uppercase tracking-[0.14em] text-subtle">
+            {group.label}
+          </p>
+          {group.entries.map((entry) => {
+            const active = pathname === entry.to || pathname.startsWith(`${entry.to}/`);
+            return (
+              <Link
+                key={entry.to}
+                to={entry.to}
+                onClick={onNavigate}
+                title={entry.hint}
+                aria-current={active ? "page" : undefined}
+                className={cn(
+                  "flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-[13px] text-sidebar-foreground transition-colors hover:text-foreground",
+                  active &&
+                    "rounded-l-none border-l-2 border-primary bg-accent font-semibold text-primary",
+                )}
+              >
+                {entry.label}
+              </Link>
+            );
+          })}
+        </div>
+      ))}
 
       {/* Settings sat at the foot of the icon rail. The rail is gone, so it
           keeps that position here — `mt-auto` pins it to the bottom. */}
