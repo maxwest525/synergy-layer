@@ -16,6 +16,7 @@ export function OperatorRouteError({ error }: { error: Error }) {
   return (
     <div className="space-y-4">
       <EmptyState
+        gapless
         title={signedOut ? "Your operator session expired" : "This workspace could not load"}
         description={
           signedOut
