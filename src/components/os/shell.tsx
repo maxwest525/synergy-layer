@@ -720,7 +720,10 @@ export function Shell({ children }: { children: ReactNode }) {
             </div>
           ) : null}
 
-          <div className="flex-1 border-t border-border/50 pt-4">
+          {/* shrink-0, not flex-1: inside a scrolling flex column a flex-1 child
+              collapses to a zero basis and its links get clipped instead of
+              extending the rail's scroll height. */}
+          <div className="shrink-0 border-t border-border/50 pt-4">
             <NavList pathname={pathname} collapsed={navCollapsed} />
           </div>
 
@@ -728,12 +731,13 @@ export function Shell({ children }: { children: ReactNode }) {
             to="/auth"
             title={navCollapsed ? accountLabel : undefined}
             className={cn(
-              "mt-4 block truncate border-t border-border/50 pt-4 text-sm font-medium text-foreground transition-colors hover:text-primary",
+              "mt-auto block shrink-0 truncate border-t border-border/50 pt-4 text-sm font-medium text-foreground transition-colors hover:text-primary",
               navCollapsed ? "text-center text-xs" : "px-2.5",
             )}
           >
             {navCollapsed ? "Account" : accountLabel}
           </Link>
+
         </nav>
 
         <div className="flex min-w-0 flex-1 flex-col">
