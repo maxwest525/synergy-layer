@@ -227,6 +227,15 @@ function SystemsPage() {
           {connectorLedger.data.connections.map((connection) => {
             const health = connection.health;
             const outcome = connection.probeOutcome ?? "never_checked";
+            // The status code and endpoint the probe actually saw. "http error"
+            // alone cannot separate a rejected credential from an unreachable
+            // host, and the number was already being stored unread.
+            const proof = [
+              connection.probeProof?.statusCode ? `HTTP ${connection.probeProof.statusCode}` : null,
+              connection.probeProof?.endpoint ?? null,
+            ]
+              .filter(Boolean)
+              .join(" · ");
             return (
               <div key={connection.key} className="rounded-xl border border-border/60 p-3">
                 <div className="flex items-start justify-between gap-2">
@@ -246,6 +255,7 @@ function SystemsPage() {
                 <p className="mt-2 text-xs text-muted-foreground">
                   {connection.state} · {outcome.replaceAll("_", " ")}
                 </p>
+                {proof ? <p className="mt-1 text-xs text-muted-foreground">{proof}</p> : null}
                 {connection.missing.length ? (
                   <p className="mt-1 text-xs text-destructive">
                     Missing: {connection.missing.join(", ")}
