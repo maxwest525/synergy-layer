@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import {
   getGovernedKnowledge,
   ingestAndActivateGovernedKnowledge,
+  ingestOutcomeMemoryKnowledge,
   probeGovernedKnowledgeEmbedding,
 } from "@/lib/knowledge/functions";
 import { OperatorRouteError } from "@/components/os/route-error";
@@ -55,6 +56,7 @@ function KnowledgePage() {
   const loadGoverned = useServerFn(getGovernedKnowledge);
   const ingestGoverned = useServerFn(ingestAndActivateGovernedKnowledge);
   const probeEmbedding = useServerFn(probeGovernedKnowledgeEmbedding);
+  const ingestOutcomes = useServerFn(ingestOutcomeMemoryKnowledge);
   const queryClient = useQueryClient();
   const governed = useSuspenseQuery({
     queryKey: ["governed-knowledge"],
@@ -72,6 +74,22 @@ function KnowledgePage() {
       await queryClient.invalidateQueries({ queryKey: ["governed-knowledge"] });
       toast.success(
         `Activated ${result.sourceCount} sources and ${result.embeddedChunkCount} embedded chunks.`,
+      );
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+  const outcomeMemory = useMutation({
+    mutationFn: () => ingestOutcomes({ data: { approvedModelRequests: 1 } }),
+    onSuccess: async (result) => {
+      await queryClient.invalidateQueries({ queryKey: ["governed-knowledge"] });
+      if (!result.ingested) {
+        toast.info(result.reason);
+        return;
+      }
+      toast.success(
+        result.reused
+          ? "Outcome history unchanged; the stored version was reused and no model request was spent."
+          : `Remembered ${result.concludedReadings} concluded readings as ${result.chunkCount} embedded chunks.`,
       );
     },
     onError: (error: Error) => toast.error(error.message),
@@ -130,6 +148,15 @@ function KnowledgePage() {
                 {ingestion.isPending
                   ? "Embedding and activating…"
                   : "Ingest and activate · maximum 18 requests"}
+              </Button>
+              <Button
+                variant="outline"
+                disabled={outcomeMemory.isPending || ingestion.isPending}
+                onClick={() => outcomeMemory.mutate()}
+              >
+                {outcomeMemory.isPending
+                  ? "Remembering outcomes…"
+                  : "Remember outcomes · maximum 1 request"}
               </Button>
             </div>
           </div>

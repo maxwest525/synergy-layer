@@ -43,3 +43,19 @@ The two playbooks used to compile this handbook remain source documents. This ha
 - [Source of Truth](SOURCE_OF_TRUTH.md)
 - [Evidence Policy](EVIDENCE_POLICY.md)
 - [Canonical Test Cases](TEST_CASES.md)
+
+## Outcome memory
+
+Concluded outcome verdicts (success, neutral, failure — graded by
+`site-health.ts :: gradeOutcomes` from stored measurement rows) can be
+written back into the governed store as one source, `outcome-history`
+(`src/lib/knowledge/outcome-sources.ts`). Ungraded, not-yet, too-early and
+unmeasurable readings are never remembered: a verdict that never existed
+must not become retrievable.
+
+Ingestion is the operator action "Remember outcomes" on the Knowledge page
+(`ingestOutcomeMemoryKnowledge`, approval for exactly 1 model request). The
+source is content-addressed like every other: an unchanged history reuses
+the stored version and spends nothing; an empty history ingests nothing and
+says so. Retrieval treats it as guidance in the devils_advocate role — the
+evidence for any new claim remains the live page and stored provider rows.
