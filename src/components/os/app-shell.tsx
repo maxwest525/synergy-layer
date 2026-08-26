@@ -267,7 +267,13 @@ export function AppShell({ children }: { children: ReactNode }) {
     });
   }, [accessState, navigate, pathname]);
 
-  if (onAuthRoute) return <>{children}</>;
+  if (onAuthRoute) {
+    return (
+      <div className="flex min-h-svh w-full items-center justify-center bg-background px-4 py-10 text-foreground">
+        <div className="w-full max-w-md">{children}</div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-svh flex-col bg-background text-foreground">
