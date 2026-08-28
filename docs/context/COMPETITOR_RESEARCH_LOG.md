@@ -326,6 +326,90 @@ and mover brands** (moveBuddha, Moving.com, poseidonmoving and the rest of the
 route-page operators), while the Katz group dominates the **paid** block. These
 are two different competitive surfaces and the system must not merge them.
 
+### The publisher layer, and why the tracked keywords are the wrong ones
+
+Operator, 2026-08-28: companies like **ConsumerAffairs** publish "top 10 movers"
+listicles and funnel the resulting calls. They are a fourth layer, distinct from
+lead vendors, brokers and carriers: they never move anyone and never broker a
+move, they rank and monetise the click.
+
+This connects to the keyword finding directly. AOOS tracks **40 keywords, all
+synonyms of one head term** — "best long distance movers", "top long distance
+moving company", "long distance movers near me" and so on — with **zero** route
+queries (`\s+to\s+` matches nothing). Those head terms are exactly the queries
+listicle publishers are built to win. So the tracked set measures the one part
+of the market where a broker is least likely to rank and a publisher is most
+likely to, and measures none of the route queries where the route-matrix
+operators actually compete.
+
+TruMove's own sitemap is 30 URLs — seven service pages, three blog posts, the
+rest utility — with **no route pages at all**. So on the head terms the system
+tracks, the contest is against publishers; on the route queries it does not
+track, there is nothing to contest with.
+
+Three competitor layers now measured or identified, none of them the same
+problem:
+
+| Layer | Example | Wins on | Measured? |
+|---|---|---|---|
+| Lead vendors / broker brands | Katz Group | Paid, heavily | Yes — 2,606 creatives |
+| Carriers / van lines | UniGroup, SIRVA | Paid + brand | Yes — 1,924 / 697 |
+| Route-matrix operators | moveBuddha, Poseidon | Organic route queries | Partly (URL patterns only) |
+| **Publishers / listicles** | **ConsumerAffairs** | **Organic head terms** | **Not yet** |
+
+### Paid market, corrected
+
+An earlier entry claimed the Katz group holds "94% of the paid market". That was
+94% of the seven-domain lead-vendor watchlist, not of the market — brokers and
+carriers advertise too and none were in that set. Operator flagged the
+overstatement. Measured across eleven owners including real carriers:
+
+| Owner | Creatives | Live 7d | Brands |
+|---|---:|---:|---|
+| Katz Group | 2,606 | 2,236 | budgetvanlines, 2movers, quoterunner, uload |
+| UniGroup | 1,924 | 1,397 | unitedvanlines, mayflower |
+| SIRVA | 697 | 332 | allied, northamerican |
+| International Van Lines | 118 | 13 | internationalvanlines |
+| RESOLT INC | 104 | 6 | resultcalls, doppcall |
+| ROADWAY MOVERS INC | 101 | 63 | roadwaymoving |
+| Colonial Van Lines Inc | 100 | 85 | colonialvanlines |
+| American Van Lines, Inc | 68 | 50 | americanvanlines |
+| moveBuddha LLC | 51 | 1 | movebuddha |
+| Leadgen Network | 30 | 1 | billy.com |
+| Lovine, Inc | 8 | 3 | 99calls |
+| **TruMove** | **1** | — | trumoveinc.com |
+
+Katz share of this measured set: **44.9%**, not 94%. The multi-brand pattern is
+not unique to them — SIRVA and UniGroup each run two brands from one owner,
+which is further support for reading the market by owner rather than by domain.
+TruMove runs **one creative**.
+
+**Caveat on creative counts:** a creative is one ad unit, not a landing page.
+Many creatives can share a destination and one creative can rotate destinations.
+These figures measure ad-production volume, nothing about placement, spend, or
+where the click lands. They are context, not an answer.
+
+### uload.com: a live Katz brand that was not being watched
+
+`uload.com` — named in the Katz Group list on equatemedia.com/careers — carries
+**278 creatives, 146 live in the last week**, running since 2026-03-09, under
+advertiser **"Quote Runner, LLC" `AR16136027762673582081`**. It is absent from
+`ad_vendor_watchlist`.
+
+Note the near-collision: `quoterunner.com` runs under **"Quote Runner llc"**
+`AR15552671483326103553` — a *different* account, one comma apart in the name.
+Name matching would merge them; domain matching misses uload entirely.
+
+`equatemedia.com` and `homeexpert.com` return **zero creatives**, confirming the
+watchlist's `no_advertiser_found` state for the parent domain is correct rather
+than a failure: the holding company does not buy consumer ads, its brands do.
+
+**Method limit:** the Transparency RPC accepts a domain filter only. Querying by
+advertiser ID (`3.13.1`, and two other shapes) returns HTTP 400 or empty, so a
+watchlist cannot be keyed on the advertiser account even though the account is
+the better key. New brands under a known account are only discoverable by
+guessing their domain.
+
 ## Open items
 
 - [x] Operator's vendor list found: the confirmed advertiser watchlist above.
