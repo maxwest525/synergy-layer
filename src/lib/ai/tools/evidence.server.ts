@@ -149,7 +149,8 @@ export async function buildEvidenceTools(identity: { userId: string; token: stri
         if (!ctx.tenantId) return NO_TENANT;
         const { data, error } = await ctx.db
           .from("change_request_executions")
-          .select("id, change_request_id, outcome, created_at, detail")
+          .select("id, change_request_id, kind, status, created_at, detail")
+          .eq("tenant_id", ctx.tenantId)
           .order("created_at", { ascending: false })
           .limit(50);
         if (error) return { error: error.message };

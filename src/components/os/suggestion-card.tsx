@@ -5,6 +5,7 @@ import { useId } from "react";
 import { toast } from "sonner";
 
 import { COMMAND_CENTER_QUERY_KEY } from "./command-center-facts";
+import { fixTargetForSiteCheck } from "@/lib/audit-fixes";
 import { proposeAuditFix } from "@/lib/audit-proposals.functions";
 import { actionFor } from "@/lib/command-center";
 import { rejectChangeRequest } from "@/lib/change-requests.functions";
@@ -63,6 +64,13 @@ export function SuggestionCard({ item }: { item: QueueItem }) {
         // by id — it is drafted from its check and the page it names. Both
         // lanes file a governed proposal and return the same shape.
         if (item.kind === "audit") {
+          // A site finding names no page on purpose: its fix is the sitewide
+          // crawl directives, so it drafts against the site scope.
+          if (item.rule && fixTargetForSiteCheck(item.rule)) {
+            return draftAuditFix({
+              data: { scope: "site", check: item.rule, idempotencyKey: crypto.randomUUID() },
+            });
+          }
           if (!item.targetUrl) {
             throw new Error(
               "This finding names no page yet, so there is nothing to draft against.",

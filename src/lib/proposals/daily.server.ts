@@ -25,7 +25,9 @@ type JobRow = Database["public"]["Tables"]["automation_jobs"]["Row"];
 
 /** A configuration refusal must stop the job, not be retried every night. */
 function isTerminalConfigurationFailure(message: string): boolean {
-  return /not configured|missing|unauthor|forbidden|invalid credential/i.test(message);
+  return /not configured|missing|unauthor|forbidden|invalid credential|not visible to this account|only an operator or admin|no firecrawl deployment is configured/i.test(
+    message,
+  );
 }
 
 async function loadJob(admin: Client, tenantId: string): Promise<JobRow> {
@@ -177,6 +179,8 @@ export async function runProposalJobForTenant(
         const prepared = await prepareTitleH1Proposal(admin, tenantId, candidate.url);
         const result = await serviceRpc("create_title_h1_proposal", {
           _tenant_id: tenantId,
+          // NULL actor is the governed system path: the RPC files the draft as
+          // a system actor, never as a named operator this job cannot claim.
           _actor: null,
           _idempotency_key: `title-h1:auto:${day}:${candidate.url}`,
           _target_url: prepared.targetUrl,

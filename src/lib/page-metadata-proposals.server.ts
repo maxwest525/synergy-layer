@@ -71,7 +71,7 @@ export async function preparePageMetadataProposal(
   const renderer = createRenderedVerifier();
   if (!renderer) {
     throw new Error(
-      "Required live-page evidence is unavailable: no Firecrawl deployment is configured, self-hosted or cloud.",
+      "Required live-page evidence is unavailable: no page renderer is configured. Configure Crawl4AI (VPS_SCRAPER_API_KEY) or a Firecrawl deployment.",
     );
   }
   const rendered = await renderer.render(targetUrl);
