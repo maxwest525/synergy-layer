@@ -4,7 +4,9 @@ import { GOVERNED_BRANCH, GOVERNED_FILE, GOVERNED_PROJECT_ID, GOVERNED_REPO } fr
 import {
   applyExactReplacements,
   extractMetaDescription,
+  normalizeTextFile,
   parseFieldChanges,
+  verifyPublishedRobots,
   verifyRenderedPage,
 } from "./source-change";
 import {
@@ -16,8 +18,13 @@ import {
   type ExecutionStore,
   type GithubApi,
   type RenderedVerifier,
+  type RobotsProver,
 } from "./execute";
-import { buildRenderedScrapeRequest, captureMeasurementFollowupWarning } from "./execute.server";
+import {
+  buildRenderedScrapeRequest,
+  captureMeasurementFollowupWarning,
+  createRenderedVerifier,
+} from "./execute.server";
 
 const changes = parseFieldChanges([
   {
@@ -439,6 +446,87 @@ describe("buildRenderedScrapeRequest", () => {
   });
 });
 
+describe("createRenderedVerifier", () => {
+  const bothRenderers = {
+    VPS_SCRAPER_BASE_URL: "https://crawl.example",
+    VPS_SCRAPER_API_KEY: "vps-secret",
+    SELFHOSTED_FIRECRAWL_BASE_URL: "https://fire.example",
+    SELFHOSTED_FIRECRAWL_API_KEY: "fire-secret",
+  };
+  const pageHtml =
+    "<html><head><title>Employee Relocation Movers | TruMove</title>" +
+    '<meta name="description" content="Movers you trust."></head>' +
+    "<body><h1>Employee relocation, moved by TruMove</h1></body></html>";
+  const firecrawlSuccess = {
+    status: 200,
+    text: JSON.stringify({
+      success: true,
+      data: {
+        rawHtml: pageHtml,
+        markdown: "",
+        metadata: { sourceURL: "https://trumoveinc.com/services/corporate-relocation" },
+      },
+    }),
+    headers: new Headers(),
+  };
+
+  it("renders through Crawl4AI first and never touches Firecrawl when the box answers", async () => {
+    const firecrawlCalls: string[] = [];
+    const verifier = createRenderedVerifier(bothRenderers, {
+      scrapeCrawl4ai: async () => ({
+        html: pageHtml,
+        markdown: "",
+        finalUrl: "https://trumoveinc.com/services/corporate-relocation",
+      }),
+      fetchRendered: async (url) => {
+        firecrawlCalls.push(url);
+        return firecrawlSuccess;
+      },
+    });
+    const page = await verifier!.render("https://trumoveinc.com/services/corporate-relocation");
+    expect(page.renderedBy).toBe("Crawl4AI");
+    expect(page.title).toBe("Employee Relocation Movers | TruMove");
+    expect(page.heading).toBe("Employee relocation, moved by TruMove");
+    expect(page.metaDescription).toBe("Movers you trust.");
+    expect(firecrawlCalls).toEqual([]);
+  });
+
+  it("falls back to Firecrawl when Crawl4AI fails, and the stored provenance says so", async () => {
+    const firecrawlCalls: string[] = [];
+    const verifier = createRenderedVerifier(bothRenderers, {
+      scrapeCrawl4ai: async () => {
+        throw new Error("Crawl4AI request timed out.");
+      },
+      fetchRendered: async (url) => {
+        firecrawlCalls.push(url);
+        return firecrawlSuccess;
+      },
+    });
+    const page = await verifier!.render("https://trumoveinc.com/services/corporate-relocation");
+    expect(page.renderedBy).toBe(
+      "Firecrawl (self-hosted) after Crawl4AI failed: Crawl4AI request timed out.",
+    );
+    expect(firecrawlCalls).toEqual(["https://fire.example/v2/scrape"]);
+  });
+
+  it("still renders through Firecrawl alone when Crawl4AI is unconfigured", async () => {
+    const verifier = createRenderedVerifier(
+      {
+        SELFHOSTED_FIRECRAWL_BASE_URL: "https://fire.example",
+        SELFHOSTED_FIRECRAWL_API_KEY: "fire-secret",
+      },
+      { fetchRendered: async () => firecrawlSuccess },
+    );
+    const page = await verifier!.render("https://trumoveinc.com/services/corporate-relocation");
+    expect(page.renderedBy).toBe("Firecrawl (self-hosted)");
+  });
+
+  it("returns null only when neither renderer is configured", () => {
+    expect(createRenderedVerifier({})).toBeNull();
+    expect(createRenderedVerifier({ VPS_SCRAPER_API_KEY: "vps-secret" })).not.toBeNull();
+  });
+});
+
 describe("extractMetaDescription", () => {
   it("reads the description meta tag in either attribute order", () => {
     expect(
@@ -535,6 +623,7 @@ describe("checkPublishedPage", () => {
     const { store, saved } = makeStore(makeRequest({ commitSha: "new-sha" }));
     const outcome = await checkPublishedPage({
       store,
+      robotsProver: null,
       renderer: makeRenderer({
         title: "Employee Relocation Movers | TruMove",
         heading: "Employee Relocation Moving Services",
@@ -553,6 +642,7 @@ describe("checkPublishedPage", () => {
     });
     const outcome = await checkPublishedPage({
       store,
+      robotsProver: null,
       renderer: makeRenderer({
         title: "Employee Relocation Movers | TruMove",
         heading: "Employee Relocation Moving Services",
@@ -578,6 +668,7 @@ describe("checkPublishedPage", () => {
     );
     const outcome = await checkPublishedPage({
       store,
+      robotsProver: null,
       renderer: makeRenderer({
         title: null,
         heading: null,
@@ -596,6 +687,7 @@ describe("checkPublishedPage", () => {
     const { store, saved } = makeStore(makeRequest({ commitSha: "new-sha" }));
     const outcome = await checkPublishedPage({
       store,
+      robotsProver: null,
       renderer: makeRenderer({ title: "Old", heading: "Old" }),
       requestId: "x",
       actorId: "operator",
@@ -608,6 +700,7 @@ describe("checkPublishedPage", () => {
     const { store } = makeStore(makeRequest({ commitSha: "new-sha" }));
     const outcome = await checkPublishedPage({
       store,
+      robotsProver: null,
       renderer: null,
       requestId: "x",
       actorId: "operator",
@@ -622,6 +715,7 @@ describe("checkPublishedPage", () => {
     );
     const outcome = await checkPublishedPage({
       store,
+      robotsProver: null,
       renderer: makeRenderer({ title: "x", heading: "y" }),
       requestId: "x",
       actorId: "operator",
@@ -633,6 +727,7 @@ describe("checkPublishedPage", () => {
     const { store, saved } = makeStore(makeRequest({ commitSha: "new-sha" }));
     const outcome = await checkPublishedPage({
       store,
+      robotsProver: null,
       renderer: makeRenderer({
         title: "Employee Relocation Movers | TruMove",
         heading: "Employee Relocation Moving Services",
@@ -649,10 +744,148 @@ describe("checkPublishedPage", () => {
     const { store } = makeStore(makeRequest());
     const outcome = await checkPublishedPage({
       store,
+      robotsProver: null,
       renderer: makeRenderer({ title: "x", heading: "y" }),
       requestId: "x",
       actorId: "operator",
     });
     expect(outcome.status).toBe("refused");
+  });
+});
+
+const robotsChanges = parseFieldChanges([
+  {
+    field: "robots_txt",
+    label: "robots.txt site wide block",
+    before: "Disallow: /",
+    after: "Disallow:",
+  },
+]);
+
+function makeRobotsRequest(overrides: Partial<ExecutableRequest> = {}): ExecutableRequest {
+  return makeRequest({
+    targetUrl: "https://trumoveinc.com",
+    filePath: "public/robots.txt",
+    changes: robotsChanges,
+    commitSha: "robots-sha",
+    ...overrides,
+  });
+}
+
+function makeProver(input: { deployed: string; committed: string }): {
+  prover: RobotsProver;
+  fetchedUrls: string[];
+  readRefs: string[];
+} {
+  const fetchedUrls: string[] = [];
+  const readRefs: string[] = [];
+  const prover: RobotsProver = {
+    fetchDeployed: async (url) => {
+      fetchedUrls.push(url);
+      return { content: input.deployed, finalUrl: url };
+    },
+    readCommitted: async (_repo, _path, ref) => {
+      readRefs.push(ref);
+      return input.committed;
+    },
+    hash: (text) => `sha256-of:${text}`,
+  };
+  return { prover, fetchedUrls, readRefs };
+}
+
+describe("verifyPublishedRobots", () => {
+  it("proves a deployed file that matches the committed one, ignoring line-ending artifacts", () => {
+    const proof = verifyPublishedRobots({
+      deployedContent: "User-agent: *\r\nDisallow:\r\n",
+      committedContent: "User-agent: *\nDisallow:",
+      finalUrl: "https://trumoveinc.com/robots.txt",
+      fetchedBy: "Direct fetch",
+      commitSha: "robots-sha",
+    });
+    expect(proof.ok).toBe(true);
+    expect(proof.matchedCommitSha).toBe("robots-sha");
+  });
+
+  it("reports a mismatch as a pending publish, never as a failure of the change", () => {
+    const proof = verifyPublishedRobots({
+      deployedContent: "User-agent: *\nDisallow: /",
+      committedContent: "User-agent: *\nDisallow:",
+      finalUrl: "https://trumoveinc.com/robots.txt",
+      fetchedBy: "Direct fetch",
+      commitSha: "robots-sha",
+    });
+    expect(proof.ok).toBe(false);
+    expect(proof.reason).toContain("publish or sync is still pending");
+  });
+
+  it("refuses to prove anything against an unreadable committed file", () => {
+    const proof = verifyPublishedRobots({
+      deployedContent: "User-agent: *",
+      committedContent: "   ",
+      finalUrl: "https://trumoveinc.com/robots.txt",
+      fetchedBy: "Direct fetch",
+      commitSha: "robots-sha",
+    });
+    expect(proof.ok).toBe(false);
+    expect(proof.reason).toContain("could not be read");
+  });
+
+  it("normalizes only transport artifacts, never directive content", () => {
+    expect(normalizeTextFile("Disallow: /a\r\nAllow: /b  \n")).toBe("Disallow: /a\nAllow: /b");
+    expect(normalizeTextFile("Disallow: /a")).not.toBe(normalizeTextFile("Disallow: /b"));
+  });
+});
+
+describe("checkPublishedPage crawl-directives lane", () => {
+  it("refuses plainly when the executor credential needed to read the committed file is absent", async () => {
+    const { store } = makeStore(makeRobotsRequest());
+    const outcome = await checkPublishedPage({
+      store,
+      robotsProver: null,
+      renderer: makeRenderer({ title: "irrelevant", heading: "irrelevant" }),
+      requestId: "x",
+      actorId: "operator",
+    });
+    expect(outcome.status).toBe("refused");
+    expect(outcome.message).toContain("GITHUB_EXECUTOR_TOKEN");
+  });
+
+  it("proves the lane by comparing the deployed file to the committed one, with no renderer involved", async () => {
+    const { store, saved } = makeStore(makeRobotsRequest());
+    const { prover, fetchedUrls, readRefs } = makeProver({
+      deployed: "User-agent: *\nDisallow:",
+      committed: "User-agent: *\nDisallow:",
+    });
+    const outcome = await checkPublishedPage({
+      store,
+      robotsProver: prover,
+      renderer: null,
+      requestId: "x",
+      actorId: "operator",
+    });
+    expect(outcome.status).toBe("verified");
+    expect(fetchedUrls).toEqual(["https://trumoveinc.com/robots.txt"]);
+    expect(readRefs).toEqual(["robots-sha"]);
+    expect(outcome.proof?.matchedCommitSha).toBe("robots-sha");
+    expect(outcome.proof?.deployedSha256).toBe(outcome.proof?.committedSha256);
+    expect(saved.map((row) => row["kind"])).toEqual(["applied"]);
+  });
+
+  it("stays pending while the deployed file has not caught up with the commit", async () => {
+    const { store, saved, attempts } = makeStore(makeRobotsRequest());
+    const { prover } = makeProver({
+      deployed: "User-agent: *\nDisallow: /",
+      committed: "User-agent: *\nDisallow:",
+    });
+    const outcome = await checkPublishedPage({
+      store,
+      robotsProver: prover,
+      renderer: null,
+      requestId: "x",
+      actorId: "operator",
+    });
+    expect(outcome.status).toBe("pending");
+    expect(saved).toHaveLength(0);
+    expect(attempts[0]?.status).toBe("pending");
   });
 });
