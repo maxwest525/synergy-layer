@@ -521,7 +521,7 @@ export async function checkPublishedPage(input: {
 
   if (!input.renderer) {
     return refuse(
-      "Rendered-page verification is not connected. This site renders its title and H1 with JavaScript, so raw HTML cannot prove anything. Configure the self-hosted Firecrawl (SELFHOSTED_FIRECRAWL_BASE_URL and SELFHOSTED_FIRECRAWL_API_KEY) to enable this check.",
+      "Rendered-page verification is not connected. This site renders its title and H1 with JavaScript, so raw HTML cannot prove anything. Configure Crawl4AI (VPS_SCRAPER_API_KEY) or the self-hosted Firecrawl (SELFHOSTED_FIRECRAWL_BASE_URL and SELFHOSTED_FIRECRAWL_API_KEY) to enable this check.",
     );
   }
 

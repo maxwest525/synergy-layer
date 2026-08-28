@@ -37,6 +37,20 @@ SQL and reachable without the TypeScript wrapper. The database has rows in
 `docs/handoffs/2026-08-25-remediation-plan.md` for the retraction and the method
 error behind it.
 
+**Addendum, 2026-08-28: proposal drafting and publish proof render through
+Crawl4AI first.** `createRenderedVerifier` in
+`src/lib/execution/execute.server.ts` previously consulted only
+`firecrawlEndpoint()`, so "Propose the fix" and "Check rendered page" failed or
+spent credits whenever Firecrawl was down, while Crawl4AI sat healthy and
+preferred everywhere else. The verifier now uses the same precedence as the
+page audit: Crawl4AI first, Firecrawl only as fallback, with the fallback
+provenance recorded in `renderedBy` the same way the audit records it. The
+execution card names the renderer chain and prices the check honestly: no
+charge on Crawl4AI, 1 credit only when the Firecrawl fallback answers. A stale
+Crawl4AI render can only under-prove a forward change (the approved new wording
+cannot exist in a cache older than the commit), so the proof's safety direction
+is preserved.
+
 **How to read this file.** Section 0 is the current state and supersedes anything
 below it that disagrees. The later sections are kept in the order they were
 written, as a dated record of how the build got here. Where an older section

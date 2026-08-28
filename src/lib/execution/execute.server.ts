@@ -9,6 +9,7 @@ import type {
   RenderedVerifier,
 } from "./execute";
 import { firecrawlEndpoint } from "../firecrawl-endpoint";
+import { scrapePageWithVps, vpsScraperConfigured } from "../connectors/vps-scraper.server";
 import { GithubStatusError, readGithubResponseSignals } from "./github-error";
 import {
   extractDocumentTitle,
@@ -16,6 +17,7 @@ import {
   extractMarkdownHeading,
   extractMetaDescription,
   parseFieldChanges,
+  type RenderedPage,
 } from "./source-change";
 
 type Client = SupabaseClient<Database>;
@@ -279,60 +281,108 @@ export function buildRenderedScrapeRequest(url: string) {
   };
 }
 
-export function createRenderedVerifier(): RenderedVerifier | null {
-  // Self-hosted first. Proving a change went live renders the page again, so
-  // this ran against the metered cloud on every publish while the operator's
-  // own Firecrawl sat unused.
-  const endpoint = firecrawlEndpoint(process.env);
-  if (!endpoint) return null;
+/**
+ * Crawl4AI first, Firecrawl only as fallback — the same precedence the page
+ * audit has used since the metered-crawl correction (PRs #55/#56). This
+ * verifier previously consulted only Firecrawl, so proposal drafting and
+ * publish proof paid for (or failed on) Firecrawl while the operator's own
+ * Crawl4AI box sat healthy and preferred everywhere else in the product.
+ *
+ * Freshness: Crawl4AI renders on request. A stale render cannot falsely prove
+ * a forward change live — the approved new wording cannot exist in any cache
+ * older than the commit — so staleness only under-proves, and the Firecrawl
+ * fallback still sends maxAge: 0.
+ */
+export function createRenderedVerifier(
+  env: Record<string, string | undefined> = process.env,
+  deps: {
+    scrapeCrawl4ai?: (url: string) => Promise<{ html: string; markdown: string; finalUrl: string }>;
+    fetchRendered?: typeof boundedFetch;
+  } = {},
+): RenderedVerifier | null {
+  const endpoint = firecrawlEndpoint(env);
+  const crawl4aiConfigured = vpsScraperConfigured(env);
+  if (!crawl4aiConfigured && !endpoint) return null;
+
+  const scrape = deps.scrapeCrawl4ai ?? ((url: string) => scrapePageWithVps(url, { env }));
+  const fetchRendered = deps.fetchRendered ?? boundedFetch;
+  const firecrawlName = endpoint
+    ? endpoint.selfHosted
+      ? "Firecrawl (self-hosted)"
+      : "Firecrawl"
+    : null;
+
+  async function renderWithFirecrawl(url: string, renderedBy: string): Promise<RenderedPage> {
+    if (!endpoint) throw new Error("No Firecrawl deployment is configured.");
+    const response = await fetchRendered(endpoint.url, {
+      method: "POST",
+      label: "Firecrawl",
+      headers: { Authorization: `Bearer ${endpoint.key}`, "Content-Type": "application/json" },
+      body: JSON.stringify(buildRenderedScrapeRequest(url)),
+    });
+    if (response.status < 200 || response.status >= 300) {
+      throw new Error(`Firecrawl responded ${response.status}, so nothing was proven.`);
+    }
+    let parsed: {
+      success?: boolean;
+      error?: string;
+      data?: {
+        rawHtml?: string;
+        markdown?: string;
+        metadata?: { title?: string; sourceURL?: string; url?: string; statusCode?: number };
+      };
+    };
+    try {
+      parsed = JSON.parse(response.text) as typeof parsed;
+    } catch {
+      throw new Error("Firecrawl returned an unreadable response, so nothing was proven.");
+    }
+    if (parsed.success === false) {
+      throw new Error(`Firecrawl could not render the page: ${parsed.error ?? "no reason given"}.`);
+    }
+    const status = parsed.data?.metadata?.statusCode;
+    if (typeof status === "number" && (status < 200 || status >= 300)) {
+      throw new Error(
+        `The public page returned HTTP ${status} when rendered, so nothing was proven.`,
+      );
+    }
+    const html = parsed.data?.rawHtml ?? "";
+    const markdown = parsed.data?.markdown ?? "";
+    const metaTitle = parsed.data?.metadata?.title?.trim();
+    return {
+      finalUrl: parsed.data?.metadata?.sourceURL ?? parsed.data?.metadata?.url ?? url,
+      title: extractDocumentTitle(html) ?? (metaTitle ? metaTitle : null),
+      heading: extractFirstHeading(html) ?? extractMarkdownHeading(markdown),
+      metaDescription: extractMetaDescription(html),
+      renderedBy,
+    };
+  }
+
+  if (!crawl4aiConfigured) {
+    const name = firecrawlName as string;
+    return { name, render: (url) => renderWithFirecrawl(url, name) };
+  }
 
   return {
-    name: endpoint.selfHosted ? "Firecrawl (self-hosted)" : "Firecrawl",
+    name: firecrawlName ? `Crawl4AI, then ${firecrawlName}` : "Crawl4AI",
     async render(url) {
-      const response = await boundedFetch(endpoint.url, {
-        method: "POST",
-        label: "Firecrawl",
-        headers: { Authorization: `Bearer ${endpoint.key}`, "Content-Type": "application/json" },
-        body: JSON.stringify(buildRenderedScrapeRequest(url)),
-      });
-      if (response.status < 200 || response.status >= 300) {
-        throw new Error(`Firecrawl responded ${response.status}, so nothing was proven.`);
-      }
-      let parsed: {
-        success?: boolean;
-        error?: string;
-        data?: {
-          rawHtml?: string;
-          markdown?: string;
-          metadata?: { title?: string; sourceURL?: string; url?: string; statusCode?: number };
-        };
-      };
+      let crawl4aiFailure: string;
       try {
-        parsed = JSON.parse(response.text) as typeof parsed;
-      } catch {
-        throw new Error("Firecrawl returned an unreadable response, so nothing was proven.");
+        const page = await scrape(url);
+        return {
+          finalUrl: page.finalUrl,
+          title: extractDocumentTitle(page.html),
+          heading: extractFirstHeading(page.html) ?? extractMarkdownHeading(page.markdown),
+          metaDescription: extractMetaDescription(page.html),
+          renderedBy: "Crawl4AI",
+        };
+      } catch (error) {
+        if (!endpoint) throw error;
+        crawl4aiFailure = error instanceof Error ? error.message : "no reason given";
       }
-      if (parsed.success === false) {
-        throw new Error(
-          `Firecrawl could not render the page: ${parsed.error ?? "no reason given"}.`,
-        );
-      }
-      const status = parsed.data?.metadata?.statusCode;
-      if (typeof status === "number" && (status < 200 || status >= 300)) {
-        throw new Error(
-          `The public page returned HTTP ${status} when rendered, so nothing was proven.`,
-        );
-      }
-      const html = parsed.data?.rawHtml ?? "";
-      const markdown = parsed.data?.markdown ?? "";
-      const metaTitle = parsed.data?.metadata?.title?.trim();
-      return {
-        finalUrl: parsed.data?.metadata?.sourceURL ?? parsed.data?.metadata?.url ?? url,
-        title: extractDocumentTitle(html) ?? (metaTitle ? metaTitle : null),
-        heading: extractFirstHeading(html) ?? extractMarkdownHeading(markdown),
-        metaDescription: extractMetaDescription(html),
-        renderedBy: "Firecrawl",
-      };
+      // Same provenance wording the page audit stores, so a fallback render is
+      // attributable from the row alone.
+      return renderWithFirecrawl(url, `${firecrawlName} after Crawl4AI failed: ${crawl4aiFailure}`);
     },
   };
 }

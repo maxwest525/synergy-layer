@@ -17,7 +17,11 @@ import {
   type GithubApi,
   type RenderedVerifier,
 } from "./execute";
-import { buildRenderedScrapeRequest, captureMeasurementFollowupWarning } from "./execute.server";
+import {
+  buildRenderedScrapeRequest,
+  captureMeasurementFollowupWarning,
+  createRenderedVerifier,
+} from "./execute.server";
 
 const changes = parseFieldChanges([
   {
@@ -436,6 +440,87 @@ describe("buildRenderedScrapeRequest", () => {
       waitFor: 3000,
       maxAge: 0,
     });
+  });
+});
+
+describe("createRenderedVerifier", () => {
+  const bothRenderers = {
+    VPS_SCRAPER_BASE_URL: "https://crawl.example",
+    VPS_SCRAPER_API_KEY: "vps-secret",
+    SELFHOSTED_FIRECRAWL_BASE_URL: "https://fire.example",
+    SELFHOSTED_FIRECRAWL_API_KEY: "fire-secret",
+  };
+  const pageHtml =
+    "<html><head><title>Employee Relocation Movers | TruMove</title>" +
+    '<meta name="description" content="Movers you trust."></head>' +
+    "<body><h1>Employee relocation, moved by TruMove</h1></body></html>";
+  const firecrawlSuccess = {
+    status: 200,
+    text: JSON.stringify({
+      success: true,
+      data: {
+        rawHtml: pageHtml,
+        markdown: "",
+        metadata: { sourceURL: "https://trumoveinc.com/services/corporate-relocation" },
+      },
+    }),
+    headers: new Headers(),
+  };
+
+  it("renders through Crawl4AI first and never touches Firecrawl when the box answers", async () => {
+    const firecrawlCalls: string[] = [];
+    const verifier = createRenderedVerifier(bothRenderers, {
+      scrapeCrawl4ai: async () => ({
+        html: pageHtml,
+        markdown: "",
+        finalUrl: "https://trumoveinc.com/services/corporate-relocation",
+      }),
+      fetchRendered: async (url) => {
+        firecrawlCalls.push(url);
+        return firecrawlSuccess;
+      },
+    });
+    const page = await verifier!.render("https://trumoveinc.com/services/corporate-relocation");
+    expect(page.renderedBy).toBe("Crawl4AI");
+    expect(page.title).toBe("Employee Relocation Movers | TruMove");
+    expect(page.heading).toBe("Employee relocation, moved by TruMove");
+    expect(page.metaDescription).toBe("Movers you trust.");
+    expect(firecrawlCalls).toEqual([]);
+  });
+
+  it("falls back to Firecrawl when Crawl4AI fails, and the stored provenance says so", async () => {
+    const firecrawlCalls: string[] = [];
+    const verifier = createRenderedVerifier(bothRenderers, {
+      scrapeCrawl4ai: async () => {
+        throw new Error("Crawl4AI request timed out.");
+      },
+      fetchRendered: async (url) => {
+        firecrawlCalls.push(url);
+        return firecrawlSuccess;
+      },
+    });
+    const page = await verifier!.render("https://trumoveinc.com/services/corporate-relocation");
+    expect(page.renderedBy).toBe(
+      "Firecrawl (self-hosted) after Crawl4AI failed: Crawl4AI request timed out.",
+    );
+    expect(firecrawlCalls).toEqual(["https://fire.example/v2/scrape"]);
+  });
+
+  it("still renders through Firecrawl alone when Crawl4AI is unconfigured", async () => {
+    const verifier = createRenderedVerifier(
+      {
+        SELFHOSTED_FIRECRAWL_BASE_URL: "https://fire.example",
+        SELFHOSTED_FIRECRAWL_API_KEY: "fire-secret",
+      },
+      { fetchRendered: async () => firecrawlSuccess },
+    );
+    const page = await verifier!.render("https://trumoveinc.com/services/corporate-relocation");
+    expect(page.renderedBy).toBe("Firecrawl (self-hosted)");
+  });
+
+  it("returns null only when neither renderer is configured", () => {
+    expect(createRenderedVerifier({})).toBeNull();
+    expect(createRenderedVerifier({ VPS_SCRAPER_API_KEY: "vps-secret" })).not.toBeNull();
   });
 });
 

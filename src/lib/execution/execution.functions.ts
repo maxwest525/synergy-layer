@@ -1,7 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { firecrawlEndpoint } from "../firecrawl-endpoint";
 import { parseUuidInput } from "../server-input";
 import {
   changeKindForFile,
@@ -50,6 +49,7 @@ export type ExecutionStateView = {
   operatorCheckFailed: boolean;
   executorCredentialPresent: boolean;
   rendererCredentialPresent: boolean;
+  rendererName: string | null;
   repo: string | null;
   branch: string | null;
   filePath: string | null;
@@ -67,8 +67,8 @@ export type ExecutionStateView = {
 export function buildReadiness(input: {
   executorCredentialPresent: boolean;
   rendererCredentialPresent: boolean;
-  /** Which Firecrawl deployment would answer, so a proven read is not credited to the wrong one. */
-  rendererSelfHosted?: boolean;
+  /** Which renderer would answer, so a proven read is not credited to the wrong one. */
+  rendererName?: string | null;
   repo: string | null;
   branch: string | null;
   filePath: string | null;
@@ -158,10 +158,8 @@ export function buildReadiness(input: {
       label: "Rendered-page verification",
       state: input.rendererCredentialPresent ? "configured" : "blocked",
       detail: input.rendererCredentialPresent
-        ? input.rendererSelfHosted
-          ? `The self-hosted Firecrawl is configured and unproven. No render call has been made, so proof from ${GOVERNED_ORIGIN} has not been attempted.`
-          : `The metered Firecrawl cloud is configured and unproven. No paid render call has been authorized, so proof from ${GOVERNED_ORIGIN} has not been attempted.`
-        : "No Firecrawl deployment is configured, self-hosted or cloud. Raw HTML from this site is an application shell, so a change could not be proven live.",
+        ? `${input.rendererName ?? "A renderer"} would render this proof, and is unproven here. No render call has been made, so proof from ${GOVERNED_ORIGIN} has not been attempted.`
+        : "No page renderer is configured: neither Crawl4AI nor a Firecrawl deployment, self-hosted or cloud. Raw HTML from this site is an application shell, so a change could not be proven live.",
     },
 
     {
@@ -211,18 +209,22 @@ export const getExecutionState = createServerFn({ method: "GET" })
   .inputValidator(parseUuidInput)
   .handler(async ({ data }): Promise<ExecutionStateView> => {
     const { createRequestClient } = await import("../tenant.server");
-    const { fetchExecutionAttempts } = await import("./execute.server");
+    const { fetchExecutionAttempts, createRenderedVerifier } = await import("./execute.server");
     const executorCredentialPresent = Boolean(process.env["GITHUB_EXECUTOR_TOKEN"]);
-    // The shared chooser, not the cloud key: the self-hosted deployment renders
-    // this proof, and reading FIRECRAWL_API_KEY here reported it as absent.
-    const renderer = firecrawlEndpoint(process.env);
-    const rendererCredentialPresent = renderer !== null;
+    // Ask the verifier's own chooser (Crawl4AI first, Firecrawl fallback), so
+    // this view can never disagree with what a render would actually use.
+    // Reading only the Firecrawl chooser here reported the renderer absent
+    // while Crawl4AI was healthy and doing every audit render.
+    const verifier = createRenderedVerifier();
+    const rendererCredentialPresent = verifier !== null;
+    const rendererName = verifier?.name ?? null;
 
     const empty: ExecutionStateView = {
       isOperator: false,
       operatorCheckFailed: false,
       executorCredentialPresent,
       rendererCredentialPresent,
+      rendererName,
       repo: null,
       branch: null,
       filePath: null,
@@ -280,7 +282,7 @@ export const getExecutionState = createServerFn({ method: "GET" })
       readiness: buildReadiness({
         executorCredentialPresent,
         rendererCredentialPresent,
-        rendererSelfHosted: renderer?.selfHosted ?? false,
+        rendererName,
         repo: text("source_repo"),
         branch: text("source_branch"),
         filePath: row.source_file,
