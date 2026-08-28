@@ -8,7 +8,8 @@ import {
   GOVERNED_PROJECT_ID,
   GOVERNED_REPO,
 } from "./execution/allowlist";
-import { createGithubApi, createRenderedVerifier } from "./execution/execute.server";
+import { createGithubApi } from "./execution/execute.server";
+import { readLivePageWording } from "./live-page-evidence.server";
 import { applyExactReplacements } from "./execution/source-change";
 import { generatePageMetadataWording } from "./gemini.server";
 import { retrieveKnowledgeGuidance } from "./knowledge-retrieval.server";
@@ -68,17 +69,18 @@ export async function preparePageMetadataProposal(
   const targetUrl = requireProposalTarget(rawTargetUrl);
   const observedAt = new Date().toISOString();
 
-  const renderer = createRenderedVerifier();
-  if (!renderer) {
-    throw new Error(
-      "Required live-page evidence is unavailable: no page renderer is configured. Configure Crawl4AI (VPS_SCRAPER_API_KEY) or a Firecrawl deployment.",
-    );
-  }
-  const rendered = await renderer.render(targetUrl);
+  const rendered = await readLivePageWording({ client, tenantId, targetUrl });
   assertSameCanonicalProposalPage(targetUrl, rendered.finalUrl);
   const liveMetaDescription = rendered.metaDescription?.trim() ?? "";
   if (!liveMetaDescription) {
-    throw new Error("Required live meta description evidence is missing.");
+    // Unlike title and H1, the page audit does not store a meta description,
+    // so this one lane cannot fall back to the stored reading and says so
+    // rather than reporting the generic absence.
+    throw new Error(
+      rendered.fromStoredAudit
+        ? "This page's description can only be drafted from a live read, because the page audit stores a title and H1 but not a description. Restore a renderer, or draft the title and heading instead."
+        : "Required live meta description evidence is missing: the rendered page served no description to change.",
+    );
   }
   const livePage =
     rendered.title && rendered.heading
