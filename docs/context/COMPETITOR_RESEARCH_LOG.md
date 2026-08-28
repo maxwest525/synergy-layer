@@ -234,10 +234,36 @@ Advertiser IDs, for re-querying without a domain search:
   Katz. Budget Van Lines is a licensed broker, USDOT #2233611, MC #512534.
 - **Quote Runner is inside the same group** and is separately in the operator's
   watchlist — the two lists overlap more than they first appeared.
-- The 2movers ↔ Equate link is now supported three ways: the operator's
-  statement, AOOS's stored SerpApi advertiser rows, and this live read. The
-  connecting entity is Budget Van Lines Inc., itself a named Katz Group
-  business, rather than Equate Media Corp. directly.
+- The 2movers ↔ Equate link is supported three ways: the operator's statement,
+  AOOS's stored SerpApi advertiser rows, and this live read.
+
+### Rolled up by owner: the Katz group is 94% of the paid market
+
+An earlier version of this entry listed the seven advertisers per domain and
+hedged the ownership, treating Budget Van Lines Inc. as merely "a named Katz
+Group business" rather than an Equate-owned one. The operator corrected it:
+**Equate owns Budget Van Lines and Quote Runner.** With the careers page, the
+court filing caption, and operator knowledge all agreeing, the hedge was not
+warranted — and per-domain presentation reproduced, in the paid dimension,
+exactly the distortion COMPETITIVE_MODEL.md §4 exists to prevent.
+
+| Owner | Creatives | Active last 7d |
+|---|---:|---:|
+| **Equate Media / Budget Van Lines / Quote Runner** | **2,328** | **2,090** |
+| Lovine, Inc (99calls.com) | 64 | 6 |
+| RESOLT INC (resultcalls.com + doppcall.com) | 48 | 3 |
+| Leadgen Network Organization, Inc (billy.com) | 30 | 1 |
+| *Everyone else combined* | *142* | *10* |
+
+- **94.3%** of all creatives in the confirmed watchlist belong to one owner.
+- **36×** the next-largest owner on creative volume.
+- **209×** everyone else *combined* on ads still running in the last week.
+- Continuous since **2021-10-25**, still live **2026-08-28**.
+
+Per domain this reads as three mid-sized advertisers among seven. Rolled up by
+owner it is one operator holding the paid market and a rounding error of
+competitors. That gap between the two readings is the entire argument for
+carrying ownership as an attribute, and it is now measured rather than asserted.
 
 ### Vendor business models, verified 2026-08-28
 
