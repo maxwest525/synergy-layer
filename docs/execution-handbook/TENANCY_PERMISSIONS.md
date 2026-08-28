@@ -36,7 +36,7 @@ Secrets stay in runtime configuration or approved secret storage. They never ent
 
 ## Current state
 
-Tenant tables, membership resolution, RLS, operator checks, and service-role server clients are `IMPLEMENTED` and deployed. Live inspection confirmed RLS on proposal-version and measurement tables. Privileged title/H1, measurement, and rendered-proof functions grant execution only to `service_role`; browser-facing server functions independently assert the operator and tenant before calling them.
+Tenant tables, membership resolution, RLS, operator checks, and service-role server clients are `IMPLEMENTED` and deployed. Live inspection confirmed RLS on proposal-version and measurement tables. Privileged title/H1, measurement, and rendered-proof functions grant execution only to `service_role`; browser-facing server functions independently assert the operator and tenant before calling them. `create_title_h1_proposal` additionally accepts a null actor as the governed system path for the nightly propose-from-evidence job: the draft is logged as a system actor, lands in `proposed`, and still requires a named human approval; every non-null actor keeps the full membership and role checks.
 
 ## Related
 
