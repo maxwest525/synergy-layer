@@ -184,7 +184,11 @@ Harvested live from the RPC above, deduplicated by creative ID. "Active 7d"
 counts creatives whose last-shown timestamp falls in the final week of the
 observed range.
 
-| Advertiser | Domain | Creatives | Active 7d | First seen | Last seen |
+Read the columns precisely: **"advertiser" is the paying account — the verified
+legal entity Google bills — and "brand advertised" is the domain its creatives
+display.** They are not the same company, and the difference is the finding.
+
+| Paying advertiser account | Brand advertised | Creatives | Active 7d | First seen | Last seen |
 |---|---|---:|---:|---|---|
 | Equate Media Corp. | budgetvanlines.com | 1,400 | 1,217 | 2022-01-31 | 2026-08-28 |
 | Budget Van Lines Inc. | 2movers.com | ~800–1,000 | ~all | 2022-05-18 | 2026-08-28 |
@@ -219,6 +223,41 @@ Advertiser IDs, for re-querying without a domain search:
 `AR10383348317303078913` (RESOLT INC — both domains),
 `AR18275425919990497281` (Leadgen Network Organization, Inc),
 `AR15851341825462763521` (Lovine, Inc).
+
+### Two Movers has no ad account: its parent buys its ads
+
+Checked directly after the operator questioned whether Two Movers pays for ads
+at all. He was right, and the precise answer is sharper than either reading.
+
+Every one of the 800 creatives returned for `2movers.com` carries advertiser
+**`Budget Van Lines Inc.`** and display domain **`2movers.com`** — 800 of 800,
+no exceptions. There is no "Two Movers" advertiser account anywhere in the data.
+Two Movers does not buy ads; Budget Van Lines Inc. buys ads that wear the Two
+Movers brand.
+
+This is **stronger** evidence of control than two sibling companies each
+running their own account would be. A single payer fielding a second brand's
+creatives is one entity putting two faces in the same auction.
+
+The group's paid structure has each entity fronting the *next* brand down:
+
+| Paying account | Brand its creatives display |
+|---|---|
+| Equate Media Corp. | budgetvanlines.com |
+| Budget Van Lines Inc. | 2movers.com |
+| Quote Runner llc | quoterunner.com |
+
+Account names and brand domains are crossed over one another. Whether or not
+that is deliberate, the effect is that no single brand traces to one advertiser
+at a glance — which is exactly why per-domain reading understates this group and
+why the owner-level rollup below is the only honest view.
+
+**Method note for anyone re-running this:** searching Ads Transparency *by
+domain* returns the accounts advertising that domain — it does not establish
+that the domain's own company is the buyer. Read the advertiser field on the
+creatives before saying a brand "advertises". Querying by advertiser ID
+(request key `3.13.1` instead of `3.12.1`) returns HTTP 400 in the shape tried
+here, so the domain search plus its advertiser field is the working route.
 
 ### Corrections to earlier entries in this log
 
