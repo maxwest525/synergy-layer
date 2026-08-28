@@ -399,11 +399,13 @@ export const checkChangeRequestPublished = createServerFn({ method: "POST" })
     await assertOperator(context.supabase, context.userId);
     const tenantId = await requireTenantId(context.supabase);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { createExecutionStore, createRenderedVerifier } = await import("./execute.server");
+    const { createExecutionStore, createRenderedVerifier, createRobotsProver } =
+      await import("./execute.server");
     const { checkPublishedPage } = await import("./execute");
     const result = await checkPublishedPage({
       store: createExecutionStore(supabaseAdmin, context.supabase, context.userId),
       renderer: createRenderedVerifier(),
+      robotsProver: createRobotsProver(),
       requestId: data.id,
       actorId: context.userId,
     });

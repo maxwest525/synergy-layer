@@ -51,6 +51,33 @@ Crawl4AI render can only under-prove a forward change (the approved new wording
 cannot exist in a cache older than the commit), so the proof's safety direction
 is preserved.
 
+**Addendum, 2026-08-28: measurement is no longer title/H1-only, and the
+robots lane completes.** Two structural breaks closed:
+
+- The measurement lifecycle triggers gated on `proposal_type = 'title_h1'`, so
+  a meta-description change could be approved, committed, and proven live and
+  then never receive a cycle, windows, or a verdict. Migration
+  `20260828100000` extends both triggers to `page_metadata` — same observable
+  (the page's own Search Console rows; Google places titles and descriptions
+  in the same appearance-not-ranking category), so the grounded 14/28/56/90
+  windows carry over with no new number invented — and backfills cycles and
+  windows for any page_metadata change already approved or live.
+  `site.crawl_directives` is deliberately not measured on these windows: its
+  outcome is indexation, not click choice, and the migration says so.
+- The crawl-directives lane could be committed but never proven applied,
+  because the proof routine only accepted title/H1 and meta-description
+  shapes. robots.txt is a static file, so its proof is not a render at all:
+  the executor now fetches the deployed file, reads the committed file at the
+  recorded commit through the GitHub executor, and compares whole files
+  (`verifyPublishedRobots`, migration `20260828110000`). Whole-file
+  comparison is deliberate — the site-wide unblock fix leaves a bare
+  `Disallow:` line that literal containment cannot prove.
+
+Still title/H1-only after this change, recorded so nobody thinks the job is
+finished: the nightly autonomous proposal job files only title_h1 proposals,
+and the "Write it again" verb exists only for title_h1 cards. Both are
+proposal-generation gaps, not measurement gaps, and are tracked separately.
+
 **How to read this file.** Section 0 is the current state and supersedes anything
 below it that disagrees. The later sections are kept in the order they were
 written, as a dated record of how the build got here. Where an older section

@@ -5,7 +5,9 @@ import {
   buildRevertCommitMessage,
   commitMarker,
   type FieldChange,
+  normalizeTextFile,
   revertCommitMarker,
+  verifyPublishedRobots,
   verifyRenderedPage,
   type PublishedProof,
   type RenderedPage,
@@ -96,6 +98,18 @@ export type GithubApi = {
 export type RenderedVerifier = {
   name: string;
   render(url: string): Promise<RenderedPage>;
+};
+
+/**
+ * Proves the crawl-directives lane: fetches the deployed static file, reads
+ * the committed file at the recorded commit, and hashes both for the database
+ * routine to re-check. Null when the GitHub executor credential is absent,
+ * because the committed half of the comparison cannot be read without it.
+ */
+export type RobotsProver = {
+  fetchDeployed(url: string): Promise<{ content: string; finalUrl: string }>;
+  readCommitted(repo: string, path: string, ref: string): Promise<string>;
+  hash(text: string): string;
 };
 
 export type ExecutionOutcome = {
@@ -488,6 +502,7 @@ export type PublishCheckOutcome = {
 export async function checkPublishedPage(input: {
   store: ExecutionStore;
   renderer: RenderedVerifier | null;
+  robotsProver: RobotsProver | null;
   requestId: string;
   actorId: string;
 }): Promise<PublishCheckOutcome> {
@@ -518,6 +533,103 @@ export async function checkPublishedPage(input: {
 
   const target = checkTargetUrl(request.targetUrl);
   if (!target.ok) return refuse(target.reason);
+
+  // The crawl-directives lane proves a static file, not a rendered page: the
+  // deployed robots.txt either equals the committed file at the recorded
+  // commit or it does not. No renderer is involved.
+  const robotsChanges = request.changes.filter((change) => change.field === "robots_txt");
+  if (robotsChanges.length > 0) {
+    if (!input.robotsProver) {
+      return refuse(
+        "Robots proof reads the committed file from GitHub to compare against the deployed one, so it needs the executor credential. Configure GITHUB_EXECUTOR_TOKEN.",
+      );
+    }
+    if (!request.repo || !request.filePath) {
+      return refuse(
+        "This change request does not record the repository and file its commit wrote, so the committed robots.txt cannot be read.",
+      );
+    }
+    const robotsUrl = `${new URL(target.value).origin}/robots.txt`;
+    let proof: PublishedProof;
+    try {
+      const [deployed, committedContent] = await Promise.all([
+        input.robotsProver.fetchDeployed(robotsUrl),
+        input.robotsProver.readCommitted(request.repo, request.filePath, request.commitSha),
+      ]);
+      const checkedUrl = checkTargetUrl(deployed.finalUrl);
+      if (!checkedUrl.ok) {
+        const message = `The deployed robots.txt resolved to ${deployed.finalUrl}, which is outside the allowlisted site. Nothing was proven.`;
+        await record({ kind: "publish_check", status: "failed", error: message });
+        return { status: "failed", message };
+      }
+      proof = verifyPublishedRobots({
+        deployedContent: deployed.content,
+        committedContent,
+        finalUrl: deployed.finalUrl,
+        fetchedBy: "Direct fetch, compared to the committed file",
+        commitSha: request.commitSha,
+      });
+      // Hash the normalized text, so a CRLF or trailing-whitespace transport
+      // artifact cannot make equal content carry unequal hashes.
+      proof = {
+        ...proof,
+        deployedSha256: input.robotsProver.hash(normalizeTextFile(deployed.content)),
+        committedSha256: input.robotsProver.hash(normalizeTextFile(committedContent)),
+      };
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Reading the robots.txt files failed.";
+      await record({ kind: "publish_check", status: "failed", error: message });
+      return { status: "failed", message };
+    }
+
+    if (!proof.ok) {
+      await record({
+        kind: "publish_check",
+        status: "pending",
+        error: proof.reason,
+        detail: {
+          deployedSha256: proof.deployedSha256 ?? null,
+          committedSha256: proof.committedSha256 ?? null,
+          renderedBy: proof.renderedBy,
+        },
+      });
+      return { status: "pending", message: proof.reason, proof };
+    }
+
+    let robotsApplied = false;
+    let robotsWarning: string | undefined;
+    if (!request.publishedProofAt) {
+      const result = await input.store.applyRenderedProof({
+        id: request.id,
+        notes: `Deployed robots.txt at ${proof.finalUrl} matches the committed file at ${request.commitSha.slice(0, 10)}.`,
+        revision: request.commitSha,
+        proof,
+      });
+      robotsApplied = result.changed;
+      robotsWarning = result.warning;
+    }
+    await record({
+      kind: "publish_check",
+      status: "verified",
+      commitSha: request.commitSha,
+      detail: {
+        deployedSha256: proof.deployedSha256 ?? null,
+        committedSha256: proof.committedSha256 ?? null,
+        renderedBy: proof.renderedBy,
+        appliedNow: robotsApplied,
+        ...(robotsWarning ? { measurementFollowupWarning: robotsWarning } : {}),
+      },
+    });
+    return {
+      status: "verified",
+      message: robotsWarning
+        ? `The deployed robots.txt matches the committed file. The change is applied, but measurement follow-up needs a retry: ${robotsWarning}`
+        : "The deployed robots.txt matches the committed file, so the change is applied and proven live.",
+      proof,
+      ...(robotsWarning ? { warning: robotsWarning } : {}),
+    };
+  }
 
   if (!input.renderer) {
     return refuse(

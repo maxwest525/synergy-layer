@@ -1,12 +1,15 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database } from "@/integrations/supabase/types";
+import { createHash } from "node:crypto";
+
 import type {
   AttemptRecord,
   ExecutableRequest,
   ExecutionStore,
   GithubApi,
   RenderedVerifier,
+  RobotsProver,
 } from "./execute";
 import { firecrawlEndpoint } from "../firecrawl-endpoint";
 import { scrapePageWithVps, vpsScraperConfigured } from "../connectors/vps-scraper.server";
@@ -383,6 +386,40 @@ export function createRenderedVerifier(
       // Same provenance wording the page audit stores, so a fallback render is
       // attributable from the row alone.
       return renderWithFirecrawl(url, `${firecrawlName} after Crawl4AI failed: ${crawl4aiFailure}`);
+    },
+  };
+}
+
+/**
+ * The crawl-directives prover: a plain fetch of the deployed static file, the
+ * committed file read through the GitHub executor, and a SHA-256 for each so
+ * the database routine can re-check the comparison. Null without the executor
+ * token, because the committed half cannot be read without it.
+ */
+export function createRobotsProver(): RobotsProver | null {
+  const github = createGithubApi();
+  if (!github) return null;
+  return {
+    async fetchDeployed(url) {
+      const response = await boundedFetch(url, {
+        method: "GET",
+        label: "robots.txt fetch",
+        // The deployed file may sit behind a CDN; ask for the origin's copy.
+        headers: { "Cache-Control": "no-cache", Pragma: "no-cache" },
+      });
+      if (response.status < 200 || response.status >= 300) {
+        throw new Error(
+          `The public site returned HTTP ${response.status} for robots.txt, so nothing was proven.`,
+        );
+      }
+      return { content: response.text, finalUrl: url };
+    },
+    async readCommitted(repo, path, ref) {
+      const file = await github.readFile(repo, path, ref);
+      return file.content;
+    },
+    hash(text) {
+      return createHash("sha256").update(text, "utf8").digest("hex");
     },
   };
 }
