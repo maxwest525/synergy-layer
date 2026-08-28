@@ -8,9 +8,50 @@ It is not authoritative documentation. Provider digests under
 `docs/integrations/<provider>/DIGEST.md` and their PLAN files remain the source of
 truth for provider behaviour and must never be overwritten by this file.
 
-Last updated: 2026-08-25, at `3143f88` (PR #65) plus the branch that follows it.
+Last updated: 2026-08-28, on the registry/workflow-runner integrity branch.
 Section 0 below still describes 2026-08-21 and has NOT been rewritten; the
-current-state block immediately below supersedes it.
+current-state blocks immediately below supersede it.
+
+## 0b. Registry and workflow-runner integrity, 2026-08-28
+
+Five related defects around "declared versus wired" were closed in one pass:
+
+- **The runner refuses what it cannot execute.** `executeNode` in
+  `src/lib/workflow-runner.server.ts` used to fall through for any capability
+  key with no dispatch branch, stamping `last_run_at` and health "healthy" and
+  returning success for a step that did nothing. An unmatched capability now
+  fails the step with a named error. The same fall-through inside the
+  DataForSEO handler (an unrecognised `cap.dataforseo_*` key reported the
+  target as observed) now routes to the same refusal.
+- **Two "real" claims corrected to `pending`.** `growth.opportunity_scanner`
+  and `content.brief_builder` were declared `real` with no execution path in
+  the runner; every run of theirs was the silent fall-through above. Both are
+  redeclared `pending` per the `types.ts` rule "never claim more than is
+  wired". No runtime behaviour changes: their workflows contain agent nodes,
+  which `assertRunnableGraph` already refuses.
+- **A forcing function now guards the seam.** `operational-bridges.test.ts`
+  reads `workflow-runner.server.ts` the way `connections.registry.test.ts`
+  reads its sources: every capability a registry workflow references must be
+  declared by a module, and every reachable capability declared `real` must be
+  dispatched by the runner. Declaring a capability real without wiring it now
+  fails `npm test`.
+- **`wf.seo_validation` no longer references an undeclared key.** Its first
+  node referenced `cap.knowledge_retrieval`, which no module declares (it
+  exists only in the 2026-08-04 seed migration) and no runner path executes,
+  so the "load" step was a silent no-op. The node is removed; the workflow is
+  the single real `seo.validation` step, and a registry-only rebuild is
+  self-contained. The seed row for `cap.knowledge_retrieval` still exists in
+  the database; any seed-era workflow that references it now fails with the
+  named refusal instead of silently succeeding.
+- **Sync preserves the earned SerpApi promotion.** `syncRegistryDefinitions`
+  unconditionally overwrote `integration_state`, silently reverting the
+  runtime promotion `recordSerpApiAccountStatus` earns for
+  `cap.serpapi_ads_transparency` when the free account probe succeeds. Sync
+  now preserves a stored `real` on that one key while its declared state is
+  `pending`; a failed probe still demotes it through the same runtime path.
+  Every other capability's state remains the registry's claim. No
+  `docs/execution-handbook/` contract covers capability integration states, so
+  the decision is recorded here and in the code comments.
 
 ## 0a. Current state, 2026-08-25
 
