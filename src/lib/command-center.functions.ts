@@ -2,7 +2,12 @@ import { createServerFn } from "@tanstack/react-start";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { CommandCenterFacts, Ga4Window } from "./command-center";
-import { categoryForChangeRequest, categoryForFinding, ruleFromMetadata } from "./finding-router";
+import {
+  categoryForChangeRequest,
+  categoryForFinding,
+  pageUrlFromSuggestedAction,
+  ruleFromMetadata,
+} from "./finding-router";
 import { isObservationOnly } from "./recommendation-action";
 import type { AuditSeverity, QueueSource } from "./suggestion-queue";
 
@@ -74,7 +79,7 @@ export const getCommandCenterFacts = createServerFn({ method: "POST" })
         db
           .from("recommendations")
           .select(
-            "id, title, state, source_module, metadata, issue_fingerprint, created_at, updated_at",
+            "id, title, state, source_module, metadata, suggested_action, issue_fingerprint, created_at, updated_at",
           )
           .eq("tenant_id", tenantId)
           .order("created_at", { ascending: false })
@@ -231,7 +236,9 @@ export const getCommandCenterFacts = createServerFn({ method: "POST" })
       kind: "recommendation",
       categoryId: categoryByRecommendationId.get(row.id) ?? "pages",
       title: row.title,
-      targetUrl: null,
+      // The page the rule finding points at, when it points at one. Writing
+      // null here cost every rule-finding card its page address.
+      targetUrl: pageUrlFromSuggestedAction(row.suggested_action),
       storedState: row.state,
       fingerprint: row.issue_fingerprint,
       severity: null,
@@ -278,6 +285,11 @@ export const getCommandCenterFacts = createServerFn({ method: "POST" })
       targetUrl: null,
       storedState: "proposed",
       fingerprint: `site:${finding.check}`,
+      // The check id decides whether the crawl-directive lane can draft this
+      // fix, exactly as it does for the page-audit rows above. Omitting it
+      // here kept "Draft the fix" off every site finding, including the ones
+      // the lane already fixes.
+      rule: finding.check,
       severity: finding.severity as AuditSeverity,
       linkedChangeId: null,
       suppressed: suppressed.has(`site:${finding.check}`),

@@ -65,30 +65,29 @@ describe("buildReadiness source-file fact", () => {
 });
 
 describe("buildReadiness rendered-page fact", () => {
-  it("names the self-hosted deployment when that is what would answer", () => {
+  it("names the renderer chain that would answer, Crawl4AI first", () => {
     const found = fact(
-      buildReadiness({ ...base, rendererSelfHosted: true }),
+      buildReadiness({ ...base, rendererName: "Crawl4AI, then Firecrawl (self-hosted)" }),
       "Rendered-page verification",
     );
     expect(found.state).toBe("configured");
-    expect(found.detail).toContain("self-hosted");
-    expect(found.detail).not.toContain("paid");
+    expect(found.detail).toContain("Crawl4AI, then Firecrawl (self-hosted)");
   });
 
-  it("says the metered cloud would answer when no self-hosted deployment is configured", () => {
+  it("names Firecrawl alone when Crawl4AI is unconfigured", () => {
     const found = fact(
-      buildReadiness({ ...base, rendererSelfHosted: false }),
+      buildReadiness({ ...base, rendererName: "Firecrawl" }),
       "Rendered-page verification",
     );
-    expect(found.detail).toContain("metered");
+    expect(found.detail).toContain("Firecrawl would render this proof");
   });
 
-  it("blocks only when no deployment at all is configured", () => {
+  it("blocks only when no renderer at all is configured", () => {
     const found = fact(
       buildReadiness({ ...base, rendererCredentialPresent: false }),
       "Rendered-page verification",
     );
     expect(found.state).toBe("blocked");
-    expect(found.detail).toContain("self-hosted or cloud");
+    expect(found.detail).toContain("neither Crawl4AI nor a Firecrawl deployment");
   });
 });

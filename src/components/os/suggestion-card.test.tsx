@@ -18,8 +18,10 @@ vi.mock("sonner", () => ({ toast: { success: toastSuccess, error: vi.fn() } }));
 // Only `useServerFn` is stubbed: `createMiddleware`, which the imported
 // `.functions` modules call at module scope through the generated
 // auth-middleware, must stay real or importing them throws before any test
-// runs.
-const useServerFn = vi.hoisted(() => vi.fn(() => vi.fn()));
+// runs. Every hook hands back the same recording fn, resolving the shape the
+// draft path reads, so a test can assert what a click actually sent.
+const serverFn = vi.hoisted(() => vi.fn(async () => ({ changeRequest: { id: "cr1" } })));
+const useServerFn = vi.hoisted(() => vi.fn(() => serverFn));
 vi.mock("@tanstack/react-start", async (importOriginal) => ({
   ...(await importOriginal<object>()),
   useServerFn,
@@ -58,6 +60,7 @@ function show(overrides: Partial<QueueSource> & Pick<QueueSource, "id">) {
 
 beforeEach(() => {
   useServerFn.mockClear();
+  serverFn.mockClear();
   toastSuccess.mockClear();
 });
 
@@ -159,6 +162,38 @@ describe("drafting the fix from the card", () => {
 
   it("offers no draft where the rule has no governed fix", () => {
     show({ id: "r1", rule: "some_rule_nobody_wired" });
+    expect(screen.queryByRole("button", { name: /Draft the fix/ })).not.toBeInTheDocument();
+  });
+});
+
+describe("drafting a site crawl fix from the card", () => {
+  const finding = {
+    id: "site:robots_blocks_site",
+    kind: "audit",
+    categoryId: "health",
+    targetUrl: null,
+    severity: "critical",
+    rule: "robots_blocks_site",
+  } as const;
+
+  it("offers the draft on a site finding a governed lane fixes, priced as free", () => {
+    show(finding);
+    expect(screen.getByRole("button", { name: /Draft the fix/ })).toHaveAccessibleDescription(
+      /costs nothing/i,
+    );
+  });
+
+  it("sends the draft to the site scope, never to a page the finding does not name", async () => {
+    show(finding);
+    await userEvent.click(screen.getByRole("button", { name: /Draft the fix/ }));
+    await waitFor(() => expect(serverFn).toHaveBeenCalled());
+    expect(serverFn).toHaveBeenCalledWith({
+      data: expect.objectContaining({ scope: "site", check: "robots_blocks_site" }),
+    });
+  });
+
+  it("offers no draft on a site finding whose fix is still manual", () => {
+    show({ ...finding, id: "site:sitemap_missing", rule: "sitemap_missing" });
     expect(screen.queryByRole("button", { name: /Draft the fix/ })).not.toBeInTheDocument();
   });
 });

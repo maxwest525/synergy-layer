@@ -26,7 +26,8 @@ export const definition: ModuleDefinition = {
       kind: "internal_module",
       category: "Content",
       description: "Turns a research summary into an editorial brief.",
-      integrationState: "real",
+      // pending until the workflow runner has an execution path for brief.create.
+      integrationState: "pending",
       operations: [{ name: "brief.create", description: "Draft a brief.", mutates: true }],
     },
   ],

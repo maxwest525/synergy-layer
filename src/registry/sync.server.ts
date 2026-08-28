@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database } from "@/integrations/supabase/types";
 import { logActivity } from "@/lib/os.server";
+import { SERPAPI_PROVIDER_GATE } from "@/lib/serpapi/provider-gate";
 import { allAgents, allCapabilities, allWorkflows, moduleDefinitions } from "./index";
 
 type Client = SupabaseClient<Database>;
@@ -24,6 +25,21 @@ export async function syncRegistryDefinitions(client: Client): Promise<SyncResul
   const workflows = allWorkflows();
 
   if (capabilities.length > 0) {
+    // The SerpApi provider gate is the one capability whose state is earned at
+    // runtime: recordSerpApiAccountStatus (serpapi/account.server.ts) promotes
+    // it to "real" when the free account probe succeeds, and demotes it back
+    // when the probe fails. Its declared state stays "pending" because the
+    // registry cannot know the account is valid, so an unconditional overwrite
+    // here would silently revert the promotion on every sync. Preserve the
+    // stored state for that key alone; every other capability's state is the
+    // registry's claim and the registry wins.
+    const { data: gateRow, error: gateError } = await client
+      .from("capabilities")
+      .select("integration_state")
+      .eq("key", SERPAPI_PROVIDER_GATE)
+      .maybeSingle();
+    if (gateError) throw new Error(gateError.message);
+
     const { error } = await client.from("capabilities").upsert(
       capabilities.map((capability) => ({
         key: capability.key,
@@ -31,7 +47,12 @@ export async function syncRegistryDefinitions(client: Client): Promise<SyncResul
         kind: capability.kind,
         category: capability.category ?? null,
         description: capability.description ?? null,
-        integration_state: capability.integrationState,
+        integration_state:
+          capability.key === SERPAPI_PROVIDER_GATE &&
+          capability.integrationState === "pending" &&
+          gateRow?.integration_state === "real"
+            ? "real"
+            : capability.integrationState,
         auth_kind: capability.authKind ?? null,
         operations: (capability.operations ?? []) as never,
         config: (capability.config ?? {}) as never,

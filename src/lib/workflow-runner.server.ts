@@ -428,7 +428,16 @@ async function executeNode(
       (await runSerpCompetitorNode(client, node.ref ?? "")) ??
       (await runAdsTransparencyNode(client, node.ref ?? "", runId)) ??
       (await runDataForSeoNode(client, node.ref ?? "", runId));
-    if (specialised && !specialised.ok) return specialised;
+    // A key no runner recognises must refuse, not succeed. The old fall-through
+    // stamped last_run_at and "healthy" for any unrecognised capability, which
+    // is how a declared-but-unwired step passed as a working one.
+    if (!specialised) {
+      return {
+        ok: false,
+        error: `Capability "${capability.name}" (${node.ref}) has no execution path in the workflow runner, so this step refuses rather than reporting a success nothing earned.`,
+      };
+    }
+    if (!specialised.ok) return specialised;
 
     await client
       .from("capabilities")
@@ -814,7 +823,9 @@ async function runDataForSeoNode(
       };
     }
 
-    return { ok: true, output: { target } };
+    // A cap.dataforseo_* key with no branch above is unhandled: fall through to
+    // the caller's refusal instead of passing it off as an observed target.
+    return null;
   } catch (error) {
     return {
       ok: false,
