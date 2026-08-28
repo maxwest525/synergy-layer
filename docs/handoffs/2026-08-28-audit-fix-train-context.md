@@ -1,4 +1,4 @@
-# Status: ACTIVE — merge train pending, two fix sessions in flight, first execution queued
+# Status: CLOSED 2026-08-28 — all ten PRs merged, main green. Superseded by 2026-08-28-measurement-pass-handoff.md
 
 Written 2026-08-28 from the audit-and-fix session (Claude session
 `session_01AZeG4xBVE1hhUZXYU5tsgm`, branch `claude/hello-5m91tk`, PR #73).
