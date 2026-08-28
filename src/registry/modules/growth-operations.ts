@@ -33,7 +33,8 @@ export const definition: ModuleDefinition = {
       kind: "internal_module",
       category: "Analysis",
       description: "Scores gaps across owned assets and files recommendations.",
-      integrationState: "real",
+      // pending until the workflow runner has an execution path for scan.run.
+      integrationState: "pending",
       operations: [{ name: "scan.run", description: "Produce scored opportunities." }],
     },
   ],

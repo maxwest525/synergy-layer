@@ -99,14 +99,16 @@ export const definition: ModuleDefinition = {
       key: "wf.seo_validation",
       name: "SEO validation",
       description:
-        "Loads stored knowledge, then validates the TruMove site against finalized Search Console snapshots with typed SEO rules.",
+        "Validates the TruMove site against finalized Search Console snapshots with typed SEO rules.",
       triggerKind: "schedule",
       graph: {
-        nodes: [
-          { key: "load", kind: "capability", ref: "cap.knowledge_retrieval" },
-          { key: "validate", kind: "capability", ref: "seo.validation" },
-        ],
-        edges: [{ from: "load", to: "validate" }],
+        // The former first node referenced cap.knowledge_retrieval, a key no
+        // module declares (it exists only in the 2026-08-04 seed migration) and
+        // no runner path executes, so the step was a silent no-op. The rule
+        // engine loads its own stored inputs; the node is removed rather than
+        // declared, so a registry-only rebuild stays self-contained.
+        nodes: [{ key: "validate", kind: "capability", ref: "seo.validation" }],
+        edges: [],
       },
     },
   ],
