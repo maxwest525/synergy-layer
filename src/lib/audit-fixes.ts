@@ -39,6 +39,10 @@ export const PAGE_CHECK_FIX: Record<CheckId, AuditFixTarget | null> = {
   h1_missing: wording,
   h1_multiple: wording,
   h1_duplicate: wording,
+  // No governed change kind can edit subheadings yet, so this finding is
+  // reported and has nowhere to go. Null is the honest answer: a fix target
+  // here would offer a draft that the executor could not write.
+  h2_missing: null,
   description_missing: metadata,
   description_too_long: metadata,
   description_too_short: metadata,

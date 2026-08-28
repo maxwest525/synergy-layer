@@ -20,7 +20,6 @@ export type PageFacts = {
   hasViewport: boolean;
   h1s: string[];
   h2Count: number;
-  headingSkips: boolean;
   imageCount: number;
   imagesMissingAlt: number;
   imagesMissingDimensions?: number | undefined;
@@ -48,6 +47,7 @@ export type CheckId =
   | "h1_missing"
   | "h1_multiple"
   | "h1_duplicate"
+  | "h2_missing"
   | "canonical_missing"
   | "noindex"
   | "nofollow"
@@ -194,6 +194,21 @@ export const CHECKS: Record<CheckId, CheckDefinition> = {
     severity: "warning",
     instruction: (n) => `Leave one main headline on ${n} pages and demote the rest.`,
     fixableByWordingProposal: true,
+  },
+  // Stated assumption: no Google document requires a subheading, so this is
+  // not a ranking claim. Two things that ARE documented make it worth saying:
+  // Google reads headings to understand how a page is organised, and where a
+  // page's headings are unclear it may replace the title it shows with text
+  // drawn from elsewhere on the page
+  // (developers.google.com/search/docs/appearance/title-link). A long page
+  // with no subheading at all gives it nothing to work with. The volume gate
+  // reuses THIN_CONTENT_WORDS rather than inventing a second word count.
+  h2_missing: {
+    check: "h2_missing",
+    label: "A long page with no subheadings",
+    severity: "advice",
+    instruction: (n) => `Break ${n} pages into sections with subheadings.`,
+    fixableByWordingProposal: false,
   },
   // Stated assumption: no Google doc says a duplicate headline is
   // penalized; the reason given is for the reader, not for ranking.
@@ -655,13 +670,6 @@ export function extractPageFacts(html: string, markdown: string, pageUrl: string
   const h1s = [...html.matchAll(/<h1\b[^>]*>([\s\S]*?)<\/h1>/gi)]
     .map((match) => text(match[1] ?? ""))
     .filter((value) => value.length > 0);
-  const headings = [...html.matchAll(/<h([1-6])\b[^>]*>/gi)].map((match) => Number(match[1]));
-  let headingSkips = false;
-  for (let index = 1; index < headings.length; index += 1) {
-    const current = headings[index] ?? 0;
-    const previous = headings[index - 1] ?? 0;
-    if (current - previous > 1) headingSkips = true;
-  }
 
   const images = html.match(/<img\b[^>]*>/gi) ?? [];
   const imagesMissingAlt = images.filter((tag) => {
@@ -743,7 +751,6 @@ export function extractPageFacts(html: string, markdown: string, pageUrl: string
     hasViewport: metaContent(html, "name", "viewport") !== null,
     h1s,
     h2Count: (html.match(/<h2\b/gi) ?? []).length,
-    headingSkips,
     imageCount: images.length,
     imagesMissingAlt,
     imagesMissingDimensions,
@@ -927,6 +934,12 @@ export function evaluatePages(pages: AnalyzedPage[]): PageIssue[] {
       add("h1_multiple", url, `${facts.h1s.length} main headlines on one page.`);
     if (h1 && duplicateH1s.has(normalizeWording(h1) ?? "")) {
       add("h1_duplicate", url, `Shared headline: "${h1}"`);
+    }
+    // Only on a page with enough content for sections to mean anything. A
+    // short page with one idea does not need subheadings, and saying so would
+    // be noise.
+    if (facts.h2Count === 0 && facts.wordCount >= THIN_CONTENT_WORDS) {
+      add("h2_missing", url, `${facts.wordCount} words in one unbroken run, with no subheadings.`);
     }
 
     if (!facts.canonical) add("canonical_missing", url, "No canonical address is declared.");

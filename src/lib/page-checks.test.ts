@@ -61,6 +61,36 @@ describe("on page checks", () => {
     expect(findings[0]?.severity).toBe("critical");
   });
 
+  it("asks for subheadings only once a page is long enough for sections to mean anything", () => {
+    const long = Array.from({ length: 400 }, () => "word").join(" ");
+    const withoutSubheadings = extractPageFacts(HTML, long, "https://a.test/one");
+    expect(withoutSubheadings.h2Count).toBe(0);
+    expect(
+      evaluatePages([{ url: "https://a.test/one", facts: withoutSubheadings }]).map((i) => i.check),
+    ).toContain("h2_missing");
+
+    // A short page with one idea does not need sections, and saying so would
+    // be noise. The gate reuses THIN_CONTENT_WORDS rather than a second count.
+    const short = extractPageFacts(HTML, "just a few words here", "https://a.test/two");
+    expect(
+      evaluatePages([{ url: "https://a.test/two", facts: short }]).map((i) => i.check),
+    ).not.toContain("h2_missing");
+  });
+
+  it("does not claim subheadings are a ranking rule, because no Google doc says so", () => {
+    const check = CHECKS.h2_missing;
+    expect(check.instruction(3).toLowerCase()).not.toMatch(/rank/);
+    expect(check.severity).toBe("advice");
+  });
+
+  it("no longer judges heading order, which Google states does not matter", () => {
+    // "it doesn't matter if you're using them out of order" - SEO starter
+    // guide. The parser used to compute a headingSkips flag that nothing read;
+    // surfacing it would have manufactured findings Google contradicts.
+    const facts = extractPageFacts(HTML, "some words here", "https://a.test/one");
+    expect(facts).not.toHaveProperty("headingSkips");
+  });
+
   it("thin_content asks for substance without claiming a word-count ranking rule", () => {
     const check = CHECKS.thin_content;
     // "The length of the content alone doesn't matter for ranking purposes

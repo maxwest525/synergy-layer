@@ -12,6 +12,29 @@ Last updated: 2026-08-28, on the Command center queue-fixes branch. Section 0
 below still describes 2026-08-21 and has NOT been rewritten; the current-state
 blocks immediately below supersede it.
 
+## 0h. Subheadings surfaced, heading order deleted, 2026-08-28
+
+The page audit parsed `h2Count` and `headingSkips` on every page and no check
+read either: two signals collected on every run and shown to nobody. They are
+resolved in opposite directions, deliberately.
+
+- **`h2_missing` is now a check.** It fires only when a page has no `<h2>` at
+  all AND is long enough for sections to mean something, reusing
+  `THIN_CONTENT_WORDS` rather than inventing a second word count. Severity is
+  `advice` and the copy makes no ranking claim, because no Google document
+  requires a subheading. The reasons given are the documented ones: Google
+  reads headings to understand how a page is organised, and unclear headings
+  are an input to it replacing the title it displays.
+- **`headingSkips` is deleted, not surfaced.** Google states plainly that "it
+  doesn't matter if you're using them out of order". A rule on heading order
+  would have manufactured findings Google's own documentation contradicts,
+  which is the exact failure the no-invented-thresholds rule exists to stop.
+  The field, its computation and its consumers are gone, and a test asserts
+  the fact no longer exists on the parsed page.
+- `PAGE_CHECK_FIX.h2_missing` is `null`: no governed change kind can edit a
+  subheading yet, so the finding is reported and honestly has nowhere to go.
+  The lane is tracked separately.
+
 ## 0g. PageSpeed reaches the operator, 2026-08-28
 
 The fifth module that writes a recommendation. `pagespeed_snapshots` had
