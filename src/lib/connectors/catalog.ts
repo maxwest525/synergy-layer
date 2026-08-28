@@ -152,7 +152,12 @@ export const CONNECTOR_CATALOG = [
     key: "pagespeed_insights",
     label: "PageSpeed Insights",
     provider: "Google",
-    credentialStrategies: [["PAGESPEED_API_KEY"]],
+    // The v5 API answers without a key; PAGESPEED_API_KEY only lifts the
+    // anonymous quota (measurement/pagespeed.server.ts reads it as optional).
+    // Declaring it as the only strategy reported a working keyless setup as
+    // "not configured", so the empty strategy is listed as the fallback: the
+    // key is selected and shown when set, and its absence is not a fault.
+    credentialStrategies: [["PAGESPEED_API_KEY"], []],
   }),
   item({
     key: "serpapi",

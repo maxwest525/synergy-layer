@@ -624,6 +624,18 @@ function ChangeRequestPage() {
             <OutcomeVerdictContext verdicts={verdictReadings} />
           </div>
         ) : null}
+        {data.crawlOutcome ? (
+          <div className="mt-3 rounded-md border border-border/60 p-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Whether Google can read these pages
+            </p>
+            <p className="mt-1 text-sm text-foreground">{data.crawlOutcome.reason}</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              A crawl directive change is judged on being allowed in, not on clicks. Being read and
+              being kept in the index are separate decisions Google makes.
+            </p>
+          </div>
+        ) : null}
         <dl className="mt-3">
           <DetailRow label="Approved" value={change.approved_at?.slice(0, 10) ?? "Not approved"} />
           <DetailRow label="Applied" value={change.applied_at?.slice(0, 10) ?? "Not applied"} />

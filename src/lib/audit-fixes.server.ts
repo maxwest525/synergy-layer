@@ -94,13 +94,18 @@ export async function prepareSiteFixProposal(
   const head = await github.branchHead(GOVERNED_REPO, GOVERNED_BRANCH);
   const source = await github.readFile(GOVERNED_REPO, target.filePath, head);
 
+  // Recomputed from the stored facts rather than parsed back out of the
+  // finding's prose, which only ever names the first three. Recorded on the
+  // evidence below as well as applied, because the outcome of a crawl
+  // directive change is whether THESE pages became reachable, and nothing
+  // else on the request says which pages the edit was for.
+  const blockedPaths = blockedDeclaredPaths(facts);
+
   const built = buildCrawlDirectiveFix({
     check,
     robotsContent: source.content,
     sitemapUrl: facts.sitemapUrl ?? `${facts.origin}/sitemap.xml`,
-    // Recomputed from the stored facts rather than parsed back out of the
-    // finding's prose, which only ever names the first three.
-    blockedPaths: blockedDeclaredPaths(facts),
+    blockedPaths,
   });
   if ("error" in built) throw new Error(built.error);
 
@@ -127,6 +132,7 @@ export async function prepareSiteFixProposal(
         sitemapUrl: facts.sitemapUrl,
         sitemapStatus: facts.sitemapStatus,
         sitemapUrlCount: facts.sitemapUrlCount,
+        blockedPaths,
         observedAt,
       },
       {

@@ -12,6 +12,57 @@ Last updated: 2026-08-28, on the Command center queue-fixes branch. Section 0
 below still describes 2026-08-21 and has NOT been rewritten; the current-state
 blocks immediately below supersede it.
 
+## 0h. Subheadings surfaced, heading order deleted, 2026-08-28
+
+The page audit parsed `h2Count` and `headingSkips` on every page and no check
+read either: two signals collected on every run and shown to nobody. They are
+resolved in opposite directions, deliberately.
+
+- **`h2_missing` is now a check.** It fires only when a page has no `<h2>` at
+  all AND is long enough for sections to mean something, reusing
+  `THIN_CONTENT_WORDS` rather than inventing a second word count. Severity is
+  `advice` and the copy makes no ranking claim, because no Google document
+  requires a subheading. The reasons given are the documented ones: Google
+  reads headings to understand how a page is organised, and unclear headings
+  are an input to it replacing the title it displays.
+- **`headingSkips` is deleted, not surfaced.** Google states plainly that "it
+  doesn't matter if you're using them out of order". A rule on heading order
+  would have manufactured findings Google's own documentation contradicts,
+  which is the exact failure the no-invented-thresholds rule exists to stop.
+  The field, its computation and its consumers are gone, and a test asserts
+  the fact no longer exists on the parsed page.
+- `PAGE_CHECK_FIX.h2_missing` is `null`: no governed change kind can edit a
+  subheading yet, so the finding is reported and honestly has nowhere to go.
+  The lane is tracked separately.
+
+## 0g. PageSpeed reaches the operator, 2026-08-28
+
+The fifth module that writes a recommendation. `pagespeed_snapshots` had
+stored real Core Web Vitals readings since the measurement slice landed and
+nothing read them: `findingSources` for `pagespeed_insights` was empty, so the
+connector was pinned at "collecting and reaching nobody" no matter how many
+runs it stored.
+
+- `pagespeed-rule-checks.ts` (pure) and `pagespeed-rules.server.ts` (writer,
+  `source_module: "pagespeed"`). Two rules: `page_lcp_poor`, `page_cls_poor`.
+- **No threshold is invented.** The bands are Google's published Core Web
+  Vitals values (LCP good at or under 2.5s, poor above 4.0s; CLS good at or
+  under 0.1, poor above 0.25) and only the band Google itself calls poor
+  fires. The needs-improvement band is deliberately silent.
+- **The lab/field distinction is stated on screen.** The stored values come
+  from `lighthouseResult.audits[].numericValue`, one simulated load. Google's
+  page-experience signal and the Search Console Core Web Vitals report read
+  field data from real visitors (CrUX). The copy says the reading is a test
+  load and never claims the page fails Core Web Vitals.
+- Both rules are bucketed `fact`: a direct per-page measurement answers at any
+  volume, which makes these among the few rules this property's traffic can
+  support.
+- The rules run after each PageSpeed measurement; a rules failure never fails
+  the measurement, because the snapshot is stored and immutable either way.
+- `PAGESPEED_API_KEY` is now declared optional in the connector catalog,
+  matching the code: the v5 API answers without a key, and a working keyless
+  setup previously read as "not configured".
+
 ## 0b. Command center queue corrections, 2026-08-28
 
 Three defects around the suggestion queue, fixed on this branch:

@@ -38,6 +38,10 @@ export type PageSpeedRunResult = {
   runId: string;
   status: "succeeded" | "partial";
   snapshot: PageSpeedNormalized;
+  /** New findings filed from this reading; the rules run on what was stored. */
+  findingsFiled: number;
+  /** Set when the rules could not run. The snapshot is stored regardless. */
+  findingsError: string | null;
 };
 
 /**
@@ -168,5 +172,18 @@ export async function runPageSpeed(
       : {}),
   });
 
-  return { runId: run.id, status, snapshot };
+  // A stored reading that nothing reads is the stage-three failure this
+  // product exists to name, so the rules run on the reading just taken. A
+  // failure here must not fail the measurement: the snapshot is stored and
+  // immutable either way, and the finding can be filed by the next run.
+  let findingsFiled = 0;
+  let findingsError: string | null = null;
+  try {
+    const { evaluatePageSpeedReadings } = await import("../pagespeed-rules.server");
+    findingsFiled = (await evaluatePageSpeedReadings(admin, input.tenantId)).recommendations;
+  } catch (error) {
+    findingsError = error instanceof Error ? error.message : "the rules could not be evaluated";
+  }
+
+  return { runId: run.id, status, snapshot, findingsFiled, findingsError };
 }

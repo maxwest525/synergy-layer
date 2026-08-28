@@ -9,6 +9,7 @@ import {
 } from "./change-request-evidence";
 import { type ChangeAction } from "./change-request-state";
 import { fetchChangeMeasurementHistory } from "./change-measurements.server";
+import { fetchCrawlDirectiveOutcome } from "./crawl-directive-outcome.server";
 import type { GradedOutcome } from "./site-health";
 
 type Client = SupabaseClient<Database>;
@@ -65,6 +66,7 @@ export async function fetchChangeRequest(client: Client, tenantId: string, id: s
       versions: [] as ChangeVersionRow[],
       measurement: { cycle: null, windows: [], observations: [], revisions: [] },
       gradedOutcomes: [] as GradedOutcome[],
+      crawlOutcome: null,
     };
   }
   const [
@@ -73,6 +75,7 @@ export async function fetchChangeRequest(client: Client, tenantId: string, id: s
     postChangeRows,
     measurement,
     gradedOutcomes,
+    crawlOutcome,
   ] = await Promise.all([
     client
       .from("change_request_versions")
@@ -89,6 +92,10 @@ export async function fetchChangeRequest(client: Client, tenantId: string, id: s
     fetchPostChangeRows(client, tenantId, data.target_url, data.applied_at),
     fetchChangeMeasurementHistory(client, tenantId, id),
     fetchGradedOutcomes(client, tenantId, id),
+    // The crawl-directives lane is graded on indexation, not clicks, so it
+    // reads URL Inspection rather than the performance rows the wording
+    // lanes use. Null for every other proposal type.
+    fetchCrawlDirectiveOutcome(client, tenantId, id),
   ]);
   if (versionError) throw new Error(versionError.message);
   if (originSeoRunError) throw new Error(originSeoRunError.message);
@@ -99,6 +106,7 @@ export async function fetchChangeRequest(client: Client, tenantId: string, id: s
     versions: versions ?? [],
     measurement,
     gradedOutcomes,
+    crawlOutcome,
   };
 }
 

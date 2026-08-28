@@ -78,6 +78,20 @@ export type RuleAssignment = {
  */
 export const RULE_ASSIGNMENTS: readonly RuleAssignment[] = [
   {
+    rule: "page_lcp_poor",
+    bucket: "fact",
+    needsPerTarget: null,
+    alsoNeeds: [],
+    why: "A Lighthouse run measures one page directly, so no traffic is needed to answer it and no threshold is invented here: Google publishes the Core Web Vitals bands (LCP good at or under 2.5s, poor above 4.0s) and only the poor band fires. The finding copy states that this is a lab reading rather than the CrUX field data Google's page-experience signal and the Search Console Core Web Vitals report actually read, so it is never presented as proof the page fails Core Web Vitals for real visitors.",
+  },
+  {
+    rule: "page_cls_poor",
+    bucket: "fact",
+    needsPerTarget: null,
+    alsoNeeds: [],
+    why: "Same basis as page_lcp_poor: a direct per-page measurement, Google's published band (CLS good at or under 0.1, poor above 0.25), and only the poor band fires. Layout shift is reported for what it costs a visitor (tapping the wrong thing), not as a ranking claim.",
+  },
+  {
     rule: "zero_impression_page",
     bucket: "fact",
     needsPerTarget: null,
