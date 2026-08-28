@@ -150,7 +150,8 @@ export const proposeFixFromFinding = createServerFn({ method: "POST" })
   .handler(async ({ data, context }): Promise<FindingFixResult> => {
     const { assertOperator } = await import("./os-admin.server");
     const { requireTenantId } = await import("./tenant.server");
-    const { deriveFixTarget, proposalKindForRule } = await import("./finding-fix-target");
+    const { deriveFixTarget, proposalKindForRule, whyNoFixLane } =
+      await import("./finding-fix-target");
     await assertOperator(context.supabase, context.userId);
     const tenantId = await requireTenantId(context.supabase);
     const client = context.supabase;
@@ -192,8 +193,16 @@ export const proposeFixFromFinding = createServerFn({ method: "POST" })
     const fixTarget = deriveFixTarget(rule, target, pageQueryRows);
     if (!fixTarget.ok) throw new Error(fixTarget.reason);
 
+    // Explicitly, rather than an if/else with wording as the fallback: an
+    // unmapped rule must refuse, not quietly draft a rewrite of the page's
+    // words. That fallback is what made every finding a title change.
+    const proposalKind = proposalKindForRule(rule);
+    if (proposalKind === null) {
+      throw new Error(whyNoFixLane(rule) ?? "This finding has no governed fix to draft.");
+    }
+
     let result: FindingFixResult;
-    if (proposalKindForRule(rule) === "page_metadata") {
+    if (proposalKind === "page_metadata") {
       const { preparePageMetadataProposal } = await import("./page-metadata-proposals.server");
       const { fileGovernedProposal } = await import("./audit-fixes.server");
       const proposal = await preparePageMetadataProposal(client, tenantId, fixTarget.url);
