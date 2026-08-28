@@ -214,7 +214,22 @@ function CompetitorAdsPage() {
     mutationFn: () => sweep({ data: { limit: 12 } }),
     onSuccess: (result) => {
       if (result.domainsSearched === 0) {
-        toast.error(result.stoppedEarly ?? "No competitor was checked.");
+        // Nothing searched has two very different causes and they were being
+        // reported with the same red toast. `domainsAttempted === 0` means the
+        // sweep found nothing left to do -- every competitor on the list is
+        // already resolved -- which is a finished state, not a failure. It read
+        // as an error, and an operator seeing "No competitor was checked" on a
+        // fully-resolved list has no way to tell success from breakage.
+        if (result.domainsAttempted === 0) {
+          toast.success(
+            "Every competitor on your list has already been checked. Add one to check something new.",
+          );
+        } else {
+          toast.error(
+            result.stoppedEarly ??
+              "The lookup service did not check any competitor, and gave no reason.",
+          );
+        }
       } else {
         toast.success(
           `Checked ${result.domainsSearched} competitor${result.domainsSearched === 1 ? "" : "s"}, found ${result.candidatesFiled} to review, used ${result.chargedCredits} lookup${result.chargedCredits === 1 ? "" : "s"}.`,
