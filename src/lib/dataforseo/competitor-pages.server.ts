@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database } from "@/integrations/supabase/types";
 import { firecrawlEndpoint, type FirecrawlEndpoint } from "../firecrawl-endpoint";
+import { scrapePageWithVps } from "../connectors/vps-scraper.server";
 import type { CompetitorProfile } from "./competitor-intelligence.server";
 
 type Client = SupabaseClient<Database>;
@@ -61,21 +62,70 @@ const TOPIC_TERMS: { label: string; pattern: RegExp }[] = [
   { label: "commercial / office moving", pattern: /office mov|commercial mov/i },
 ];
 
-function requireFirecrawl(): FirecrawlEndpoint {
-  const endpoint = firecrawlEndpoint(process.env);
-  if (!endpoint)
-    throw new Error(
-      "No Firecrawl deployment is configured for this project, self-hosted or cloud.",
-    );
-  return endpoint;
+type ScrapeResult = { markdown: string; html: string; title: string; renderedBy: string };
+
+/**
+ * Render one competitor page, on the self-hosted crawler wherever it can do it.
+ *
+ * This opened with `requireFirecrawl()`, which threw whenever no Firecrawl
+ * deployment was configured -- so wherever Firecrawl is the unavailable
+ * renderer, the whole competitor page pass died before reading a single page,
+ * while Crawl4AI sat on the operator's own box answering health checks. The
+ * page audit already renders Crawl4AI-first (`page-audit.server.ts`); this
+ * caller never got the same treatment.
+ *
+ * Crawl4AI costs nothing per page and competitor pages are read in batches, so
+ * it is the only sensible default here. Firecrawl stays as a fallback, and the
+ * reason Crawl4AI was skipped or failed is carried out in `renderedBy` so a box
+ * that has quietly stopped working cannot pass for a working one while the
+ * metered account absorbs the cost.
+ */
+async function scrapePage(url: string): Promise<ScrapeResult | null> {
+  const firecrawl = firecrawlEndpoint(process.env);
+  const selfHosted = Boolean(
+    process.env["VPS_SCRAPER_BASE_URL"]?.trim() && process.env["VPS_SCRAPER_API_KEY"]?.trim(),
+  );
+
+  if (selfHosted) {
+    try {
+      const rendered = await scrapePageWithVps(url);
+      return {
+        markdown: rendered.markdown,
+        html: rendered.html,
+        title: titleFromHtml(rendered.html) ?? url,
+        renderedBy: "Crawl4AI",
+      };
+    } catch (error) {
+      if (!firecrawl) return null;
+      const reason = error instanceof Error ? error.message : String(error);
+      const rendered = await scrapeWithFirecrawl(url, firecrawl);
+      return rendered
+        ? {
+            ...rendered,
+            renderedBy: `${firecrawlName(firecrawl)} after Crawl4AI failed: ${reason}`,
+          }
+        : null;
+    }
+  }
+
+  if (!firecrawl) return null;
+  const rendered = await scrapeWithFirecrawl(url, firecrawl);
+  return rendered ? { ...rendered, renderedBy: firecrawlName(firecrawl) } : null;
 }
 
-type ScrapeResult = { markdown: string; html: string; title: string };
+function firecrawlName(endpoint: FirecrawlEndpoint): string {
+  return endpoint.selfHosted ? "Firecrawl (self-hosted)" : "Firecrawl";
+}
 
-async function scrapePage(url: string): Promise<ScrapeResult | null> {
-  // Competitor pages are scraped in batches, so this was one of the heavier
-  // metered callers. Self-hosted first, cloud only as a fallback.
-  const endpoint = requireFirecrawl();
+/** Crawl4AI returns no title field, so it is read off the rendered HTML. */
+function titleFromHtml(html: string): string | null {
+  return html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1]?.trim() || null;
+}
+
+async function scrapeWithFirecrawl(
+  url: string,
+  endpoint: FirecrawlEndpoint,
+): Promise<Omit<ScrapeResult, "renderedBy"> | null> {
   const response = await fetch(endpoint.url, {
     method: "POST",
     headers: {
