@@ -4,6 +4,7 @@ import type { Database } from "@/integrations/supabase/types";
 import { fileInboxItem, logActivity } from "./os.server";
 import { reconcileAppliedChangeEvidence } from "./change-requests.server";
 import { reconcileChangeMeasurements } from "./change-measurements.server";
+import { reconcileOutcomeAlerts } from "./outcome-alerts.server";
 import { evaluateSnapshots, type RuleRunResult } from "./search-console-rules.server";
 import { SearchConsoleFailure, collectDaily, getSelectedProperty } from "./search-console.server";
 
@@ -89,6 +90,10 @@ export async function observeSearchConsole(client: Client): Promise<ObserveResul
     const rules = await evaluateSnapshots(client, property, collection.reportingDate);
     const outcomes = await reconcileAppliedChangeEvidence(client);
     await reconcileChangeMeasurements(client);
+    // Runs after the day's evidence windows are captured, which is the only
+    // moment a stored verdict can newly resolve. Failure verdicts become Inbox
+    // items here; nothing else consumes them automatically.
+    const verdictAlerts = await reconcileOutcomeAlerts(client, property);
     await logActivity(client, {
       verb: "capability.observation_completed",
       subjectKind: "capability",
@@ -100,6 +105,7 @@ export async function observeSearchConsole(client: Client): Promise<ObserveResul
         snapshotsAdded: collection.snapshotIds.length,
         outcomeEvidenceReady: outcomes.newlyReady,
         outcomeEvidenceWaiting: outcomes.waiting,
+        outcomeFailuresFiled: verdictAlerts.filed,
       },
     });
     await setHealth(client, "healthy");

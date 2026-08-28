@@ -9,6 +9,7 @@ import {
 } from "./change-request-evidence";
 import { type ChangeAction } from "./change-request-state";
 import { fetchChangeMeasurementHistory } from "./change-measurements.server";
+import type { GradedOutcome } from "./site-health";
 
 type Client = SupabaseClient<Database>;
 
@@ -63,6 +64,7 @@ export async function fetchChangeRequest(client: Client, tenantId: string, id: s
       postChangeRows: [] as PostChangeRow[],
       versions: [] as ChangeVersionRow[],
       measurement: { cycle: null, windows: [], observations: [], revisions: [] },
+      gradedOutcomes: [] as GradedOutcome[],
     };
   }
   const [
@@ -70,6 +72,7 @@ export async function fetchChangeRequest(client: Client, tenantId: string, id: s
     { data: originSeoRun, error: originSeoRunError },
     postChangeRows,
     measurement,
+    gradedOutcomes,
   ] = await Promise.all([
     client
       .from("change_request_versions")
@@ -85,6 +88,7 @@ export async function fetchChangeRequest(client: Client, tenantId: string, id: s
       .maybeSingle(),
     fetchPostChangeRows(client, tenantId, data.target_url, data.applied_at),
     fetchChangeMeasurementHistory(client, tenantId, id),
+    fetchGradedOutcomes(client, tenantId, id),
   ]);
   if (versionError) throw new Error(versionError.message);
   if (originSeoRunError) throw new Error(originSeoRunError.message);
@@ -94,7 +98,33 @@ export async function fetchChangeRequest(client: Client, tenantId: string, id: s
     postChangeRows,
     versions: versions ?? [],
     measurement,
+    gradedOutcomes,
   };
+}
+
+/**
+ * This change's stored readings, graded exactly as Site health grades them:
+ * the same assembly (`fetchStoredOutcomes`) and the same rules
+ * (`gradeOutcomes`), narrowed to one change. Shown beside the verify control
+ * so verifying is an informed act; it does not gate the transition.
+ */
+async function fetchGradedOutcomes(
+  client: Client,
+  tenantId: string,
+  changeRequestId: string,
+): Promise<GradedOutcome[]> {
+  const { getSelectedProperty } = await import("./search-console.server");
+  const { fetchStoredOutcomes } = await import("./change-outcomes.server");
+  const { gradeOutcomes } = await import("./site-health");
+  const property = await getSelectedProperty(client);
+  const { outcomes } = await fetchStoredOutcomes(
+    client,
+    tenantId,
+    new Date().toISOString(),
+    property,
+    changeRequestId,
+  );
+  return gradeOutcomes(outcomes);
 }
 
 /**

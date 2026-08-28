@@ -5,8 +5,8 @@ import { Gauge, Info, TriangleAlert } from "lucide-react";
 import { useSiteHealth } from "./site-health-facts";
 import { EmptyState } from "./primitives";
 import { SuggestionCard } from "./suggestion-card";
+import { VERDICT_LABEL, VERDICT_TONE } from "./verdict-copy";
 import type { GradedOutcome, StatusTone, TabId, Tile } from "@/lib/site-health";
-import type { OutcomeVerdict } from "@/lib/outcome-verdict";
 import type { SiteFinding } from "@/lib/site-checks";
 import type { QueueItem } from "@/lib/suggestion-queue";
 import { cn } from "@/lib/utils";
@@ -33,25 +33,6 @@ const SEVERITY_TONE: Record<string, string> = {
   critical: "text-destructive",
   warning: "text-warning",
   advice: "text-info",
-};
-
-/** Plain words, not the stored enum. The operator never sees "too_early". */
-const VERDICT_LABEL: Record<OutcomeVerdict, string> = {
-  success: "It worked",
-  neutral: "No change yet",
-  failure: "It did not work",
-  not_yet: "Not yet",
-  too_early: "Too early to say",
-  unmeasurable: "Cannot be measured",
-};
-
-const VERDICT_TONE: Record<OutcomeVerdict, string> = {
-  success: "text-primary",
-  neutral: "text-info",
-  failure: "text-destructive",
-  not_yet: "text-muted-foreground",
-  too_early: "text-muted-foreground",
-  unmeasurable: "text-muted-foreground",
 };
 
 const LINK =
@@ -92,6 +73,14 @@ function OutcomeCard({ outcome }: { outcome: GradedOutcome }) {
         </span>
       </div>
       <p className="text-xs leading-snug text-muted-foreground">{outcome.reason}</p>
+      {outcome.verdict === "success" ? (
+        // The one card on this tab that is finished rather than waiting, and it
+        // says so: approved, proven live, measured, and this check passed.
+        <p className="text-xs leading-snug text-primary">
+          This journey is complete. The change was approved, went live, was measured, and this check
+          passed. Nothing here is waiting on you.
+        </p>
+      ) : null}
       <p className="text-[10.5px] font-bold uppercase tracking-[0.1em] text-subtle">
         {outcome.windowDays} day reading
         {outcome.targetUrl ? ` · ${outcome.targetUrl}` : null}

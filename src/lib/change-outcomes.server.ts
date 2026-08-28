@@ -66,22 +66,28 @@ export async function fetchStoredOutcomes(
   now: string,
   /** The connected Search Console property, or null when none is connected. */
   property: string | null,
+  /** Narrows the read to one change's cycle, for the change detail page. */
+  changeRequestId?: string,
 ): Promise<StoredOutcomeRead> {
   const { assertRead } = await import("./essentials");
 
+  const cycleQuery = db
+    .from("change_measurement_cycles")
+    .select("id, change_request_id, target_url, live_at")
+    .eq("tenant_id", tenantId)
+    .order("approved_at", { ascending: false })
+    .limit(CYCLE_LIMIT);
+  const changeQuery = db
+    .from("change_requests")
+    .select("id, title, proposal_type")
+    .eq("tenant_id", tenantId)
+    .order("created_at", { ascending: false })
+    .limit(500);
   const [cycleResult, changeResult] = await Promise.all([
-    db
-      .from("change_measurement_cycles")
-      .select("id, change_request_id, target_url, live_at")
-      .eq("tenant_id", tenantId)
-      .order("approved_at", { ascending: false })
-      .limit(CYCLE_LIMIT),
-    db
-      .from("change_requests")
-      .select("id, title, proposal_type")
-      .eq("tenant_id", tenantId)
-      .order("created_at", { ascending: false })
-      .limit(500),
+    changeRequestId === undefined
+      ? cycleQuery
+      : cycleQuery.eq("change_request_id", changeRequestId),
+    changeRequestId === undefined ? changeQuery : changeQuery.eq("id", changeRequestId),
   ]);
 
   const cycles = assertRead("Measurement cycles", cycleResult).data ?? [];
