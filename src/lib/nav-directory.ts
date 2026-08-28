@@ -29,7 +29,6 @@ export type NavEntry = {
 export const NAV_EXEMPT: Readonly<Record<string, string>> = {
   "/": "the Command center, rendered as its own Start here entry",
   "/operators": "settings, pinned to the foot of the sidebar",
-  "/today": "the same queue as the Command center",
   "/ads/advertisers": "a view inside Competitor ads",
   "/knowledge/manual": "a form reached from Knowledge",
 };

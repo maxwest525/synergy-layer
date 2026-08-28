@@ -17,9 +17,10 @@
  *
  * Stage three is where most of this estate sits. Six paid DataForSEO backlink
  * endpoints run on every baseline into a file whose own header says it produces
- * no recommendations. Umami stores snapshots nothing reads. Four modules in the
- * whole codebase write a recommendation, so every connector outside their reach,
- * however well wired, stops at stage three.
+ * no recommendations. Umami stores snapshots that the measurement panel
+ * displays (`umami-panel.tsx` via `getUmamiState`) but no rule module reads.
+ * Four modules in the whole codebase write a recommendation, so every connector
+ * outside their reach, however well wired, stops at stage three.
  *
  * The page exists to say that out loud, per connection, with the row counts
  * behind it. "Configured is not connected" was already the rule here; this adds
@@ -347,7 +348,7 @@ function reasonFor(
  *
  * The first draft went green whenever the queue of problems was empty, which on
  * a fresh install meant a green "every connection reaches you" sitting on top of
- * four zeroes and ten rows reading "not set up". It was vacuously true - all
+ * four zeroes and eleven rows reading "not set up". It was vacuously true - all
  * zero of them did reach you - and it read as an all-clear.
  *
  * So green now requires the only state that earns it: every connection in the
@@ -377,11 +378,11 @@ function statusFor(rows: readonly ConnectionRow[]): ConnectionsView["status"] {
     return { text: "No account is set up yet", tone: "warning" };
   }
   // Green, but never as a bare all-clear: it always says how many of how many,
-  // so it cannot be read as "the estate is wired" when eight of ten are dark.
+  // so it cannot be read as "the estate is wired" when eight of eleven are dark.
   //
-  // "Every connection reaches you" is deliberately not a state. Two connectors
-  // have no table by design - a credential with no code behind it cannot
-  // collect - so a rule requiring all ten would be a branch that never runs.
+  // "Every connection reaches you" is deliberately not a state. Google Ads has
+  // no table by design - a credential with no code behind it cannot collect -
+  // so a rule requiring all eleven would be a branch that never runs.
   return { text: `${reaching} of ${rows.length} connections reach you`, tone: "positive" };
 }
 

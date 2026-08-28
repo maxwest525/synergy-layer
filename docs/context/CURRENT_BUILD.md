@@ -211,6 +211,41 @@ written, as a dated record of how the build got here. Where an older section
 contradicts section 0, section 0 wins and the contradiction is named rather than
 quietly edited away.
 
+## 0f. Deletion pass and known orphan registry rows, 2026-08-28
+
+Two deletions landed on this branch:
+
+- `/today` (the old Action center, `src/routes/today.tsx`) is deleted along
+  with its `NAV_EXEMPT` entry. It was a full duplicate approval queue on a
+  different data path (`getInbox`/`getOverview`) that could silently disagree
+  with the Command center at `/`. The server reads it used remain on disk:
+  `getOverview` is still consumed by `/command-center`; `getInbox`,
+  `resolveInboxItem` and `getMeasurementWatch` now have no route consumer and
+  are candidates for a later pass.
+- `src/lib/connectors/vps-runtime.server.ts` (a two-line re-export shim nothing
+  imported) and its test are deleted. `n8n.server.ts` / `triggerN8nWorkflow`
+  and its tests stay: whether n8n gets wired or removed is a pending operator
+  decision.
+
+**Known orphan registry rows, documented for a later decision — do not delete
+the data.** These database rows exist only because the 2026-08-04 seed
+migration (`20260804091534_*.sql`) inserted them; they are not declared in
+`src/registry/modules/*.ts`, and `src/registry/sync.server.ts` only upserts —
+it never prunes — so a registry sync can neither refresh nor remove them:
+
+- `agent.research` — seed-only, but **still read at runtime** by
+  `src/lib/web-research.server.ts`, so pruning it would break web research.
+- `wf.research_refresh`, `wf.content_generation`, `wf.publish` — seed-only
+  workflows. (`wf.seo_validation` is seeded _and_ declared in code, so it is
+  not an orphan.)
+- `sch.research_refresh`, `sch.seo_validation`, `sch.content_generation`,
+  `sch.publish` — seed-only schedules, all disabled since
+  `20260814070000_signal_integrity_recovery.sql` set every schedule except
+  `gsc-daily-observe` to disabled.
+
+Whether these rows should be pruned, or re-declared in the code registry, is a
+human decision that has not been made.
+
 ## 0. State of the build, 2026-08-21
 
 Verified in this worktree at `2a2e87f`: `npm run typecheck` clean, `npm test`
