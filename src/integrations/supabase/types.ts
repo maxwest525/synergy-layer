@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.17"
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
@@ -5170,6 +5170,28 @@ export type Database = {
         }
         Returns: Json
       }
+      create_page_wording_proposal: {
+        Args: {
+          _actor: string
+          _changes: Json
+          _evidence: Json
+          _evidence_limitations: string
+          _evidence_summary: string
+          _generation_context: Json
+          _idempotency_key: string
+          _rationale: string
+          _risk_note: string
+          _source_branch: string
+          _source_file: string
+          _source_project_id: string
+          _source_repo: string
+          _source_revision_before: string
+          _target_url: string
+          _tenant_id: string
+          _title: string
+        }
+        Returns: Json
+      }
       create_title_h1_proposal: {
         Args: {
           _actor: string
@@ -5264,6 +5286,22 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      revise_page_wording_proposal: {
+        Args: {
+          _actor: string
+          _changes: Json
+          _evidence: Json
+          _evidence_limitations: string
+          _evidence_summary: string
+          _generation_context: Json
+          _id: string
+          _rationale: string
+          _revision_kind: string
+          _risk_note: string
+          _source_revision_before: string
+        }
+        Returns: Json
       }
       revise_title_h1_proposal: {
         Args: {
