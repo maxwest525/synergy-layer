@@ -46,6 +46,47 @@ SQL and reachable without the TypeScript wrapper. The database has rows in
 `docs/handoffs/2026-08-25-remediation-plan.md` for the retraction and the method
 error behind it.
 
+**Addendum, 2026-08-28: proposal drafting and publish proof render through
+Crawl4AI first.** `createRenderedVerifier` in
+`src/lib/execution/execute.server.ts` previously consulted only
+`firecrawlEndpoint()`, so "Propose the fix" and "Check rendered page" failed or
+spent credits whenever Firecrawl was down, while Crawl4AI sat healthy and
+preferred everywhere else. The verifier now uses the same precedence as the
+page audit: Crawl4AI first, Firecrawl only as fallback, with the fallback
+provenance recorded in `renderedBy` the same way the audit records it. The
+execution card names the renderer chain and prices the check honestly: no
+charge on Crawl4AI, 1 credit only when the Firecrawl fallback answers. A stale
+Crawl4AI render can only under-prove a forward change (the approved new wording
+cannot exist in a cache older than the commit), so the proof's safety direction
+is preserved.
+
+**Addendum, 2026-08-28: measurement is no longer title/H1-only, and the
+robots lane completes.** Two structural breaks closed:
+
+- The measurement lifecycle triggers gated on `proposal_type = 'title_h1'`, so
+  a meta-description change could be approved, committed, and proven live and
+  then never receive a cycle, windows, or a verdict. Migration
+  `20260828100000` extends both triggers to `page_metadata` — same observable
+  (the page's own Search Console rows; Google places titles and descriptions
+  in the same appearance-not-ranking category), so the grounded 14/28/56/90
+  windows carry over with no new number invented — and backfills cycles and
+  windows for any page_metadata change already approved or live.
+  `site.crawl_directives` is deliberately not measured on these windows: its
+  outcome is indexation, not click choice, and the migration says so.
+- The crawl-directives lane could be committed but never proven applied,
+  because the proof routine only accepted title/H1 and meta-description
+  shapes. robots.txt is a static file, so its proof is not a render at all:
+  the executor now fetches the deployed file, reads the committed file at the
+  recorded commit through the GitHub executor, and compares whole files
+  (`verifyPublishedRobots`, migration `20260828110000`). Whole-file
+  comparison is deliberate — the site-wide unblock fix leaves a bare
+  `Disallow:` line that literal containment cannot prove.
+
+Still title/H1-only after this change, recorded so nobody thinks the job is
+finished: the nightly autonomous proposal job files only title_h1 proposals,
+and the "Write it again" verb exists only for title_h1 cards. Both are
+proposal-generation gaps, not measurement gaps, and are tracked separately.
+
 **How to read this file.** Section 0 is the current state and supersedes anything
 below it that disagrees. The later sections are kept in the order they were
 written, as a dated record of how the build got here. Where an older section
@@ -196,7 +237,24 @@ likely to waste someone's afternoon:
 
 - `GITHUB_EXECUTOR_TOKEN` is not configured, so no change request has ever been
   executed against the real repository. The UI names this exactly and refuses
-  without writing.
+  without writing. **Where this secret lives, recorded 2026-08-28 so nobody
+  hunts for it again:** it is a fine-grained GitHub personal access token
+  created on the `maxwest525` GitHub account, scoped to the single repository
+  `maxwest525/brittmove-829a7519` with Contents read/write only (the executor
+  is hard-allowlisted to that repo and branch in
+  `src/lib/execution/allowlist.ts`, so a wider token buys nothing). It is
+  placed in the AOOS Lovable project's secret store (Project Settings, then
+  Secrets, in the Lovable editor for the project deployed at
+  `trumove-resource-center.lovable.app`). It is never written into `.env`,
+  never a `VITE_` variable, and does not belong to the customer site's
+  project. A newly placed value is not live until the next Lovable publish,
+  and a deleted one survives until the next publish; see AGENTS.md, "The
+  layer that keeps costing hours". Proof of placement is the
+  `github_executor` probe on `/capabilities/systems` turning healthy, or the
+  execution card on `/changes/$id` reporting the executor connected; the
+  settings screen alone proves nothing. If the deployment ever moves off
+  Lovable, this secret moves to the new platform's secret store with it; the
+  token authenticates to GitHub and is platform-independent.
 - `cap.github` is not connected, which blocks `wf.publish`.
 - The six-domain competitor shortlist is still `pending` in `/competitors`. An
   agent must not approve or reject it.

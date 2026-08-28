@@ -19,11 +19,11 @@ Execution requires an authenticated operator, tenant ownership, executable propo
 ## Execution sequence
 
 1. Load the approved, frozen change request by ID.
-2. Load the exact approved source revision and compare the exact title/H1 before-values once.
+2. Load the exact approved source revision and compare the exact approved before-values once.
 3. Refuse on revision or before-value drift with `Page changed — review required`; perform zero GitHub writes.
 4. Require exactly one intended replacement for each approved field.
 5. Write with an idempotent commit marker and record source repository, branch, before/after commit, and adapter response.
-6. Keep state as source-committed until the public rendered page proves the approved after-state.
+6. Keep state as source-committed until the live site proves the approved after-state: for wording lanes (title/H1, meta description), the rendered public page must serve the exact approved values; for the crawl-directives lane, the deployed static file must match the committed file at the recorded commit, whole-file, no renderer involved.
 7. Store dated published proof separately.
 8. Wait for finalized measurement windows; do not mark a winner at publish time.
 
