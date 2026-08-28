@@ -74,7 +74,7 @@ npm run build
 ```
 
 Verified on 2026-08-28, measured on the deletion-pass branch off `main` at
-`47f6ae9`: typecheck clean, 1381 tests in 128 files passing, lint 0 errors with
+`47f6ae9`: typecheck clean, 1437 tests in 135 files passing, lint 0 errors with
 the 14 pre-existing react-refresh warnings, build green.
 
 `.env` is committed and holds only public Supabase config. Server secrets —

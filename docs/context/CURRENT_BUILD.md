@@ -211,7 +211,7 @@ written, as a dated record of how the build got here. Where an older section
 contradicts section 0, section 0 wins and the contradiction is named rather than
 quietly edited away.
 
-## 0b. Deletion pass and known orphan registry rows, 2026-08-28
+## 0f. Deletion pass and known orphan registry rows, 2026-08-28
 
 Two deletions landed on this branch:
 
