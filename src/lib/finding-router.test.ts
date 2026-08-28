@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import { CATEGORIES } from "./categories";
-import { categoryForChangeRequest, categoryForFinding, ruleFromMetadata } from "./finding-router";
+import {
+  categoryForChangeRequest,
+  categoryForFinding,
+  pageUrlFromSuggestedAction,
+  ruleFromMetadata,
+} from "./finding-router";
 
 describe("the bug this module exists to fix", () => {
   it("sends a competitor rule to Your competition, not Your pages", () => {
@@ -82,6 +87,40 @@ describe("ruleFromMetadata", () => {
     expect(ruleFromMetadata(["weak_ctr_page"])).toBeNull();
     expect(ruleFromMetadata({ rule: 42 })).toBeNull();
     expect(ruleFromMetadata({ rule: "" })).toBeNull();
+  });
+});
+
+describe("the page address a rule finding's stored target points at", () => {
+  it("reads a page URL out of the stored suggested action", () => {
+    expect(
+      pageUrlFromSuggestedAction({
+        kind: "review",
+        rule: "weak_ctr_page",
+        target: "https://trumoveinc.com/corporate-relocation",
+      }),
+    ).toBe("https://trumoveinc.com/corporate-relocation");
+  });
+
+  it("keeps only the page half of the coverage-gap page :: query form", () => {
+    expect(
+      pageUrlFromSuggestedAction({ target: "https://trumoveinc.com/moving :: piano transport" }),
+    ).toBe("https://trumoveinc.com/moving");
+  });
+
+  it("returns no address when the target is not a page", () => {
+    // A query rule targets a search term, a site rule the literal `site`, a
+    // competitor rule a bare domain. None of them is a page address.
+    expect(pageUrlFromSuggestedAction({ target: "piano transport cost" })).toBeNull();
+    expect(pageUrlFromSuggestedAction({ target: "site" })).toBeNull();
+    expect(pageUrlFromSuggestedAction({ target: "unitedvanlines.com" })).toBeNull();
+  });
+
+  it("does not trust the shape of a jsonb column", () => {
+    expect(pageUrlFromSuggestedAction(null)).toBeNull();
+    expect(pageUrlFromSuggestedAction("https://trumoveinc.com")).toBeNull();
+    expect(pageUrlFromSuggestedAction(["https://trumoveinc.com"])).toBeNull();
+    expect(pageUrlFromSuggestedAction({ target: 42 })).toBeNull();
+    expect(pageUrlFromSuggestedAction({})).toBeNull();
   });
 });
 

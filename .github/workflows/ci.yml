@@ -5,7 +5,6 @@ on:
   push:
     branches:
       - main
-      - codex/aoos-recovery-title-h1
 
 permissions:
   contents: read

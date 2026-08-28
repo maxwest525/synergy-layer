@@ -3,7 +3,7 @@ id: 20260814-outcome-measurement
 title: Outcome Measurement
 tags: [measurement, evidence, seo]
 created: 2026-08-14
-updated: 2026-08-14
+updated: 2026-08-28
 related: [20260814-evidence-policy, 20260814-proposal-data-contract, 20260814-test-cases]
 summary: Baseline, comparison-window, GSC, GA4, and neutral result-classification contract.
 ---
@@ -25,7 +25,15 @@ summary: Baseline, comparison-window, GSC, GA4, and neutral result-classificatio
 
 Each baseline and follow-up requires source, page, date range, finalized/complete status, dimensions, metric values, collection time, and limitations. Partial windows remain visibly partial.
 
-## Title/H1 readout
+## Wording-change readout (title/H1 and meta description)
+
+Both wording lanes are measured identically, because Google's own documentation
+places titles and meta descriptions in the same category: they affect how the
+result appears, not how it ranks, so the observable for both is the page's own
+Search Console rows. The crawl-directives lane is deliberately not measured on
+these windows: a robots.txt change's outcome is crawl and indexation state, not
+click choice, and opening a CTR-shaped cycle for it would grade the wrong
+observable.
 
 - GSC: clicks, impressions, CTR, and average position with absolute and relative differences where defined.
 - GA4 when connected: views, sessions, engagement rate, lead events, and whether lead-event mapping is configured.

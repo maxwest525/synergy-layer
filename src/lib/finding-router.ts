@@ -82,6 +82,30 @@ export function ruleFromMetadata(metadata: unknown): string | null {
 }
 
 /**
+ * The page address a rule finding points at, read from its stored
+ * `suggested_action.target`, or null when the finding targets no page.
+ *
+ * Every rule writer stores a target there, but not every target is a page: a
+ * query rule targets a search term, a site-level rule the literal `site`, a
+ * competitor rule a bare domain. Only a URL is returned, because the queue
+ * renders this as the card's page address, and the coverage-gap rule's
+ * `page :: query` form is split the same way `deriveFixTarget` splits it.
+ */
+export function pageUrlFromSuggestedAction(suggestedAction: unknown): string | null {
+  if (
+    suggestedAction === null ||
+    typeof suggestedAction !== "object" ||
+    Array.isArray(suggestedAction)
+  ) {
+    return null;
+  }
+  const target = (suggestedAction as Record<string, unknown>)["target"];
+  if (typeof target !== "string") return null;
+  const page = target.split(" :: ")[0] ?? "";
+  return page.startsWith("http") ? page : null;
+}
+
+/**
  * The category for one recommendation.
  *
  * Falls back to Your pages only when neither the rule nor the module is

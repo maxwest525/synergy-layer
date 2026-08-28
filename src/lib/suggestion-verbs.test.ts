@@ -150,3 +150,44 @@ describe("drafting a fix straight from the card", () => {
     expect(draft?.consequence).toMatch(/approve/i);
   });
 });
+
+describe("drafting a site crawl fix straight from the card", () => {
+  function siteFinding(check: string): Partial<QueueSource> & Pick<QueueSource, "id"> {
+    return {
+      id: `site:${check}`,
+      kind: "audit",
+      categoryId: "health",
+      targetUrl: null,
+      severity: "critical",
+      rule: check,
+    };
+  }
+
+  it("offers the draft on exactly the site checks a governed lane fixes", () => {
+    for (const check of ["robots_blocks_site", "robots_blocks_pages", "sitemap_not_declared"]) {
+      expect(idsFor(siteFinding(check))).toContain("draft");
+    }
+  });
+
+  it("offers no draft on the site checks whose fix is still manual", () => {
+    for (const check of [
+      "robots_missing",
+      "sitemap_missing",
+      "sitemap_unreachable",
+      "sitemap_empty",
+      "sitemap_coverage_gap",
+      "pages_unreadable",
+    ]) {
+      expect(idsFor(siteFinding(check))).not.toContain("draft");
+    }
+  });
+
+  it("prices the site draft as free, because it is written deterministically", () => {
+    const queue = buildQueue([source(siteFinding("robots_blocks_site"))], NOW);
+    const draft = verbsFor(queue.open[0]!).find((verb) => verb.id === "draft");
+    expect(draft?.metered).toBe(false);
+    expect(draft?.consequence).toMatch(/costs nothing/i);
+    expect(draft?.consequence).not.toMatch(/AI call/i);
+    expect(draft?.consequence).toMatch(/approve/i);
+  });
+});
