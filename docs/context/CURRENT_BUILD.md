@@ -77,6 +77,29 @@ Five related defects around "declared versus wired" were closed in one pass:
   `docs/execution-handbook/` contract covers capability integration states, so
   the decision is recorded here and in the code comments.
 
+## 0d. cap.umami promoted to real, 2026-08-28
+
+The daily `umami-daily-observe` firing (pg_cron `aoos-umami-daily-observe`,
+16:45 UTC) had failed on every run with "Capability "Umami (self-hosted
+analytics)" is not authorised yet": the workflow runner admits only `real`
+capabilities, and `cap.umami` was still declared `pending` even though its own
+promotion condition ("pending until one authenticated read stores a snapshot")
+was met on 2026-08-18. Re-verified against the production database on
+2026-08-28: exactly four `umami_snapshots` rows for TruMove, all from one
+succeeded `measurement_runs` row with `authenticationSucceeded: true` and HTTP
+200, and three stored `workflow_runs` failures carrying the exact refusal
+above.
+
+Promoted in `src/registry/modules/self-hosted-analytics.ts` and, because
+registry sync is operator triggered, also in migration
+`20260828120000_promote_umami_capability_real.sql`, which flips the
+`capabilities` row the runner actually reads.
+
+**Waiting on a human:** the migration is a file until it is applied. After this
+branch merges to `main`, apply it (Lovable prompt: "Apply pending Supabase
+migrations") or run the registry sync from the admin surface. The 16:45 UTC run
+keeps failing until one of those happens.
+
 ## 0a. Current state, 2026-08-25
 
 - **2026-08-28:** the nightly propose-from-evidence job can now succeed:

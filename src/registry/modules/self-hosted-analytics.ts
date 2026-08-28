@@ -14,8 +14,12 @@ export const definition: ModuleDefinition = {
       category: "Traffic",
       description:
         "Read-only observation of the operator's self-hosted Umami instance: site totals, daily series, top pages, and referrers, stored as immutable snapshots.",
-      // pending until one authenticated read stores a snapshot.
-      integrationState: "pending",
+      // Promoted from pending: the stated condition ("pending until one
+      // authenticated read stores a snapshot") was met on 2026-08-18, when a
+      // succeeded measurement_runs row (authenticationSucceeded, HTTP 200)
+      // stored four umami_snapshots rows for TruMove. Re-verified against the
+      // production database on 2026-08-28.
+      integrationState: "real",
       authKind: "token_login",
       operations: [
         { name: "heartbeat", description: "Check the instance answers before any read." },
