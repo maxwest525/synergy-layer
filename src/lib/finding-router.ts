@@ -58,6 +58,39 @@ const CATEGORY_BY_RULE: Record<string, CategoryId> = {
   approved_keyword_no_page: "search",
   // Off-site domains are a competitive question, not a page one.
   referring_domain_movement: "competition",
+
+  // Site audit, from the OnPage crawl. `health` was a category no finding
+  // could reach until these: eight OnPage endpoints were collected and read by
+  // nothing, so the crawl answered questions nobody was asking.
+  non_indexable_pages_found: "health",
+  crawl_pages_error_status: "health",
+  redirect_chain_present: "health",
+  crawl_hit_its_page_cap: "health",
+  crawl_result_truncated: "health",
+  crawl_started_never_collected: "health",
+  // Duplicate title and description are about the pages themselves, not the
+  // crawl's health, so they route with the rest of the page findings.
+  duplicate_titles_across_pages: "pages",
+  duplicate_descriptions_across_pages: "pages",
+
+  // Backlinks. Five of six endpoints were collected and read by nothing; these
+  // two are about a page of ours, and the third about our view of the profile.
+  inbound_link_to_error_page: "pages",
+  linked_page_never_audited: "pages",
+  link_profile_coverage_partial: "competition",
+
+  // Umami. cap.umami is real and snapshots exist, but the visitors category
+  // had no Umami rule to fill it.
+  umami_tracking_silent: "visitors",
+  umami_site_traffic_shift: "visitors",
+  umami_referrer_source_stopped: "visitors",
+
+  // Labs, Domain Analytics and Content Analysis. The ownership pair files an
+  // operator decision and never asserts a link, per COMPETITIVE_MODEL.md.
+  overlap_list_reached_the_row_limit: "competition",
+  same_registration_details_across_two_known_domains: "competition",
+  identical_technology_stack_across_two_known_domains: "competition",
+  rival_page_mentions_your_brand: "competition",
 };
 
 const CATEGORY_BY_MODULE: Record<string, CategoryId> = {
