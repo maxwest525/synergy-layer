@@ -187,7 +187,24 @@ likely to waste someone's afternoon:
 
 - `GITHUB_EXECUTOR_TOKEN` is not configured, so no change request has ever been
   executed against the real repository. The UI names this exactly and refuses
-  without writing.
+  without writing. **Where this secret lives, recorded 2026-08-28 so nobody
+  hunts for it again:** it is a fine-grained GitHub personal access token
+  created on the `maxwest525` GitHub account, scoped to the single repository
+  `maxwest525/brittmove-829a7519` with Contents read/write only (the executor
+  is hard-allowlisted to that repo and branch in
+  `src/lib/execution/allowlist.ts`, so a wider token buys nothing). It is
+  placed in the AOOS Lovable project's secret store (Project Settings, then
+  Secrets, in the Lovable editor for the project deployed at
+  `trumove-resource-center.lovable.app`). It is never written into `.env`,
+  never a `VITE_` variable, and does not belong to the customer site's
+  project. A newly placed value is not live until the next Lovable publish,
+  and a deleted one survives until the next publish; see AGENTS.md, "The
+  layer that keeps costing hours". Proof of placement is the
+  `github_executor` probe on `/capabilities/systems` turning healthy, or the
+  execution card on `/changes/$id` reporting the executor connected; the
+  settings screen alone proves nothing. If the deployment ever moves off
+  Lovable, this secret moves to the new platform's secret store with it; the
+  token authenticates to GitHub and is platform-independent.
 - `cap.github` is not connected, which blocks `wf.publish`.
 - The six-domain competitor shortlist is still `pending` in `/competitors`. An
   agent must not approve or reject it.
