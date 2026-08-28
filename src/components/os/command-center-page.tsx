@@ -2,6 +2,8 @@ import { Link } from "@tanstack/react-router";
 import { CircleCheck, Sparkles, X } from "lucide-react";
 
 import { categoryIcon, tileIcon } from "./category-icons";
+import { NextActionsPanel } from "@/components/os/next-actions-panel";
+
 import { useCommandCenter } from "./command-center-facts";
 import { EmptyState } from "./primitives";
 import type { Delta, SuggestedNextRow, Tile, TopCard, TopCardAction } from "@/lib/command-center";
@@ -192,6 +194,14 @@ export function CommandCenterPage() {
           What needs you first, and the fastest way to clear it.
         </p>
       </div>
+
+      {/*
+        The heading above has promised this since the page was built, and the
+        rules that answer it were mounted only on /essentials, filed under
+        Evidence, with nothing here linking to them. An operator landing on the
+        Command center could not find the one surface that says what to do next.
+      */}
+      <NextActionsPanel />
 
       <div className="flex flex-col gap-2">
         <span className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.12em] text-primary">
