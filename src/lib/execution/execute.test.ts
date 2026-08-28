@@ -123,6 +123,7 @@ function makeRenderer(page: {
       title: page.title,
       heading: page.heading,
       metaDescription: page.metaDescription ?? null,
+      subheadings: [],
       renderedBy: "TestRenderer",
     }),
   };
@@ -556,6 +557,7 @@ describe("verifyRenderedPage", () => {
       title: "Employee Relocation Movers | TruMove",
       heading: "Employee Relocation Moving Services",
       metaDescription: null,
+      subheadings: [],
       renderedBy: "TestRenderer",
     };
     expect(verifyRenderedPage(page, changes).ok).toBe(true);
@@ -569,6 +571,7 @@ describe("verifyRenderedPage", () => {
       heading: null,
       metaDescription:
         "Employee relocation movers with dedicated coordinators and guaranteed dates.",
+      subheadings: [],
       renderedBy: "TestRenderer",
     };
     const proof = verifyRenderedPage(page, metaChanges);
@@ -586,6 +589,7 @@ describe("verifyRenderedPage", () => {
         title: "TruMove, AI-Powered Moving Made Simple",
         heading: "Corporate Relocation",
         metaDescription: null,
+        subheadings: [],
         renderedBy: "TestRenderer",
       },
       metaChanges,
@@ -601,6 +605,7 @@ describe("verifyRenderedPage", () => {
         title: "TruMove, AI-Powered Moving Made Simple",
         heading: null,
         metaDescription: null,
+        subheadings: [],
         renderedBy: "TestRenderer",
       },
       changes,

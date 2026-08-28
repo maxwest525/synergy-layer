@@ -151,6 +151,15 @@ export type RenderedPage = {
   title: string | null;
   heading: string | null;
   metaDescription: string | null;
+  /**
+   * Every H2 on the rendered page, in document order.
+   *
+   * A change can only be approved if it can later be proven live, so this list
+   * is what makes a subheading editable at all: without it the wording lane
+   * could edit nothing but the title and the H1, because those were the only
+   * two things a rendered page could be asked about.
+   */
+  subheadings: string[];
   renderedBy: string;
 };
 
@@ -180,6 +189,16 @@ export function extractFirstHeading(html: string): string | null {
   const match = /<h1[^>]*>([\s\S]*?)<\/h1>/i.exec(html);
   const text = match?.[1] ? normalize(match[1]) : null;
   return text ? text : null;
+}
+
+/** Every H2 in document order, for proving a subheading change went live. */
+export function extractSubheadings(html: string): string[] {
+  const found: string[] = [];
+  for (const match of html.matchAll(/<h2[^>]*>([\s\S]*?)<\/h2>/gi)) {
+    const text = match[1] ? normalize(match[1]) : "";
+    if (text) found.push(text);
+  }
+  return found;
 }
 
 /** The description meta tag's content, whichever order its attributes appear in. */
@@ -266,6 +285,24 @@ export function verifyPublishedRobots(input: {
  * value counts as proof: both wording values for the title/H1 lane, the meta
  * description for the page metadata lane.
  */
+/**
+ * A commit is not a live page, and a rendered page is the only thing that can
+ * show what a visitor actually receives. Only an exact match of every approved
+ * value counts as proof.
+ *
+ * This used to demand a title AND an H1 on every wording change, and refuse
+ * anything else with "does not store both an SEO title and a page heading to
+ * prove". That was one of four places -- with the generator, the create RPC's
+ * `<> 2` check, and the proof function's field lookups -- that together made
+ * the wording lane a title-and-H1 editor and nothing else. A change could not
+ * be approved unless it could be proven, and only those two fields could be
+ * proven, so only those two were ever offered.
+ *
+ * It now proves whatever fields the change set actually carries: every field
+ * must be one this lane owns, and every one of them must match. A change
+ * carrying a subheading alone is provable; so is one carrying a title, an H1
+ * and two subheadings. Nothing is assumed present.
+ */
 export function verifyRenderedPage(page: RenderedPage, changes: FieldChange[]): PublishedProof {
   const expectedTitle = changes.find((c) => c.field === "seo_title")?.after ?? null;
   const expectedHeading = changes.find((c) => c.field === "page_heading")?.after ?? null;
@@ -281,65 +318,68 @@ export function verifyRenderedPage(page: RenderedPage, changes: FieldChange[]): 
     finalUrl: page.finalUrl,
   };
 
-  if (expectedDescription) {
-    if (!page.metaDescription) {
-      return {
-        ...base,
-        ok: false,
-        reason:
-          "The rendered page returned no meta description. That is an unrendered application shell, not proof either way.",
-      };
-    }
-    if (page.metaDescription === normalize(expectedDescription)) {
-      return {
-        ...base,
-        ok: true,
-        reason: `The rendered page at ${page.finalUrl} serves the exact approved meta description, as rendered by ${page.renderedBy}.`,
-      };
-    }
+  /** What a rendered page can be asked about, and the words to say it in. */
+  const PROVABLE: Readonly<
+    Record<string, { label: string; find: (p: RenderedPage) => string | string[] | null }>
+  > = {
+    seo_title: { label: "document title", find: (p) => p.title },
+    page_heading: { label: "H1", find: (p) => p.heading },
+    meta_description: { label: "meta description", find: (p) => p.metaDescription },
+    subheading: { label: "subheading", find: (p) => p.subheadings },
+  };
+
+  const proofs = changes.filter((c) => c.field in PROVABLE);
+  if (proofs.length === 0) {
     return {
       ...base,
       ok: false,
       reason:
-        "The rendered page does not yet serve the approved meta description. The commit may exist while the site publish or sync is still pending.",
+        "This change request stores no field a rendered page can be asked about, so nothing here can be proven live.",
     };
   }
 
-  if (!expectedTitle || !expectedHeading) {
+  const absent: string[] = [];
+  const wrong: string[] = [];
+  for (const change of proofs) {
+    const spec = PROVABLE[change.field];
+    if (!spec) continue;
+    const found = spec.find(page);
+    const wanted = normalize(change.after);
+    if (Array.isArray(found)) {
+      // A page carries many subheadings; the approved one need only be present.
+      if (found.length === 0) absent.push(spec.label);
+      else if (!found.includes(wanted)) wrong.push(spec.label);
+      continue;
+    }
+    if (!found) absent.push(spec.label);
+    else if (found !== wanted) wrong.push(spec.label);
+  }
+
+  if (absent.length > 0) {
     return {
       ...base,
       ok: false,
-      reason: "This change request does not store both an SEO title and a page heading to prove.",
+      reason: `The rendered page returned no ${list(absent)}. That is an unrendered application shell, not proof either way.`,
     };
   }
-
-  if (!page.title || !page.heading) {
-    const missing = [!page.title ? "document title" : null, !page.heading ? "H1" : null]
-      .filter(Boolean)
-      .join(" and ");
+  if (wrong.length > 0) {
     return {
       ...base,
       ok: false,
-      reason: `The rendered page returned no ${missing}. That is an unrendered application shell, not proof either way.`,
+      reason: `The rendered page does not yet serve the approved ${list(wrong)}. The commit may exist while the site publish or sync is still pending.`,
     };
   }
 
-  const titleOk = page.title === normalize(expectedTitle);
-  const headingOk = page.heading === normalize(expectedHeading);
-  if (titleOk && headingOk) {
-    return {
-      ...base,
-      ok: true,
-      reason: `The rendered page at ${page.finalUrl} serves the exact approved title and heading, as rendered by ${page.renderedBy}.`,
-    };
-  }
-
-  const missing = [!titleOk ? "document title" : null, !headingOk ? "H1" : null]
-    .filter(Boolean)
-    .join(" and ");
+  const proven = list(proofs.map((c) => PROVABLE[c.field]?.label ?? c.field));
   return {
     ...base,
-    ok: false,
-    reason: `The rendered page does not yet serve the approved ${missing}. The commit may exist while the site publish or sync is still pending.`,
+    ok: true,
+    reason: `The rendered page at ${page.finalUrl} serves the exact approved ${proven}, as rendered by ${page.renderedBy}.`,
   };
+}
+
+/** "a", "a and b", "a, b and c" — the copy rules want words, not commas alone. */
+function list(parts: string[]): string {
+  if (parts.length <= 1) return parts[0] ?? "";
+  return `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}`;
 }

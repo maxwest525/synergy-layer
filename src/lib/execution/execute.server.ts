@@ -19,6 +19,7 @@ import {
   extractFirstHeading,
   extractMarkdownHeading,
   extractMetaDescription,
+  extractSubheadings,
   parseFieldChanges,
   type RenderedPage,
 } from "./source-change";
@@ -357,6 +358,7 @@ export function createRenderedVerifier(
       title: extractDocumentTitle(html) ?? (metaTitle ? metaTitle : null),
       heading: extractFirstHeading(html) ?? extractMarkdownHeading(markdown),
       metaDescription: extractMetaDescription(html),
+      subheadings: extractSubheadings(html),
       renderedBy,
     };
   }
@@ -377,6 +379,7 @@ export function createRenderedVerifier(
           title: extractDocumentTitle(page.html),
           heading: extractFirstHeading(page.html) ?? extractMarkdownHeading(page.markdown),
           metaDescription: extractMetaDescription(page.html),
+          subheadings: extractSubheadings(page.html),
           renderedBy: "Crawl4AI",
         };
       } catch (error) {
