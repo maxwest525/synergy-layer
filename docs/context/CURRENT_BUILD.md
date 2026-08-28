@@ -12,6 +12,34 @@ Last updated: 2026-08-28, on the Command center queue-fixes branch. Section 0
 below still describes 2026-08-21 and has NOT been rewritten; the current-state
 blocks immediately below supersede it.
 
+## 0g. PageSpeed reaches the operator, 2026-08-28
+
+The fifth module that writes a recommendation. `pagespeed_snapshots` had
+stored real Core Web Vitals readings since the measurement slice landed and
+nothing read them: `findingSources` for `pagespeed_insights` was empty, so the
+connector was pinned at "collecting and reaching nobody" no matter how many
+runs it stored.
+
+- `pagespeed-rule-checks.ts` (pure) and `pagespeed-rules.server.ts` (writer,
+  `source_module: "pagespeed"`). Two rules: `page_lcp_poor`, `page_cls_poor`.
+- **No threshold is invented.** The bands are Google's published Core Web
+  Vitals values (LCP good at or under 2.5s, poor above 4.0s; CLS good at or
+  under 0.1, poor above 0.25) and only the band Google itself calls poor
+  fires. The needs-improvement band is deliberately silent.
+- **The lab/field distinction is stated on screen.** The stored values come
+  from `lighthouseResult.audits[].numericValue`, one simulated load. Google's
+  page-experience signal and the Search Console Core Web Vitals report read
+  field data from real visitors (CrUX). The copy says the reading is a test
+  load and never claims the page fails Core Web Vitals.
+- Both rules are bucketed `fact`: a direct per-page measurement answers at any
+  volume, which makes these among the few rules this property's traffic can
+  support.
+- The rules run after each PageSpeed measurement; a rules failure never fails
+  the measurement, because the snapshot is stored and immutable either way.
+- `PAGESPEED_API_KEY` is now declared optional in the connector catalog,
+  matching the code: the v5 API answers without a key, and a working keyless
+  setup previously read as "not configured".
+
 ## 0b. Command center queue corrections, 2026-08-28
 
 Three defects around the suggestion queue, fixed on this branch:

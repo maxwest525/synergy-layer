@@ -180,7 +180,7 @@ export const CONNECTION_OUTPUTS: readonly ConnectionOutput[] = [
     label: "PageSpeed Insights",
     table: "pagespeed_snapshots",
     succeeded: null,
-    findingSources: [],
+    findingSources: ["pagespeed"],
     promise: "Google's own speed score for a page.",
   },
   {

@@ -4,6 +4,7 @@ import { RULE_ASSIGNMENTS, unmetPrerequisites, type RuleBucket } from "./rule-bu
 import { SEARCH_CONSOLE_THRESHOLDS, SEO_RULES } from "./rule-thresholds";
 import { ALL_SEARCH_RULES } from "./finding-copy";
 import type { Ga4CheckRule } from "./ga4-rule-checks";
+import type { PageSpeedCheckRule } from "./pagespeed-rule-checks";
 
 /**
  * Rules deliberately excluded from RULE_ASSIGNMENTS: they carry their own
@@ -29,6 +30,16 @@ const GA4_RULES_COVERED: Record<Ga4CheckRule, true> = {
 };
 
 /**
+ * Same compile-time exhaustiveness for the PageSpeed family: the module
+ * exposes only the `PageSpeedCheckRule` type, so a new rule id added there
+ * without a key here fails the build rather than this test at runtime.
+ */
+const PAGESPEED_RULES_COVERED: Record<PageSpeedCheckRule, true> = {
+  page_lcp_poor: true,
+  page_cls_poor: true,
+};
+
+/**
  * The rule ids RULE_ASSIGNMENTS must cover, read from the actual runtime
  * unions rather than a hand-maintained list — SEO_RULES (family A) and
  * ALL_SEARCH_RULES (families B and C, via finding-copy.ts) plus the
@@ -37,7 +48,12 @@ const GA4_RULES_COVERED: Record<Ga4CheckRule, true> = {
  * bucket assignment.
  */
 const EXPECTED_RULE_IDS = [
-  ...new Set<string>([...SEO_RULES, ...ALL_SEARCH_RULES, ...Object.keys(GA4_RULES_COVERED)]),
+  ...new Set<string>([
+    ...SEO_RULES,
+    ...ALL_SEARCH_RULES,
+    ...Object.keys(GA4_RULES_COVERED),
+    ...Object.keys(PAGESPEED_RULES_COVERED),
+  ]),
 ].filter((rule) => !EXCLUDED_FROM_BUCKETING.has(rule));
 
 describe("RULE_ASSIGNMENTS", () => {

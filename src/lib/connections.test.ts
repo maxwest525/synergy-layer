@@ -53,11 +53,11 @@ describe("the stage no screen has ever shown", () => {
   });
 
   it("says the reading is happening and the telling is not", () => {
-    const view = buildConnections([facts("pagespeed_insights", { storedRows: 412 })]);
-    expect(row(view, "pagespeed_insights").reason).toContain("412");
-    expect(row(view, "pagespeed_insights").reason).toMatch(
-      /reading is happening; the telling is not/i,
-    );
+    // Umami, not PageSpeed: PageSpeed earned a rule module and now reaches the
+    // operator, so this example moved to a connector that is still silent.
+    const view = buildConnections([facts("umami", { storedRows: 412 })]);
+    expect(row(view, "umami").reason).toContain("412");
+    expect(row(view, "umami").reason).toMatch(/reading is happening; the telling is not/i);
   });
 
   it("names the silent ones in the headline", () => {
@@ -73,9 +73,9 @@ describe("the stage no screen has ever shown", () => {
   it("counts the writers rather than asserting how many there are", () => {
     // This sentence said "two" when there were three, then "three" when the
     // targeting pass made DataForSEO the fourth. It is now derived.
-    const view = buildConnections([facts("pagespeed_insights", { storedRows: 412 })]);
-    expect(view.headline).toContain("four parts");
-    expect(FINDING_SOURCES).toHaveLength(4);
+    const view = buildConnections([facts("umami", { storedRows: 412 })]);
+    expect(view.headline).toContain("five parts");
+    expect(FINDING_SOURCES).toHaveLength(5);
   });
 
   it("says nothing when no connection is collecting in silence", () => {
