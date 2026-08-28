@@ -117,9 +117,14 @@ describe("restore and ignore legality", () => {
   it("offers regenerate only for a title fix that is still a draft", () => {
     const queue = buildQueue(
       [
-        source({ id: "ok", kind: "change", storedState: "proposed", proposalType: "title_h1" }),
+        source({ id: "ok", kind: "change", storedState: "proposed", proposalType: "page_wording" }),
         // Approval freezes the wording, so there is nothing left to redraft.
-        source({ id: "frozen", kind: "change", storedState: "applied", proposalType: "title_h1" }),
+        source({
+          id: "frozen",
+          kind: "change",
+          storedState: "applied",
+          proposalType: "page_wording",
+        }),
         // The page-metadata lane has no redraft path at all.
         source({
           id: "meta",

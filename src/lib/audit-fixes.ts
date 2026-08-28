@@ -21,12 +21,12 @@ export type AuditFixTarget = {
   filePath: string;
 };
 
-const WORDING_FILE = GOVERNED_CHANGE_KINDS["service.title_h1"][0];
+const WORDING_FILE = GOVERNED_CHANGE_KINDS["service.page_wording"][0];
 const ROBOTS_FILE = GOVERNED_CHANGE_KINDS["site.crawl_directives"][0];
 
 const METADATA_FILE = GOVERNED_CHANGE_KINDS["page.metadata"][0];
 
-const wording: AuditFixTarget = { changeKind: "service.title_h1", filePath: WORDING_FILE };
+const wording: AuditFixTarget = { changeKind: "service.page_wording", filePath: WORDING_FILE };
 const crawl: AuditFixTarget = { changeKind: "site.crawl_directives", filePath: ROBOTS_FILE };
 const metadata: AuditFixTarget = { changeKind: "page.metadata", filePath: METADATA_FILE };
 
@@ -99,7 +99,7 @@ export function fixTargetForPageCheck(check: string): AuditFixTarget | null {
  * file renders that page.
  */
 const PAGE_SCOPED_KINDS: ReadonlySet<GovernedChangeKind> = new Set([
-  "service.title_h1",
+  "service.page_wording",
   "content.blog_post",
 ]);
 
@@ -121,7 +121,7 @@ const PAGE_SCOPED_KINDS: ReadonlySet<GovernedChangeKind> = new Set([
  * Known residual gap, stated rather than implied. This answers "does a governed
  * file render this page", which is a question about routing. It cannot answer
  * "is this page's wording editable", which is a question about that file's
- * contents: `prepareTitleH1Proposal` additionally requires the live title and
+ * contents: `preparePageWordingProposal` additionally requires the live title and
  * the live H1 to each occur exactly once in the source. Two of the governed
  * components fail that today, both checked against the client repository on
  * 2026-08-22:

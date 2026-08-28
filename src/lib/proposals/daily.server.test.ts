@@ -2,11 +2,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { runProposalJobForTenant } from "./daily.server";
 
-vi.mock("../title-h1-proposals.server", () => ({ prepareTitleH1Proposal: vi.fn() }));
-vi.mock("../title-h1-proposals.functions", () => ({ serviceRpc: vi.fn() }));
+vi.mock("../page-wording-proposals.server", () => ({ preparePageWordingProposal: vi.fn() }));
+vi.mock("../page-wording-proposals.functions", () => ({ serviceRpc: vi.fn() }));
 
-import { serviceRpc } from "../title-h1-proposals.functions";
-import { prepareTitleH1Proposal } from "../title-h1-proposals.server";
+import { serviceRpc } from "../page-wording-proposals.functions";
+import { preparePageWordingProposal } from "../page-wording-proposals.server";
 
 type QueryResult = { data: unknown; error: { message: string } | null };
 
@@ -112,7 +112,7 @@ const prepared = {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  vi.mocked(prepareTitleH1Proposal).mockResolvedValue(prepared as never);
+  vi.mocked(preparePageWordingProposal).mockResolvedValue(prepared as never);
 });
 
 async function runWithRpcRefusal(message: string) {
@@ -124,7 +124,7 @@ async function runWithRpcRefusal(message: string) {
 
 describe("the nightly propose-from-evidence job", () => {
   it("pauses instead of retrying nightly when the RPC cannot see the tenant for the job's actor", async () => {
-    // The deployed create_title_h1_proposal refuses a null actor with exactly
+    // The deployed create_page_wording_proposal refuses a null actor with exactly
     // this message, so until the system-actor migration is applied the job
     // must pause rather than record a failure every night forever.
     const { outcome, release } = await runWithRpcRefusal(
@@ -132,7 +132,7 @@ describe("the nightly propose-from-evidence job", () => {
     );
 
     expect(serviceRpc).toHaveBeenCalledWith(
-      "create_title_h1_proposal",
+      "create_page_wording_proposal",
       expect.objectContaining({ _tenant_id: TENANT, _actor: null }),
     );
     expect(outcome.state).toBe("paused");
@@ -152,7 +152,7 @@ describe("the nightly propose-from-evidence job", () => {
   });
 
   it("pauses when no renderer is configured for the required live-page evidence", async () => {
-    vi.mocked(prepareTitleH1Proposal).mockRejectedValue(
+    vi.mocked(preparePageWordingProposal).mockRejectedValue(
       new Error(
         "Required live-page evidence is unavailable: no Firecrawl deployment is configured, self-hosted or cloud.",
       ),
@@ -181,11 +181,11 @@ describe("the nightly propose-from-evidence job", () => {
     const outcome = await runProposalJobForTenant(admin, TENANT, new Date("2026-08-28T05:00:00Z"));
 
     expect(serviceRpc).toHaveBeenCalledWith(
-      "create_title_h1_proposal",
+      "create_page_wording_proposal",
       expect.objectContaining({
         _tenant_id: TENANT,
         _actor: null,
-        _idempotency_key: `title-h1:auto:2026-08-28:${CANDIDATE_URL}`,
+        _idempotency_key: `page-wording:auto:2026-08-28:${CANDIDATE_URL}`,
         _target_url: CANDIDATE_URL,
       }),
     );

@@ -56,7 +56,7 @@ describe("proposalKindForRule", () => {
       "query_coverage_gap",
       "mystery_rule",
     ]) {
-      expect(proposalKindForRule(rule)).toBe("title_h1");
+      expect(proposalKindForRule(rule)).toBe("page_wording");
     }
   });
 });

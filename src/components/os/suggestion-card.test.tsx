@@ -145,7 +145,7 @@ describe("a change card's ignore is honestly labeled, because rejecting is termi
 
 describe("what a verb costs is on the verb", () => {
   it("says the redraft spends an AI call before it is clicked", () => {
-    show({ id: "c1", kind: "change", proposalType: "title_h1", storedState: "proposed" });
+    show({ id: "c1", kind: "change", proposalType: "page_wording", storedState: "proposed" });
     expect(screen.getByRole("button", { name: /Write it again/ })).toHaveAccessibleDescription(
       /one AI call/i,
     );

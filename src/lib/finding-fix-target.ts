@@ -39,7 +39,7 @@ export function hasGovernedFixPath(rule: string): boolean {
 export type FixTarget =
   { ok: true; url: string; query: string | null } | { ok: false; reason: string };
 
-export type FixProposalKind = "title_h1" | "page_metadata";
+export type FixProposalKind = "page_wording" | "page_metadata";
 
 /**
  * Which governed proposal lane drafts the fix for a rule finding. Weak
@@ -47,7 +47,7 @@ export type FixProposalKind = "title_h1" | "page_metadata";
  * other rule stays on the title/H1 lane.
  */
 export function proposalKindForRule(rule: string): FixProposalKind {
-  return rule === "weak_ctr_page" ? "page_metadata" : "title_h1";
+  return rule === "weak_ctr_page" ? "page_metadata" : "page_wording";
 }
 
 export function deriveFixTarget(

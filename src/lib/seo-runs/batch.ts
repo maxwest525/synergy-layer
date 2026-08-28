@@ -1,4 +1,4 @@
-import { requireProposalTarget } from "../title-h1-proposals";
+import { requireProposalTarget } from "../page-wording-proposals";
 
 export const maxSeoRunBatchSize = 100;
 

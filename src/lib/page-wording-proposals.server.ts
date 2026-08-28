@@ -10,7 +10,7 @@ import {
 import { createGithubApi } from "./execution/execute.server";
 import { resolvePageSource } from "./execution/page-source-map";
 import { applyExactReplacements, countOccurrences } from "./execution/source-change";
-import { generateTitleH1Wording } from "./gemini.server";
+import { generatePageWordingWording } from "./gemini.server";
 import { readLivePageWording } from "./live-page-evidence.server";
 import { retrieveKnowledgeGuidance } from "./knowledge-retrieval.server";
 import {
@@ -18,8 +18,8 @@ import {
   assertSameCanonicalProposalPage,
   buildDeterministicDevWording,
   buildProposalEvidenceGroups,
-  buildTitleH1Changes,
-  buildTitleH1Prompt,
+  buildPageWordingChanges,
+  buildPageWordingPrompt,
   describeEvidenceMode,
   describeEvidenceRowsUsed,
   requireProposalTarget,
@@ -30,14 +30,14 @@ import {
   type GscSnapshotInput,
   type ProposalEvidence,
   type ProposalOptionalContext,
-} from "./title-h1-proposals";
+} from "./page-wording-proposals";
 
 type Client = SupabaseClient<Database>;
 
-export type PreparedTitleH1Proposal = {
+export type PreparedPageWordingProposal = {
   targetUrl: string;
   title: string;
-  changes: ReturnType<typeof buildTitleH1Changes>;
+  changes: ReturnType<typeof buildPageWordingChanges>;
   rationale: string;
   evidence: Record<string, unknown>[];
   evidenceSummary: string;
@@ -64,7 +64,7 @@ function pageLabel(targetUrl: string): string {
   return path ? path.split("/").at(-1)!.replace(/[-_]+/g, " ") : "homepage";
 }
 
-export async function prepareTitleH1Proposal(
+export async function preparePageWordingProposal(
   client: Client,
   tenantId: string,
   rawTargetUrl: string,
@@ -72,7 +72,7 @@ export async function prepareTitleH1Proposal(
     wordingMode?: "gemini" | "deterministic_dev";
     evidenceMode?: EvidenceMode;
   } = {},
-): Promise<PreparedTitleH1Proposal> {
+): Promise<PreparedPageWordingProposal> {
   const evidenceMode = options.evidenceMode ?? "wording";
   const targetUrl = requireProposalTarget(rawTargetUrl);
   const observedAt = new Date().toISOString();
@@ -286,12 +286,12 @@ export async function prepareTitleH1Proposal(
   const wording =
     wordingMode === "deterministic_dev"
       ? buildDeterministicDevWording(evidence)
-      : await generateTitleH1Wording({
+      : await generatePageWordingWording({
           apiKey,
           model,
-          prompt: buildTitleH1Prompt(evidence, guidance, optionalContext),
+          prompt: buildPageWordingPrompt(evidence, guidance, optionalContext),
         });
-  const changes = buildTitleH1Changes(evidence.livePage, wording);
+  const changes = buildPageWordingChanges(evidence.livePage, wording);
   const simulation = applyExactReplacements(source.content, changes);
   if (!simulation.ok || simulation.value.alreadyApplied) {
     throw new Error(
@@ -378,7 +378,7 @@ export async function proveEditedWordingAgainstSource(input: {
     throw new Error(`${input.sourceFile} is not a file any governed change kind may write.`);
   }
   const source = await github.readFile(GOVERNED_REPO, input.sourceFile, head);
-  const changes = buildTitleH1Changes(
+  const changes = buildPageWordingChanges(
     {
       url: "",
       title: input.liveTitle,

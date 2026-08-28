@@ -53,7 +53,7 @@ export const proposeAuditFix = createServerFn({ method: "POST" })
     // that describes the wrong problem.
     const target = data.check
       ? fixTargetForPage(data.check, data.targetUrl ?? null)
-      : { changeKind: "service.title_h1" as const };
+      : { changeKind: "service.page_wording" as const };
     if (!target || !data.targetUrl) {
       throw new Error(
         (data.check ? noFixReasonForPage(data.check, data.targetUrl ?? null) : null) ??
@@ -87,13 +87,13 @@ export const proposeAuditFix = createServerFn({ method: "POST" })
       });
     }
 
-    const { prepareTitleH1Proposal } = await import("./title-h1-proposals.server");
-    const { serviceRpc } = await import("./title-h1-proposals.functions");
-    const proposal = await prepareTitleH1Proposal(context.supabase, tenantId, data.targetUrl, {
+    const { preparePageWordingProposal } = await import("./page-wording-proposals.server");
+    const { serviceRpc } = await import("./page-wording-proposals.functions");
+    const proposal = await preparePageWordingProposal(context.supabase, tenantId, data.targetUrl, {
       wordingMode: "gemini",
       evidenceMode: "defect",
     });
-    const result = await serviceRpc("create_title_h1_proposal", {
+    const result = await serviceRpc("create_page_wording_proposal", {
       _tenant_id: tenantId,
       _actor: context.userId,
       _idempotency_key: `audit:${data.check ?? "page"}:${data.idempotencyKey}`,

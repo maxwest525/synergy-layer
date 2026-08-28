@@ -27,7 +27,7 @@ describe("buildReadiness source-file fact", () => {
     const found = fact(buildReadiness(base), "Exact source file");
     expect(found.state).toBe("stored");
     expect(found.detail).toContain(GOVERNED_FILE);
-    expect(found.detail).toContain("service.title_h1");
+    expect(found.detail).toContain("service.page_wording");
   });
 
   it("reports a page.metadata source file as stored, not blocked", () => {

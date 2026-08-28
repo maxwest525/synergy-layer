@@ -33,11 +33,14 @@ import {
  * and meta description — rather than the page's own content or crawl
  * behavior. Copied from the CHECK constraint in
  * `supabase/migrations/20260819213000_widen_proposal_type_check.sql`:
- * `CHECK (proposal_type IN ('title_h1', 'page_metadata', 'site.crawl_directives'))`.
+ * `CHECK (proposal_type IN ('page_wording', 'page_metadata', 'site.crawl_directives'))`.
  * `site.crawl_directives` is left out: it changes what Google can crawl, not
  * what it shows.
  */
-export const WORDING_PROPOSAL_TYPES: ReadonlySet<string> = new Set(["title_h1", "page_metadata"]);
+export const WORDING_PROPOSAL_TYPES: ReadonlySet<string> = new Set([
+  "page_wording",
+  "page_metadata",
+]);
 
 /** One stored measurement of one approved change. */
 export type StoredOutcome = {

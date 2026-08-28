@@ -46,7 +46,7 @@ export type KnowledgeWritingGuidance = {
   sourceRef: string | null;
 };
 
-export type TitleH1Wording = {
+export type PageWordingWording = {
   seoTitle: string;
   h1: string;
   rationale: string;
@@ -56,7 +56,7 @@ export type TitleH1Wording = {
  * is not configured. Evidence and source-proof gates still run before this is
  * used, and the resulting proposal remains a normal review-required draft.
  */
-export function buildDeterministicDevWording(evidence: ProposalEvidence): TitleH1Wording {
+export function buildDeterministicDevWording(evidence: ProposalEvidence): PageWordingWording {
   const observedQuery = [...evidence.gsc]
     .sort((a, b) => b.impressions - a.impressions || a.position - b.position)[0]
     ?.query.trim();
@@ -78,7 +78,7 @@ export function buildDeterministicDevWording(evidence: ProposalEvidence): TitleH
     .slice(0, 80)
     .trim();
 
-  return validateTitleH1Wording({
+  return validatePageWordingWording({
     seoTitle: `${lead} | Corporate Relocation | TruMove`,
     h1: `${lead} & Corporate Relocation Services`,
     rationale: `Development-mode wording uses the highest-impression exact-page GSC query, “${observedQuery},” while preserving the page's observed corporate-relocation intent. It bypasses only Gemini generation; all evidence, source-proof, review, and approval gates remain active.`,
@@ -404,7 +404,7 @@ export function describeEvidenceMode(mode: EvidenceMode): string {
     : "Evidence mode: wording — live-page, exact-page Search Console, and active-tracked-competitor evidence were all required.";
 }
 
-export function buildTitleH1Prompt(
+export function buildPageWordingPrompt(
   evidence: ProposalEvidence,
   guidance: KnowledgeWritingGuidance[] = [],
   optional: ProposalOptionalContext = emptyOptionalContext,
@@ -490,7 +490,7 @@ function requiredText(value: unknown, label: string, max: number): string {
   return text;
 }
 
-export function validateTitleH1Wording(value: unknown): TitleH1Wording {
+export function validatePageWordingWording(value: unknown): PageWordingWording {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     throw new Error("Gemini did not return the required structured JSON object.");
   }
@@ -502,9 +502,9 @@ export function validateTitleH1Wording(value: unknown): TitleH1Wording {
   };
 }
 
-export function buildTitleH1Changes(
+export function buildPageWordingChanges(
   livePage: LivePageEvidence,
-  wording: TitleH1Wording,
+  wording: PageWordingWording,
 ): FieldChange[] {
   if (livePage.title === wording.seoTitle || livePage.h1 === wording.h1) {
     throw new Error("A proposal must change both the SEO title and H1.");

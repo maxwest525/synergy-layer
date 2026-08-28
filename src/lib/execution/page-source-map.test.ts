@@ -8,8 +8,8 @@ describe("resolvePageSource", () => {
     const result = resolvePageSource("https://trumoveinc.com/services/corporate-relocation");
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.source.changeKind).toBe("service.title_h1");
-    expect(result.source.filePath).toBe(GOVERNED_CHANGE_KINDS["service.title_h1"][0]);
+    expect(result.source.changeKind).toBe("service.page_wording");
+    expect(result.source.filePath).toBe(GOVERNED_CHANGE_KINDS["service.page_wording"][0]);
   });
 
   it("resolves a blog post to the posts data file", () => {

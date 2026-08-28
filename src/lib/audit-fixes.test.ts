@@ -149,7 +149,7 @@ describe("which page a fix can actually be drafted for", () => {
 
   it("offers the wording lane on a service page, whose wording is a data record", () => {
     expect(fixTargetForPage("title_too_short", SERVICE)).toEqual({
-      changeKind: "service.title_h1",
+      changeKind: "service.page_wording",
       filePath: "src/pages/services/servicesData.ts",
     });
   });
@@ -158,7 +158,7 @@ describe("which page a fix can actually be drafted for", () => {
     // fixTargetForPageCheck maps every title check to the service lane. Asking
     // the resolver is what stops a post being drafted against a file that does
     // not contain it.
-    expect(fixTargetForPageCheck("title_too_long")?.changeKind).toBe("service.title_h1");
+    expect(fixTargetForPageCheck("title_too_long")?.changeKind).toBe("service.page_wording");
     expect(fixTargetForPage("title_too_long", POST)).toEqual({
       changeKind: "content.blog_post",
       filePath: "src/pages/blog/posts.ts",

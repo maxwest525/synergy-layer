@@ -204,12 +204,12 @@ export const proposeFixFromFinding = createServerFn({ method: "POST" })
         proposal,
       });
     } else {
-      const { prepareTitleH1Proposal } = await import("./title-h1-proposals.server");
-      const { serviceRpc } = await import("./title-h1-proposals.functions");
-      const proposal = await prepareTitleH1Proposal(client, tenantId, fixTarget.url, {
+      const { preparePageWordingProposal } = await import("./page-wording-proposals.server");
+      const { serviceRpc } = await import("./page-wording-proposals.functions");
+      const proposal = await preparePageWordingProposal(client, tenantId, fixTarget.url, {
         wordingMode: "gemini",
       });
-      result = await serviceRpc("create_title_h1_proposal", {
+      result = await serviceRpc("create_page_wording_proposal", {
         _tenant_id: tenantId,
         _actor: context.userId,
         _idempotency_key: `finding:${data.recommendationId}`,

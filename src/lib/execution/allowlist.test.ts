@@ -24,7 +24,7 @@ describe("governed change kinds", () => {
   it("keeps the original title and H1 target executable", () => {
     const outcome = target(GOVERNED_FILE);
     expect(outcome.ok).toBe(true);
-    if (outcome.ok) expect(outcome.value.changeKind).toBe("service.title_h1");
+    if (outcome.ok) expect(outcome.value.changeKind).toBe("service.page_wording");
   });
 
   it("allows every file declared by a governed kind", () => {

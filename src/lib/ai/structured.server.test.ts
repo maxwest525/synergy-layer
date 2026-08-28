@@ -51,7 +51,7 @@ describe("routing the wording call off Google's own endpoint", () => {
     await generateStructuredJson({
       system: "s",
       prompt: "p",
-      schemaName: "title_h1_wording",
+      schemaName: "page_wording_fields",
       schema: SCHEMA,
       fetcher,
     });
@@ -67,13 +67,13 @@ describe("routing the wording call off Google's own endpoint", () => {
     await generateStructuredJson({
       system: "s",
       prompt: "p",
-      schemaName: "title_h1_wording",
+      schemaName: "page_wording_fields",
       schema: SCHEMA,
       fetcher,
     });
     expect(bodyOf(sent)["response_format"]).toEqual({
       type: "json_schema",
-      json_schema: { name: "title_h1_wording", strict: true, schema: SCHEMA },
+      json_schema: { name: "page_wording_fields", strict: true, schema: SCHEMA },
     });
   });
 

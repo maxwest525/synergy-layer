@@ -44,7 +44,7 @@ describe("which verbs a card may offer", () => {
 
   it("offers a redraft only where a redraft path exists", () => {
     expect(
-      idsFor({ id: "c1", kind: "change", proposalType: "title_h1", storedState: "proposed" }),
+      idsFor({ id: "c1", kind: "change", proposalType: "page_wording", storedState: "proposed" }),
     ).toContain("regenerate");
     expect(
       idsFor({ id: "c2", kind: "change", proposalType: "page_metadata", storedState: "proposed" }),
@@ -63,7 +63,7 @@ describe("which verbs a card may offer", () => {
 
   it("offers no restore on an ignored item that cannot be restored", () => {
     expect(
-      idsFor({ id: "c1", kind: "change", storedState: "rejected", proposalType: "title_h1" }),
+      idsFor({ id: "c1", kind: "change", storedState: "rejected", proposalType: "page_wording" }),
     ).not.toContain("restore");
   });
 });
@@ -71,7 +71,7 @@ describe("which verbs a card may offer", () => {
 describe("what each verb tells the operator it will do", () => {
   it("names the cost of the redraft on the verb itself", () => {
     const queue = buildQueue(
-      [source({ id: "c1", kind: "change", proposalType: "title_h1", storedState: "proposed" })],
+      [source({ id: "c1", kind: "change", proposalType: "page_wording", storedState: "proposed" })],
       NOW,
     );
     const redraft = verbsFor(queue.open[0]!).find((verb) => verb.id === "regenerate");
@@ -116,12 +116,12 @@ describe("what each verb tells the operator it will do", () => {
 
   it("never names a rule id or a stored state in operator copy", () => {
     const queue = buildQueue(
-      [source({ id: "c1", kind: "change", proposalType: "title_h1", storedState: "proposed" })],
+      [source({ id: "c1", kind: "change", proposalType: "page_wording", storedState: "proposed" })],
       NOW,
     );
     for (const verb of verbsFor(queue.open[0]!)) {
       expect(`${verb.label} ${verb.consequence}`).not.toMatch(
-        /title_h1|page_metadata|proposed|rejected|weak_ctr_page/,
+        /page_wording|page_metadata|proposed|rejected|weak_ctr_page/,
       );
     }
   });

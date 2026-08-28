@@ -4,7 +4,7 @@ import type {
   KnowledgeWritingGuidance,
   ProposalEvidence,
   ProposalOptionalContext,
-} from "./title-h1-proposals";
+} from "./page-wording-proposals";
 
 export type PageMetadataWording = {
   metaDescription: string;

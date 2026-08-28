@@ -72,7 +72,7 @@ export const GOVERNED_PAGE_SOURCES = {
  * A kind is executable only while this map lists at least one file for it.
  */
 export const GOVERNED_CHANGE_KINDS = {
-  "service.title_h1": [GOVERNED_FILE],
+  "service.page_wording": [GOVERNED_FILE],
   "page.metadata": ["src/components/seo/SeoHead.tsx", "src/components/seo/DefaultSeo.tsx"],
   "site.crawl_directives": ["public/robots.txt", "public/sitemap.xml"],
   "site.structured_data": ["src/platform/content/schema/index.ts"],

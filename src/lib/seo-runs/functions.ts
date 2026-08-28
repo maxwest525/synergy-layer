@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { AuthorityQueryClass } from "../authority/types";
-import { requireProposalTarget } from "../title-h1-proposals";
+import { requireProposalTarget } from "../page-wording-proposals";
 import { canonicalSeoRunTarget, maxSeoRunBatchSize } from "./batch";
 import { describeSeoRunFailure } from "./failure";
 import {
@@ -179,8 +179,8 @@ export const evaluateSeoRun = createServerFn({ method: "POST" })
     const { assessSeoPreflight, buildCurrentSeoConnectorSnapshot } =
       await import("./orchestrator.server");
     const { evaluateAuthorityForTarget } = await import("../authority/evaluate.server");
-    const { prepareTitleH1Proposal } = await import("../title-h1-proposals.server");
-    const { serviceRpc } = await import("../title-h1-proposals.functions");
+    const { preparePageWordingProposal } = await import("../page-wording-proposals.server");
+    const { serviceRpc } = await import("../page-wording-proposals.functions");
 
     const [connectionsResult, gscResult, dfsResult] = await Promise.all([
       context.supabase.from("tenant_connections").select("*").eq("tenant_id", tenantId),
@@ -246,8 +246,8 @@ export const evaluateSeoRun = createServerFn({ method: "POST" })
         run.target_url,
         run.query_class as AuthorityQueryClass,
       );
-      const proposal = await prepareTitleH1Proposal(context.supabase, tenantId, run.target_url);
-      const created = await serviceRpc("create_title_h1_proposal", {
+      const proposal = await preparePageWordingProposal(context.supabase, tenantId, run.target_url);
+      const created = await serviceRpc("create_page_wording_proposal", {
         _tenant_id: tenantId,
         _actor: context.userId,
         _idempotency_key: `seo-run:${run.idempotency_key}`,

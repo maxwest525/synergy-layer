@@ -127,11 +127,11 @@ describe("the page address a rule finding's stored target points at", () => {
 describe("change requests inherit their finding's category", () => {
   it("keeps a title fix raised by a search rule in Getting found on Google", () => {
     // Drafting a fix should not move the work to a different part of the app.
-    expect(categoryForChangeRequest("title_h1", "search")).toBe("search");
+    expect(categoryForChangeRequest("page_wording", "search")).toBe("search");
   });
 
   it("uses the proposal type when nothing raised it", () => {
-    expect(categoryForChangeRequest("title_h1", null)).toBe("pages");
+    expect(categoryForChangeRequest("page_wording", null)).toBe("pages");
     expect(categoryForChangeRequest("page_metadata", null)).toBe("pages");
     expect(categoryForChangeRequest("site.crawl_directives", null)).toBe("health");
   });
