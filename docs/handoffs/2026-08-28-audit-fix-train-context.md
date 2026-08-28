@@ -47,11 +47,11 @@ Three changes, all de-centering the first-built lane:
    of the deployed file against the committed file at the recorded commit. No
    renderer involved.
 
-## 4. The merge train (all PRs green drafts as of writing)
+## 4. The merge train (all nine PRs verified green and mergeable, 2026-08-28)
 
-Order: **#73 → #72 → #77 → #74 → #76 → #80 → #78 → #75**, then close **#79**
-(duplicate of #78 without the migration) and do **one Lovable Publish** at the
-end.
+Order: **#73 → #72 → #77 → #74 → #76 → #80 → #78 → #81 → #75**, then close
+**#79** (duplicate of #78 without the migration) and do **one Lovable
+Publish** at the end.
 
 Known frictions to resolve at merge time, not before:
 
@@ -61,18 +61,23 @@ Known frictions to resolve at merge time, not before:
 - **Migration timestamp collision**: #74 and #78 both created
   `20260828000000_*.sql`. Merge #74 first; rename #78's migration before it
   merges.
-- **Pinned knowledge estimate**: #73 and #77 both edit
-  `docs/execution-handbook/` and the pinned `estimatedInputTokens` in
-  `scripts/ingest-governed-knowledge.test.ts` (#73: 72,722 on its own tree).
-  Whichever merges second must re-run `npm run knowledge:ingest` on the merged
-  tree and paste the total.
+- **#73 and #81 genuinely overlap**: both edit
+  `docs/execution-handbook/OUTCOME_MEASUREMENT.md` and
+  `src/components/os/execution-card.tsx`. Merge #73 first; #81 then needs a
+  real conflict resolution keeping both the wording-lanes section (#73) and
+  the verdict-layer section (#81), and both card additions.
+- **Pinned knowledge estimate is a three-way collision**: #73 (72,722), #77
+  (72,615) and #81 (72,953) each pinned `estimatedInputTokens` from their own
+  tree. Whichever merges after another must re-run
+  `npm run knowledge:ingest` on the merged tree and paste the real total.
 
 ## 5. In flight elsewhere
 
-- **Prompt 9** (close the verdict loop: failure verdicts file an inbox item,
-  verdict shown beside the verify control) and **Prompt 10** (give
-  observation-only findings their Not now / Put it back verbs) are running as
-  separate sessions and will arrive as new PRs.
+- **Prompt 9 landed**: PR #81 (verdict loop). Verified green.
+- **Prompt 10** (give observation-only findings their Not now / Put it back
+  verbs) has produced no PR yet — session still running or not started. If it
+  never arrives, the prompt text lives in the chat session named at the top of
+  this file and can be re-run.
 
 ## 6. Still open after all of the above
 
