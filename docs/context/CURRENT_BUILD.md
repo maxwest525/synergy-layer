@@ -8,9 +8,32 @@ It is not authoritative documentation. Provider digests under
 `docs/integrations/<provider>/DIGEST.md` and their PLAN files remain the source of
 truth for provider behaviour and must never be overwritten by this file.
 
-Last updated: 2026-08-25, at `3143f88` (PR #65) plus the branch that follows it.
-Section 0 below still describes 2026-08-21 and has NOT been rewritten; the
-current-state block immediately below supersedes it.
+Last updated: 2026-08-28, on the cap.umami promotion branch. Section 0 below
+still describes 2026-08-21 and has NOT been rewritten; the current-state blocks
+immediately below supersede it.
+
+## 0b. cap.umami promoted to real, 2026-08-28
+
+The daily `umami-daily-observe` firing (pg_cron `aoos-umami-daily-observe`,
+16:45 UTC) had failed on every run with "Capability "Umami (self-hosted
+analytics)" is not authorised yet": the workflow runner admits only `real`
+capabilities, and `cap.umami` was still declared `pending` even though its own
+promotion condition ("pending until one authenticated read stores a snapshot")
+was met on 2026-08-18. Re-verified against the production database on
+2026-08-28: exactly four `umami_snapshots` rows for TruMove, all from one
+succeeded `measurement_runs` row with `authenticationSucceeded: true` and HTTP
+200, and three stored `workflow_runs` failures carrying the exact refusal
+above.
+
+Promoted in `src/registry/modules/self-hosted-analytics.ts` and, because
+registry sync is operator triggered, also in migration
+`20260828000000_promote_umami_capability_real.sql`, which flips the
+`capabilities` row the runner actually reads.
+
+**Waiting on a human:** the migration is a file until it is applied. After this
+branch merges to `main`, apply it (Lovable prompt: "Apply pending Supabase
+migrations") or run the registry sync from the admin surface. The 16:45 UTC run
+keeps failing until one of those happens.
 
 ## 0a. Current state, 2026-08-25
 
