@@ -100,6 +100,36 @@ branch merges to `main`, apply it (Lovable prompt: "Apply pending Supabase
 migrations") or run the registry sync from the admin surface. The 16:45 UTC run
 keeps failing until one of those happens.
 
+## 0e. Outcome verdicts feed the loop, 2026-08-28
+
+Until this change, a computed outcome verdict, including `failure`, fed nothing
+but a coloured label on Site health: nothing consumed `outcomeVerdict` outside
+`site-health.ts`, an operator could mark verified a change the system graded a
+failure, and a failed change never suggested its own rollback. Closed, minimally
+and honestly:
+
+- **Failure files to Inbox.** `src/lib/outcome-alerts.server.ts` runs at the end
+  of each daily Search Console observation, right after the evidence windows are
+  captured (the only moment a verdict can newly resolve). Each change whose
+  graded reading is a failure gets one needs-attention item, once per change
+  ever, carrying the verdict's own reason and window and linking to
+  `/changes/$id` where the rollback control already lives. Verdicts come from
+  `outcome-verdict.ts` as-is; the new module only selects.
+- **Verifying is an informed act.** `fetchChangeRequest` now returns the
+  change's graded readings (same assembly and grading as Site health, narrowed
+  by a new `changeRequestId` parameter on `fetchStoredOutcomes`), rendered on
+  the change page's Outcome card and inside the execution card beside Mark
+  verified. The verify gate is deliberately unchanged (finalized post-change
+  GSC rows); the verdict is displayed context, and
+  `docs/execution-handbook/OUTCOME_MEASUREMENT.md` now records both the verdict
+  layer and that non-gating decision.
+- **Success reads as a completed journey.** On the Site health outcomes tab,
+  decided verdicts sort above the still-waiting readings (worst news still
+  first) and a success card states the journey is complete rather than sitting
+  under "too early" cards.
+
+`getMeasurementWatch` remains display-only, as designed.
+
 ## 0a. Current state, 2026-08-25
 
 - **2026-08-28:** the nightly propose-from-evidence job can now succeed:

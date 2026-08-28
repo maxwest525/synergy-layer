@@ -442,6 +442,30 @@ describe("defects an adversarial review found before this shipped", () => {
     expect(view.tiles.find((entry) => entry.label === "Fixes graded")?.value).toBe("0");
   });
 
+  it("sorts a success above the readings still waiting, so it reads decided rather than pending", () => {
+    // A success buried under "too early" cards read as one more thing pending.
+    // Decided verdicts come first, worst news still leading; only the waits
+    // trail them.
+    const view = buildSiteHealth(
+      withFacts({
+        siteObservedAt: NOW,
+        outcomes: [
+          outcome({ changeId: "too-early", windowDays: 14, daysSinceLive: 3 }),
+          outcome({ changeId: "not-yet", windowDays: 14, daysSinceLive: 14, impressions: 0 }),
+          outcome({
+            changeId: "worked",
+            impressions: 400,
+            clicks: 6,
+            baseline: { impressions: 50, clicks: 0 },
+          }),
+        ],
+      }),
+    );
+    const ids = view.outcomes.map((entry) => entry.changeId);
+    expect(ids.indexOf("worked")).toBeLessThan(ids.indexOf("not-yet"));
+    expect(ids.indexOf("worked")).toBeLessThan(ids.indexOf("too-early"));
+  });
+
   it("sorts a not_yet reading after neutral and before too early", () => {
     const view = buildSiteHealth(
       withFacts({

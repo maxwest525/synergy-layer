@@ -6,6 +6,10 @@ import { toast } from "sonner";
 
 import { ExecutionCard } from "@/components/os/execution-card";
 import {
+  OutcomeVerdictContext,
+  type VerdictReading,
+} from "@/components/os/outcome-verdict-context";
+import {
   BackLink,
   DetailRow,
   EmptyNote,
@@ -370,6 +374,16 @@ function ChangeRequestPage() {
   }
 
   const state = isChangeState(change.state) ? change.state : "proposed";
+  // Graded readings in window order, so the journey reads chronologically.
+  // Ungraded readings stay on the measurement history; only verdicts belong
+  // beside a decision.
+  const verdictReadings: VerdictReading[] = (data.gradedOutcomes ?? [])
+    .flatMap((outcome) =>
+      outcome.verdict === null
+        ? []
+        : [{ windowDays: outcome.windowDays, verdict: outcome.verdict, reason: outcome.reason }],
+    )
+    .sort((a, b) => a.windowDays - b.windowDays);
   const fields = asArray<FieldChange>(change.changes);
   const evidence = asArray<EvidenceRow>(change.evidence);
   const outcome = describeOutcome({
@@ -593,6 +607,7 @@ function ChangeRequestPage() {
           sourceProjectUrl={change.source_project_url}
           brief={brief}
           postChangeCount={data.postChangeRows.length}
+          verdicts={verdictReadings}
           notes={notes}
           onNotesChange={setNotes}
           busy={busy}
@@ -604,6 +619,11 @@ function ChangeRequestPage() {
       <GlassCard className="p-5">
         <h2 className="text-sm font-semibold text-foreground">Outcome</h2>
         <p className="mt-2 text-sm text-muted-foreground">{outcome.message}</p>
+        {state === "applied" || state === "verified" ? (
+          <div className="mt-3">
+            <OutcomeVerdictContext verdicts={verdictReadings} />
+          </div>
+        ) : null}
         <dl className="mt-3">
           <DetailRow label="Approved" value={change.approved_at?.slice(0, 10) ?? "Not approved"} />
           <DetailRow label="Applied" value={change.applied_at?.slice(0, 10) ?? "Not applied"} />

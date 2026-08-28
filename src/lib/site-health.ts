@@ -463,12 +463,15 @@ export function buildSiteHealth(facts: SiteHealthFacts): SiteHealthView {
   };
 }
 
+// Worst news first, then decided news, then the waits. A success sorted below
+// "too early" cards read as one more thing pending, when it is the one journey
+// on the page that has actually completed.
 const VERDICT_ORDER: Record<string, number> = {
   failure: 0,
   neutral: 1,
-  not_yet: 2,
-  too_early: 3,
-  success: 4,
+  success: 2,
+  not_yet: 3,
+  too_early: 4,
   unmeasurable: 5,
 };
 
