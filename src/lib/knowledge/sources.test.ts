@@ -12,22 +12,28 @@ describe("governed production source manifest", () => {
     expect(source).not.toMatch(/const REPO_ROOT\s*=\s*fileURLToPath\(new URL/);
   });
 
-  it("loads exactly the two supplied playbooks and all 16 handbook documents", () => {
+  it("loads exactly the two supplied playbooks and all 17 handbook documents", () => {
     const sources = loadGovernedKnowledgeSources();
     const playbooks = sources.filter((source) => source.sourceType === "playbook");
     const handbook = sources.filter((source) => source.sourceType === "execution_handbook");
 
-    expect(sources).toHaveLength(18);
+    expect(sources).toHaveLength(19);
     expect(playbooks.map((source) => source.stableKey)).toEqual([
       "playbook.seo-aeo-laws",
       "playbook.dataforseo-master",
     ]);
-    expect(handbook).toHaveLength(16);
+    expect(handbook).toHaveLength(17);
     expect(handbook.map((source) => source.sourceRef)).toContain(
       "docs/execution-handbook/SOURCE_OF_TRUTH.md",
     );
     expect(handbook.map((source) => source.sourceRef)).toContain(
       "docs/execution-handbook/KNOWLEDGE_INGESTION.md",
+    );
+    // Doctrine an agent has to reason with, not just a file a human can open:
+    // the competitive model decides who counts as a competitor and what is out
+    // of scope, so it has to reach the runtime the same way the rest does.
+    expect(handbook.map((source) => source.sourceRef)).toContain(
+      "docs/execution-handbook/COMPETITIVE_MODEL.md",
     );
   });
 
