@@ -493,6 +493,11 @@ See cross-cutting finding 5.
 - **Tool availability: dynamic.** Unlike the AOOS server's static eight,
   OpenSEO's tools are discovered live and re-classified on every call.
 - **Classification:** `IMPLEMENTED_LOCALLY` + `EXPOSED_AS_TOOL`; auth `UNKNOWN`.
+- **Scope decision (2026-08-28):** OpenSEO is a **DataForSEO front end only**.
+  GSC and GA4 are deliberately not connected through it — its wrapper exposes two
+  Google tools where AOOS reads Search Console directly and holds three GA4 APIs,
+  so routing Google data here would narrow both and meter free data. The mirrored
+  GA/GSC self-hosting guides are reference, not a to-do. See the digest.
 - **Official capabilities:** [digest] `docs/integrations/openseo/` — 18 files
   including self-hosting and GA/GSC guides.
 
