@@ -8,11 +8,99 @@ It is not authoritative documentation. Provider digests under
 `docs/integrations/<provider>/DIGEST.md` and their PLAN files remain the source of
 truth for provider behaviour and must never be overwritten by this file.
 
-Last updated: 2026-08-28, on the outcome-verdict loop-closure branch. Section 0
+Last updated: 2026-08-28, on the Command center queue-fixes branch. Section 0
 below still describes 2026-08-21 and has NOT been rewritten; the current-state
 blocks immediately below supersede it.
 
-## 0b. Outcome verdicts feed the loop, 2026-08-28
+## 0b. Command center queue corrections, 2026-08-28
+
+Three defects around the suggestion queue, fixed on this branch:
+
+- **Rule-finding cards carry their page address again.** The Command center
+  read hardcoded `targetUrl: null` for every recommendation row. It now reads
+  the stored `suggested_action.target` through `pageUrlFromSuggestedAction`
+  (`finding-router.ts`), which returns only a page URL: query terms, `site`
+  and bare domains stay off the card, and the coverage-gap `page :: query`
+  form is split the same way `deriveFixTarget` splits it.
+- **Site crawl findings can draft their fix.** `siteSources` never carried the
+  check id, so `verbsFor` could not offer "Draft the fix" even though
+  `SITE_CHECK_FIX` maps `robots_blocks_site`, `robots_blocks_pages` and
+  `sitemap_not_declared` to the crawl-directives lane and `proposeAuditFix`
+  already accepted `scope: "site"`. The check id now travels on the row, the
+  card dispatches those three to the site scope, and the verb carries its own
+  copy (`DRAFT_SITE`): the site draft is deterministic, so it is not metered
+  and says so. The other six site checks still offer no draft.
+- **The lying "Run agent" button is gone.** `/agents/$id` offered a button
+  whose server function unconditionally throws (`agent-runtime.server.ts`).
+  Per the no-lying-controls rule it now renders a sentence saying agent runs
+  are switched off in this build; `runReferenceAgent` keeps refusing
+  server-side and no longer has a UI caller.
+
+## 0c. Registry and workflow-runner integrity, 2026-08-28
+
+Five related defects around "declared versus wired" were closed in one pass:
+
+- **The runner refuses what it cannot execute.** `executeNode` in
+  `src/lib/workflow-runner.server.ts` used to fall through for any capability
+  key with no dispatch branch, stamping `last_run_at` and health "healthy" and
+  returning success for a step that did nothing. An unmatched capability now
+  fails the step with a named error. The same fall-through inside the
+  DataForSEO handler (an unrecognised `cap.dataforseo_*` key reported the
+  target as observed) now routes to the same refusal.
+- **Two "real" claims corrected to `pending`.** `growth.opportunity_scanner`
+  and `content.brief_builder` were declared `real` with no execution path in
+  the runner; every run of theirs was the silent fall-through above. Both are
+  redeclared `pending` per the `types.ts` rule "never claim more than is
+  wired". No runtime behaviour changes: their workflows contain agent nodes,
+  which `assertRunnableGraph` already refuses.
+- **A forcing function now guards the seam.** `operational-bridges.test.ts`
+  reads `workflow-runner.server.ts` the way `connections.registry.test.ts`
+  reads its sources: every capability a registry workflow references must be
+  declared by a module, and every reachable capability declared `real` must be
+  dispatched by the runner. Declaring a capability real without wiring it now
+  fails `npm test`.
+- **`wf.seo_validation` no longer references an undeclared key.** Its first
+  node referenced `cap.knowledge_retrieval`, which no module declares (it
+  exists only in the 2026-08-04 seed migration) and no runner path executes,
+  so the "load" step was a silent no-op. The node is removed; the workflow is
+  the single real `seo.validation` step, and a registry-only rebuild is
+  self-contained. The seed row for `cap.knowledge_retrieval` still exists in
+  the database; any seed-era workflow that references it now fails with the
+  named refusal instead of silently succeeding.
+- **Sync preserves the earned SerpApi promotion.** `syncRegistryDefinitions`
+  unconditionally overwrote `integration_state`, silently reverting the
+  runtime promotion `recordSerpApiAccountStatus` earns for
+  `cap.serpapi_ads_transparency` when the free account probe succeeds. Sync
+  now preserves a stored `real` on that one key while its declared state is
+  `pending`; a failed probe still demotes it through the same runtime path.
+  Every other capability's state remains the registry's claim. No
+  `docs/execution-handbook/` contract covers capability integration states, so
+  the decision is recorded here and in the code comments.
+
+## 0d. cap.umami promoted to real, 2026-08-28
+
+The daily `umami-daily-observe` firing (pg_cron `aoos-umami-daily-observe`,
+16:45 UTC) had failed on every run with "Capability "Umami (self-hosted
+analytics)" is not authorised yet": the workflow runner admits only `real`
+capabilities, and `cap.umami` was still declared `pending` even though its own
+promotion condition ("pending until one authenticated read stores a snapshot")
+was met on 2026-08-18. Re-verified against the production database on
+2026-08-28: exactly four `umami_snapshots` rows for TruMove, all from one
+succeeded `measurement_runs` row with `authenticationSucceeded: true` and HTTP
+200, and three stored `workflow_runs` failures carrying the exact refusal
+above.
+
+Promoted in `src/registry/modules/self-hosted-analytics.ts` and, because
+registry sync is operator triggered, also in migration
+`20260828120000_promote_umami_capability_real.sql`, which flips the
+`capabilities` row the runner actually reads.
+
+**Waiting on a human:** the migration is a file until it is applied. After this
+branch merges to `main`, apply it (Lovable prompt: "Apply pending Supabase
+migrations") or run the registry sync from the admin surface. The 16:45 UTC run
+keeps failing until one of those happens.
+
+## 0e. Outcome verdicts feed the loop, 2026-08-28
 
 Until this change, a computed outcome verdict, including `failure`, fed nothing
 but a coloured label on Site health: nothing consumed `outcomeVerdict` outside
@@ -44,6 +132,15 @@ and honestly:
 
 ## 0a. Current state, 2026-08-25
 
+- **2026-08-28:** the nightly propose-from-evidence job can now succeed:
+  migration `20260828090000` lets `create_title_h1_proposal` accept a null
+  actor as the governed system path (drafts logged as a system actor, human
+  approval unchanged, non-null actors keep every check), and
+  `isTerminalConfigurationFailure` now pauses the job on the tenant-visibility,
+  operator-authority, and no-renderer refusals instead of retrying every
+  night. The migration still needs applying to the remote project; until then
+  the job pauses itself on the first refusal.
+
 Measured on this branch, not recalled: `npm run typecheck` clean, `npm test`
 **1259 passing in 123 files**, `npx eslint .` **0 errors and the same 14
 pre-existing react-refresh warnings**. Section 0's figures (1168 tests in 118
@@ -66,6 +163,47 @@ SQL and reachable without the TypeScript wrapper. The database has rows in
 `applied` and `rolled_back`. See item 8 of
 `docs/handoffs/2026-08-25-remediation-plan.md` for the retraction and the method
 error behind it.
+
+**Addendum, 2026-08-28: proposal drafting and publish proof render through
+Crawl4AI first.** `createRenderedVerifier` in
+`src/lib/execution/execute.server.ts` previously consulted only
+`firecrawlEndpoint()`, so "Propose the fix" and "Check rendered page" failed or
+spent credits whenever Firecrawl was down, while Crawl4AI sat healthy and
+preferred everywhere else. The verifier now uses the same precedence as the
+page audit: Crawl4AI first, Firecrawl only as fallback, with the fallback
+provenance recorded in `renderedBy` the same way the audit records it. The
+execution card names the renderer chain and prices the check honestly: no
+charge on Crawl4AI, 1 credit only when the Firecrawl fallback answers. A stale
+Crawl4AI render can only under-prove a forward change (the approved new wording
+cannot exist in a cache older than the commit), so the proof's safety direction
+is preserved.
+
+**Addendum, 2026-08-28: measurement is no longer title/H1-only, and the
+robots lane completes.** Two structural breaks closed:
+
+- The measurement lifecycle triggers gated on `proposal_type = 'title_h1'`, so
+  a meta-description change could be approved, committed, and proven live and
+  then never receive a cycle, windows, or a verdict. Migration
+  `20260828100000` extends both triggers to `page_metadata` — same observable
+  (the page's own Search Console rows; Google places titles and descriptions
+  in the same appearance-not-ranking category), so the grounded 14/28/56/90
+  windows carry over with no new number invented — and backfills cycles and
+  windows for any page_metadata change already approved or live.
+  `site.crawl_directives` is deliberately not measured on these windows: its
+  outcome is indexation, not click choice, and the migration says so.
+- The crawl-directives lane could be committed but never proven applied,
+  because the proof routine only accepted title/H1 and meta-description
+  shapes. robots.txt is a static file, so its proof is not a render at all:
+  the executor now fetches the deployed file, reads the committed file at the
+  recorded commit through the GitHub executor, and compares whole files
+  (`verifyPublishedRobots`, migration `20260828110000`). Whole-file
+  comparison is deliberate — the site-wide unblock fix leaves a bare
+  `Disallow:` line that literal containment cannot prove.
+
+Still title/H1-only after this change, recorded so nobody thinks the job is
+finished: the nightly autonomous proposal job files only title_h1 proposals,
+and the "Write it again" verb exists only for title_h1 cards. Both are
+proposal-generation gaps, not measurement gaps, and are tracked separately.
 
 **How to read this file.** Section 0 is the current state and supersedes anything
 below it that disagrees. The later sections are kept in the order they were
@@ -217,7 +355,24 @@ likely to waste someone's afternoon:
 
 - `GITHUB_EXECUTOR_TOKEN` is not configured, so no change request has ever been
   executed against the real repository. The UI names this exactly and refuses
-  without writing.
+  without writing. **Where this secret lives, recorded 2026-08-28 so nobody
+  hunts for it again:** it is a fine-grained GitHub personal access token
+  created on the `maxwest525` GitHub account, scoped to the single repository
+  `maxwest525/brittmove-829a7519` with Contents read/write only (the executor
+  is hard-allowlisted to that repo and branch in
+  `src/lib/execution/allowlist.ts`, so a wider token buys nothing). It is
+  placed in the AOOS Lovable project's secret store (Project Settings, then
+  Secrets, in the Lovable editor for the project deployed at
+  `trumove-resource-center.lovable.app`). It is never written into `.env`,
+  never a `VITE_` variable, and does not belong to the customer site's
+  project. A newly placed value is not live until the next Lovable publish,
+  and a deleted one survives until the next publish; see AGENTS.md, "The
+  layer that keeps costing hours". Proof of placement is the
+  `github_executor` probe on `/capabilities/systems` turning healthy, or the
+  execution card on `/changes/$id` reporting the executor connected; the
+  settings screen alone proves nothing. If the deployment ever moves off
+  Lovable, this secret moves to the new platform's secret store with it; the
+  token authenticates to GitHub and is platform-independent.
 - `cap.github` is not connected, which blocks `wf.publish`.
 - The six-domain competitor shortlist is still `pending` in `/competitors`. An
   agent must not approve or reject it.

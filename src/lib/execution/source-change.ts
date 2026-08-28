@@ -131,6 +131,14 @@ export type PublishedProof = {
   renderedBy: string;
   finalUrl: string;
   reason: string;
+  /**
+   * Robots lane only. The deployed file and the committed file are compared
+   * whole, so the proof does not depend on the shape of any one directive
+   * edit; these carry the comparison for the database routine to re-check.
+   */
+  deployedSha256?: string | null;
+  committedSha256?: string | null;
+  matchedCommitSha?: string | null;
 };
 
 /**
@@ -191,6 +199,65 @@ export function extractMarkdownHeading(markdown: string): string | null {
   const match = /^[ \t]*#[ \t]+(.+)$/m.exec(markdown);
   const text = match?.[1] ? normalize(match[1]) : null;
   return text ? text : null;
+}
+
+/** CRLF and trailing-whitespace differences are transport artifacts, not content. */
+export function normalizeTextFile(value: string): string {
+  return value
+    .replace(/\r\n/g, "\n")
+    .replace(/[ \t]+$/gm, "")
+    .replace(/\s+$/, "");
+}
+
+/**
+ * Proof for the crawl-directives lane. robots.txt is a static file, so no
+ * renderer is involved: the deployed file either equals the committed file at
+ * the recorded commit or it does not. Comparing whole files rather than
+ * re-finding each edited literal keeps the proof correct for every directive
+ * shape — a bare `Disallow:` left by the site-wide unblock fix is a substring
+ * of half the lines in a robots file, so literal containment cannot prove it.
+ */
+export function verifyPublishedRobots(input: {
+  deployedContent: string;
+  committedContent: string;
+  finalUrl: string;
+  fetchedBy: string;
+  commitSha: string;
+}): PublishedProof {
+  const base = {
+    expectedTitle: null,
+    expectedHeading: null,
+    expectedDescription: null,
+    foundTitle: null,
+    foundHeading: null,
+    foundDescription: null,
+    renderedBy: input.fetchedBy,
+    finalUrl: input.finalUrl,
+    matchedCommitSha: input.commitSha,
+  };
+  const deployed = normalizeTextFile(input.deployedContent);
+  const committed = normalizeTextFile(input.committedContent);
+  if (committed === "") {
+    return {
+      ...base,
+      ok: false,
+      reason:
+        "The committed robots.txt could not be read from the recorded commit, so nothing can be proven.",
+    };
+  }
+  if (deployed === committed) {
+    return {
+      ...base,
+      ok: true,
+      reason: `The deployed robots.txt at ${input.finalUrl} matches the committed file at ${input.commitSha.slice(0, 10)} exactly.`,
+    };
+  }
+  return {
+    ...base,
+    ok: false,
+    reason:
+      "The deployed robots.txt does not yet match the committed file. The commit may exist while the site publish or sync is still pending.",
+  };
 }
 
 /**
