@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { validateTitleH1Wording } from "./title-h1-proposals";
+import { validatePageWordingWording } from "./page-wording-proposals";
 
 const id = z.string().uuid();
 const editInput = z.object({
@@ -15,7 +15,7 @@ const editInput = z.object({
 type RpcResult = { data: unknown; error: { message: string } | null };
 type ServiceRpc = { rpc(name: string, args: Record<string, unknown>): Promise<RpcResult> };
 
-export type TitleH1ProposalMutationResult = {
+export type PageWordingProposalMutationResult = {
   changeRequest: { id: string };
   changed: boolean;
   versionNumber: number | null;
@@ -24,7 +24,7 @@ export type TitleH1ProposalMutationResult = {
 export async function serviceRpc(
   name: string,
   args: Record<string, unknown>,
-): Promise<TitleH1ProposalMutationResult> {
+): Promise<PageWordingProposalMutationResult> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const result = await (supabaseAdmin as unknown as ServiceRpc).rpc(name, args);
   if (result.error) throw new Error(result.error.message);
@@ -62,13 +62,13 @@ function liveEvidence(evidence: unknown): { title: string; h1: string } {
   return { title: row["title"], h1: row["h1"] };
 }
 
-export const regenerateTitleH1Proposal = createServerFn({ method: "POST" })
+export const regeneratePageWordingProposal = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((value: unknown) => z.object({ id }).parse(value))
   .handler(async ({ data, context }) => {
     const { assertOperator } = await import("./os-admin.server");
     const { requireTenantId } = await import("./tenant.server");
-    const { prepareTitleH1Proposal } = await import("./title-h1-proposals.server");
+    const { preparePageWordingProposal } = await import("./page-wording-proposals.server");
     await assertOperator(context.supabase, context.userId);
     const tenantId = await requireTenantId(context.supabase);
     const { data: current, error } = await context.supabase
@@ -79,11 +79,15 @@ export const regenerateTitleH1Proposal = createServerFn({ method: "POST" })
       .maybeSingle();
     if (error) throw new Error(error.message);
     const row = current as (Record<string, unknown> & { target_url?: string }) | null;
-    if (!row || row["proposal_type"] !== "title_h1" || row["state"] !== "proposed") {
+    if (!row || row["proposal_type"] !== "page_wording" || row["state"] !== "proposed") {
       throw new Error("Only a draft title/H1 proposal can be regenerated.");
     }
-    const proposal = await prepareTitleH1Proposal(context.supabase, tenantId, row.target_url ?? "");
-    return serviceRpc("revise_title_h1_proposal", {
+    const proposal = await preparePageWordingProposal(
+      context.supabase,
+      tenantId,
+      row.target_url ?? "",
+    );
+    return serviceRpc("revise_page_wording_proposal", {
       _id: data.id,
       _actor: context.userId,
       _revision_kind: "regenerate",
@@ -98,13 +102,13 @@ export const regenerateTitleH1Proposal = createServerFn({ method: "POST" })
     });
   });
 
-export const editTitleH1Proposal = createServerFn({ method: "POST" })
+export const editPageWordingProposal = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((value: unknown) => editInput.parse(value))
   .handler(async ({ data, context }) => {
     const { assertOperator } = await import("./os-admin.server");
     const { requireTenantId } = await import("./tenant.server");
-    const { proveEditedWordingAgainstSource } = await import("./title-h1-proposals.server");
+    const { proveEditedWordingAgainstSource } = await import("./page-wording-proposals.server");
     await assertOperator(context.supabase, context.userId);
     const tenantId = await requireTenantId(context.supabase);
     const { data: current, error } = await context.supabase
@@ -115,10 +119,10 @@ export const editTitleH1Proposal = createServerFn({ method: "POST" })
       .maybeSingle();
     if (error) throw new Error(error.message);
     const row = current as Record<string, unknown> | null;
-    if (!row || row["proposal_type"] !== "title_h1" || row["state"] !== "proposed") {
+    if (!row || row["proposal_type"] !== "page_wording" || row["state"] !== "proposed") {
       throw new Error("Only a draft title/H1 proposal can be edited.");
     }
-    const wording = validateTitleH1Wording(data);
+    const wording = validatePageWordingWording(data);
     const live = liveEvidence(row["evidence"]);
     const base = row["source_revision_before"];
     if (typeof base !== "string" || !base) throw new Error("This draft has no source baseline.");
@@ -141,7 +145,7 @@ export const editTitleH1Proposal = createServerFn({ method: "POST" })
       !Array.isArray(row["generation_context"])
         ? (row["generation_context"] as Record<string, unknown>)
         : {};
-    return serviceRpc("revise_title_h1_proposal", {
+    return serviceRpc("revise_page_wording_proposal", {
       _id: data.id,
       _actor: context.userId,
       _revision_kind: "edit",

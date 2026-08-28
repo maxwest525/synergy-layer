@@ -5,12 +5,12 @@ import {
   assertSameCanonicalProposalPage,
   buildDeterministicDevWording,
   buildProposalEvidenceGroups,
-  buildTitleH1Prompt,
+  buildPageWordingPrompt,
   describeEvidenceMode,
   describeEvidenceRowsUsed,
   selectRelevantCompetitorEvidence,
   type ProposalEvidence,
-} from "./title-h1-proposals";
+} from "./page-wording-proposals";
 
 const complete: ProposalEvidence = {
   livePage: {
@@ -188,7 +188,7 @@ describe("title/H1 proposal evidence contract", () => {
 
   it("accepts complete evidence when optional writing guidance is empty", () => {
     expect(() => assertCompleteEvidence(complete)).not.toThrow();
-    expect(buildTitleH1Prompt(complete, [])).toContain(
+    expect(buildPageWordingPrompt(complete, [])).toContain(
       "DEVIL'S ADVOCATE WRITING GUIDANCE (not empirical evidence; may be empty):\n[]",
     );
   });
@@ -232,7 +232,7 @@ describe("title/H1 proposal evidence contract", () => {
   });
 
   it("builds a wording-only prompt with explicit roles and optional-source absence", () => {
-    const prompt = buildTitleH1Prompt(complete, [
+    const prompt = buildPageWordingPrompt(complete, [
       {
         id: "guide-1",
         title: "SEO title guidance",
@@ -256,7 +256,7 @@ describe("title/H1 proposal evidence contract", () => {
   });
   it("does not gate generation when GA4 and SerpAPI are missing", () => {
     expect(() => assertCompleteEvidence(complete)).not.toThrow();
-    const prompt = buildTitleH1Prompt(complete, []);
+    const prompt = buildPageWordingPrompt(complete, []);
     expect(prompt.match(/"status": "missing"/g)?.length).toBe(3);
     expect(prompt).toContain("CROSS-SOURCE REVIEW FLAGS (questions, never verdicts):\n[]");
   });

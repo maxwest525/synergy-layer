@@ -32,7 +32,7 @@ import {
   type GscSnapshotInput,
   type ProposalEvidence,
   type ProposalOptionalContext,
-} from "./title-h1-proposals";
+} from "./page-wording-proposals";
 
 type Client = SupabaseClient<Database>;
 

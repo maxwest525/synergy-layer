@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { deriveFixTarget, hasGovernedFixPath, proposalKindForRule } from "./finding-fix-target";
+import {
+  deriveFixTarget,
+  hasGovernedFixPath,
+  proposalKindForRule,
+  whyNoFixLane,
+} from "./finding-fix-target";
 
 const row = (page: string, query: string, impressions: number) => ({
   keys: [page, query],
@@ -47,29 +52,51 @@ describe("proposalKindForRule", () => {
     expect(proposalKindForRule("weak_ctr_page")).toBe("page_metadata");
   });
 
-  it("keeps every other rule on the title/H1 lane", () => {
+  it("sends a rule to the wording lane only where wording is the lever", () => {
     for (const rule of [
-      "visibility_gain",
-      "zero_impression_page",
       "striking_distance_query",
-      "position_loss",
       "query_coverage_gap",
-      "mystery_rule",
+      "possible_query_overlap",
     ]) {
-      expect(proposalKindForRule(rule)).toBe("title_h1");
+      expect(proposalKindForRule(rule)).toBe("page_wording");
     }
+  });
+
+  it("refuses to draft anything for a finding wording cannot fix", () => {
+    // These four used to draft a rewrite of the page's words, which could not
+    // have fixed what any of them found. A page that has never been shown does
+    // not need better wording, and a page that improved needs nothing at all.
+    for (const rule of [
+      "zero_impression_page",
+      "index_coverage_drift",
+      "visibility_gain",
+      "position_loss",
+    ]) {
+      expect(proposalKindForRule(rule)).toBeNull();
+      expect(hasGovernedFixPath(rule)).toBe(false);
+    }
+  });
+
+  it("returns nothing at all for a rule it has never heard of", () => {
+    // The old default answered "rewrite the words" for any unknown rule.
+    expect(proposalKindForRule("mystery_rule")).toBeNull();
+  });
+
+  it("says why there is no draft, in words an operator can act on", () => {
+    expect(whyNoFixLane("zero_impression_page")).toMatch(/never been shown/i);
+    expect(whyNoFixLane("zero_impression_page")).toMatch(/sitemap/i);
+    expect(whyNoFixLane("visibility_gain")).toMatch(/nothing to correct/i);
+    expect(whyNoFixLane("position_loss")).toMatch(/would be a guess/i);
+    // A rule with a lane has no such sentence, because it has a button.
+    expect(whyNoFixLane("weak_ctr_page")).toBeNull();
   });
 });
 
 describe("which rules the governed fix path accepts", () => {
-  it("accepts every rule deriveFixTarget can resolve", () => {
+  it("accepts exactly the rules a lane can genuinely answer", () => {
     for (const rule of [
       "weak_ctr_page",
-      "visibility_gain",
-      "zero_impression_page",
-      "index_coverage_drift",
       "striking_distance_query",
-      "position_loss",
       "possible_query_overlap",
       "query_coverage_gap",
     ]) {

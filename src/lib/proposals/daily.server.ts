@@ -168,21 +168,21 @@ export async function runProposalJobForTenant(
       };
     }
 
-    const { prepareTitleH1Proposal } = await import("../title-h1-proposals.server");
-    const { serviceRpc } = await import("../title-h1-proposals.functions");
+    const { preparePageWordingProposal } = await import("../page-wording-proposals.server");
+    const { serviceRpc } = await import("../page-wording-proposals.functions");
     const day = now.toISOString().slice(0, 10);
     const proposals: { url: string; changeRequestId: string }[] = [];
     let failure: string | null = null;
 
     for (const candidate of candidates) {
       try {
-        const prepared = await prepareTitleH1Proposal(admin, tenantId, candidate.url);
-        const result = await serviceRpc("create_title_h1_proposal", {
+        const prepared = await preparePageWordingProposal(admin, tenantId, candidate.url);
+        const result = await serviceRpc("create_page_wording_proposal", {
           _tenant_id: tenantId,
           // NULL actor is the governed system path: the RPC files the draft as
           // a system actor, never as a named operator this job cannot claim.
           _actor: null,
-          _idempotency_key: `title-h1:auto:${day}:${candidate.url}`,
+          _idempotency_key: `page-wording:auto:${day}:${candidate.url}`,
           _target_url: prepared.targetUrl,
           _title: prepared.title,
           _changes: prepared.changes,

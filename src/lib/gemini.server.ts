@@ -1,7 +1,7 @@
 import { generateStructuredJson } from "./ai/structured.server";
 import { litellmConfigured } from "./ai/routing";
 import { validatePageMetadataWording, type PageMetadataWording } from "./page-metadata-proposals";
-import { validateTitleH1Wording, type TitleH1Wording } from "./title-h1-proposals";
+import { validatePageWordingWording, type PageWordingWording } from "./page-wording-proposals";
 
 /**
  * The system half of the wording request.
@@ -65,9 +65,11 @@ type WordingRequest = {
   fetcher?: Fetcher;
 };
 
-export async function generateTitleH1Wording(input: WordingRequest): Promise<TitleH1Wording> {
-  return validateTitleH1Wording(
-    await generateWording(input, "title_h1_wording", RESPONSE_JSON_SCHEMA),
+export async function generatePageWordingWording(
+  input: WordingRequest,
+): Promise<PageWordingWording> {
+  return validatePageWordingWording(
+    await generateWording(input, "page_wording_fields", RESPONSE_JSON_SCHEMA),
   );
 }
 

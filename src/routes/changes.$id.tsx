@@ -32,7 +32,10 @@ import {
 } from "@/lib/change-requests.functions";
 import { describeOutcome, humanState, isChangeState } from "@/lib/change-request-state";
 import { revertChangeRequest } from "@/lib/execution/execution.functions";
-import { editTitleH1Proposal, regenerateTitleH1Proposal } from "@/lib/title-h1-proposals.functions";
+import {
+  editPageWordingProposal,
+  regeneratePageWordingProposal,
+} from "@/lib/page-wording-proposals.functions";
 import { getTenantContext } from "@/lib/tenant.functions";
 
 export const Route = createFileRoute("/changes/$id")({
@@ -102,8 +105,8 @@ function ProposalRevisionPanel({
   editable: boolean;
   onChanged: () => void;
 }) {
-  const edit = useServerFn(editTitleH1Proposal);
-  const regenerate = useServerFn(regenerateTitleH1Proposal);
+  const edit = useServerFn(editPageWordingProposal);
+  const regenerate = useServerFn(regeneratePageWordingProposal);
   const [seoTitle, setSeoTitle] = useState(
     fields.find((field) => field.field === "seo_title")?.after ?? "",
   );
@@ -397,7 +400,7 @@ function ChangeRequestPage() {
       ? "Rejected"
       : state === "rolled_back"
         ? "Rolled back"
-        : change.proposal_type === "title_h1"
+        : change.proposal_type === "page_wording"
           ? state === "proposed"
             ? "Draft"
             : change.published_proof_at || state === "applied" || state === "verified"
@@ -481,7 +484,7 @@ function ChangeRequestPage() {
         ) : null}
       </GlassCard>
 
-      {change.proposal_type === "title_h1" ? (
+      {change.proposal_type === "page_wording" ? (
         <ProposalRevisionPanel
           key={`${id}:${change.revision_count}`}
           id={id}

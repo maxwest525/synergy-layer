@@ -4,7 +4,7 @@ import {
   DEFAULT_GEMINI_GENERATION_MODEL,
   GEMINI_API_ORIGIN,
   generatePageMetadataWording,
-  generateTitleH1Wording,
+  generatePageWordingWording,
 } from "./gemini.server";
 
 describe("direct Gemini structured output", () => {
@@ -33,7 +33,7 @@ describe("direct Gemini structured output", () => {
         ),
     );
 
-    const result = await generateTitleH1Wording({
+    const result = await generatePageWordingWording({
       apiKey: "test-key",
       model: "gemini-test",
       prompt: "draft wording only",
@@ -67,7 +67,7 @@ describe("direct Gemini structured output", () => {
     );
 
     await expect(
-      generateTitleH1Wording({
+      generatePageWordingWording({
         apiKey: "test-key",
         model: "gemini-test",
         prompt: "draft",
@@ -174,7 +174,7 @@ describe("direct Gemini structured output", () => {
       }),
     );
 
-    await generateTitleH1Wording({
+    await generatePageWordingWording({
       apiKey: "test-key",
       model: "",
       prompt: "draft",

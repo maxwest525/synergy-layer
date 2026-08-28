@@ -192,7 +192,7 @@ function canIgnoreSource(source: QueueSource): boolean {
 /**
  * Whether the wording can be redrafted in place.
  *
- * Only `regenerateTitleH1Proposal` exists, and it accepts a title/H1 change
+ * Only `regeneratePageWordingProposal` exists, and it accepts a title/H1 change
  * request that is still `proposed`; approval freezes the wording, and the
  * page-metadata lane has no redraft path at all. Offering the verb anywhere else
  * would be a button that always fails, so it is reported as unavailable instead.
@@ -200,7 +200,7 @@ function canIgnoreSource(source: QueueSource): boolean {
 function canRegenerateSource(source: QueueSource): boolean {
   return (
     source.kind === "change" &&
-    source.proposalType === "title_h1" &&
+    source.proposalType === "page_wording" &&
     source.storedState === "proposed"
   );
 }

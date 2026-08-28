@@ -7,7 +7,7 @@ import {
   selectUniqueLiteralSource,
   validatePageMetadataWording,
 } from "./page-metadata-proposals";
-import { type ProposalEvidence } from "./title-h1-proposals";
+import { type ProposalEvidence } from "./page-wording-proposals";
 
 const liveMetaDescription =
   "TruMove coordinates corporate relocation end to end with dedicated move coordinators, transparent pricing, and guaranteed dates.";

@@ -150,7 +150,8 @@ export const proposeFixFromFinding = createServerFn({ method: "POST" })
   .handler(async ({ data, context }): Promise<FindingFixResult> => {
     const { assertOperator } = await import("./os-admin.server");
     const { requireTenantId } = await import("./tenant.server");
-    const { deriveFixTarget, proposalKindForRule } = await import("./finding-fix-target");
+    const { deriveFixTarget, proposalKindForRule, whyNoFixLane } =
+      await import("./finding-fix-target");
     await assertOperator(context.supabase, context.userId);
     const tenantId = await requireTenantId(context.supabase);
     const client = context.supabase;
@@ -192,8 +193,16 @@ export const proposeFixFromFinding = createServerFn({ method: "POST" })
     const fixTarget = deriveFixTarget(rule, target, pageQueryRows);
     if (!fixTarget.ok) throw new Error(fixTarget.reason);
 
+    // Explicitly, rather than an if/else with wording as the fallback: an
+    // unmapped rule must refuse, not quietly draft a rewrite of the page's
+    // words. That fallback is what made every finding a title change.
+    const proposalKind = proposalKindForRule(rule);
+    if (proposalKind === null) {
+      throw new Error(whyNoFixLane(rule) ?? "This finding has no governed fix to draft.");
+    }
+
     let result: FindingFixResult;
-    if (proposalKindForRule(rule) === "page_metadata") {
+    if (proposalKind === "page_metadata") {
       const { preparePageMetadataProposal } = await import("./page-metadata-proposals.server");
       const { fileGovernedProposal } = await import("./audit-fixes.server");
       const proposal = await preparePageMetadataProposal(client, tenantId, fixTarget.url);
@@ -204,12 +213,12 @@ export const proposeFixFromFinding = createServerFn({ method: "POST" })
         proposal,
       });
     } else {
-      const { prepareTitleH1Proposal } = await import("./title-h1-proposals.server");
-      const { serviceRpc } = await import("./title-h1-proposals.functions");
-      const proposal = await prepareTitleH1Proposal(client, tenantId, fixTarget.url, {
+      const { preparePageWordingProposal } = await import("./page-wording-proposals.server");
+      const { serviceRpc } = await import("./page-wording-proposals.functions");
+      const proposal = await preparePageWordingProposal(client, tenantId, fixTarget.url, {
         wordingMode: "gemini",
       });
-      result = await serviceRpc("create_title_h1_proposal", {
+      result = await serviceRpc("create_page_wording_proposal", {
         _tenant_id: tenantId,
         _actor: context.userId,
         _idempotency_key: `finding:${data.recommendationId}`,

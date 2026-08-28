@@ -56,8 +56,8 @@ const ROUTES: readonly {
 }[] = [
   {
     match: /^\/services\/[^/]+\/?$/,
-    changeKind: "service.title_h1",
-    file: GOVERNED_CHANGE_KINDS["service.title_h1"][0],
+    changeKind: "service.page_wording",
+    file: GOVERNED_CHANGE_KINDS["service.page_wording"][0],
     because: "a service page's wording is a record in the service data file",
   },
   {

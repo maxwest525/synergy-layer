@@ -14,7 +14,7 @@ import { proposeFixFromFinding } from "@/lib/search-findings.functions";
 import { ignoreAuditFinding, restoreAuditFinding } from "@/lib/suggestion-suppressions.functions";
 import type { QueueItem, UrgencyTone } from "@/lib/suggestion-queue";
 import { verbsFor, type SuggestionVerb } from "@/lib/suggestion-verbs";
-import { regenerateTitleH1Proposal } from "@/lib/title-h1-proposals.functions";
+import { regeneratePageWordingProposal } from "@/lib/page-wording-proposals.functions";
 import { cn } from "@/lib/utils";
 
 /**
@@ -50,7 +50,7 @@ export function SuggestionCard({ item }: { item: QueueItem }) {
   const navigate = useNavigate();
   const setQueueState = useServerFn(setRecommendationQueueState);
   const rejectChange = useServerFn(rejectChangeRequest);
-  const redraft = useServerFn(regenerateTitleH1Proposal);
+  const redraft = useServerFn(regeneratePageWordingProposal);
   const ignoreAudit = useServerFn(ignoreAuditFinding);
   const restoreAudit = useServerFn(restoreAuditFinding);
   const draftFix = useServerFn(proposeFixFromFinding);
