@@ -8,9 +8,32 @@ It is not authoritative documentation. Provider digests under
 `docs/integrations/<provider>/DIGEST.md` and their PLAN files remain the source of
 truth for provider behaviour and must never be overwritten by this file.
 
-Last updated: 2026-08-25, at `3143f88` (PR #65) plus the branch that follows it.
-Section 0 below still describes 2026-08-21 and has NOT been rewritten; the
-current-state block immediately below supersedes it.
+Last updated: 2026-08-28. Section 0 below still describes 2026-08-21 and has
+NOT been rewritten; the current-state blocks immediately below supersede it.
+
+## 0b. cap.umami promoted to real, 2026-08-28
+
+The registry declared `cap.umami` "pending until one authenticated read stores
+a snapshot", and the workflow guard (`src/lib/serpapi/provider-gate.ts`) only
+lets `real` capabilities execute, so the enabled pg_cron job
+`aoos-umami-daily-observe` (16:45 UTC daily) failed on every firing with
+"Capability \"Umami (self-hosted analytics)\" is not authorised yet." —
+verified in `workflow_runs` for 2026-08-19, 2026-08-20 and 2026-08-25, with
+`capabilities.last_run_at` still null.
+
+The promotion condition was re-verified against the production database, not
+recalled from this file: `umami_snapshots` holds exactly four rows (stats,
+pageviews, pages, referrers) for TruMove, collected 2026-08-18, joined to a
+succeeded `measurement_runs` row with `quota.authenticationSucceeded: true`.
+Section 3's Umami row below already recorded this evidence.
+
+`integrationState` in `src/registry/modules/self-hosted-analytics.ts` is now
+`"real"`, with the met condition cited in the comment. The runtime gate reads
+the database `capabilities` row, which still says `pending`, and registry sync
+is an operator action, not a deploy step. **Waiting on a human:** after this
+change is merged and published, an operator clicks "Sync from modules" on
+`/capabilities/registry`; the daily observation stops failing from the next
+16:45 UTC firing after that.
 
 ## 0a. Current state, 2026-08-25
 
