@@ -9,7 +9,7 @@
  * Pure, so the three category pages cannot drift from one another.
  */
 
-import { fixTargetForPage } from "./audit-fixes";
+import { fixTargetForPage, fixTargetForSiteCheck } from "./audit-fixes";
 import { hasGovernedFixPath } from "./finding-fix-target";
 import type { QueueItem } from "./suggestion-queue";
 
@@ -68,6 +68,19 @@ const DRAFT: SuggestionVerb = {
 };
 
 /**
+ * A site crawl finding drafts deterministically from the stored site read and
+ * the governed robots.txt, with no page read and no AI call, so the metered
+ * DRAFT copy would name a cost that is not charged. Same verb, honest price.
+ */
+const DRAFT_SITE: SuggestionVerb = {
+  id: "draft",
+  label: "Draft the fix",
+  consequence:
+    "Writes the exact robots.txt change from evidence already stored. Costs nothing to draft, and nothing reaches the site until you approve it on the change itself.",
+  metered: false,
+};
+
+/**
  * A done row is finished, so it carries no verbs: the decision was made and
  * neither ignoring nor redrafting it means anything.
  */
@@ -86,13 +99,17 @@ export function verbsFor(item: QueueItem): readonly SuggestionVerb[] {
   // draft will succeed: the server also refuses a finding that names no page,
   // and a page whose evidence the proposal lane cannot assemble.
   if (item.queueState === "open" && typeof item.rule === "string") {
-    const drafts =
-      item.kind === "recommendation"
-        ? hasGovernedFixPath(item.rule)
-        : item.kind === "audit"
-          ? fixTargetForPage(item.rule, item.targetUrl) !== null
-          : false;
-    if (drafts) verbs.push(DRAFT);
+    if (item.kind === "recommendation" && hasGovernedFixPath(item.rule)) {
+      verbs.push(DRAFT);
+    } else if (item.kind === "audit") {
+      // Page and site findings share the "audit" kind but carry disjoint check
+      // ids, so each row only ever answers from the map that knows its check.
+      if (fixTargetForPage(item.rule, item.targetUrl) !== null) {
+        verbs.push(DRAFT);
+      } else if (fixTargetForSiteCheck(item.rule) !== null) {
+        verbs.push(DRAFT_SITE);
+      }
+    }
   }
   return verbs;
 }

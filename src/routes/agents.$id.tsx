@@ -1,7 +1,5 @@
-import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { useServerFn } from "@tanstack/react-start";
-import { toast } from "sonner";
 
 import {
   BackLink,
@@ -13,8 +11,6 @@ import {
   StatePill,
   toneForState,
 } from "@/components/os/primitives";
-import { Button } from "@/components/ui/button";
-import { runReferenceAgent } from "@/lib/os-admin.functions";
 import { getAgent } from "@/lib/os.functions";
 import { OperatorRouteError } from "@/components/os/route-error";
 
@@ -53,22 +49,11 @@ export const Route = createFileRoute("/agents/$id")({
 function AgentDetailPage() {
   const { id } = Route.useParams();
   const { data } = useSuspenseQuery(agentQuery(id));
-  const queryClient = useQueryClient();
-  const run = useServerFn(runReferenceAgent);
   const agent = data.agent!;
   const permissions = (agent.permissions ?? {}) as {
     mutating?: boolean;
     requiresApproval?: boolean;
   };
-
-  const mutation = useMutation({
-    mutationFn: () => run({ data: { agentId: id } }),
-    onSuccess: (result) => {
-      toast.success(`${result.agent}: ${result.summary}`);
-      void queryClient.invalidateQueries();
-    },
-    onError: (error: Error) => toast.error(error.message),
-  });
 
   return (
     <div className="space-y-10">
@@ -80,13 +65,13 @@ function AgentDetailPage() {
         actions={
           <>
             <StatePill label={agent.health} tone={toneForState(agent.health)} />
-            <Button
-              variant="outline"
-              onClick={() => mutation.mutate()}
-              disabled={mutation.isPending}
-            >
-              {mutation.isPending ? "Running" : "Run agent"}
-            </Button>
+            {/* No run control on purpose: the runtime refuses every agent run
+                (agent-runtime.server.ts), and a button that always errors is a
+                lying control. The sentence below is what stands in its place. */}
+            <p className="max-w-xs text-xs text-muted-foreground">
+              This agent cannot be run from here. Agent runs are switched off in this build; AOOS
+              runs explicit automation and operator workflows only.
+            </p>
           </>
         }
       />

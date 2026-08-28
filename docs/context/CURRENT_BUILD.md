@@ -8,9 +8,33 @@ It is not authoritative documentation. Provider digests under
 `docs/integrations/<provider>/DIGEST.md` and their PLAN files remain the source of
 truth for provider behaviour and must never be overwritten by this file.
 
-Last updated: 2026-08-25, at `3143f88` (PR #65) plus the branch that follows it.
-Section 0 below still describes 2026-08-21 and has NOT been rewritten; the
-current-state block immediately below supersedes it.
+Last updated: 2026-08-28, on the Command center queue-fixes branch. Section 0
+below still describes 2026-08-21 and has NOT been rewritten; the current-state
+blocks immediately below supersede it.
+
+## 0b. Command center queue corrections, 2026-08-28
+
+Three defects around the suggestion queue, fixed on this branch:
+
+- **Rule-finding cards carry their page address again.** The Command center
+  read hardcoded `targetUrl: null` for every recommendation row. It now reads
+  the stored `suggested_action.target` through `pageUrlFromSuggestedAction`
+  (`finding-router.ts`), which returns only a page URL: query terms, `site`
+  and bare domains stay off the card, and the coverage-gap `page :: query`
+  form is split the same way `deriveFixTarget` splits it.
+- **Site crawl findings can draft their fix.** `siteSources` never carried the
+  check id, so `verbsFor` could not offer "Draft the fix" even though
+  `SITE_CHECK_FIX` maps `robots_blocks_site`, `robots_blocks_pages` and
+  `sitemap_not_declared` to the crawl-directives lane and `proposeAuditFix`
+  already accepted `scope: "site"`. The check id now travels on the row, the
+  card dispatches those three to the site scope, and the verb carries its own
+  copy (`DRAFT_SITE`): the site draft is deterministic, so it is not metered
+  and says so. The other six site checks still offer no draft.
+- **The lying "Run agent" button is gone.** `/agents/$id` offered a button
+  whose server function unconditionally throws (`agent-runtime.server.ts`).
+  Per the no-lying-controls rule it now renders a sentence saying agent runs
+  are switched off in this build; `runReferenceAgent` keeps refusing
+  server-side and no longer has a UI caller.
 
 ## 0a. Current state, 2026-08-25
 
