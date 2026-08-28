@@ -7,10 +7,11 @@ import {
   GOVERNED_REPO,
   changeKindForFile,
 } from "./execution/allowlist";
-import { createGithubApi, createRenderedVerifier } from "./execution/execute.server";
+import { createGithubApi } from "./execution/execute.server";
 import { resolvePageSource } from "./execution/page-source-map";
 import { applyExactReplacements, countOccurrences } from "./execution/source-change";
 import { generateTitleH1Wording } from "./gemini.server";
+import { readLivePageWording } from "./live-page-evidence.server";
 import { retrieveKnowledgeGuidance } from "./knowledge-retrieval.server";
 import {
   assertCompleteEvidence,
@@ -76,13 +77,11 @@ export async function prepareTitleH1Proposal(
   const targetUrl = requireProposalTarget(rawTargetUrl);
   const observedAt = new Date().toISOString();
 
-  const renderer = createRenderedVerifier();
-  if (!renderer) {
-    throw new Error(
-      "Required live-page evidence is unavailable: no page renderer is configured. Configure Crawl4AI (VPS_SCRAPER_API_KEY) or a Firecrawl deployment.",
-    );
-  }
-  const rendered = await renderer.render(targetUrl);
+  // A fresh render when one can be had, the stored page audit reading when it
+  // cannot. Drafting a fix must not depend on a scraper being reachable; the
+  // executor re-checks drift at commit time, so a stale reading is refused
+  // there rather than applied.
+  const rendered = await readLivePageWording({ client, tenantId, targetUrl });
   assertSameCanonicalProposalPage(targetUrl, rendered.finalUrl);
   const livePage =
     rendered.title && rendered.heading
