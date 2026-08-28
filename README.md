@@ -42,17 +42,17 @@ is indistinguishable from working code until someone checks.
 
 ## The shape of it
 
-| Layer | Where | What it is |
-| --- | --- | --- |
-| Navigation | `src/lib/categories.ts` | Seven slots, capped permanently. A new feature goes *inside* a category, never beside one. |
-| Category pages | `src/components/os/*-page.tsx` | Command center plus Getting found on Google, Your pages, Site health, Connections. |
-| View models | `src/lib/{getting-found,your-pages,site-health,connections,command-center}.ts` | Pure, exhaustively tested. Every tile carries `value: null` plus a `missingReason` when no row backs it. |
-| Reads | `*.functions.ts` | One tenant-scoped fetch per page, every read `assertRead` guarded so a failure raises instead of arriving as a zero. |
-| Rules | `src/lib/{search-console-rule-checks,page-checks,targeting-rules,ga4-rule-checks,robots-rules}.ts` | Pure functions over stored rows. 30 page checks, 24 bucketed finding rules. |
-| Queue | `src/lib/suggestion-queue.ts` | open / ignored / done, dedup by fingerprint, urgency ranking, seven visible per week. |
-| Registries | `src/registry/modules/*.ts` | Capabilities, agents, workflows and schedules declared as data and synced to the database. No hardcoded per-integration UI. |
-| Providers | `src/lib/{dataforseo,serpapi,umami,measurement,execution,mcp}/` | Adapters, spend ledgers, guards. |
-| Database | `supabase/migrations/` | 76 migrations. Multi-tenant, RLS on every registry table. |
+| Layer          | Where                                                                                              | What it is                                                                                                                  |
+| -------------- | -------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| Navigation     | `src/lib/categories.ts`                                                                            | Seven slots, capped permanently. A new feature goes _inside_ a category, never beside one.                                  |
+| Category pages | `src/components/os/*-page.tsx`                                                                     | Command center plus Getting found on Google, Your pages, Site health, Connections.                                          |
+| View models    | `src/lib/{getting-found,your-pages,site-health,connections,command-center}.ts`                     | Pure, exhaustively tested. Every tile carries `value: null` plus a `missingReason` when no row backs it.                    |
+| Reads          | `*.functions.ts`                                                                                   | One tenant-scoped fetch per page, every read `assertRead` guarded so a failure raises instead of arriving as a zero.        |
+| Rules          | `src/lib/{search-console-rule-checks,page-checks,targeting-rules,ga4-rule-checks,robots-rules}.ts` | Pure functions over stored rows. 30 page checks, 24 bucketed finding rules.                                                 |
+| Queue          | `src/lib/suggestion-queue.ts`                                                                      | open / ignored / done, dedup by fingerprint, urgency ranking, seven visible per week.                                       |
+| Registries     | `src/registry/modules/*.ts`                                                                        | Capabilities, agents, workflows and schedules declared as data and synced to the database. No hardcoded per-integration UI. |
+| Providers      | `src/lib/{dataforseo,serpapi,umami,measurement,execution,mcp}/`                                    | Adapters, spend ledgers, guards.                                                                                            |
+| Database       | `supabase/migrations/`                                                                             | 82 migrations. Multi-tenant, RLS on every registry table.                                                                   |
 
 Stack: TypeScript, React 19, TanStack Start / Router / Query, Tailwind 4,
 Supabase (Postgres + RLS), Vitest + Testing Library, Vite 8.
@@ -73,8 +73,9 @@ npm test           # vitest run
 npm run build
 ```
 
-Verified on `main` at commit `2a2e87f` (2026-08-21): typecheck clean, 1168 tests
-in 118 files passing.
+Verified on 2026-08-28, measured on the deletion-pass branch off `main` at
+`47f6ae9`: typecheck clean, 1381 tests in 128 files passing, lint 0 errors with
+the 14 pre-existing react-refresh warnings, build green.
 
 `.env` is committed and holds only public Supabase config. Server secrets —
 provider keys, `LITELLM_API_KEY`, `GITHUB_EXECUTOR_TOKEN` — live where the
@@ -83,16 +84,16 @@ knowledge documents, or into provider digests.
 
 ## Where the records are
 
-| Document | What it is for |
-| --- | --- |
-| [`docs/context/CURRENT_BUILD.md`](docs/context/CURRENT_BUILD.md) | **Current state only.** What is live, what is blocked, what is pending approval, what is next. Start here. |
-| [`AGENTS.md`](AGENTS.md) | The working contract for anyone, human or agent, making changes. |
-| [`docs/execution-handbook/`](docs/execution-handbook/INDEX.md) | The governing contracts: source of truth, evidence policy, proposal data contract, validation gates, execution and rollback, outcome measurement. |
-| [`docs/integrations/<provider>/DIGEST.md`](docs/integrations) | Authoritative provider behaviour, digested from the vendor's own documentation before any integration code was written. Never overwrite these from memory. |
-| [`docs/superpowers/{plans,specs,research}/`](docs/superpowers) | Per-lane plans and the research they argue from. Dated, and superseded rather than edited. |
-| [`docs/handoffs/`](docs/handoffs) | Work orders written for whoever picks the thread up next, with their status at the top. |
-| [`docs/context/ORIGINAL_BRIEF.md`](docs/context/ORIGINAL_BRIEF.md) | The 2026-08-04 prompt the project started from, kept verbatim as history. |
-| [`.claude/skills/seo-measurement/SKILL.md`](.claude/skills/seo-measurement) | The method for grounding any SEO rule, threshold or verdict in a primary source. |
+| Document                                                                    | What it is for                                                                                                                                             |
+| --------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`docs/context/CURRENT_BUILD.md`](docs/context/CURRENT_BUILD.md)            | **Current state only.** What is live, what is blocked, what is pending approval, what is next. Start here.                                                 |
+| [`AGENTS.md`](AGENTS.md)                                                    | The working contract for anyone, human or agent, making changes.                                                                                           |
+| [`docs/execution-handbook/`](docs/execution-handbook/INDEX.md)              | The governing contracts: source of truth, evidence policy, proposal data contract, validation gates, execution and rollback, outcome measurement.          |
+| [`docs/integrations/<provider>/DIGEST.md`](docs/integrations)               | Authoritative provider behaviour, digested from the vendor's own documentation before any integration code was written. Never overwrite these from memory. |
+| [`docs/superpowers/{plans,specs,research}/`](docs/superpowers)              | Per-lane plans and the research they argue from. Dated, and superseded rather than edited.                                                                 |
+| [`docs/handoffs/`](docs/handoffs)                                           | Work orders written for whoever picks the thread up next, with their status at the top.                                                                    |
+| [`docs/context/ORIGINAL_BRIEF.md`](docs/context/ORIGINAL_BRIEF.md)          | The 2026-08-04 prompt the project started from, kept verbatim as history.                                                                                  |
+| [`.claude/skills/seo-measurement/SKILL.md`](.claude/skills/seo-measurement) | The method for grounding any SEO rule, threshold or verdict in a primary source.                                                                           |
 
 When these disagree, precedence is set by
 [`SOURCE_OF_TRUTH.md`](docs/execution-handbook/SOURCE_OF_TRUTH.md): live

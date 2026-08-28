@@ -14,19 +14,19 @@ is the current-state file; provider behaviour is authoritative only in
 Each capability carries exactly one label. The labels are not ranked and are not
 synonyms for each other.
 
-| Label | Means, exactly |
-| --- | --- |
-| `SUPPORTED_BY_PROVIDER` | The vendor offers it. Says nothing about this repo. |
-| `IMPLEMENTED_LOCALLY` | Code exists in this repo that calls it. |
-| `EXPOSED_AS_TOOL` | Reachable through the AOOS MCP server or an MCP client. **Not** proof that authorization succeeds. |
-| `CONFIGURED` | Env-var names are declared and read. **Not** a synonym for working. |
-| `READ_VERIFIED` | A real read executed in this session and returned real data. |
-| `WRITE_VERIFIED` | A write executed with explicit approval. **Nothing in this audit carries this label.** |
-| `PARTIAL` | Some operations wired, others absent. |
-| `STUB` | Placeholder that returns fabricated or empty results. |
-| `BROKEN` | Wired, and observed failing. |
-| `UNWIRED` | Declared, probed, or documented, but read by no code path that would use it. |
-| `UNKNOWN` | Could not be determined from here. Most credential states are this. |
+| Label                   | Means, exactly                                                                                     |
+| ----------------------- | -------------------------------------------------------------------------------------------------- |
+| `SUPPORTED_BY_PROVIDER` | The vendor offers it. Says nothing about this repo.                                                |
+| `IMPLEMENTED_LOCALLY`   | Code exists in this repo that calls it.                                                            |
+| `EXPOSED_AS_TOOL`       | Reachable through the AOOS MCP server or an MCP client. **Not** proof that authorization succeeds. |
+| `CONFIGURED`            | Env-var names are declared and read. **Not** a synonym for working.                                |
+| `READ_VERIFIED`         | A real read executed in this session and returned real data.                                       |
+| `WRITE_VERIFIED`        | A write executed with explicit approval. **Nothing in this audit carries this label.**             |
+| `PARTIAL`               | Some operations wired, others absent.                                                              |
+| `STUB`                  | Placeholder that returns fabricated or empty results.                                              |
+| `BROKEN`                | Wired, and observed failing.                                                                       |
+| `UNWIRED`               | Declared, probed, or documented, but read by no code path that would use it.                       |
+| `UNKNOWN`               | Could not be determined from here. Most credential states are this.                                |
 
 ### What this audit could and could not verify
 
@@ -34,7 +34,7 @@ synonyms for each other.
 surface; reachability of all six self-hosted hosts; three external MCP servers
 end to end.
 
-**Could not:** whether any *connector credential* is accepted. Those values live
+**Could not:** whether any _connector credential_ is accepted. Those values live
 in the Lovable deployment's environment, not on this machine — the local `.env`
 holds six Supabase publishable values and nothing else. Every connector
 authentication state below is therefore `UNKNOWN`, and no amount of green in the
@@ -65,8 +65,8 @@ paths exist and they disagree.
   `:embedContent`). Three importers: `knowledge/embeddings.server.ts`,
   `page-metadata-proposals.server.ts`, `title-h1-proposals.server.ts`.
 
-This is deliberate, not an accident — the test is literally named *"calls Google
-directly with a strict wording-only JSON schema"*
+This is deliberate, not an accident — the test is literally named _"calls Google
+directly with a strict wording-only JSON schema"_
 (`gemini.server.test.ts:10`). But it means page-wording generation and all
 knowledge embeddings are billed to a Google key outside the gateway that exists
 to control spend and routing. **Classification: `IMPLEMENTED_LOCALLY`, policy
@@ -88,7 +88,7 @@ organization `amwpxkdhyohqmaygqehg`. AOOS's project ref is `zrfzllupoccmztyweznq
 (`.env`), **which is not among them**. That server is authenticated to a
 different account, so it can neither read nor migrate AOOS's data. This confirms
 the existing memory note that the route to AOOS's Postgres is the Lovable MCP.
-Blast-radius note: that same token *can* reach 12 other live projects.
+Blast-radius note: that same token _can_ reach 12 other live projects.
 
 ### 4. Three connectors are registered and ignored
 
@@ -96,15 +96,15 @@ The exact "declared but read by nothing" pattern. Verified by grepping each name
 across `src/` with `catalog.ts`, `probes.server.ts` and `surface-inventory.ts`
 excluded:
 
-| Name | Consumers outside the catalog | Reading |
-| --- | --- | --- |
-| `SEARXNG_BASE_URL` / `_USERNAME` / `_PASSWORD` | **0** | `UNWIRED`. Catalogued at `catalog.ts:202-208` and probed at `probes.server.ts:142-146`, called by nothing. Consistent with the standing decision that SearXNG is not wanted — so the fix is to delete the row, not to wire it. |
-| `GOOGLE_ADS_CUSTOMER_ID` | **0** | Required as a credential (`catalog.ts:166-175`) and normalized (`catalog.ts:241` strips non-digits), but no call reads it. The only Ads endpoint in the repo is `customers:listAccessibleCustomers`, which takes no customer id. |
-| `N8N_API_KEY` | **0** | Appears only in a test fixture, `connectors/connections.server.test.ts:38,57,63`. Not in the catalog, not read. Dead name. |
+| Name                                           | Consumers outside the catalog | Reading                                                                                                                                                                                                                          |
+| ---------------------------------------------- | ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SEARXNG_BASE_URL` / `_USERNAME` / `_PASSWORD` | **0**                         | `UNWIRED`. Catalogued at `catalog.ts:202-208` and probed at `probes.server.ts:142-146`, called by nothing. Consistent with the standing decision that SearXNG is not wanted — so the fix is to delete the row, not to wire it.   |
+| `GOOGLE_ADS_CUSTOMER_ID`                       | **0**                         | Required as a credential (`catalog.ts:166-175`) and normalized (`catalog.ts:241` strips non-digits), but no call reads it. The only Ads endpoint in the repo is `customers:listAccessibleCustomers`, which takes no customer id. |
+| `N8N_API_KEY`                                  | **0**                         | Appears only in a test fixture, `connectors/connections.server.test.ts:38,57,63`. Not in the catalog, not read. Dead name.                                                                                                       |
 
 ### 5. Google Ads asks for three secrets and does nothing with them
 
-`src/lib/connectors/google-ads.server.ts` (133 lines) is the *entire* Google Ads
+`src/lib/connectors/google-ads.server.ts` (133 lines) is the _entire_ Google Ads
 integration: an OAuth `refresh_token` exchange against
 `oauth2.googleapis.com/v3/token`, then a single read-only call to
 `googleads.googleapis.com/v25/customers:listAccessibleCustomers`. There is no
@@ -129,7 +129,7 @@ calls `analyticsdata.googleapis.com/v1beta/{property}:runReport` with the
 `analytics.readonly` scope.
 
 It even exports `ga4ResponseProvesAuthentication(status)` (line 55) — a helper
-whose *only purpose* is to separate "credential rejected" (401) from
+whose _only purpose_ is to separate "credential rejected" (401) from
 "authenticated but the property read failed" (403/400). Serena confirms its only
 callers are `fetchGa4Inventory` inside the same file and `measurement.test.ts`.
 
@@ -157,14 +157,14 @@ Read-only. No writes, no spend, no resource creation.
 
 Unauthenticated `GET`, 12s timeout, from this machine on 2026-08-25:
 
-| Host | Path | Status | Reading |
-| --- | --- | --- | --- |
-| `n8n.marky.systems` | `/healthz` | **200** | `READ_VERIFIED` — reachable, health endpoint public |
-| `analytics.marky.systems` | `/api/heartbeat` | **200** | `READ_VERIFIED` — Umami reachable, heartbeat public |
-| `fire.marky.systems` | `/is-production` | 401 | Reachable; auth required. Credential state `UNKNOWN` |
-| `crawl.marky.systems` | `/health` | 401 | Reachable; auth required. Credential state `UNKNOWN` |
-| `seo.marky.systems` | `/api/health` | 401 | Reachable; **Caddy** basic_auth, not OpenSEO's own — OpenSEO runs `authMode: local_noauth` |
-| `litellm.marky.systems` | `/v1/models` | 401 | Reachable; auth required. Credential state `UNKNOWN` |
+| Host                      | Path             | Status  | Reading                                                                                    |
+| ------------------------- | ---------------- | ------- | ------------------------------------------------------------------------------------------ |
+| `n8n.marky.systems`       | `/healthz`       | **200** | `READ_VERIFIED` — reachable, health endpoint public                                        |
+| `analytics.marky.systems` | `/api/heartbeat` | **200** | `READ_VERIFIED` — Umami reachable, heartbeat public                                        |
+| `fire.marky.systems`      | `/is-production` | 401     | Reachable; auth required. Credential state `UNKNOWN`                                       |
+| `crawl.marky.systems`     | `/health`        | 401     | Reachable; auth required. Credential state `UNKNOWN`                                       |
+| `seo.marky.systems`       | `/api/health`    | 401     | Reachable; **Caddy** basic_auth, not OpenSEO's own — OpenSEO runs `authMode: local_noauth` |
+| `litellm.marky.systems`   | `/v1/models`     | 401     | Reachable; auth required. Credential state `UNKNOWN`                                       |
 
 A 401 here proves DNS, TLS and a live HTTP server — it proves nothing about
 whether the app's stored credential is accepted. Those are different questions
@@ -172,11 +172,11 @@ and this audit can only answer the first.
 
 ### External MCP servers — authentication accepted
 
-| Server | Read call | Result |
-| --- | --- | --- |
-| Lovable | `get_me` | `READ_VERIFIED`. Account `maxw@trumoveinc.com`; workspaces "Max" (owner) and "JONATHAN's Lovable" (member) |
-| Supabase | `list_projects` | `READ_VERIFIED`. 12 projects, org `amwpxkdhyohqmaygqehg` — **none is AOOS** |
-| Vercel | `list_teams` | `READ_VERIFIED`. One team, `maxs-projects-6b4bb981`, plan `pro` |
+| Server   | Read call       | Result                                                                                                     |
+| -------- | --------------- | ---------------------------------------------------------------------------------------------------------- |
+| Lovable  | `get_me`        | `READ_VERIFIED`. Account `maxw@trumoveinc.com`; workspaces "Max" (owner) and "JONATHAN's Lovable" (member) |
+| Supabase | `list_projects` | `READ_VERIFIED`. 12 projects, org `amwpxkdhyohqmaygqehg` — **none is AOOS**                                |
+| Vercel   | `list_teams`    | `READ_VERIFIED`. One team, `maxs-projects-6b4bb981`, plan `pro`                                            |
 
 ---
 
@@ -188,22 +188,22 @@ AOOS is not only an MCP client — it **publishes** an MCP server.
   do not edit) mounts `createTanStackMcpHandler` at `/mcp`, with OAuth metadata
   at `/.well-known/oauth-protected-resource`.
 - **Definition:** `src/lib/mcp/index.ts` — `defineMcp({ name: "aoos-marketing-os",
-  version: "0.1.0" })`.
+version: "0.1.0" })`.
 - **Auth:** `auth.oauth.issuer({ issuer: "https://${VITE_SUPABASE_PROJECT_ID}.supabase.co/auth/v1",
-  acceptedAudiences: "authenticated" })`. Tenant scope is the authenticated
+acceptedAudiences: "authenticated" })`. Tenant scope is the authenticated
   Supabase operator; roles are read from `user_roles` (`guard.ts:25-28`).
 - **Tool availability:** **static** — eight tools, listed literally in the
   `tools:` array. Nothing is registered at runtime.
 
-| Tool | Annotations | Destructive / external-write / financial? |
-| --- | --- | --- |
-| `list_inbox` | `readOnlyHint: true, idempotentHint: true, openWorldHint: false` | No |
-| `list_recommendations` | same | No |
-| `get_recommendation` | same | No |
-| `list_workflow_runs` | same | No |
-| `list_capabilities` | same | No |
-| `list_assets` | same | No |
-| `list_openseo_tools` | same | No |
+| Tool                     | Annotations                                                          | Destructive / external-write / financial?                           |
+| ------------------------ | -------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| `list_inbox`             | `readOnlyHint: true, idempotentHint: true, openWorldHint: false`     | No                                                                  |
+| `list_recommendations`   | same                                                                 | No                                                                  |
+| `get_recommendation`     | same                                                                 | No                                                                  |
+| `list_workflow_runs`     | same                                                                 | No                                                                  |
+| `list_capabilities`      | same                                                                 | No                                                                  |
+| `list_assets`            | same                                                                 | No                                                                  |
+| `list_openseo_tools`     | same                                                                 | No                                                                  |
 | `call_openseo_free_read` | `readOnlyHint: true, idempotentHint: false, **openWorldHint: true**` | **The one to watch.** It proxies a live call to another MCP server. |
 
 `call_openseo_free_read` is gated properly: it re-fetches OpenSEO's current
@@ -240,7 +240,7 @@ the absence is real, not a logging failure.
 
 So the AOOS MCP server is fully built, OAuth-protected, rate-limited, audited,
 and **has never been used**. That is not an argument for deleting it: it was
-built so an outside agent *could* read the OS, and nothing has been pointed at
+built so an outside agent _could_ read the OS, and nothing has been pointed at
 `/mcp` yet. But it does mean none of the eight tools has ever proven itself
 end to end against a real caller, and no design assumption in them has been
 tested by use. Treat `EXPOSED_AS_TOOL` here as its literal self and nothing more.
@@ -345,8 +345,8 @@ from code only, and the provider's full surface was not enumerated.
 
 - **Business purpose:** the preferred page renderer. Runs on Max's box, so a
   page it renders costs nothing (`page-audit.server.ts:66`).
-- **Local files:** `src/lib/connectors/vps-scraper.server.ts`,
-  `vps-runtime.server.ts`, consumed by `page-audit.server.ts`.
+- **Local files:** `src/lib/connectors/vps-scraper.server.ts`, consumed by
+  `page-audit.server.ts`.
 - **Auth:** `VPS_SCRAPER_API_KEY` bearer; `VPS_SCRAPER_BASE_URL` defaulted
   in code to `https://crawl.marky.systems` (`catalog.ts:64`).
 - **Probe:** `${BASE}/health`. **Reachable, 401** from here.
@@ -433,8 +433,8 @@ See cross-cutting finding 5.
   `PERPLEXITY_API_KEY`.
 - **Endpoints seen:** `api.perplexity.ai`, `console.perplexity.ai`.
 - **Connector ledger:** ∈ `noSafeProbe` — correctly, per
-  `probes.server.test.ts:236`, *"does not spend against providers that have no
-  read-only health endpoint"*.
+  `probes.server.test.ts:236`, _"does not spend against providers that have no
+  read-only health endpoint"_.
 - **Classification:** `IMPLEMENTED_LOCALLY`, auth `UNKNOWN`. Metered.
 - **Official capabilities:** [unverified].
 
@@ -586,13 +586,13 @@ connected on every dashboard" failure the self-hosted rule warns about.
 
 Five public endpoints under `src/routes/api/public/hooks/`:
 
-| Endpoint | Purpose | Auth |
-| --- | --- | --- |
-| `dataforseo-postback.ts` | async job results from DataForSEO | provider callback |
-| `openai-ads-conversions.ts` | conversion delivery | `OPENAI_ADS_BRIDGE_SECRET` |
-| `openai-ads-events.ts` | event delivery | `OPENAI_ADS_CAPI_BRIDGE_SECRET` |
-| `propose-from-evidence.ts` | inbound proposal creation | see route |
-| `scheduler-tick.ts` | external scheduler trigger | see route |
+| Endpoint                    | Purpose                           | Auth                            |
+| --------------------------- | --------------------------------- | ------------------------------- |
+| `dataforseo-postback.ts`    | async job results from DataForSEO | provider callback               |
+| `openai-ads-conversions.ts` | conversion delivery               | `OPENAI_ADS_BRIDGE_SECRET`      |
+| `openai-ads-events.ts`      | event delivery                    | `OPENAI_ADS_CAPI_BRIDGE_SECRET` |
+| `propose-from-evidence.ts`  | inbound proposal creation         | see route                       |
+| `scheduler-tick.ts`         | external scheduler trigger        | see route                       |
 
 Plus `src/routes/api/agent-chat.ts` and `studio-chat.ts` (model-backed chat) and
 `src/routes/mcp.ts` (the MCP server).
@@ -602,12 +602,14 @@ Plus `src/routes/api/agent-chat.ts` and `studio-chat.ts` (model-backed chat) and
 ## Gap analysis
 
 **Provider capabilities not exposed**
+
 - Google Ads: everything except `listAccessibleCustomers`.
 - GA4: Admin API — a digest exists (`docs/integrations/ga4-admin-api/DIGEST.md`)
   with no corresponding client.
 - GA4 Measurement Protocol: digest exists, no client.
 
 **Local features not connected to runtime**
+
 - `ga4ResponseProvesAuthentication` — purpose-built for a probe, unused by one.
 - `GOOGLE_ADS_CUSTOMER_ID` — required, normalized, never read.
 
@@ -616,9 +618,10 @@ Plus `src/routes/api/agent-chat.ts` and `studio-chat.ts` (model-backed chat) and
 **Product UI calling stubs or mocks** — none found. Zero stubs in `src/`.
 
 **Overlapping integrations**
+
 - Three page renderers: Crawl4AI, self-hosted Firecrawl, cloud Firecrawl. The
   precedence is explicit and correct; the overlap is intentional redundancy.
-- Two model paths — see finding 1. This overlap is *not* intentional redundancy.
+- Two model paths — see finding 1. This overlap is _not_ intentional redundancy.
 - Two search-evidence providers: Search Console and DataForSEO/SerpApi. Distinct
   purposes.
 
@@ -633,6 +636,7 @@ generation behind but stable.
 network calls found within a single request path.
 
 **Capabilities connectable directly instead of adding layers**
+
 - The GA4 probe: reuse the existing token helper rather than building anything.
 - Search Console currently routes through the Lovable connector gateway
   (`LOVABLE_API_KEY`); given the migration off Lovable, a direct Google OAuth
