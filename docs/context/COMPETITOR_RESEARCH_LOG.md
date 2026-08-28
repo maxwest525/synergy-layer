@@ -107,12 +107,48 @@ Where research can actually run, so no session re-derives this:
   session is the free path; the SerpApi path is the governed, stored-evidence
   path. Findings that should persist belong in the deployment path.
 
+### Verified in AOOS's own stored evidence (2026-08-28, later the same day)
+
+The deployment's database already holds an operator-confirmed advertiser
+watchlist, built via SerpApi Ads Transparency on 2026-08-11/12 — the operator
+had already done the vendor identification this log's open items asked for:
+
+| Advertiser (Ads Transparency) | Vendor domain | Confirmed |
+|---|---|---|
+| Quote Runner LLC | quoterunner.com | 2026-08-11 |
+| DOPPCALL | doppcall.com | 2026-08-11 |
+| RESOLT INC | resultcalls.com | 2026-08-12 |
+| Lovine, Inc | 99calls.com | 2026-08-12 |
+| Leadgen Network Organization, Inc | billy.com | 2026-08-12 |
+| **Equate Media Corp.** | **budgetvanlines.com** | 2026-08-12 |
+| **Budget Van Lines Inc.** | **2movers.com** | 2026-08-12 |
+
+**The Equate triangle is upgraded from operator-grade to verified:** Equate
+Media Corp. is the Ads Transparency advertiser behind budgetvanlines.com, and
+Budget Van Lines Inc. is the advertiser behind 2movers.com (Two Movers). The
+supplier layer and the competitor layer are one organization, shown by the
+system's own stored SerpApi rows (`ad_advertisers`, confirmed_by the operator).
+
+Note the roster difference: these are **call/lead-gen vendors**, not the
+consumer-brand route-page operators the web sweep surfaced. Both lists are
+real; they are different layers of the same market.
+
+### Why this data was 16 days stale
+
+The three vendor schedules (`sch.vendor_ad_refresh`,
+`sch.vendor_landing_page_analysis`, `sch.vendor_message_synthesis`) existed,
+targeted active workflows, and were **never enabled** — `enabled: false`, zero
+runs, since creation. Enabled 2026-08-28. Separately, the deployed app was down
+(HTTP 500 on every route) for most of 2026-08-28 — a test file swept into the
+production server bundle by the registry's module glob (fixed in synergy-layer
+PR #86) — so no scheduler tick could run anything that day regardless.
+
 ## Open items
 
-- [ ] Operator to contribute his known lead-vendor list (grade: operator).
+- [x] Operator's vendor list found: the confirmed advertiser watchlist above.
 - [ ] Run each vendor through Ads Transparency; record advertiser IDs, ad
       counts, and landing-page URLs per vendor.
 - [ ] Read each vendor's organic route-page template (URL pattern, scale).
-- [ ] Verify the Two Movers ↔ Equate Media ownership link independently.
+- [x] Equate link verified via stored Ads Transparency advertiser rows.
 - [ ] Feed confirmed vendors into `competitor_candidates` with
       `company_classification = 'lead_vendor'` (operator-declared).
