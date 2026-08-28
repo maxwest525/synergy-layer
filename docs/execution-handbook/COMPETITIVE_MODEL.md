@@ -98,32 +98,59 @@ its own.
 
 ---
 
-## 4. One company can be many domains
+## 4. The competitive unit is the ranking page
 
-**Two Movers and Budget Van Lines are both owned by Equate Media.**
+**The competitor is the landing page, not the company and not the domain.**
 
-This is the structural failure in any per-domain analysis. Computed per domain,
-those two read as separate mid-sized players at roughly 8% SERP share each,
-each possibly below a significance threshold, each consuming a shortlist slot.
-The truth is one adversary at 16% share occupying two positions on the page.
+Google ranks pages. A SERP position belongs to a URL. TruMove does not outrank
+Equate Media; it outranks a specific page, for a specific query, and the work
+that changes that outcome is page against page. Any analysis whose unit is the
+company answers a question nobody can act on.
 
-Requirements that follow:
+This is most obvious with lead vendors, whose whole method is the template: one
+operator spins up hundreds of near-identical state-to-state landing pages. On
+"movers CA to TX" you face one of those pages. On "movers NY to FL" you face a
+different one -- possibly a different domain, possibly the same owner. Rolling
+those into a single company-level share figure destroys the only detail that
+tells you what to do.
 
-1. **The competitive unit is the owning organization, not the domain.** Share,
-   significance and shortlisting roll up to the parent entity where one is
-   known, and fall back to the domain where none is.
-2. **Ownership is operator-declared.** Same rule as classification: evidence may
-   *suggest* a link, it never asserts one.
-3. **Ownership evidence comes from data already purchased.** Two DataForSEO
-   Domain Analytics endpoints AOOS already calls are exactly the fingerprinting
-   tools: `whois/overview` (registrant organization, registrar, nameservers)
-   and `technologies/domain_technologies` (shared stack). Shared referring-domain
-   patterns from the Backlinks family are a third signal. None is proof; all
-   three together are a suggestion worth an operator's attention.
-4. **A rolled-up figure must say it is rolled up.** An operator reading "16%"
-   must be able to see it is two domains, which two, and who linked them.
+So the model is **page → domain → owning organization**, with the page as the
+unit of analysis and the two above it as attributes carried along:
 
----
+1. **Observation, comparison and action all happen at page level.** What is on
+   their page that is not on ours, for the query where they beat us.
+2. **Domain and owner are grouping attributes, not units.** They earn their
+   keep in one specific way: recognising a template. Forty ranking pages sharing
+   an owner and a structure is one playbook, not forty problems. That is pattern
+   intelligence about *how* a competitor operates, and it is secondary to the
+   page-level comparison, never a substitute for it.
+3. **Ownership is operator-declared.** Evidence may suggest a link, never assert
+   one. `whois/overview` (registrant organization, registrar, nameservers) and
+   `technologies/domain_technologies` (shared stack) -- both already called by
+   AOOS -- plus shared referring-domain patterns are suggestions worth an
+   operator's attention, and nothing more.
+4. **Coverage is the metric that matters, not sampling.** A pass that observes
+   one page per domain is not page-level analysis wearing a different name. If a
+   competitor ranks against the approved keyword set on forty pages, forty pages
+   is the work.
+
+**Corrections this section records**, both found in the code on 2026-08-28:
+
+- `competitor-intelligence.server.ts` profiles by domain and treats URLs as a
+  subordinate field capped at five. Its `serpShare` is computed per domain.
+- `competitor-pages.server.ts` does hold a genuine page-level observation model
+  -- page type, intent match, heading structure, schema, CTAs, quote forms,
+  review signals, FAQ blocks, topical coverage against a moving-industry
+  vocabulary, and repeated tactics across domains. It is capped at **one page
+  per shortlisted domain**, gated behind a domain-level shortlist of six, wired
+  to `requireFirecrawl()` so it throws wherever Firecrawl is the unavailable
+  renderer rather than falling back to Crawl4AI, and writes to
+  `knowledge_entries` rather than to any finding an operator would see.
+
+An earlier draft of this section named the owning organization as the
+competitive unit. That was wrong, and it was wrong in a way worth keeping on the
+record: the ownership insight is real, and it still does not make the company
+the thing you compete with.
 
 ## 5. How competitors are discovered
 
@@ -180,7 +207,9 @@ unfinished task.
 - Reporting local-search capability as a gap.
 - Inferring a business classification from SERP position.
 - Inferring corporate ownership without operator confirmation.
-- Computing competitive share per domain where an owning organization is known.
+- Treating the company or the domain as the competitive unit. The ranking page
+  is the unit; domain and owner are attributes carried along with it.
+- Sampling one page per domain and calling the result page-level analysis.
 - Bounding competitor discovery to the approved keyword list.
 - Presenting an ads-transparency result as evidence of organic ranking.
 - Routing competitor evidence into page-wording generation as its only consumer.
@@ -190,4 +219,11 @@ That last one is not hypothetical. Ads Transparency data was wired into
 `page-wording-proposals` with `role: "corroboration"` and reached the competitor
 engine nowhere: evidence about who was advertising against TruMove was used to
 help word a headline. Operator classification had the same fate — written by the
-operator, read only by the dropdown that displays it.
+operator, read only by the dropdown that displays it. Page observations have a
+third variant of it: `competitor-pages.server.ts` files real findings about
+competitor landing pages into `knowledge_entries`, where no operator surface
+reads them.
+
+The pattern across all three is one thing: evidence is collected competently and
+then routed somewhere it cannot act. Wiring an analysis to a consumer is not a
+finishing touch on this project. It is the part that keeps being skipped.
