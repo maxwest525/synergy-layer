@@ -5,6 +5,7 @@ import type { Database } from "@/integrations/supabase/types";
 import { reconcileAppliedChangeEvidence } from "./change-requests.server";
 import { reconcileChangeMeasurements } from "./change-measurements.server";
 import { logActivity } from "./os.server";
+import { reconcileOutcomeAlerts } from "./outcome-alerts.server";
 import { observeSearchConsole } from "./search-console-observe.server";
 import { collectDaily, getSelectedProperty } from "./search-console.server";
 
@@ -35,6 +36,10 @@ vi.mock("./change-measurements.server", () => ({
 
 vi.mock("./change-requests.server", () => ({
   reconcileAppliedChangeEvidence: vi.fn(async () => ({ waiting: 1, ready: 0, newlyReady: 0 })),
+}));
+
+vi.mock("./outcome-alerts.server", () => ({
+  reconcileOutcomeAlerts: vi.fn(async () => ({ failed: 0, filed: 0 })),
 }));
 
 vi.mock("./os.server", () => ({
@@ -73,6 +78,8 @@ describe("Search Console observation tracking", () => {
     expect(collectDaily).toHaveBeenCalledWith(client, "sc-domain:trumoveinc.com");
     expect(reconcileAppliedChangeEvidence).toHaveBeenCalledWith(client);
     expect(reconcileChangeMeasurements).toHaveBeenCalledWith(client);
+    // After the day's windows are captured, failure verdicts reach the Inbox.
+    expect(reconcileOutcomeAlerts).toHaveBeenCalledWith(client, "sc-domain:trumoveinc.com");
     expect(
       updates.some(
         (entry) =>

@@ -21,6 +21,7 @@ export const getChangeRequest = createServerFn({ method: "GET" })
         postChangeRows: [],
         versions: [],
         measurement: { cycle: null, windows: [], observations: [], revisions: [] },
+        gradedOutcomes: [],
       };
     const tenantId = await resolveTenantId(db);
     if (!tenantId)
@@ -30,6 +31,7 @@ export const getChangeRequest = createServerFn({ method: "GET" })
         postChangeRows: [],
         versions: [],
         measurement: { cycle: null, windows: [], observations: [], revisions: [] },
+        gradedOutcomes: [],
       };
     return fetchChangeRequest(db, tenantId, data.id);
   });

@@ -12,6 +12,7 @@ import {
   testGithubConnection,
 } from "@/lib/execution/execution.functions";
 import { reconcileExecutionFacts, reconcileReadinessFacts } from "@/lib/execution/timeline";
+import { OutcomeVerdictContext, type VerdictReading } from "./outcome-verdict-context";
 
 type Stage = { label: string; detail: string; done: boolean };
 
@@ -27,6 +28,8 @@ type Props = {
   sourceProjectUrl: string | null;
   brief: string;
   postChangeCount: number;
+  /** This change's graded readings, shown beside Mark verified as context. */
+  verdicts: VerdictReading[];
   notes: string;
   onNotesChange: (value: string) => void;
   busy: boolean;
@@ -360,6 +363,9 @@ export function ExecutionCard(props: Props) {
           <p className="text-sm text-muted-foreground">
             Applied on {props.appliedAt?.slice(0, 10)}. Applied means proven live, not verified.
           </p>
+          <div className="rounded-lg border border-border/60 p-3">
+            <OutcomeVerdictContext verdicts={props.verdicts} />
+          </div>
           {props.postChangeCount === 0 ? (
             <p className="rounded-lg border border-border/60 p-3 text-sm text-muted-foreground">
               Waiting for finalized post-change Search Console data. No data is not evidence of

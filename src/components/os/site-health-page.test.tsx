@@ -106,6 +106,22 @@ describe("grading the fixes, on screen", () => {
     expect(screen.queryByText(/too_early|unmeasurable/)).not.toBeInTheDocument();
   });
 
+  it("closes the journey on a success instead of leaving it reading as pending", async () => {
+    show({
+      outcomes: [
+        outcome({ impressions: 400, clicks: 6, baseline: { impressions: 50, clicks: 0 } }),
+      ],
+    });
+    await userEvent.click(screen.getByRole("tab", { name: /Did the fixes work/ }));
+    expect(screen.getByText(/journey is complete/i)).toBeInTheDocument();
+  });
+
+  it("does not claim a completed journey for a reading still waiting", async () => {
+    show({ outcomes: [outcome({ windowDays: 14, daysSinceLive: 3 })] });
+    await userEvent.click(screen.getByRole("tab", { name: /Did the fixes work/ }));
+    expect(screen.queryByText(/journey is complete/i)).not.toBeInTheDocument();
+  });
+
   it("explains a verdict rather than asserting it", async () => {
     show({
       outcomes: [

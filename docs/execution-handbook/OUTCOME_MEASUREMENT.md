@@ -3,7 +3,7 @@ id: 20260814-outcome-measurement
 title: Outcome Measurement
 tags: [measurement, evidence, seo]
 created: 2026-08-14
-updated: 2026-08-14
+updated: 2026-08-28
 related: [20260814-evidence-policy, 20260814-proposal-data-contract, 20260814-test-cases]
 summary: Baseline, comparison-window, GSC, GA4, and neutral result-classification contract.
 ---
@@ -35,6 +35,16 @@ Each baseline and follow-up requires source, page, date range, finalized/complet
 ## Result language
 
 Allowed: `waiting for finalized data`, `partial comparison`, `comparison available`, and a neutral list of differences. Forbidden without a credible causal design: `success`, `winner`, `caused`, `lift from this change`, or `ROI from this change`.
+
+## Graded verdict layer
+
+`src/lib/outcome-verdict.ts` is the one layer permitted the words success and failure, because it earns them: each stored reading is graded only on the research-grounded windows (14, 28, 56, 90 days), only against the stored 28-day approval baseline, only above the count-noise floor in `src/lib/confidence.ts`, and only after the site's own trend over the same weeks is ruled out as the cause. A reading that clears none of that is `neutral`, `not_yet`, `too_early`, or `unmeasurable`, never a verdict. The neutral calculator and `describeOutcome` keep the Result language rules above unchanged.
+
+Where a verdict travels, as of 2026-08-28:
+
+- Site health renders every graded reading. A failure leads the list; a success reads as a completed journey rather than one more pending card.
+- The change detail page and its execution card show the change's own graded readings beside the Mark verified control, so verifying is an informed act. The verify gate itself is unchanged: finalized post-change Search Console rows, enforced in `transitionChangeRequest`. The verdict is displayed context and deliberately does not gate the transition, because the grading and the operator's judgment answer different questions and neither may impersonate the other.
+- A failure verdict files one needs-attention Inbox item per change (`src/lib/outcome-alerts.server.ts`, on the daily Search Console observation), naming the change, the verdict's own reason, and the evidence window, and linking to the change page where the rollback control already lives. Once per change, ever: clearing the item means it was seen, not that the failure should be re-announced daily.
 
 ## Current state
 
