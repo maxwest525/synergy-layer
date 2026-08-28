@@ -14,6 +14,15 @@ current-state block immediately below supersedes it.
 
 ## 0a. Current state, 2026-08-25
 
+- **2026-08-28:** the nightly propose-from-evidence job can now succeed:
+  migration `20260828090000` lets `create_title_h1_proposal` accept a null
+  actor as the governed system path (drafts logged as a system actor, human
+  approval unchanged, non-null actors keep every check), and
+  `isTerminalConfigurationFailure` now pauses the job on the tenant-visibility,
+  operator-authority, and no-renderer refusals instead of retrying every
+  night. The migration still needs applying to the remote project; until then
+  the job pauses itself on the first refusal.
+
 Measured on this branch, not recalled: `npm run typecheck` clean, `npm test`
 **1259 passing in 123 files**, `npx eslint .` **0 errors and the same 14
 pre-existing react-refresh warnings**. Section 0's figures (1168 tests in 118
