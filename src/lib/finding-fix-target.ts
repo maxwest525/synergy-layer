@@ -52,6 +52,12 @@ const FIX_LANES: Readonly<Record<string, FixLane>> = {
     because:
       "The page is being shown and not chosen. What a searcher reads before choosing is the snippet, and the description is the part of the snippet a site controls.",
   },
+  high_impression_low_ctr: {
+    proposalKind: "page_metadata",
+    targeting: "page",
+    because:
+      "The same measurement as weak_ctr_page, under a different producer: both fire at 200 impressions and a CTR at or below 1%. Identical evidence cannot honestly get a fix on one screen and a shrug on the other, so it gets the same lane -- the description is what a searcher reads before choosing.",
+  },
   query_coverage_gap: {
     proposalKind: "page_wording",
     targeting: "page_and_query",
@@ -88,6 +94,58 @@ const NO_LANE_REASON: Readonly<Record<string, string>> = {
     "This page is doing better than it was. There is nothing to correct, so no fix is offered.",
   position_loss:
     "This page lost ground for this term, and the cause is not in the evidence: it could be a competitor's change, a shift in what people search for, or something on the page. Drafting a rewrite here would be a guess.",
+
+  // The one genuinely ambiguous case, so it says so rather than guessing.
+  // Above 200 impressions weak_ctr_page and high_impression_low_ctr fire on the
+  // same page and do offer the description draft; between 150 and 200 this
+  // fires alone, and at zero clicks "nobody chose it" and "nobody could see it"
+  // look identical in this evidence.
+  zero_click_page:
+    "This page was shown and never clicked. That is either the description not earning the click, or the page sitting too far down to be seen at all, and these numbers cannot tell the two apart. Check its position first: if it is on the first page of results, the description is the lever, and the same page will offer that draft once it clears 200 impressions.",
+
+  // Speed and layout. Real defects, measured against Google's own bands, and
+  // not one of them is answerable by editing words.
+  page_lcp_poor:
+    "This page is slow to show its main content. That comes from image sizes, server response time, and scripts that block the page from drawing -- none of which change when the words do.",
+  page_cls_poor:
+    "Things move around while this page loads, so people tap the wrong thing. The cause is layout: images and embeds that do not reserve their space before they arrive. Rewriting the words would not hold the page still.",
+
+  // Falls and rises where the evidence names the size of the change and not
+  // its cause. Offering a rewrite here would be inventing a diagnosis.
+  declining_clicks:
+    "Fewer people clicked through to this page. The evidence does not say why -- it could be position, a competitor, the season, or simply fewer people searching. There is nothing specific enough here to draft.",
+  declining_impressions:
+    "This page was shown less often. That is about how often it is eligible to appear at all, which is not something its wording decides.",
+  declining_position:
+    "This page slipped for this term. As with any drop in position, the cause is not in the evidence, so a rewrite would be a guess.",
+  significant_period_change:
+    "Something moved sharply here, up or down. The rule reports how big the change was, not what caused it, so there is nothing to correct yet.",
+  research_page_traction:
+    "This page is gaining ground. There is nothing to correct, so no fix is offered.",
+
+  // Whole-property readings. True, useful, and about no single page.
+  site_visibility_shift:
+    "This is a reading for the whole site, not one page. There is no single page to edit.",
+  site_clicks_shift:
+    "This is a reading for the whole site, not one page. There is no single page to edit.",
+
+  // Analytics behaviour. A visit can arrive from anywhere, so search wording is
+  // one candidate cause among many.
+  page_traffic_loss:
+    "Visits to this page fell. Visits arrive from every channel, not just search, so the page's wording is one possible cause among many and not the one to assume.",
+  page_traffic_gain: "Visits to this page grew. There is nothing to correct.",
+  zero_engagement_page:
+    "People reach this page and then do nothing. That is about what the page offers and how it is laid out, which is a larger change than editing a line.",
+  event_disappeared:
+    "Something that used to be recorded here has stopped being recorded. That is far more often tracking that broke than content that changed. Check the tag or the form before changing the page.",
+
+  // Targeting and links. Nothing is wrong with a page in any of these.
+  approved_keyword_unobserved:
+    "No search result has ever been collected for this term, so nothing is known to be wrong with any page. The term needs looking up, not fixing.",
+  approved_keyword_no_page:
+    "No page is mapped to this term. It needs a page, which is a decision about what to publish rather than an edit to something that exists.",
+  referring_domain_movement:
+    "The sites linking to you changed. Those are other people's pages, and nothing here can edit them.",
 };
 
 /**
