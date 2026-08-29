@@ -98,19 +98,32 @@ export async function retrieveKnowledgeGuidance(
     .eq("tenant_id", tenantId)
     .eq("status", "active")
     .limit(1);
-  if (!governedVersionError && governedVersions?.length) {
-    const governed = await retrieveGovernedKnowledge(client, query, { limit: options.limit ?? 8 });
-    return governed.map((chunk) => ({
-      id: chunk.id,
-      collectionKey: "kb.playbooks",
-      title: `${chunk.sourceTitle} — ${chunk.title}`,
-      body: chunk.body,
-      sourceRef: `${chunk.sourceRef}#${chunk.contentSha256.slice(0, 12)}`,
-      tags: [chunk.sourceKey, ...chunk.headingPath],
-      excerpt: chunk.body.trim().slice(0, 1200),
-      score: chunk.score,
-    }));
-  }
+  // Governed handbook chunks, when a version is active. These used to RETURN
+  // here, and that early return silently deleted the other half of this
+  // function: with 18 active versions, `knowledge_entries` was never read at
+  // all, so every research entry an operator captured was invisible to the
+  // agents that write proposals -- visible on /knowledge, unreachable by the
+  // thing it exists to inform.
+  //
+  // Both are now gathered and ranked together. The handbook is doctrine and the
+  // entries are what the operator has collected from outside; a proposal wants
+  // whichever is more relevant to the page in hand, not whichever table the
+  // function happened to reach first.
+  const governedGuidance: RetrievedKnowledgeEntry[] =
+    !governedVersionError && governedVersions?.length
+      ? (await retrieveGovernedKnowledge(client, query, { limit: options.limit ?? 8 })).map(
+          (chunk) => ({
+            id: chunk.id,
+            collectionKey: "kb.playbooks",
+            title: `${chunk.sourceTitle} — ${chunk.title}`,
+            body: chunk.body,
+            sourceRef: `${chunk.sourceRef}#${chunk.contentSha256.slice(0, 12)}`,
+            tags: [chunk.sourceKey, ...chunk.headingPath],
+            excerpt: chunk.body.trim().slice(0, 1200),
+            score: chunk.score,
+          }),
+        )
+      : [];
   if (
     governedVersionError &&
     !/knowledge_source_versions|schema cache|does not exist/i.test(governedVersionError.message)
@@ -128,7 +141,7 @@ export async function retrieveKnowledgeGuidance(
 
   const keyById = new Map((collections ?? []).map((collection) => [collection.id, collection.key]));
   const collectionIds = [...keyById.keys()];
-  if (collectionIds.length === 0) return [];
+  if (collectionIds.length === 0) return governedGuidance.slice(0, options.limit ?? 8);
 
   const { data: entries, error: entryError } = await client
     .from("knowledge_entries")
@@ -139,7 +152,7 @@ export async function retrieveKnowledgeGuidance(
     .limit(500);
   if (entryError) throw new Error(entryError.message);
 
-  return rankKnowledgeEntries(
+  const ranked = rankKnowledgeEntries(
     (entries ?? []).flatMap((entry) => {
       const collectionKey = keyById.get(entry.collection_id);
       if (!collectionKey) return [];
@@ -157,4 +170,34 @@ export async function retrieveKnowledgeGuidance(
     query,
     options.limit,
   );
+
+  return mergeGuidance(governedGuidance, ranked, options.limit ?? 8);
+}
+
+/**
+ * One ordered list from the two sources, highest score first.
+ *
+ * The two scores are not on one scale -- governed chunks are scored by the
+ * runtime retriever, entries by token overlap here -- so this deliberately does
+ * not pretend they are comparable beyond ordering. What it guarantees is that
+ * neither source can crowd the other out entirely: each is granted at least a
+ * third of the slots when it has something to offer, so a large handbook cannot
+ * bury a single research entry that names the exact page being worked on.
+ */
+export function mergeGuidance(
+  governed: RetrievedKnowledgeEntry[],
+  entries: RetrievedKnowledgeEntry[],
+  limit: number,
+): RetrievedKnowledgeEntry[] {
+  if (limit <= 0) return [];
+  if (governed.length === 0) return entries.slice(0, limit);
+  if (entries.length === 0) return governed.slice(0, limit);
+
+  const floor = Math.max(1, Math.floor(limit / 3));
+  const keptEntries = entries.slice(0, Math.max(floor, limit - governed.length));
+  const keptGoverned = governed.slice(0, Math.max(floor, limit - keptEntries.length));
+
+  return [...keptGoverned, ...keptEntries]
+    .sort((left, right) => right.score - left.score || left.title.localeCompare(right.title))
+    .slice(0, limit);
 }
