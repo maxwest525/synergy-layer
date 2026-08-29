@@ -3,7 +3,7 @@ id: 20260814-test-cases
 title: Canonical Test Cases
 tags: [testing, execution, governance]
 created: 2026-08-14
-updated: 2026-08-14
+updated: 2026-08-29
 related:
   [
     20260814-validation-gates,
@@ -22,7 +22,7 @@ summary: Required acceptance cases for observation, proposal, approval, executio
 
 1. An observation-only finding persists as `observed`, never requires approval, and never enters Action Center.
 2. A legacy observation leaking into pending approval is filtered and repaired without deleting evidence.
-3. Missing/ambiguous rendered title or H1 blocks proposal generation.
+3. Missing/ambiguous rendered value for the field a change targets blocks proposal generation for that field. **Corrected 2026-08-29:** this used to name only title and H1, because those were the only two fields a proposal could ever contain. `page_wording` now owns `seo_title`, `page_heading`, and `subheading`, and generation checks whichever of those the finding actually targets, not both unconditionally.
 4. Missing page-level GSC or relevant stored DataForSEO evidence returns `insufficient evidence`.
 5. GA4 absence is disclosed but does not block title/H1 drafting.
 6. Model output that violates schema, copies a competitor, invents a claim, duplicates another page, or is unchanged is rejected deterministically.
@@ -48,7 +48,14 @@ summary: Required acceptance cases for observation, proposal, approval, executio
 
 ## Verification map
 
-Current tests cover observation persistence, Search Console/SEO producers, title/H1 sufficiency/evidence/generation/validation/lifecycle, Action Center UI shape, database migration contracts, execution/drift, rendered proof, and outcome comparisons. Live inspection verifies deployed RLS/RPC shape and persisted workflow history. Provider calls and future publications still require runtime credentials and authorized operator actions.
+**Corrected 2026-08-29.** Current tests cover observation persistence,
+Search Console/SEO/PageSpeed/GA4/targeting producers, page-wording
+sufficiency/evidence/generation/validation/lifecycle (title, H1, meta
+description, and subheading — not title/H1 alone), Action Center UI shape,
+database migration contracts, execution/drift, rendered proof, and outcome
+comparisons. Live inspection verifies deployed RLS/RPC shape and persisted
+workflow history. Provider calls and future publications still require runtime
+credentials and authorized operator actions.
 
 ## Related
 
