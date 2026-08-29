@@ -24,7 +24,7 @@ describe("governed knowledge ingestion CLI", () => {
       // docs/execution-handbook/ moves this number. Re-run the script and paste
       // the new total; a changed estimate here is the expected cost of a
       // documentation change, not a regression.
-      estimatedInputTokens: 76_026,
+      estimatedInputTokens: 77_271,
     });
   });
 });
