@@ -6,7 +6,8 @@ import { categoryIcon } from "./category-icons";
 import { navDirectory } from "@/lib/nav-directory";
 import { useCommandCenter } from "./command-center-facts";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { useOperatorSession } from "@/hooks/use-operator-session";
+import { useOperatorSession, type OperatorSession } from "@/hooks/use-operator-session";
+import { TenantSwitcher } from "./tenant-switcher";
 import {
   CATEGORIES,
   breadcrumbsForPath,
@@ -56,7 +57,15 @@ function WaitingBadge({ count, tone }: { count: number; tone: NavTone | null }) 
   );
 }
 
-function NavPanel({ pathname, onNavigate }: { pathname: string; onNavigate?: () => void }) {
+function NavPanel({
+  pathname,
+  session,
+  onNavigate,
+}: {
+  pathname: string;
+  session: OperatorSession;
+  onNavigate?: () => void;
+}) {
   const { view } = useCommandCenter();
   const current = categoryForPath(pathname);
   const heading = current ?? null;
@@ -145,8 +154,21 @@ function NavPanel({ pathname, onNavigate }: { pathname: string; onNavigate?: () 
         </div>
       ))}
 
+      {/* The workspace switcher. It lived in the previous shell and was lost on
+          2026-08-20 when the root started rendering this one instead, so
+          `switchTenant` and the whole workspace-scoping design had no control
+          in the product at all. One tenant exists today, which is the only
+          reason nobody noticed.
+
+          `mt-auto` moves here from the settings link below: this block now
+          absorbs the free space and pins the pair to the foot of the sidebar,
+          which is where settings already sat. */}
+      <div className="mt-auto px-2.5 pb-1.5 pt-3">
+        <TenantSwitcher session={session} />
+      </div>
+
       {/* Settings sat at the foot of the icon rail. The rail is gone, so it
-          keeps that position here — `mt-auto` pins it to the bottom. */}
+          keeps that position here, directly under the switcher. */}
       {navEntries()
         .filter((entry) => entry.kind === "settings")
         .map((entry) => {
@@ -159,7 +181,7 @@ function NavPanel({ pathname, onNavigate }: { pathname: string; onNavigate?: () 
               onClick={onNavigate}
               aria-current={active ? "page" : undefined}
               className={cn(
-                "mt-auto flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-[13px] text-sidebar-foreground transition-colors hover:text-foreground",
+                "flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-[13px] text-sidebar-foreground transition-colors hover:text-foreground",
                 active &&
                   "rounded-l-none border-l-2 border-primary bg-accent font-semibold text-primary",
               )}
@@ -288,7 +310,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           // mt-auto -- are simply unreachable.
           className="hidden w-[208px] shrink-0 overflow-y-auto border-r border-sidebar-border md:block"
         >
-          <NavPanel pathname={pathname} />
+          <NavPanel pathname={pathname} session={session} />
         </aside>
 
         <div className="flex min-w-0 flex-1 flex-col">
@@ -302,7 +324,11 @@ export function AppShell({ children }: { children: ReactNode }) {
                 Menu
               </SheetTrigger>
               <SheetContent side="left" className="w-[260px] p-0">
-                <NavPanel pathname={pathname} onNavigate={() => setMenuOpen(false)} />
+                <NavPanel
+                  pathname={pathname}
+                  session={session}
+                  onNavigate={() => setMenuOpen(false)}
+                />
               </SheetContent>
             </Sheet>
           </div>
