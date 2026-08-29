@@ -3,7 +3,7 @@ id: 20260814-execution-handbook-index
 title: AOOS Execution Handbook
 tags: [governance, execution, seo]
 created: 2026-08-14
-updated: 2026-08-21
+updated: 2026-08-28
 related: [20260814-execution-handbook-topic, 20260814-source-of-truth]
 summary: Index and operating boundary for AOOS SEO and AEO execution.
 ---
@@ -15,11 +15,12 @@ summary: Index and operating boundary for AOOS SEO and AEO execution.
 ## Read first
 
 1. [Source of Truth](SOURCE_OF_TRUTH.md)
-2. [Evidence Policy](EVIDENCE_POLICY.md)
-3. [Proposal Data Contract](PROPOSAL_DATA_CONTRACT.md)
-4. [Validation Gates](VALIDATION_GATES.md)
-5. [Execution and Rollback](EXECUTION_ROLLBACK.md)
-6. [Outcome Measurement](OUTCOME_MEASUREMENT.md)
+2. [Competitive Model](COMPETITIVE_MODEL.md) — who we compete with, and what is out of scope
+3. [Evidence Policy](EVIDENCE_POLICY.md)
+4. [Proposal Data Contract](PROPOSAL_DATA_CONTRACT.md)
+5. [Validation Gates](VALIDATION_GATES.md)
+6. [Execution and Rollback](EXECUTION_ROLLBACK.md)
+7. [Outcome Measurement](OUTCOME_MEASUREMENT.md)
 
 ## Reference contracts
 
@@ -46,7 +47,7 @@ These labels describe current implementation state. Recommendation certainty use
 
 ## Current handbook boundary
 
-This handbook contains 14 named contracts. It does not assert that all 14 are fully wired.
+This handbook contains 15 named contracts. It does not assert that all 15 are fully wired.
 
 Updated 2026-08-21: the executable slice is no longer only title/H1 proposals. Page metadata proposals, the page audit's 30 checks, the bucketed finding rules and the targeting layer all now reach the suggestion queue, and four modules write recommendations. Execution against the real repository remains `BLOCKED` on `GITHUB_EXECUTOR_TOKEN`. Other components remain governed detection or design contracts until their adapters and tests exist. Current state is in [`docs/context/CURRENT_BUILD.md`](../context/CURRENT_BUILD.md).
 

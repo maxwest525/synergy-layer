@@ -34,6 +34,23 @@ const RESPONSE_JSON_SCHEMA = {
       type: "string",
       description: "The proposed visible page H1 wording.",
     },
+    subheadings: {
+      type: "array",
+      description:
+        "Optional subheading rewrites. Each entry's `before` MUST be one of the page's existing H2 headings, copied exactly; an entry naming a heading that is not on the page is discarded, because the change is applied by exact string replacement. Return an empty array when no subheading needs to change.",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          before: {
+            type: "string",
+            description: "The existing H2 text, exactly as it appears on the page.",
+          },
+          after: { type: "string", description: "The proposed replacement wording." },
+        },
+        required: ["before", "after"],
+      },
+    },
     rationale: {
       type: "string",
       description: "A concise evidence-grounded rationale for the wording.",

@@ -5,6 +5,15 @@ export type LivePageEvidence = {
   url: string;
   title: string;
   h1: string;
+  /**
+   * The page's current H2s, when the reader captured them.
+   *
+   * Optional because a stored reading taken before subheadings were captured
+   * has none, and a page legitimately has none. An absent list means "not
+   * observed" and a present empty one means "observed, none there"; neither is
+   * rendered as a zero or a defect.
+   */
+  subheadings?: string[];
   observedAt: string;
   renderedBy: string;
 };
@@ -49,6 +58,14 @@ export type KnowledgeWritingGuidance = {
 export type PageWordingWording = {
   seoTitle: string;
   h1: string;
+  /**
+   * Proposed subheading rewrites, each naming the exact H2 it replaces.
+   *
+   * Optional: a page may have no subheadings, and a generator that returns none
+   * is proposing a title-and-H1 change, which is still valid -- it is just no
+   * longer the only thing this lane can express.
+   */
+  subheadings?: { before: string; after: string }[];
   rationale: string;
 };
 /**
@@ -498,31 +515,96 @@ export function validatePageWordingWording(value: unknown): PageWordingWording {
   return {
     seoTitle: requiredText(row["seoTitle"], "SEO title", 200),
     h1: requiredText(row["h1"], "H1", 200),
+    subheadings: readSubheadingRewrites(row["subheadings"]),
     rationale: requiredText(row["rationale"], "rationale", 1200),
   };
 }
 
+/**
+ * Subheading rewrites out of a model response, read defensively.
+ *
+ * Absent or malformed means "none proposed", never an error: subheadings are
+ * optional, and a generator that returns a title and H1 change is still making
+ * a valid proposal. Entries missing either side are dropped here rather than
+ * reaching `buildPageWordingChanges`, which would otherwise have to decide what
+ * half a replacement means.
+ */
+function readSubheadingRewrites(value: unknown): { before: string; after: string }[] {
+  if (!Array.isArray(value)) return [];
+  const rewrites: { before: string; after: string }[] = [];
+  for (const entry of value) {
+    if (entry === null || typeof entry !== "object" || Array.isArray(entry)) continue;
+    const row = entry as Record<string, unknown>;
+    const before = typeof row["before"] === "string" ? row["before"].trim() : "";
+    const after = typeof row["after"] === "string" ? row["after"].trim() : "";
+    if (!before || !after || after.length > 200) continue;
+    rewrites.push({ before, after });
+  }
+  return rewrites;
+}
+
+/**
+ * The exact replacements a wording proposal will carry.
+ *
+ * This used to demand that BOTH the title and the H1 change, and to return
+ * exactly those two -- the last of four layers that made this lane a
+ * title-and-H1 editor. The other three (the create RPC's `<> 2` equality, the
+ * proof function's two field lookups, and `verifyRenderedPage`'s insistence on
+ * both) came off in 20260828160000; this is the one that decided what was
+ * offered in the first place.
+ *
+ * A change set is now whatever genuinely changed: a title alone, a subheading
+ * alone, or all of them. A field whose proposed wording equals what is already
+ * live is dropped rather than filed as a no-op edit, and at least one real
+ * change must remain.
+ *
+ * A subheading rewrite is only included when its `before` is a subheading the
+ * reader actually observed on the page. A model can propose a rewrite of a
+ * heading that is not there; the executor replaces exact strings, so such a
+ * change could never apply and could never be proven, and filing it would spend
+ * an operator's approval on something that cannot work.
+ */
 export function buildPageWordingChanges(
   livePage: LivePageEvidence,
   wording: PageWordingWording,
 ): FieldChange[] {
-  if (livePage.title === wording.seoTitle || livePage.h1 === wording.h1) {
-    throw new Error("A proposal must change both the SEO title and H1.");
-  }
-  return [
-    {
+  const changes: FieldChange[] = [];
+
+  if (livePage.title !== wording.seoTitle) {
+    changes.push({
       field: "seo_title",
       label: "SEO title",
       before: livePage.title,
       after: wording.seoTitle,
-    },
-    {
+    });
+  }
+  if (livePage.h1 !== wording.h1) {
+    changes.push({
       field: "page_heading",
       label: "Page heading (H1)",
       before: livePage.h1,
       after: wording.h1,
-    },
-  ];
+    });
+  }
+
+  const observed = livePage.subheadings ?? [];
+  for (const rewrite of wording.subheadings ?? []) {
+    if (rewrite.before === rewrite.after) continue;
+    if (!observed.includes(rewrite.before)) continue;
+    changes.push({
+      field: "subheading",
+      label: `Subheading: ${rewrite.before}`,
+      before: rewrite.before,
+      after: rewrite.after,
+    });
+  }
+
+  if (changes.length === 0) {
+    throw new Error(
+      "The proposed wording is identical to what the page already says, so there is nothing to change.",
+    );
+  }
+  return changes;
 }
 
 export function nextProposalRevision(input: {

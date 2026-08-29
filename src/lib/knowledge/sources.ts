@@ -12,6 +12,7 @@ function resolveRepoRoot(): string {
 export const EXECUTION_HANDBOOK_FILES = [
   "_topic.md",
   "BRAND_AND_CLAIMS.md",
+  "COMPETITIVE_MODEL.md",
   "COMPONENT_REGISTRY.md",
   "DETECTION_RULES.md",
   "DIAGNOSIS_REMEDY_MATRIX.md",

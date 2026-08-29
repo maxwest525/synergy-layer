@@ -18,13 +18,13 @@ describe("governed knowledge ingestion CLI", () => {
     const output = result.stdout.slice(result.stdout.indexOf("{"));
     expect(JSON.parse(output)).toMatchObject({
       mode: "dry-run",
-      sourceCount: 18,
-      modelRequestCount: 18,
+      sourceCount: 19,
+      modelRequestCount: 19,
       // The handbook is the input, so editing any file in
       // docs/execution-handbook/ moves this number. Re-run the script and paste
       // the new total; a changed estimate here is the expected cost of a
       // documentation change, not a regression.
-      estimatedInputTokens: 73_210,
+      estimatedInputTokens: 76_026,
     });
   });
 });

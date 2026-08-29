@@ -39,9 +39,21 @@ export const PAGE_CHECK_FIX: Record<CheckId, AuditFixTarget | null> = {
   h1_missing: wording,
   h1_multiple: wording,
   h1_duplicate: wording,
-  // No governed change kind can edit subheadings yet, so this finding is
-  // reported and has nowhere to go. Null is the honest answer: a fix target
-  // here would offer a draft that the executor could not write.
+  // Still null, but no longer for the reason it was: the wording lane DOES own
+  // `subheading` now (20260828160000), so rewriting a subheading is drafted,
+  // applied and proven like any other wording change.
+  //
+  // `h2_missing` fires when a page has NO H2 at all, and the executor's only
+  // mechanic is exact string replacement -- `implementation_method` is
+  // literally `github_exact_replacement`. Adding a heading is an insertion:
+  // there is no `before` text to match, so there is nothing for the executor to
+  // replace and nothing for the rendered proof to have expected. A fix target
+  // here would offer a draft that still could not be written.
+  //
+  // What would close this is a governed insertion mechanic -- an anchor to
+  // insert relative to, and a proof that reads the new heading's position
+  // rather than a replaced string. That is a different change kind, not a
+  // wider wording lane.
   h2_missing: null,
   description_missing: metadata,
   description_too_long: metadata,

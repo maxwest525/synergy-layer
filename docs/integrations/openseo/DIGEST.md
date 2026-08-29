@@ -85,33 +85,36 @@ call for establishing context before any paid tool.
 
 Every other tool should be assumed to cost credits until individually verified.
 
-## Google connections — possible, not currently wired
+## Google connections — deliberately NOT wired
 
-`get_search_console_performance`, `inspect_urls`, and any GA4 reads need a Google OAuth
-grant. As of 2026-08-25 the container has **only** `DATAFORSEO_API_KEY` and
-`OPENROUTER_API_KEY` set — no `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, or
-`BETTER_AUTH_SECRET`. So GSC and GA4 through OpenSEO are available but not connected.
+**Standing decision (2026-08-28, operator):** OpenSEO is a DataForSEO front end.
+Google data does not come through it. Do not connect GSC or GA4 here.
 
-To connect (per `SELF_HOSTING_GOOGLE_ANALYTICS.md` and `SELF_HOSTING_GOOGLE_SEARCH_CONSOLE.md`,
-both mirrored beside this file):
+`get_search_console_performance` and `inspect_urls` are therefore two of OpenSEO's
+24 tools that AOOS will never call. Treat them as out of scope, not as a gap.
 
-1. Enable the Analytics Admin API and Analytics Data API in Google Cloud.
-2. Create a **Web application** OAuth client; while the consent screen is in Testing,
-   add every connecting account as a test user.
-3. Register redirect URIs on the deployment origin:
-   `https://seo.marky.systems/api/ga4/oauth/callback` and
-   `https://seo.marky.systems/api/gsc/oauth/callback`. One client serves both.
-4. Set `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `BETTER_AUTH_SECRET` (≥32 chars,
-   `openssl rand -base64 32`) on the container and restart.
-5. Connect the property from Project settings → Analytics / Search Console.
+The reason is narrowing. OpenSEO exposes exactly two Google tools. AOOS reads
+Search Console directly and stores far more than those two return — including
+`search_console_url_inspections`, which the robots lane grades indexation on — and
+the operator holds three separate GA4 APIs. Routing Google data through OpenSEO
+would cap both surfaces at whatever its wrapper chose to expose, and would put a
+DataForSEO credit meter on data Google serves free.
 
-**Why this route matters here:** the operator's GCP organization enforces
-`iam.disableServiceAccountKeyCreation`, which kills service-account JSON keys. OAuth web
-clients are not covered by that policy, so this is a Google path that actually works on
-this account.
+The mirrored `SELF_HOSTING_GOOGLE_ANALYTICS.md` and
+`SELF_HOSTING_GOOGLE_SEARCH_CONSOLE.md` beside this file are upstream's
+instructions, kept for completeness. **They are not a to-do list.** An earlier
+version of this digest carried a five-step "to connect" procedure in this
+position; it was removed because it read as pending work rather than as a
+declined option.
 
-Tokens are stored encrypted in Better Auth's account table. Disconnecting GA4 does not
-disconnect Search Console.
+The container has only `DATAFORSEO_API_KEY` and `OPENROUTER_API_KEY` set, and that
+is the intended state. `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` and
+`BETTER_AUTH_SECRET` are absent by decision, not by oversight.
+
+One fact worth keeping from the removed procedure, because it applies to the
+direct Google path too: the operator's GCP organization enforces
+`iam.disableServiceAccountKeyCreation`, so service-account JSON keys do not work
+on this account. Any Google integration here must use an OAuth web client.
 
 ## Limits and risks
 

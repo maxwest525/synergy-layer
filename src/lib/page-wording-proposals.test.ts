@@ -4,8 +4,9 @@ import {
   assertCompleteEvidence,
   assertSameCanonicalProposalPage,
   buildDeterministicDevWording,
-  buildProposalEvidenceGroups,
+  buildPageWordingChanges,
   buildPageWordingPrompt,
+  buildProposalEvidenceGroups,
   describeEvidenceMode,
   describeEvidenceRowsUsed,
   selectRelevantCompetitorEvidence,
@@ -199,6 +200,10 @@ describe("title/H1 proposal evidence contract", () => {
     expect(wording).toEqual({
       seoTitle: "Employee Relocation Movers | Corporate Relocation | TruMove",
       h1: "Employee Relocation Movers & Corporate Relocation Services",
+      // The dev path proposes no subheading rewrite: it has no page reading to
+      // name an existing H2 from, and a rewrite naming a heading that is not
+      // there could never apply. An empty list is the honest answer.
+      subheadings: [],
       rationale: expect.stringMatching(/development-mode[\s\S]*evidence[\s\S]*approval/i),
     });
     expect(wording.seoTitle).not.toBe(complete.livePage.title);
@@ -303,5 +308,96 @@ describe("rendered proposal redirect boundary", () => {
 
   it("allows only the explicit trailing-slash canonical equivalent", () => {
     expect(() => assertSameCanonicalProposalPage(requested, `${requested}/`)).not.toThrow();
+  });
+});
+
+/**
+ * The fourth and last lock. `buildPageWordingChanges` demanded that BOTH the
+ * title and the H1 change and returned exactly those two, which is what decided
+ * that only title and H1 were ever offered. The database and proof layers came
+ * off in 20260828160000; this pins the generator.
+ */
+describe("buildPageWordingChanges emits what actually changed", () => {
+  const live = {
+    url: "https://trumoveinc.com/services/corporate-relocation",
+    title: "Old title",
+    h1: "Old heading",
+    subheadings: ["What it costs", "How long it takes"],
+    observedAt: "2026-08-28T00:00:00.000Z",
+    renderedBy: "Crawl4AI",
+  };
+
+  it("files a subheading rewrite on its own, with the title and H1 unchanged", () => {
+    const changes = buildPageWordingChanges(live, {
+      seoTitle: "Old title",
+      h1: "Old heading",
+      subheadings: [{ before: "What it costs", after: "What a long-distance move costs" }],
+      rationale: "r",
+    });
+    expect(changes).toHaveLength(1);
+    expect(changes[0]?.field).toBe("subheading");
+    expect(changes[0]?.before).toBe("What it costs");
+  });
+
+  it("files a title, an H1 and two subheadings together", () => {
+    const changes = buildPageWordingChanges(live, {
+      seoTitle: "New title",
+      h1: "New heading",
+      subheadings: [
+        { before: "What it costs", after: "Costs" },
+        { before: "How long it takes", after: "Timelines" },
+      ],
+      rationale: "r",
+    });
+    expect(changes.map((c) => c.field)).toEqual([
+      "seo_title",
+      "page_heading",
+      "subheading",
+      "subheading",
+    ]);
+  });
+
+  it("drops a rewrite naming a subheading the page does not have", () => {
+    // The executor replaces exact strings, so this could never apply and could
+    // never be proven. Filing it would spend an approval on a change that
+    // cannot work.
+    const changes = buildPageWordingChanges(live, {
+      seoTitle: "New title",
+      h1: "Old heading",
+      subheadings: [{ before: "Not on the page", after: "Something" }],
+      rationale: "r",
+    });
+    expect(changes.map((c) => c.field)).toEqual(["seo_title"]);
+  });
+
+  it("drops a field whose proposed wording is what the page already says", () => {
+    const changes = buildPageWordingChanges(live, {
+      seoTitle: "Old title",
+      h1: "New heading",
+      rationale: "r",
+    });
+    expect(changes.map((c) => c.field)).toEqual(["page_heading"]);
+  });
+
+  it("refuses when nothing at all changed, rather than filing a no-op", () => {
+    expect(() =>
+      buildPageWordingChanges(live, {
+        seoTitle: "Old title",
+        h1: "Old heading",
+        subheadings: [{ before: "What it costs", after: "What it costs" }],
+        rationale: "r",
+      }),
+    ).toThrow(/nothing to change/i);
+  });
+
+  it("treats an unobserved subheading list as none observed, not as none present", () => {
+    const { subheadings: _ignored, ...withoutReading } = live;
+    const changes = buildPageWordingChanges(withoutReading, {
+      seoTitle: "New title",
+      h1: "Old heading",
+      subheadings: [{ before: "What it costs", after: "Costs" }],
+      rationale: "r",
+    });
+    expect(changes.map((c) => c.field)).toEqual(["seo_title"]);
   });
 });
