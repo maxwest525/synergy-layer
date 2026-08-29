@@ -1,3 +1,28 @@
+# TruMove Inc — every name for every thing
+
+The one-screen answer, then the detail.
+
+| What | Where |
+|---|---|
+| **The company** | TruMove Inc |
+| **Public website** | **trumoveinc.com** |
+| ↳ Lovable project | **TruMove Website Final** (`3c0c30e5-798a-425c-b077-6d5e8cb04e5b`) |
+| ↳ GitHub repo | **`maxwest525/brittmove-829a7519`** |
+| **Marketing OS (AOOS)** | **trumove.marky.systems** |
+| ↳ Lovable project | **Marky Sysyems** (`4aa4b3cf-b3ab-4721-aff6-e0d55ce13276`) |
+| ↳ GitHub repo | **`maxwest525/synergy-layer`** |
+| **Instagram** | **@trumoveinc** |
+
+Two things, four names each. The website's repo is `brittmove-829a7519`, which
+says nothing about TruMove; AOOS's Lovable slug is `trumove-resource-center`,
+which sounds like the website and is not. Both live on domains containing
+"trumove".
+
+**Publish rule:** a change a customer could see is **TruMove Website Final**. A
+change only the operator sees is **Marky Sysyems**.
+
+---
+
 # The two projects, and which is which
 
 There are two Lovable projects with confusingly similar names, and picking the
@@ -34,6 +59,7 @@ wrong project is being queried.
 | **Lovable project id** | `3c0c30e5-798a-425c-b077-6d5e8cb04e5b` |
 | **Editor** | https://lovable.dev/projects/3c0c30e5-798a-425c-b077-6d5e8cb04e5b |
 | **Live at** | **https://trumoveinc.com** (also `trumoveinc.lovable.app`) |
+| **Instagram** | **@trumoveinc** |
 | **GitHub repo** | `maxwest525/brittmove-829a7519` — note: **not** named "trumove" |
 | **Governed branch** | `main` |
 
