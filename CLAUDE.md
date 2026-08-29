@@ -5,7 +5,8 @@
 The working contract for this repository lives in [`AGENTS.md`](AGENTS.md) —
 read it before making changes. [`README.md`](README.md) says what the project is;
 [`docs/context/CURRENT_BUILD.md`](docs/context/CURRENT_BUILD.md) says where the
-build has got to and what is waiting on a human.
+build has got to; [`docs/context/BACKLOG.md`](docs/context/BACKLOG.md) says what
+is still owed, one item per ID, and is the only place open work is tracked.
 
 [`docs/context/PROJECTS.md`](docs/context/PROJECTS.md) says which Lovable project
 is which — AOOS ("Marky Sysyems") versus the public website ("TruMove Website

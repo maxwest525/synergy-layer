@@ -1,6 +1,11 @@
 # AOOS Current Build Context
 
 
+> **Open work lives in [`BACKLOG.md`](BACKLOG.md), not here and not in the handoffs.**
+> This file records current state. That one records what is still owed, with a
+> stable ID per item and a grade saying whether it was verified or only carried
+> forward. If you are looking for "what is left to do", that is the file.
+
 > **2026-08-29 — read the session record first.**
 > [`docs/handoffs/2026-08-29-session-record.md`](../handoffs/2026-08-29-session-record.md)
 > covers a session that changed several things this file assumes.
