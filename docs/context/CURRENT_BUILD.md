@@ -1,5 +1,22 @@
 # AOOS Current Build Context
 
+
+> **2026-08-29 — read the session record first.**
+> [`docs/handoffs/2026-08-29-session-record.md`](../handoffs/2026-08-29-session-record.md)
+> covers a session that changed several things this file assumes.
+>
+> The two that matter most:
+>
+> 1. **The public website served 38 characters of text on every URL**, with one
+>    sitewide title and no H1, including to Googlebot — a Vite SPA whose words
+>    only existed after JavaScript ran. Fixed by prerendering (brittmove PR #4,
+>    merged): 30 pages now ship 27,000–35,000 characters each. Any conclusion in
+>    this file drawn from thin search evidence predates that fix.
+> 2. **The page wording lane was locked to exactly two changes by the database**,
+>    not by preference — `jsonb_array_length(_changes) <> 2`, an equality, since
+>    20260814080000. Four layers enforced it. All four are removed and the
+>    migration is applied, so the lane now edits subheadings too.
+
 Purpose: a lightweight, always-current handoff note so a future agent run does not
 lose decisions made in chat. This file records **current state only**: architecture,
 live integrations, pending approvals, active workflows, and next priorities.
