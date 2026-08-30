@@ -5253,6 +5253,10 @@ export type Database = {
         }[]
       }
       normalize_email: { Args: { _email: string }; Returns: string }
+      page_wording_field_is_owned: {
+        Args: { _field: string }
+        Returns: boolean
+      }
       provider_spend_summary: { Args: { _tenant_id: string }; Returns: Json }
       provision_operator_from_allowlist: {
         Args: { _auth_user_id: string }
