@@ -8,12 +8,6 @@ import { useCommandCenter } from "./command-center-facts";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useOperatorSession } from "@/hooks/use-operator-session";
 import {
-  useSidebarWidth,
-  SIDEBAR_WIDTH_MIN,
-  SIDEBAR_WIDTH_MAX,
-} from "@/hooks/use-sidebar-width";
-
-import {
   CATEGORIES,
   breadcrumbsForPath,
   categoryForPath,
@@ -251,12 +245,6 @@ export function AppShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const hydrated = useHydrated();
   const [menuOpen, setMenuOpen] = useState(false);
-  const {
-    width: sidebarWidth,
-    setWidth: setSidebarWidth,
-    reset: resetSidebarWidth,
-  } = useSidebarWidth();
-
 
   const onAuthRoute = pathname.startsWith("/auth");
   const accessState = getWorkspaceAccessState({
@@ -294,56 +282,14 @@ export function AppShell({ children }: { children: ReactNode }) {
       <div className="flex min-h-0 flex-1">
         <aside
           aria-label="Section navigation"
-          // The directory below the categories makes this list taller than the
-          // viewport. The aside is a flex child whose height grows with its
-          // content, so overflow-y-auto alone never scrolls -- it needs a real
-          // height bound. Sticking it to the top of the viewport with h-svh
-          // gives it that bound while the main column keeps page scroll.
-          style={{ width: `${sidebarWidth}px` }}
-          className="hidden shrink-0 md:block sticky top-0 h-svh overflow-y-auto border-r border-sidebar-border"
+          // overflow-y-auto because the directory below the categories makes this
+          // list taller than the viewport on a short screen. Without it the
+          // bottom entries -- System health, and the settings link pinned by
+          // mt-auto -- are simply unreachable.
+          className="hidden w-[208px] shrink-0 overflow-y-auto border-r border-sidebar-border md:block"
         >
           <NavPanel pathname={pathname} />
         </aside>
-
-        {/* Drag to resize, double click to restore the default, arrow keys when
-            focused. The handle sits between the panel and the page so it never
-            covers a nav link. */}
-        <div
-          role="separator"
-          aria-orientation="vertical"
-          aria-label="Resize navigation"
-          aria-valuenow={sidebarWidth}
-          aria-valuemin={SIDEBAR_WIDTH_MIN}
-          aria-valuemax={SIDEBAR_WIDTH_MAX}
-          tabIndex={0}
-          onDoubleClick={resetSidebarWidth}
-          onPointerDown={(event) => {
-            event.preventDefault();
-            const startX = event.clientX;
-            const startWidth = sidebarWidth;
-            const onMove = (move: PointerEvent) => {
-              setSidebarWidth(startWidth + (move.clientX - startX));
-            };
-            const onUp = () => {
-              window.removeEventListener("pointermove", onMove);
-              window.removeEventListener("pointerup", onUp);
-            };
-            window.addEventListener("pointermove", onMove);
-            window.addEventListener("pointerup", onUp);
-          }}
-          onKeyDown={(event) => {
-            if (event.key === "ArrowLeft") {
-              event.preventDefault();
-              setSidebarWidth(sidebarWidth - 16);
-            }
-            if (event.key === "ArrowRight") {
-              event.preventDefault();
-              setSidebarWidth(sidebarWidth + 16);
-            }
-          }}
-          className="hidden md:block sticky top-0 h-svh w-1.5 -ml-[3px] shrink-0 cursor-col-resize bg-transparent transition-colors hover:bg-primary/40 focus-visible:bg-primary/60 focus-visible:outline-none"
-        />
-
 
         <div className="flex min-w-0 flex-1 flex-col">
           <div className="border-b border-sidebar-border px-4 py-2 md:hidden">
