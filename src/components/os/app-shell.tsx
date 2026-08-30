@@ -245,6 +245,12 @@ export function AppShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const hydrated = useHydrated();
   const [menuOpen, setMenuOpen] = useState(false);
+  const {
+    width: sidebarWidth,
+    setWidth: setSidebarWidth,
+    reset: resetSidebarWidth,
+  } = useSidebarWidth();
+
 
   const onAuthRoute = pathname.startsWith("/auth");
   const accessState = getWorkspaceAccessState({
