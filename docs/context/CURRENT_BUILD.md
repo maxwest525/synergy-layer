@@ -737,3 +737,9 @@ Findings that change how AOOS should treat Search Console:
 Sequencing recommended, none of it implemented: consume the stored inspection
 fields, ingest layers 1 and 2 as citable knowledge, add a JSON-LD reader and
 diff, then widen page proposals beyond title and H1.
+
+## Git remote (2026-08-30)
+
+This project syncs to `maxwest525/trumove-resource-center` on branch `main`.
+It is a separate repository from `synergy-layer`, which belongs to a different
+project and must not be pointed at this tree.
