@@ -7,11 +7,7 @@ import { navDirectory } from "@/lib/nav-directory";
 import { useCommandCenter } from "./command-center-facts";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useOperatorSession } from "@/hooks/use-operator-session";
-import {
-  useSidebarWidth,
-  SIDEBAR_WIDTH_MIN,
-  SIDEBAR_WIDTH_MAX,
-} from "@/hooks/use-sidebar-width";
+import { useSidebarWidth, SIDEBAR_WIDTH_MIN, SIDEBAR_WIDTH_MAX } from "@/hooks/use-sidebar-width";
 
 import {
   CATEGORIES,
@@ -257,7 +253,6 @@ export function AppShell({ children }: { children: ReactNode }) {
     reset: resetSidebarWidth,
   } = useSidebarWidth();
 
-
   const onAuthRoute = pathname.startsWith("/auth");
   const accessState = getWorkspaceAccessState({
     ready: session.ready,
@@ -343,7 +338,6 @@ export function AppShell({ children }: { children: ReactNode }) {
           }}
           className="hidden md:block sticky top-0 h-svh w-1.5 -ml-[3px] shrink-0 cursor-col-resize bg-transparent transition-colors hover:bg-primary/40 focus-visible:bg-primary/60 focus-visible:outline-none"
         />
-
 
         <div className="flex min-w-0 flex-1 flex-col">
           <div className="border-b border-sidebar-border px-4 py-2 md:hidden">
