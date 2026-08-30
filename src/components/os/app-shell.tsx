@@ -282,11 +282,12 @@ export function AppShell({ children }: { children: ReactNode }) {
       <div className="flex min-h-0 flex-1">
         <aside
           aria-label="Section navigation"
-          // overflow-y-auto because the directory below the categories makes this
-          // list taller than the viewport on a short screen. Without it the
-          // bottom entries -- System health, and the settings link pinned by
-          // mt-auto -- are simply unreachable.
-          className="hidden w-[208px] shrink-0 overflow-y-auto border-r border-sidebar-border md:block"
+          // The directory below the categories makes this list taller than the
+          // viewport. The aside is a flex child whose height grows with its
+          // content, so overflow-y-auto alone never scrolls -- it needs a real
+          // height bound. Sticking it to the top of the viewport with h-svh
+          // gives it that bound while the main column keeps page scroll.
+          className="hidden w-[208px] shrink-0 md:block sticky top-0 h-svh overflow-y-auto border-r border-sidebar-border"
         >
           <NavPanel pathname={pathname} />
         </aside>
