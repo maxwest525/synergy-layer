@@ -8,6 +8,12 @@ import { useCommandCenter } from "./command-center-facts";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useOperatorSession } from "@/hooks/use-operator-session";
 import {
+  useSidebarWidth,
+  SIDEBAR_WIDTH_MIN,
+  SIDEBAR_WIDTH_MAX,
+} from "@/hooks/use-sidebar-width";
+
+import {
   CATEGORIES,
   breadcrumbsForPath,
   categoryForPath,
