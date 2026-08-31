@@ -1,4 +1,11 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+import type { Database } from "@/integrations/supabase/types";
+import { assertAiBudget, recordAiSpend } from "./budget.server";
+import { estimateCostUsd, estimateTokensFromChars, pricingForRole } from "./pricing";
 import { modelForRole, readModelRouting, withPromptCaching } from "./routing";
+
+type Client = SupabaseClient<Database>;
 
 /**
  * Structured JSON from a model, over the OpenAI chat shape.
@@ -20,6 +27,14 @@ import { modelForRole, readModelRouting, withPromptCaching } from "./routing";
 
 const REQUEST_TIMEOUT_MS = 20_000;
 
+/**
+ * A worst-case output-token guess for the pre-call budget gate, used only to
+ * decide whether to refuse the call before it happens. A JSON-schema
+ * constrained wording response is a handful of short strings, not free text,
+ * so this is deliberately generous rather than tuned per schema.
+ */
+const ASSUMED_MAX_OUTPUT_TOKENS = 800;
+
 export type StructuredRequest = {
   /** Fixed per surface, and the only part worth caching. */
   readonly system: string;
@@ -27,6 +42,11 @@ export type StructuredRequest = {
   readonly schemaName: string;
   readonly schema: Record<string, unknown>;
   readonly fetcher?: typeof fetch;
+  /** Whose spend this call counts against, and where to enforce the ceiling. */
+  readonly client: Client;
+  readonly tenantId: string;
+  /** Which caller this was, recorded on the spend row for `ai_gateway_requests`. */
+  readonly surface: string;
 };
 
 /** True when a proxy is configured, so the caller knows this path is available. */
@@ -35,9 +55,20 @@ export { litellmConfigured } from "./routing";
 export async function generateStructuredJson(input: StructuredRequest): Promise<unknown> {
   const routing = readModelRouting(process.env);
   const fetcher = input.fetcher ?? fetch;
+  const model = modelForRole(process.env, "wording");
+  const pricing = pricingForRole(process.env, "wording");
+
+  if (pricing) {
+    const estimatedInputTokens = estimateTokensFromChars(input.system.length + input.prompt.length);
+    await assertAiBudget(
+      input.client,
+      input.tenantId,
+      estimateCostUsd(pricing, estimatedInputTokens, ASSUMED_MAX_OUTPUT_TOKENS),
+    );
+  }
 
   const base: Record<string, unknown> = {
-    model: modelForRole(process.env, "wording"),
+    model,
     messages: [
       { role: "system", content: input.system },
       { role: "user", content: input.prompt },
@@ -84,10 +115,32 @@ export async function generateStructuredJson(input: StructuredRequest): Promise<
     throw new Error("The model proxy returned an unreadable response; no proposal was created.");
   }
 
-  const text = (envelope as { choices?: { message?: { content?: unknown } }[] }).choices?.[0]
-    ?.message?.content;
+  const parsed = envelope as {
+    choices?: { message?: { content?: unknown } }[];
+    usage?: { prompt_tokens?: unknown; completion_tokens?: unknown };
+  };
+  const text = parsed.choices?.[0]?.message?.content;
   if (typeof text !== "string") {
     throw new Error("The model returned no structured JSON; no proposal was created.");
+  }
+
+  if (pricing) {
+    const inputTokens =
+      typeof parsed.usage?.prompt_tokens === "number" ? parsed.usage.prompt_tokens : 0;
+    const outputTokens =
+      typeof parsed.usage?.completion_tokens === "number" ? parsed.usage.completion_tokens : 0;
+    await recordAiSpend(
+      input.client,
+      input.tenantId,
+      estimateCostUsd(pricing, inputTokens, outputTokens),
+      {
+        surface: input.surface,
+        model,
+        inputTokens,
+        outputTokens,
+        priced: true,
+      },
+    );
   }
 
   try {

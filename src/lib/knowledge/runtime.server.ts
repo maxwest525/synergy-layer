@@ -52,6 +52,8 @@ type EmbedderInput = {
   apiKey: string;
   documents: { title: string; text: string }[];
   model?: string;
+  client: Client;
+  tenantId: string;
 };
 
 type IngestOptions = {
@@ -181,6 +183,7 @@ export function createKnowledgeRuntimeStore(client: Client): KnowledgeRuntimeSto
 
 export async function ingestKnowledgeVersionWithStore(
   store: KnowledgeRuntimeStore,
+  client: Client,
   tenantId: string,
   input: KnowledgeSourceInput,
   options: IngestOptions,
@@ -218,6 +221,8 @@ export async function ingestKnowledgeVersionWithStore(
       title: `${input.title}: ${chunk.headingPath.join(" > ")}`,
       text: chunk.body,
     })),
+    client,
+    tenantId,
     ...(options.model === undefined ? {} : { model: options.model }),
   };
   const embeddings = await embedder(embeddingInput);
@@ -272,6 +277,7 @@ export async function ingestKnowledgeVersion(
 ) {
   return ingestKnowledgeVersionWithStore(
     createKnowledgeRuntimeStore(client),
+    client,
     tenantId,
     input,
     options,
@@ -288,6 +294,8 @@ export async function retrieveGovernedKnowledge(
   const queryVector = await embedQuery({
     apiKey,
     query,
+    client,
+    tenantId,
     ...(options.model === undefined ? {} : { model: options.model }),
   });
   const { data, error } = await client.rpc("match_knowledge_chunks", {

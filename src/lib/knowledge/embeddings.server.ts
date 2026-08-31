@@ -1,10 +1,15 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+import type { Database } from "@/integrations/supabase/types";
 import { GEMINI_API_ORIGIN } from "../gemini.server";
+import { assertAiBudget, recordAiSpend } from "../ai/budget.server";
+import { estimateCostUsd, estimateTokensFromChars, pricingForRole } from "../ai/pricing";
 import { litellmConfigured, modelForRole, readModelRouting } from "../ai/routing";
+
+type Client = SupabaseClient<Database>;
 
 export const KNOWLEDGE_EMBEDDING_MODEL = "gemini-embedding-001";
 export const KNOWLEDGE_EMBEDDING_DIMENSIONS = 768;
-
-const PROXY_REQUEST_TIMEOUT_MS = 20_000;
 
 type Fetcher = (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
 
@@ -13,6 +18,9 @@ type EmbeddingOptions = {
   model?: string;
   fetcher?: Fetcher;
   timeoutMs?: number;
+  /** Whose spend a proxy-routed call counts against; unused on the direct path. */
+  client: Client;
+  tenantId: string;
 };
 
 type DocumentEmbeddingInput = EmbeddingOptions & {
@@ -52,8 +60,20 @@ async function embedViaProxy(
   taskType: "RETRIEVAL_DOCUMENT" | "RETRIEVAL_QUERY",
   fetcher: Fetcher,
   timeoutMs: number,
+  client: Client,
+  tenantId: string,
 ): Promise<number[][]> {
   const routing = readModelRouting(process.env);
+  const model = modelForRole(process.env, "embedding");
+  const pricing = pricingForRole(process.env, "embedding");
+
+  if (pricing) {
+    const estimatedInputTokens = estimateTokensFromChars(
+      texts.reduce((total, text) => total + text.length, 0),
+    );
+    await assertAiBudget(client, tenantId, estimateCostUsd(pricing, estimatedInputTokens, 0));
+  }
+
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   let response: Response;
@@ -66,7 +86,7 @@ async function embedViaProxy(
         ...routing.headers,
       },
       body: JSON.stringify({
-        model: modelForRole(process.env, "embedding"),
+        model,
         input: texts,
         task_type: taskType,
       }),
@@ -89,10 +109,24 @@ async function embedViaProxy(
 
   const payload = (await response.json()) as {
     data?: { embedding?: unknown; index?: number }[];
+    usage?: { prompt_tokens?: unknown };
   };
   if (!Array.isArray(payload.data) || payload.data.length !== texts.length) {
     throw new Error("The model proxy returned the wrong number of embeddings.");
   }
+
+  if (pricing) {
+    const inputTokens =
+      typeof payload.usage?.prompt_tokens === "number" ? payload.usage.prompt_tokens : 0;
+    await recordAiSpend(client, tenantId, estimateCostUsd(pricing, inputTokens, 0), {
+      surface: "knowledge_embedding",
+      model,
+      inputTokens,
+      outputTokens: 0,
+      priced: true,
+    });
+  }
+
   return [...payload.data]
     .sort((a, b) => (a.index ?? 0) - (b.index ?? 0))
     .map((entry) => validateVector(entry.embedding));
@@ -156,6 +190,8 @@ export async function embedDocuments(input: DocumentEmbeddingInput): Promise<num
           "RETRIEVAL_DOCUMENT",
           fetcher,
           timeoutMs,
+          input.client,
+          input.tenantId,
         )),
       );
     }
@@ -200,7 +236,14 @@ export async function embedQuery(input: QueryEmbeddingInput): Promise<number[]> 
   const timeoutMs = input.timeoutMs ?? 30_000;
 
   if (litellmConfigured(process.env)) {
-    const [vector] = await embedViaProxy([query], "RETRIEVAL_QUERY", fetcher, timeoutMs);
+    const [vector] = await embedViaProxy(
+      [query],
+      "RETRIEVAL_QUERY",
+      fetcher,
+      timeoutMs,
+      input.client,
+      input.tenantId,
+    );
     return vector!;
   }
 

@@ -55,6 +55,7 @@ describe("governed knowledge ingestion", () => {
     );
     const result = await ingestKnowledgeVersionWithStore(
       store,
+      {} as never,
       "tenant-1",
       {
         stableKey: "playbook.authority-science",
@@ -81,6 +82,7 @@ describe("governed knowledge ingestion", () => {
     const embedder = vi.fn();
     const result = await ingestKnowledgeVersionWithStore(
       store,
+      {} as never,
       "tenant-1",
       {
         stableKey: "manual.source-of-truth",
