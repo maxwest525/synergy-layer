@@ -1,3 +1,5 @@
+import { UMAMI_RULE_THRESHOLDS } from "../umami-rule-checks";
+
 /**
  * Self-hosted Umami transport. Credentials stay server side: the token is
  * obtained per request from POST /api/auth/login and never leaves this module.
@@ -192,7 +194,10 @@ export async function fetchUmamiMetrics(
   type: "path" | "referrer",
   startAt: number,
   endAt: number,
-  limit = 25,
+  // Read from the one exported object rather than hand-copied (AGENTS.md:
+  // "No threshold value copied by hand") so umami-rule-checks.ts's
+  // completeness guard reasons about the same slice this transport applies.
+  limit: number = UMAMI_RULE_THRESHOLDS.referrer.appSliceLimit,
 ): Promise<UmamiMetricRow[]> {
   const raw = await umamiGet<unknown>(
     `/api/websites/${encodeURIComponent(websiteId)}/metrics?startAt=${startAt}&endAt=${endAt}&type=${type}`,

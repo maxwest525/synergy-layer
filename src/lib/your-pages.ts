@@ -453,7 +453,7 @@ export function buildYourPages(facts: YourPagesFacts): YourPagesView {
       pageAudit: facts.lastObservedAt !== null,
       analytics: facts.sessions !== null,
       // Nothing on this page reads a stored URL inspection, approved
-      // keywords, or backlink snapshots yet.
+      // keywords, backlink snapshots, or a second Umami window yet.
       urlInspection: true,
       approvedKeywords: true,
       backlinkCollection: true,
@@ -463,6 +463,14 @@ export function buildYourPages(facts: YourPagesFacts): YourPagesView {
       technologyCollection: true,
       brandMentionCollection: true,
       reviewedCompetitorSet: true,
+      umamiSecondWindow: true,
+      // Stated gap: this page's duplicate-title/description findings need an
+      // OnPage crawl, but this view model does not yet read
+      // dataforseo_snapshots to know whether one has been collected. Passing
+      // true keeps the banner silent rather than wrong; the rules themselves
+      // are unaffected (onpage-rule-checks.ts already returns nothing/a
+      // named absence without a crawl). Wiring a real read is follow-up work.
+      onpageCrawl: true,
     }),
     neverRunNotice: facts.lastObservedAt === null ? NEVER_RUN : null,
     orphanNote:

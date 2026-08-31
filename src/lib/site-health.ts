@@ -453,8 +453,9 @@ export function buildSiteHealth(facts: SiteHealthFacts): SiteHealthView {
       : null,
     // Nothing on this page reads a comparison window, analytics, a stored URL
     // inspection, approved keywords, backlink snapshots, whois or
-    // technology-stack evidence, brand mentions, or a reviewed competitor
-    // set, so those pass true and say nothing rather than guessing.
+    // technology-stack evidence, brand mentions, a reviewed competitor set,
+    // or a second Umami window, so those pass true and say nothing rather
+    // than guessing.
     waitingOn: unmetPrerequisites({
       secondCollection: true,
       pageAudit: facts.siteObservedAt !== null,
@@ -466,6 +467,14 @@ export function buildSiteHealth(facts: SiteHealthFacts): SiteHealthView {
       technologyCollection: true,
       brandMentionCollection: true,
       reviewedCompetitorSet: true,
+      umamiSecondWindow: true,
+      // Stated gap: this page's site-audit findings need an OnPage crawl,
+      // but SiteHealthFacts does not yet carry whether one has been
+      // collected. Passing true keeps the banner silent rather than wrong;
+      // the rules themselves are unaffected (onpage-rule-checks.ts already
+      // returns nothing/a named absence without a crawl). Wiring a real
+      // read from dataforseo_snapshots is follow-up work.
+      onpageCrawl: true,
     }),
     neverRunNotice: facts.siteObservedAt === null ? NEVER_RUN : null,
   };

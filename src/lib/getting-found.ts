@@ -308,6 +308,20 @@ export function describeAnswerability(
   const beyond = assignments
     .filter((assignment) => assignment.bucket === "beyond_current_volume")
     .map((assignment) => {
+      // The shared sentence below is built on Search Console site impressions
+      // per page, so it only fits the query-dimension rules named in
+      // BEYOND_RULE_NAMES. umami_referrer_source_stopped needs Umami visits
+      // from a single referrer, not GSC impressions per page — a different
+      // provider's count entirely — so it gets its own sentence rather than
+      // being run through per-page math that says nothing about it, or
+      // falling back to its developer-facing rule id on screen.
+      if (assignment.rule === "umami_referrer_source_stopped") {
+        return (
+          `Referral-source dropout checks need a source to have carried at least ` +
+          `${assignment.needsPerTarget} visits in a window before it going quiet means anything. ` +
+          `That is a count of Umami visits, not the Search Console appearances the rest of this page measures.`
+        );
+      }
       const name = BEYOND_RULE_NAMES[assignment.rule] ?? assignment.rule;
       const unit = PER_PAGE_BEYOND_RULES.has(assignment.rule)
         ? "on a single page"
@@ -342,7 +356,8 @@ function answerabilityFor(facts: GettingFoundFacts): Answerability | null {
     // Coverage being present already means the page audit read something.
     pageAudit: true,
     analytics: facts.sessions !== null,
-    // Nothing on this page reads a stored URL inspection yet.
+    // Nothing on this page reads a stored URL inspection or a second Umami
+    // window yet.
     urlInspection: true,
     approvedKeywords: facts.approvedKeywords > 0,
     backlinkCollection: facts.backlinkSnapshots >= 2,
@@ -354,6 +369,10 @@ function answerabilityFor(facts: GettingFoundFacts): Answerability | null {
     technologyCollection: true,
     brandMentionCollection: true,
     reviewedCompetitorSet: true,
+    umamiSecondWindow: true,
+    // None of this page's rules are OnPage crawl rules (site-audit routes to
+    // health/pages), so this always reads as met, same as urlInspection above.
+    onpageCrawl: true,
   });
 
   if (facts.comparison.status !== "ready") {

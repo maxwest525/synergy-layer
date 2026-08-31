@@ -53,11 +53,12 @@ describe("the stage no screen has ever shown", () => {
   });
 
   it("says the reading is happening and the telling is not", () => {
-    // Umami, not PageSpeed: PageSpeed earned a rule module and now reaches the
-    // operator, so this example moved to a connector that is still silent.
-    const view = buildConnections([facts("umami", { storedRows: 412 })]);
-    expect(row(view, "umami").reason).toContain("412");
-    expect(row(view, "umami").reason).toMatch(/reading is happening; the telling is not/i);
+    // OpenSEO, not Umami: Umami earned a rule module (umami-rules.server.ts)
+    // and now reaches the operator, so this example moved again to a
+    // connector that is still silent.
+    const view = buildConnections([facts("openseo", { storedRows: 412 })]);
+    expect(row(view, "openseo").reason).toContain("412");
+    expect(row(view, "openseo").reason).toMatch(/reading is happening; the telling is not/i);
   });
 
   it("names the silent ones in the headline", () => {
@@ -73,12 +74,14 @@ describe("the stage no screen has ever shown", () => {
   it("counts the writers rather than asserting how many there are", () => {
     // This sentence said "two" when there were three, then "three" when the
     // targeting pass made DataForSEO the fourth, then "five" once PageSpeed
-    // shipped a rule module. It is now derived, so a sixth writer
-    // (discovery-findings.server.ts, "competitor-discovery") moves it again
-    // without anyone having to remember to update a hand-written number here.
-    const view = buildConnections([facts("umami", { storedRows: 412 })]);
-    expect(view.headline).toContain("six parts");
-    expect(FINDING_SOURCES).toHaveLength(6);
+    // and DataForSEO's targeting pass both wrote. `onpage-rules.server.ts`
+    // (site-audit), `backlink-rules.server.ts` (backlink-findings) and
+    // `umami-rules.server.ts` (umami) made it eight; `discovery-findings.server.ts`
+    // (competitor-discovery) makes it nine. It is derived from
+    // FINDING_SOURCES, not hand-counted.
+    const view = buildConnections([facts("openseo", { storedRows: 412 })]);
+    expect(view.headline).toContain("nine parts");
+    expect(FINDING_SOURCES).toHaveLength(9);
   });
 
   it("says nothing when no connection is collecting in silence", () => {
