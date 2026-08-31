@@ -453,10 +453,11 @@ export function buildYourPages(facts: YourPagesFacts): YourPagesView {
       pageAudit: facts.lastObservedAt !== null,
       analytics: facts.sessions !== null,
       // Nothing on this page reads a stored URL inspection, approved
-      // keywords, or backlink snapshots yet.
+      // keywords, backlink snapshots, or a second Umami window yet.
       urlInspection: true,
       approvedKeywords: true,
       backlinkCollection: true,
+      umamiSecondWindow: true,
     }),
     neverRunNotice: facts.lastObservedAt === null ? NEVER_RUN : null,
     orphanNote:
