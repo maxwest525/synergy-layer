@@ -21,7 +21,10 @@ build has got to. This file is the contract for making changes.
 1. **Read the current state.** `docs/context/CURRENT_BUILD.md` records what is
    live, what is blocked, and what is waiting on a human. It is the fastest way
    to avoid rebuilding something that exists or wiring something that is
-   deliberately not wired.
+   deliberately not wired. Its companion `docs/context/BACKLOG.md` records what
+   is still *owed* — every open item, with a stable ID and a grade saying
+   whether it was verified against the code or only carried forward from an
+   older note. Look for work there, not at the bottom of a handoff.
 2. **Documentation-first for anything touching a provider.** Authoritative
    vendor documentation is read and digested into
    `docs/integrations/<provider>/DIGEST.md` *before* integration code is
@@ -189,6 +192,14 @@ Update the record you invalidated, in the same change:
 | Provider behaviour you learned from vendor documentation | `docs/integrations/<provider>/DIGEST.md` |
 | A phase of the category-page redesign | `docs/superpowers/plans/category-page-redesign-STATE.md` |
 | Work someone else will pick up | a dated file in `docs/handoffs/`, with its status on the first line |
+| An item listed in the backlog | `docs/context/BACKLOG.md` — move it to §D with the commit that closed it |
+| Work you found and are not doing | add it to `docs/context/BACKLOG.md` with a new ID |
 
 A handoff whose status line is wrong is worse than no handoff. When you finish
 the work a handoff describes, close it in the same change.
+
+The same applies to the backlog, and it is the reason that file exists: seven
+handoffs each described part of the open work in prose, none of them in a form
+that could be reconciled, and the result was that nobody — human or agent —
+could answer "what is left". One list, with IDs, closed in the same change as
+the work.

@@ -3,7 +3,7 @@ id: 20260814-validation-gates
 title: Validation Gates
 tags: [execution, evidence, testing]
 created: 2026-08-14
-updated: 2026-08-14
+updated: 2026-08-29
 related:
   [
     20260814-evidence-policy,
@@ -24,7 +24,7 @@ summary: Fail-closed gates for evidence, claims, intent, duplication, drift, exe
 | Gate          | Pass condition                                                              | Failure result                                |
 | ------------- | --------------------------------------------------------------------------- | --------------------------------------------- |
 | Target        | exact allowlisted public URL and eligible page-level finding                | no proposal                                   |
-| Render        | reachable final URL, readable title, exactly one H1, main text, checksum    | no proposal                                   |
+| Render        | reachable final URL, readable title, main text, checksum                    | no proposal                                   |
 | Evidence      | sufficient dated GSC and relevant stored DataForSEO evidence                | `insufficient evidence`                       |
 | Intent        | proposed wording matches mapped page purpose and observed query job         | proposal rejected                             |
 | Claims        | every factual promise exists on the page or approved claims registry        | proposal rejected                             |
@@ -44,7 +44,25 @@ The model may draft structured candidates only. Deterministic code owns eligibil
 
 ## Current state
 
-Title/H1 evidence, model/development wording, persistence, UI, approval locking, exact-source execution, drift refusal, and rendered proof are `IMPLEMENTED` and deployed. Provider calls still require configured credentials. The GA4 registry is deployed, but the live database currently has zero GA4 snapshots, so GA4 readout remains unproven rather than implied.
+**Corrected 2026-08-29.** Two claims here were stale.
+
+The Render gate no longer requires exactly one H1. `verifyRenderedPage`
+(`src/lib/execution/source-change.ts`) was rewritten so a change to any owned
+field — `seo_title`, `page_heading`, `meta_description`, or a subheading — is
+independently provable; a page carrying a subheading change alone is proof
+enough. Demanding both a title and an H1 on every change is exactly what forced
+every proposal into a title-and-H1 shape regardless of what the finding said,
+and is recorded as the cause in the code's own comment.
+
+"The live database currently has zero GA4 snapshots" is no longer true: 13
+`ga4_snapshots` rows exist and `ga4-rule-checks.ts` fires four findings from
+them (`page_traffic_loss`, `page_traffic_gain`, `zero_engagement_page`,
+`event_disappeared` — see Detection Rules). GA4 readout is proven, not merely
+deployed.
+
+Page wording, model/development drafting, persistence, UI, approval locking,
+exact-source execution, drift refusal, and rendered proof are `IMPLEMENTED` and
+deployed. Provider calls still require configured credentials.
 
 ## Related
 

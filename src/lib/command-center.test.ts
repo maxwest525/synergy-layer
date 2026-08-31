@@ -335,7 +335,7 @@ describe("waiting counts and the assist line", () => {
     }
   });
 
-  it("writes the assist line in plain words with real counts", () => {
+  it("writes the assist line in plain words with real counts, each linked to its category", () => {
     const view = buildCommandCenter(
       withFacts({
         queueSources: [
@@ -345,7 +345,10 @@ describe("waiting counts and the assist line", () => {
         ],
       }),
     );
-    expect(view.assistLine).toEqual(["2 search fixes waiting", "1 connection to finish"]);
+    expect(view.assistLine).toEqual([
+      { phrase: "2 search fixes waiting", to: "/search" },
+      { phrase: "1 connection to finish", to: "/capabilities" },
+    ]);
   });
 
   it("says nothing needs you when the queue is empty", () => {

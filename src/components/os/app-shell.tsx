@@ -6,7 +6,8 @@ import { categoryIcon } from "./category-icons";
 import { navDirectory } from "@/lib/nav-directory";
 import { useCommandCenter } from "./command-center-facts";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { useOperatorSession } from "@/hooks/use-operator-session";
+import { useOperatorSession, type OperatorSession } from "@/hooks/use-operator-session";
+import { TenantSwitcher } from "./tenant-switcher";
 import {
   CATEGORIES,
   breadcrumbsForPath,
@@ -56,7 +57,15 @@ function WaitingBadge({ count, tone }: { count: number; tone: NavTone | null }) 
   );
 }
 
-function NavPanel({ pathname, onNavigate }: { pathname: string; onNavigate?: () => void }) {
+function NavPanel({
+  pathname,
+  session,
+  onNavigate,
+}: {
+  pathname: string;
+  session: OperatorSession;
+  onNavigate?: () => void;
+}) {
   const { view } = useCommandCenter();
   const current = categoryForPath(pathname);
   const heading = current ?? null;
@@ -66,14 +75,30 @@ function NavPanel({ pathname, onNavigate }: { pathname: string; onNavigate?: () 
 
   return (
     <div className="flex h-full w-full flex-col gap-1 px-3 py-3.5">
-      <div className="flex items-center gap-2 px-2.5 pb-2.5 pt-1">
+      {/*
+        This used to render as a plain <span>. "Other categories" below
+        excludes whichever category you're currently in -- by design, so the
+        list doesn't show you the page you're already on -- but that left the
+        category you're in with no clickable link anywhere in the sidebar at
+        all: not here, not in the list below (which no longer lists it), and
+        not in navDirectory() (which never carried the category roots to begin
+        with). The only way back to a category's own landing page, from
+        anywhere inside it, was the browser's back button. Linking the heading
+        to the current category's route closes that; on "/" it points at "/",
+        which is harmless since Command center is already linked just below.
+      */}
+      <Link
+        to={current?.to ?? "/"}
+        onClick={onNavigate}
+        className="flex items-center gap-2 rounded-lg px-2.5 pb-2.5 pt-1 text-[13px] font-bold text-foreground transition-colors hover:text-primary"
+      >
         <HeadingIcon
           className="h-[15px] w-[15px] text-primary"
           strokeWidth={1.6}
           aria-hidden="true"
         />
-        <span className="text-[13px] font-bold text-foreground">{heading?.title ?? "Today"}</span>
-      </div>
+        {heading?.title ?? "Today"}
+      </Link>
 
       <p className="px-2.5 pb-0.5 pt-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-subtle">
         Start here
@@ -145,8 +170,21 @@ function NavPanel({ pathname, onNavigate }: { pathname: string; onNavigate?: () 
         </div>
       ))}
 
+      {/* The workspace switcher. It lived in the previous shell and was lost on
+          2026-08-20 when the root started rendering this one instead, so
+          `switchTenant` and the whole workspace-scoping design had no control
+          in the product at all. One tenant exists today, which is the only
+          reason nobody noticed.
+
+          `mt-auto` moves here from the settings link below: this block now
+          absorbs the free space and pins the pair to the foot of the sidebar,
+          which is where settings already sat. */}
+      <div className="mt-auto px-2.5 pb-1.5 pt-3">
+        <TenantSwitcher session={session} />
+      </div>
+
       {/* Settings sat at the foot of the icon rail. The rail is gone, so it
-          keeps that position here — `mt-auto` pins it to the bottom. */}
+          keeps that position here, directly under the switcher. */}
       {navEntries()
         .filter((entry) => entry.kind === "settings")
         .map((entry) => {
@@ -159,7 +197,7 @@ function NavPanel({ pathname, onNavigate }: { pathname: string; onNavigate?: () 
               onClick={onNavigate}
               aria-current={active ? "page" : undefined}
               className={cn(
-                "mt-auto flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-[13px] text-sidebar-foreground transition-colors hover:text-foreground",
+                "flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-[13px] text-sidebar-foreground transition-colors hover:text-foreground",
                 active &&
                   "rounded-l-none border-l-2 border-primary bg-accent font-semibold text-primary",
               )}
@@ -288,7 +326,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           // mt-auto -- are simply unreachable.
           className="hidden w-[208px] shrink-0 overflow-y-auto border-r border-sidebar-border md:block"
         >
-          <NavPanel pathname={pathname} />
+          <NavPanel pathname={pathname} session={session} />
         </aside>
 
         <div className="flex min-w-0 flex-1 flex-col">
@@ -302,7 +340,11 @@ export function AppShell({ children }: { children: ReactNode }) {
                 Menu
               </SheetTrigger>
               <SheetContent side="left" className="w-[260px] p-0">
-                <NavPanel pathname={pathname} onNavigate={() => setMenuOpen(false)} />
+                <NavPanel
+                  pathname={pathname}
+                  session={session}
+                  onNavigate={() => setMenuOpen(false)}
+                />
               </SheetContent>
             </Sheet>
           </div>

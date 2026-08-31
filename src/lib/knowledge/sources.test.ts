@@ -1,9 +1,9 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
-import { loadGovernedKnowledgeSources } from "./sources";
+import { EXECUTION_HANDBOOK_FILES, loadGovernedKnowledgeSources } from "./sources";
 
 describe("governed production source manifest", () => {
   it("does not resolve the repository URL while the bundled server module initializes", () => {
@@ -35,6 +35,29 @@ describe("governed production source manifest", () => {
     expect(handbook.map((source) => source.sourceRef)).toContain(
       "docs/execution-handbook/COMPETITIVE_MODEL.md",
     );
+  });
+
+  /**
+   * EXECUTION_HANDBOOK_FILES is an allowlist, not a glob. A file added to
+   * docs/execution-handbook/ and left out of it is not governed knowledge: it
+   * is never ingested, never embedded, and never retrieved, while looking to a
+   * human exactly like the files that are. Nothing announces that.
+   *
+   * It has already happened once. COMPETITIVE_MODEL.md was written, linked from
+   * the handbook index, and not ingested, which is a worse failure than a
+   * missing file -- the doctrine deciding who counts as a competitor was
+   * present for a reader and absent for every agent.
+   *
+   * So the directory is the assertion. Adding a handbook document now fails
+   * here by name until it is either governed or explicitly refused.
+   */
+  it("governs every file in the handbook directory, with nothing listed that is not there", () => {
+    const directory = fileURLToPath(new URL("../../../docs/execution-handbook/", import.meta.url));
+    const onDisk = readdirSync(directory)
+      .filter((entry) => entry.endsWith(".md"))
+      .sort();
+
+    expect(onDisk).toEqual([...EXECUTION_HANDBOOK_FILES].sort());
   });
 
   it("loads the same source inventory from the production bundle", () => {

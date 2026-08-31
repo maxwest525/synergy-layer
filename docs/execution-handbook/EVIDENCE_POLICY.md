@@ -3,7 +3,7 @@ id: 20260814-evidence-policy
 title: Evidence Policy
 tags: [evidence, governance, seo]
 created: 2026-08-14
-updated: 2026-08-14
+updated: 2026-08-29
 related:
   [
     20260814-source-of-truth,
@@ -54,9 +54,22 @@ Every evidence object must carry source/provider, collection time, target/query/
 - Provider estimates never replace owned measurements.
 - Generated copy never serves as factual support for its own claims.
 
-## Title/H1 sufficiency
+## Page wording sufficiency
 
-The current executable slice requires one allowlisted rendered live page with one H1, exact-page GSC rows, relevant active-tracked DataForSEO competitor evidence, and the source revision/before-values needed for execution. GA4 and SerpAPI have optional, explicitly labeled roles; their absence is disclosed and does not block title/H1 drafting. No composite score may conceal a missing mandatory source.
+**Corrected 2026-08-29**, retitled from "Title/H1 sufficiency": that name and
+its rule both described a fixed two-field shape the wording lane no longer has.
+`page_wording` owns `seo_title`, `page_heading`, and `subheading`
+(`page_wording_field_is_owned()`), and a proposal drafts whichever of those the
+finding's evidence actually supports — one field, not necessarily two.
+
+The requirement is: one allowlisted rendered live page, exact-page GSC rows,
+relevant active-tracked DataForSEO competitor evidence, and the source
+revision/before-values needed for execution, **for each field the proposal
+changes**. A change naming a subheading not present on the live page is
+dropped rather than drafted (`buildPageWordingChanges`); a proposal is refused
+only if nothing genuinely changed. GA4 and SerpAPI have optional, explicitly
+labeled roles; their absence is disclosed and does not block drafting. No
+composite score may conceal a missing mandatory source.
 
 ## Related
 

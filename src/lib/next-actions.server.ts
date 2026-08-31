@@ -1,6 +1,6 @@
 import { generateText } from "ai";
 
-import { createGateway, reasoningModel } from "./ai/gateway.server";
+import { createGateway, fastModel } from "./ai/gateway.server";
 import type { NextAction } from "./next-actions";
 
 export type PrioritizedAction = {
@@ -42,6 +42,11 @@ function parse(text: string): { orderedIds: unknown; rewritten: unknown; note: u
  * Optional agent pass over the deterministic actions. The model can only
  * choose among ids that already exist, so a hallucinated action is dropped
  * rather than shown, and the deterministic order survives any failure.
+ *
+ * Uses the fast model, not reasoning: reordering an existing short list and
+ * rewording each reason in one plain sentence is bounded, constrained-output
+ * work with a safe fallback on any failure, not a task that benefits from a
+ * larger model's depth.
  */
 export async function prioritizeActions(actions: NextAction[]): Promise<Prioritization> {
   const known = new Set(actions.map((action) => action.id));
@@ -56,7 +61,7 @@ export async function prioritizeActions(actions: NextAction[]): Promise<Prioriti
   try {
     const gateway = createGateway();
     const result = await generateText({
-      model: gateway(reasoningModel()),
+      model: gateway(fastModel()),
       system: SYSTEM,
       prompt: JSON.stringify(
         actions.map((action) => ({

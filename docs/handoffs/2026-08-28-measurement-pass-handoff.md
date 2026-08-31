@@ -1,15 +1,20 @@
-# Status: OPEN — three of six measurement items done, the title/H1 default is the one that matters
+# Status: SUPERSEDED 2026-08-29 by [`../context/BACKLOG.md`](../context/BACKLOG.md)
+
+Its §1 — the title/H1 default — **is closed**: `proposalKindForRule` now returns
+`null` rather than falling back to a lane, so nothing defaults to a title rewrite.
+The §4 table survives as backlog items CODE-1, CODE-3, CODE-5 and CODE-6. Read the
+rest as the record of a session, not as a work order.
 
 Written 2026-08-28. Supersedes the merge-train notes in
 [`2026-08-28-audit-fix-train-context.md`](2026-08-28-audit-fix-train-context.md),
 which is now closed: all ten PRs from that train are merged and `main` is
 green.
 
-## 1. The finding that matters most, and it is NOT fixed
+## 1. The finding that mattered most — CLOSED 2026-08-29, kept for the reasoning
 
 The operator's standing complaint through this whole session was that **the
 system keeps reverting to title and H1**. That complaint is correct, it is one
-line of code, and nothing merged so far changes it:
+line of code, and at the time nothing merged had changed it:
 
 ```ts
 // src/lib/finding-fix-target.ts

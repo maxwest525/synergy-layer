@@ -22,7 +22,7 @@
 export type ModelProvider = "litellm" | "lovable";
 
 /** What each provider is asked for, by role rather than by model name. */
-export type ModelRole = "reasoning" | "fast" | "wording";
+export type ModelRole = "reasoning" | "fast" | "wording" | "embedding";
 
 export type ModelRouting = {
   readonly provider: ModelProvider;
@@ -48,16 +48,27 @@ export type ModelRouting = {
  * proxy naming its models differently sets the env override rather than
  * editing this file.
  */
+/**
+ * `embedding` is not an OpenRouter slug like the other three: it names the
+ * exact model already producing every stored vector (see
+ * `KNOWLEDGE_EMBEDDING_MODEL` in `knowledge/embeddings.server.ts`). Embeddings
+ * are compared to each other by cosine distance, so changing the model here
+ * would silently make old and new vectors incomparable -- this must stay
+ * whatever a proxy calls the same Gemini embedding model, never a different
+ * or "better" one, until every stored vector is re-embedded to match.
+ */
 const DEFAULT_MODELS: Record<ModelRole, string> = {
   reasoning: "google/gemini-3.1-pro-preview",
   fast: "google/gemini-3.6-flash",
   wording: "google/gemini-3.6-flash",
+  embedding: "gemini-embedding-001",
 };
 
 const MODEL_ENV: Record<ModelRole, string> = {
   reasoning: "LITELLM_MODEL_REASONING",
   fast: "LITELLM_MODEL_FAST",
   wording: "LITELLM_MODEL_WORDING",
+  embedding: "LITELLM_MODEL_EMBEDDING",
 };
 
 type Env = Record<string, string | undefined>;
