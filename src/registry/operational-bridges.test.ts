@@ -15,6 +15,7 @@ describe("operational bridge registry", () => {
     expect(googleAds?.integrationState).toBe("real");
     expect(googleAds?.operations).toEqual([
       expect.objectContaining({ name: "customers.list_accessible", mutates: false }),
+      expect.objectContaining({ name: "campaigns.report_read", mutates: false }),
     ]);
   });
 

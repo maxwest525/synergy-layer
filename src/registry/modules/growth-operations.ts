@@ -10,7 +10,7 @@ export const definition: ModuleDefinition = {
       kind: "connector",
       category: "Paid media",
       description:
-        "Read-only Google Ads account-access probe. AOOS can list accessible customer resource names to prove OAuth and developer-token access; campaign reads and all writes remain unimplemented.",
+        "Read-only Google Ads reporting. AOOS lists accessible customer resource names to prove access, and reads campaign-level impressions, clicks, cost and conversions day by day for the configured customer id. All writes remain unimplemented.",
       integrationState: "real",
       authKind: "oauth",
       operations: [
@@ -20,11 +20,17 @@ export const definition: ModuleDefinition = {
             "List accessible customer resource names without reading campaigns or spend.",
           mutates: false,
         },
+        {
+          name: "campaigns.report_read",
+          description:
+            "Read campaign id, name, status, channel type, and daily impressions/clicks/cost/conversions for the trailing 30 days via GAQL search.",
+          mutates: false,
+        },
       ],
       config: {
         mutating: false,
         provider: "google_ads_v25",
-        prohibited: ["campaign_reads", "budget_writes", "bid_writes", "ad_writes"],
+        prohibited: ["budget_writes", "bid_writes", "ad_writes"],
       },
     },
     {

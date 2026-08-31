@@ -561,13 +561,15 @@ function EssentialsPage() {
     {
       id: "google-ads",
       title: "Google Ads",
-      status: systemStatus(system("api.google_ads_v25")),
-      evidence: "No Google Ads account, campaign, or spend row is stored in AOOS.",
-      gap: systemGap(system("api.google_ads_v25"), "Google Ads API"),
+      status: evidenceStatus(data.googleAds.campaignDayRows, false),
+      evidence:
+        data.googleAds.campaignDayRows > 0
+          ? `${data.googleAds.campaignDayRows} stored campaign-day row(s) across ${data.googleAds.distinctCampaigns} campaign(s), latest ${formatWhen(data.googleAds.latestAt)}.`
+          : "No Google Ads campaign-day row is stored in AOOS yet. Refresh Google Ads from the Measurement page to take the first read.",
+      gap: "Reads campaign-level impressions, clicks, cost and conversions only. Negative keywords and Keyword Planner remain unbuilt.",
       action: {
-        label: "Open the Google Ads system record",
-        to: "/capabilities/systems/$key" as const,
-        params: { key: "api.google_ads_v25" },
+        label: "Open Measurement",
+        to: "/measurement/tools",
       },
     },
   ];

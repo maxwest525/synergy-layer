@@ -167,11 +167,13 @@ describe("the four stages", () => {
     expect(row(view, "umami").reason).toMatch(/credentials are not set/i);
   });
 
-  it("tells a credential with no code behind it apart from an unrun one", () => {
-    // Google Ads has a credential slot and nothing reads it. That is a
-    // different problem from an account that simply has not run yet.
+  it("reads an unrun connector the same way whichever one it is", () => {
+    // Google Ads used to be this file's example of a credential slot with no
+    // code behind it (`table: null`) -- google-ads.server.ts now reads a real
+    // campaign-performance report, so it is an ordinary table-backed
+    // connector like PageSpeed: configured, wired, just not run yet.
     const view = buildConnections([facts("google_ads"), facts("pagespeed_insights")]);
-    expect(row(view, "google_ads").reason).toMatch(/nothing in this system calls it/i);
+    expect(row(view, "google_ads").reason).toMatch(/nothing has been stored/i);
     expect(row(view, "pagespeed_insights").reason).toMatch(/nothing has been stored/i);
   });
 

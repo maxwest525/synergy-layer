@@ -2450,6 +2450,65 @@ export type Database = {
           },
         ]
       }
+      google_ads_snapshots: {
+        Row: {
+          advertising_channel_type: string | null
+          campaign_id: string
+          campaign_name: string
+          campaign_status: string
+          clicks: number
+          collected_at: string
+          conversions: number
+          conversions_value: number
+          cost_micros: number
+          customer_id: string
+          id: string
+          impressions: number
+          segment_date: string
+          tenant_id: string
+        }
+        Insert: {
+          advertising_channel_type?: string | null
+          campaign_id: string
+          campaign_name: string
+          campaign_status: string
+          clicks?: number
+          collected_at?: string
+          conversions?: number
+          conversions_value?: number
+          cost_micros?: number
+          customer_id: string
+          id?: string
+          impressions?: number
+          segment_date: string
+          tenant_id: string
+        }
+        Update: {
+          advertising_channel_type?: string | null
+          campaign_id?: string
+          campaign_name?: string
+          campaign_status?: string
+          clicks?: number
+          collected_at?: string
+          conversions?: number
+          conversions_value?: number
+          cost_micros?: number
+          customer_id?: string
+          id?: string
+          impressions?: number
+          segment_date?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "google_ads_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inbox_items: {
         Row: {
           actions: Json
