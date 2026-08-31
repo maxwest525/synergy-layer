@@ -4,6 +4,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { PageSpeedOpportunity } from "./measurement/pagespeed";
 import type { Ga4ConnectionState } from "./measurement/ga4";
+import type { GoogleAdsConnectionState } from "./measurement/google-ads";
 
 export type MeasurementRunView = {
   id: string;
@@ -74,6 +75,19 @@ export type Ga4Diagnostics = {
   schedule: Ga4ScheduleView | null;
 };
 
+export type GoogleAdsSnapshotRowView = {
+  campaignId: string;
+  campaignName: string;
+  campaignStatus: string;
+  advertisingChannelType: string | null;
+  segmentDate: string;
+  impressions: number;
+  clicks: number;
+  costMicros: number;
+  conversions: number;
+  conversionsValue: number;
+};
+
 export type MeasurementState = {
   isOperator: boolean;
   defaultUrl: string;
@@ -88,6 +102,16 @@ export type MeasurementState = {
     runs: MeasurementRunView[];
     diagnostics: Ga4Diagnostics;
   };
+  googleAds: {
+    customerId: string | null;
+    connection: GoogleAdsConnectionState;
+    rows: GoogleAdsSnapshotRowView[];
+    runs: MeasurementRunView[];
+    lastSuccessAt: string | null;
+    lastError: string | null;
+    lastErrorAt: string | null;
+    lastErrorHttpStatus: number | null;
+  };
 };
 
 /** Tenant members read. Running a refresh is a separate, operator-only call. */
@@ -97,9 +121,11 @@ export const getMeasurementState = createServerFn({ method: "POST" })
     const { requireTenantId } = await import("./tenant.server");
     const { describeGa4Connection, ga4PropertyForSearchConsoleProperty, readGa4EnvPresence } =
       await import("./measurement/ga4");
+    const { describeGoogleAdsConnection, readGoogleAdsEnvPresence, normalizeCustomerId } =
+      await import("./measurement/google-ads");
     const tenantId = await requireTenantId(context.supabase);
 
-    const [roles, assets, runs, snapshots, ga4Rows, selectedProperty, ga4Schedule] =
+    const [roles, assets, runs, snapshots, ga4Rows, selectedProperty, ga4Schedule, googleAdsRows] =
       await Promise.all([
         context.supabase.from("user_roles").select("role").eq("user_id", context.userId),
         context.supabase
@@ -143,6 +169,14 @@ export const getMeasurementState = createServerFn({ method: "POST" })
           .order("updated_at", { ascending: false })
           .limit(1)
           .maybeSingle(),
+        context.supabase
+          .from("google_ads_snapshots")
+          .select(
+            "campaign_id, campaign_name, campaign_status, advertising_channel_type, segment_date, impressions, clicks, cost_micros, conversions, conversions_value, collected_at",
+          )
+          .eq("tenant_id", tenantId)
+          .order("segment_date", { ascending: false })
+          .limit(500),
       ]);
 
     // A failed read must never read as "nothing measured yet".
@@ -154,6 +188,7 @@ export const getMeasurementState = createServerFn({ method: "POST" })
       ["GA4 snapshots", ga4Rows],
       ["selected Search Console property", selectedProperty],
       ["GA4 schedule", ga4Schedule],
+      ["Google Ads snapshots", googleAdsRows],
     ] as const) {
       if (result.error) throw new Error(`Could not read ${label}: ${result.error.message}`);
     }
@@ -222,6 +257,9 @@ export const getMeasurementState = createServerFn({ method: "POST" })
     const ga4Runs = allRuns.filter((row) => row.provider === "ga4");
     const lastGa4Success = ga4Runs.find((row) => row.status === "succeeded") ?? null;
     const lastGa4Failure = ga4Runs.find((row) => row.status === "failed") ?? null;
+    const googleAdsRuns = allRuns.filter((row) => row.provider === "google_ads");
+    const lastGoogleAdsSuccess = googleAdsRuns.find((row) => row.status === "succeeded") ?? null;
+    const lastGoogleAdsFailure = googleAdsRuns.find((row) => row.status === "failed") ?? null;
     const latestMetrics = ga4SnapshotViews[0]?.metrics ?? null;
     const ga4SuccessRowCount =
       latestMetrics && typeof latestMetrics["rowCount"] === "number"
@@ -295,6 +333,34 @@ export const getMeasurementState = createServerFn({ method: "POST" })
             }
           : null,
         runs: ga4Runs,
+      },
+      googleAds: {
+        customerId: (() => {
+          const raw = process.env["GOOGLE_ADS_CUSTOMER_ID"];
+          return raw ? normalizeCustomerId(raw) : null;
+        })(),
+        connection: describeGoogleAdsConnection(
+          readGoogleAdsEnvPresence(process.env),
+          googleAdsRows.data !== null && googleAdsRows.data.length > 0,
+          googleAdsRuns.some((row) => row.authenticationSucceeded === true),
+        ),
+        rows: (googleAdsRows.data ?? []).map((row) => ({
+          campaignId: row.campaign_id,
+          campaignName: row.campaign_name,
+          campaignStatus: row.campaign_status,
+          advertisingChannelType: row.advertising_channel_type,
+          segmentDate: row.segment_date,
+          impressions: Number(row.impressions),
+          clicks: Number(row.clicks),
+          costMicros: Number(row.cost_micros),
+          conversions: Number(row.conversions),
+          conversionsValue: Number(row.conversions_value),
+        })),
+        runs: googleAdsRuns,
+        lastSuccessAt: lastGoogleAdsSuccess?.finishedAt ?? null,
+        lastError: lastGoogleAdsFailure?.error ?? null,
+        lastErrorAt: lastGoogleAdsFailure?.startedAt ?? null,
+        lastErrorHttpStatus: lastGoogleAdsFailure?.httpStatus ?? null,
       },
     };
   });
@@ -373,5 +439,36 @@ export const refreshGa4 = createServerFn({ method: "POST" })
       tenantId,
       actorId: context.userId,
       property,
+    });
+  });
+
+/**
+ * Google Ads refresh. One click, one campaign-performance report, upserted
+ * day by day. Refuses honestly when no complete server credential and
+ * customer id are present, same as GA4.
+ */
+export const refreshGoogleAds = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { assertOperator } = await import("./os-admin.server");
+    await assertOperator(context.supabase, context.userId);
+    const { requireTenantId } = await import("./tenant.server");
+    const tenantId = await requireTenantId(context.supabase);
+    const { describeGoogleAdsConnection, readGoogleAdsEnvPresence } =
+      await import("./measurement/google-ads");
+    const customerId = process.env["GOOGLE_ADS_CUSTOMER_ID"];
+    const connection = describeGoogleAdsConnection(readGoogleAdsEnvPresence(process.env));
+    if (!connection.configured || !customerId) {
+      throw new Error(
+        `Google Ads is not configured, so no request was made. ${connection.requirements.join(" ")}`.trim(),
+      );
+    }
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { runGoogleAdsReport } = await import("./measurement/google-ads.server");
+    return runGoogleAdsReport(supabaseAdmin, {
+      tenantId,
+      actorId: context.userId,
+      customerId,
     });
   });

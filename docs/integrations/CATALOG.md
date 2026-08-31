@@ -104,6 +104,12 @@ excluded:
 
 ### 5. Google Ads asks for three secrets and does nothing with them
 
+**Closed 2026-08-31 — see `docs/context/BACKLOG.md` OP-1.**
+`src/lib/measurement/google-ads.server.ts` now reads campaign-level
+impressions, clicks, cost and conversions day by day via `googleAds:search`,
+stores them in `google_ads_snapshots`, and surfaces them on `/measurement/tools`.
+The finding below is kept as the audit recorded it on 2026-08-25.
+
 `src/lib/connectors/google-ads.server.ts` (133 lines) is the _entire_ Google Ads
 integration: an OAuth `refresh_token` exchange against
 `oauth2.googleapis.com/v3/token`, then a single read-only call to
@@ -608,7 +614,8 @@ Plus `src/routes/api/agent-chat.ts` and `studio-chat.ts` (model-backed chat) and
 
 **Provider capabilities not exposed**
 
-- Google Ads: everything except `listAccessibleCustomers`.
+- Google Ads: everything except `listAccessibleCustomers`. **Closed
+  2026-08-31**: campaign-level report reads and stores now exist (finding 5).
 - GA4: Admin API — a digest exists (`docs/integrations/ga4-admin-api/DIGEST.md`)
   with no corresponding client.
 - GA4 Measurement Protocol: digest exists, no client.
@@ -616,7 +623,8 @@ Plus `src/routes/api/agent-chat.ts` and `studio-chat.ts` (model-backed chat) and
 **Local features not connected to runtime**
 
 - `ga4ResponseProvesAuthentication` — purpose-built for a probe, unused by one.
-- `GOOGLE_ADS_CUSTOMER_ID` — required, normalized, never read.
+- ~~`GOOGLE_ADS_CUSTOMER_ID` — required, normalized, never read.~~ **Closed
+  2026-08-31** — read by `google-ads.server.ts`'s campaign report.
 
 **MCP tools with no product UI** — none. All eight map to existing surfaces.
 
@@ -656,8 +664,9 @@ network calls found within a single request path.
    permanently-degraded ledger row. (finding 6)
 2. **Untrack `.env`** and add it to `.gitignore` before anything secret lands in
    it. (finding 2)
-3. **Decide on Google Ads.** Either wire a reporting call or stop requiring
-   three secrets for a green row. (finding 5)
+3. ~~**Decide on Google Ads.** Either wire a reporting call or stop requiring
+   three secrets for a green row.~~ **Closed 2026-08-31** — a reporting call
+   is wired. (finding 5)
 4. **Route Gemini through LiteLLM**, or write down why it is exempt. (finding 1)
 5. **Delete the SearXNG catalog row and probe branch.** (finding 4)
 6. **Give the OpenAI Ads CAPI bridge a connector row**, since it is an

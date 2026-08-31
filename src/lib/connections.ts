@@ -224,7 +224,12 @@ export const CONNECTION_OUTPUTS: readonly ConnectionOutput[] = [
   {
     key: "google_ads",
     label: "Google Ads",
-    table: null,
+    // Was `table: null` -- a credential slot with no code behind it -- until
+    // google-ads.server.ts started reading campaign-performance reports.
+    // Every stored row is a successful upsert; a failed attempt writes
+    // nothing here, only a measurement_runs row, so this table has no
+    // failure marker of its own.
+    table: "google_ads_snapshots",
     succeeded: null,
     findingSources: [],
     promise: "What the paid side is spending and returning.",

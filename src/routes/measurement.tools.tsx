@@ -23,7 +23,9 @@ import { Button } from "@/components/ui/button";
 import {
   getMeasurementState,
   refreshGa4,
+  refreshGoogleAds,
   runPageSpeedCheck,
+  type GoogleAdsSnapshotRowView,
   type MeasurementRunView,
   type PageSpeedSnapshotView,
 } from "@/lib/measurement.functions";
@@ -100,6 +102,26 @@ function ga4Rows(metrics: Record<string, unknown>): Ga4UiRow[] {
       typeof (row as Ga4UiRow).activeUsers === "number" &&
       typeof (row as Ga4UiRow).sessions === "number",
   );
+}
+
+function usd(costMicros: number): string {
+  return `$${(costMicros / 1_000_000).toFixed(2)}`;
+}
+
+function summarizeGoogleAdsRows(rows: GoogleAdsSnapshotRowView[]) {
+  const byCampaign = new Map<string, GoogleAdsSnapshotRowView[]>();
+  for (const row of rows) {
+    const existing = byCampaign.get(row.campaignId) ?? [];
+    existing.push(row);
+    byCampaign.set(row.campaignId, existing);
+  }
+  return {
+    campaignCount: byCampaign.size,
+    totalImpressions: rows.reduce((sum, row) => sum + row.impressions, 0),
+    totalClicks: rows.reduce((sum, row) => sum + row.clicks, 0),
+    totalCostMicros: rows.reduce((sum, row) => sum + row.costMicros, 0),
+    totalConversions: rows.reduce((sum, row) => sum + row.conversions, 0),
+  };
 }
 
 function RunRow({ run }: { run: MeasurementRunView }) {
@@ -226,6 +248,7 @@ function MeasurementPage() {
   const loadState = useServerFn(getMeasurementState);
   const runCheck = useServerFn(runPageSpeedCheck);
   const refreshAnalytics = useServerFn(refreshGa4);
+  const refreshAds = useServerFn(refreshGoogleAds);
   const queryClient = useQueryClient();
 
   const { data } = useSuspenseQuery({
@@ -269,10 +292,26 @@ function MeasurementPage() {
     },
   });
 
+  const adsMutation = useMutation({
+    mutationFn: () => refreshAds(),
+    onSuccess: (result) => {
+      toast.success(
+        `Google Ads refresh stored ${result.rowCount} campaign-day row(s) across ${result.campaignCount} campaign(s).`,
+      );
+      void queryClient.invalidateQueries({ queryKey: ["measurement"] });
+    },
+    onError: (error: Error) => toast.error(error.message),
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: ["measurement"] });
+    },
+  });
+
   const latest = data.snapshots[0] ?? null;
   const ga4 = data.ga4;
   const latestGa4Metrics = ga4.latest?.metrics ?? {};
   const latestGa4Rows = ga4Rows(latestGa4Metrics);
+  const googleAds = data.googleAds;
+  const googleAdsSummary = summarizeGoogleAdsRows(googleAds.rows);
 
   return (
     <div className="space-y-10">
@@ -562,6 +601,139 @@ function MeasurementPage() {
           className="mt-4 inline-block text-sm text-primary underline-offset-4 hover:underline"
         >
           Open the GA4 Data API system record
+        </Link>
+      </GlassCard>
+
+      <GlassCard className="p-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-sm font-semibold text-foreground">Google Ads</h2>
+          <span className="flex items-center gap-2">
+            <StatePill
+              label={googleAds.connection.configured ? "Configured" : "Not configured"}
+              tone={googleAds.connection.configured ? "success" : "warning"}
+            />
+            <StatePill
+              label={googleAds.connection.authenticated ? "Authenticated" : "Auth not proven"}
+              tone={googleAds.connection.authenticated ? "success" : "warning"}
+            />
+            <StatePill
+              label={googleAds.connection.connected ? "Read succeeded" : "Read not proven"}
+              tone={googleAds.connection.connected ? "success" : "warning"}
+            />
+            <StatePill label="Provider cost $0" tone="success" />
+          </span>
+        </div>
+
+        <div className="mt-4 space-y-1">
+          <DetailRow label="Customer id" value={googleAds.customerId ?? "not configured"} />
+          <DetailRow label="Reporting window" value="Trailing 30 days, day by day" />
+          <DetailRow
+            label="Last successful refresh"
+            value={googleAds.lastSuccessAt ? formatWhen(googleAds.lastSuccessAt) : "never"}
+          />
+          <DetailRow
+            label="Last error"
+            value={
+              googleAds.lastError
+                ? `${formatWhen(googleAds.lastErrorAt ?? "")} · HTTP ${
+                    googleAds.lastErrorHttpStatus ?? "none"
+                  } · ${googleAds.lastError}`
+                : "none recorded"
+            }
+          />
+        </div>
+
+        <p className="mt-4 text-sm text-muted-foreground">{googleAds.connection.statement}</p>
+
+        <Button
+          type="button"
+          variant="outline"
+          className="mt-4"
+          disabled={!data.isOperator || !googleAds.connection.configured || adsMutation.isPending}
+          onClick={() => adsMutation.mutate()}
+        >
+          {adsMutation.isPending ? "Refreshing Google Ads" : "Refresh Google Ads"}
+        </Button>
+
+        {googleAds.connection.configured ? null : (
+          <div className="mt-3 rounded-xl border border-primary/30 bg-primary/5 px-3 py-3">
+            <p className="text-sm font-medium text-foreground">
+              What must be enabled before a first request
+            </p>
+            <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
+              {googleAds.connection.requirements.map((line) => (
+                <li key={line}>{line}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {googleAds.rows.length > 0 ? (
+          <div className="mt-5 space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <MetricTile
+                label="Campaigns"
+                value={googleAdsSummary.campaignCount}
+                hint="Trailing 30 days"
+              />
+              <MetricTile
+                label="Impressions"
+                value={googleAdsSummary.totalImpressions}
+                hint="Provider total, not a success judgment"
+              />
+              <MetricTile
+                label="Clicks"
+                value={googleAdsSummary.totalClicks}
+                hint="Trailing 30 days"
+              />
+              <MetricTile
+                label="Cost"
+                value={usd(googleAdsSummary.totalCostMicros)}
+                hint={`${googleAdsSummary.totalConversions} conversion(s)`}
+              />
+            </div>
+
+            <div>
+              <h3 className="text-sm font-semibold text-foreground">Campaign performance by day</h3>
+              <ul className="mt-3 space-y-2">
+                {googleAds.rows.slice(0, 50).map((row, index) => (
+                  <li
+                    key={`${row.campaignId}:${row.segmentDate}:${index}`}
+                    className="flex flex-wrap items-baseline justify-between gap-2 border-b border-border/50 pb-2 text-sm last:border-b-0"
+                  >
+                    <span className="min-w-0 flex-1 break-all text-foreground">
+                      {row.campaignName} · {row.segmentDate} · {row.campaignStatus}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {row.impressions} impression(s) · {row.clicks} click(s) ·{" "}
+                      {usd(row.costMicros)} · {row.conversions} conversion(s)
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              {googleAds.rows.length > 50 ? (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Showing the first 50 of {googleAds.rows.length} returned rows.
+                </p>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
+
+        {googleAds.runs.length > 0 ? (
+          <ul className="mt-4 space-y-2">
+            {googleAds.runs.map((run) => (
+              <RunRow key={run.id} run={run} />
+            ))}
+          </ul>
+        ) : null}
+
+        <Link
+          to="/capabilities/systems/$key"
+          params={{ key: "api.google_ads_v25" }}
+          className="mt-4 inline-block text-sm text-primary underline-offset-4 hover:underline"
+        >
+          Open the Google Ads API system record
         </Link>
       </GlassCard>
     </div>

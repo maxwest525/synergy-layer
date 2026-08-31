@@ -30,10 +30,46 @@ It is not authoritative documentation. Provider digests under
 `docs/integrations/<provider>/DIGEST.md` and their PLAN files remain the source of
 truth for provider behaviour and must never be overwritten by this file.
 
-Last updated: 2026-08-31, after merging all four CODE-6 rule sessions
+Last updated: 2026-08-31, after wiring Google Ads campaign reporting
+(CODE-28) on top of the four merged CODE-6 rule sessions
 (A: OnPage, B: Backlinks, C: Umami, D: discovery). Section 0 below still
 describes 2026-08-21 and has NOT been rewritten; the current-state blocks
 immediately below supersede it.
+
+## 0k. Google Ads reports real campaign data, 2026-08-31
+
+CODE-28 in `BACKLOG.md`, closing the reporting half of OP-1. Until now
+`google-ads.server.ts` did one thing: prove OAuth/developer-token access via
+`customers:listAccessibleCustomers`. It now also sends a GAQL
+`googleAds:search` query for campaign id/name/status/channel type plus
+impressions, clicks, cost and conversions, segmented by day over the trailing
+30 days, and upserts the rows into `google_ads_snapshots` keyed on
+`(tenant_id, customer_id, campaign_id, segment_date)` -- a rerun corrects that
+day's numbers rather than duplicating, since Google Ads attributes
+conversions for several days after the click.
+
+- New pure module `src/lib/measurement/google-ads.ts` (GAQL builder,
+  normalizer, connection-state description) and server module
+  `src/lib/measurement/google-ads.server.ts` (token acquisition, fetch,
+  upsert, a `measurement_runs` row per attempt) -- mirrors the GA4/PageSpeed
+  measurement pattern already in this directory.
+- `refreshGoogleAds` server function and a Google Ads card on
+  `/measurement/tools`, gated behind `assertOperator` like every other
+  provider refresh. One click, one report, no schedule.
+- `growth-operations.ts`'s `google.ads` capability gained a
+  `campaigns.report_read` operation and dropped `campaign_reads` from its
+  `prohibited` list; budget/bid/ad writes stay prohibited.
+- `connections.ts`'s `google_ads` entry moved off `table: null` -- it used to
+  be this file's own example of "a credential with no code behind it."
+- `essentials.tsx`'s Google Ads concern now reads real stored-row counts
+  (`data.googleAds`) instead of a hardcoded "nothing stored" sentence.
+- **Stated gap, not silently missing:** `google_ads_snapshots` already
+  existed live in the database with zero rows and no migration file behind
+  it -- the same undocumented-drift shape CODE-9 found elsewhere. A catch-up
+  migration (`20260831210000_google_ads_snapshots.sql`) now matches the live
+  schema. No rule module reads this table yet, so a stored campaign-day row
+  does not yet become a finding; negative keywords and Keyword Planner remain
+  unbuilt. 10 new tests, 1624 total, typecheck clean, lint 0 errors.
 
 ## 0j. Competitor discovery findings reach the operator, 2026-08-31
 
