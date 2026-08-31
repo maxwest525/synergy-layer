@@ -1,3 +1,4 @@
+import { MIN_BASELINE } from "./confidence";
 import { RULE_CHECK_THRESHOLDS } from "./search-console-rule-checks";
 import { SEARCH_CONSOLE_THRESHOLDS, SEO_VALIDATION_THRESHOLDS } from "./rule-thresholds";
 
@@ -27,6 +28,7 @@ export type Prerequisite =
   | "url_inspection"
   | "approved_keywords"
   | "backlink_collection"
+  | "umami_second_window"
   | "onpage_crawl";
 
 /** What has actually happened for this tenant, read from facts each page already holds. */
@@ -43,6 +45,15 @@ export type PrerequisiteState = {
   readonly approvedKeywords: boolean;
   /** Two stored backlink readings exist, so there is movement to compare. */
   readonly backlinkCollection: boolean;
+  /**
+   * Two stored umami_snapshots rows for the same website whose windows do not
+   * overlap (pairNonOverlappingWindows in umami-rule-checks.ts). Optional
+   * because the three fact-gathering call sites (your-pages.ts, getting-found.ts,
+   * site-health.ts) do not read Umami and are outside this change's file list;
+   * an absent field reads as unmet, which is the safe default until one of
+   * them is wired to pass it.
+   */
+  readonly umamiSecondWindow?: boolean;
   /**
    * At least one OnPage crawl has been collected (a stored
    * `dataforseo_snapshots` row for one of the OnPage detail kinds). None of
@@ -286,6 +297,27 @@ export const RULE_ASSIGNMENTS: readonly RuleAssignment[] = [
     why: "The count of linking domains is a count, so it takes confidenceInCountChange like every other count-shaped rule rather than a literal: at this property's link volume a move of one or two domains sits inside ordinary variation, and the finding says so instead of being suppressed. It is pooled by construction — the whole property has one referring-domain set, not one per page. detectReferringDomainMovement returns nothing without two stored backlinks_referring_domains snapshots.",
   },
   {
+    rule: "umami_zero_recorded",
+    bucket: "fact",
+    needsPerTarget: null,
+    alsoNeeds: [],
+    why: "Whether the Umami instance recorded anything at all is a row lookup answerable at any traffic volume, not a statistics question — no threshold makes 'did anything arrive' more honest than checking the stored counters. detectZeroRecorded (umami-rule-checks.ts) reads only the newest metric='stats' row per website; the stored snapshot itself is the rule's entire target set, so unlike event_disappeared this needs no second collection to say something (though it says less without one — see umami_site_traffic_shift).",
+  },
+  {
+    rule: "umami_site_traffic_shift",
+    bucket: "pooled",
+    needsPerTarget: null,
+    alsoNeeds: ["umami_second_window"],
+    why: "The pooled, site-wide version of the killed per-page umami_page_traffic_shift: site-wide visitors judged with confidenceInCountChange rather than a per-page count too small to trust alone, matching site_visibility_shift and site_clicks_shift. Gated on pairNonOverlappingWindows finding two stored metric='stats' rows for the same website whose windows do not overlap — deliberately not `second_collection`, which is wired to `facts.comparison.status === \"ready\"` (Search Console's comparison, your-pages.ts:452 / getting-found.ts:341 / site-health.ts:458): reusing it would tell the operator this rule is unblocked because Search Console has two windows, which is not true. On the current daily 28-day cadence a non-overlapping pair exists at roughly day 29 of collection (56 days of coverage); as of 2026-08-28 there is exactly one stored Umami run, so this is doubly inert today — no second window, and no volume to clear MIN_BASELINE even once one exists.",
+  },
+  {
+    rule: "umami_referrer_source_stopped",
+    bucket: "beyond_current_volume",
+    needsPerTarget: MIN_BASELINE,
+    alsoNeeds: ["umami_second_window"],
+    why: "A referrer going quiet is behaviour, not wiring, unlike event_disappeared, so it is scored with confidenceInCountChange(before, 0) rather than a hand-picked constant; MIN_BASELINE (confidence.ts) is the volume this would need per source. Pooling referrers cannot recover a single source any more than pooling pages recovers a censored query, hence beyond_current_volume rather than pooled. Same umami_second_window prerequisite as umami_site_traffic_shift, and for the same reason: this also diffs two stored windows, and naming it `second_collection` or `analytics` (both wired to other providers' facts — see umami_site_traffic_shift's why) would misname the real blocker the same way.",
+  },
+  {
     rule: "non_indexable_pages_found",
     bucket: "fact",
     needsPerTarget: null,
@@ -366,6 +398,7 @@ const PREREQUISITE_COPY: Record<Prerequisite, string> = {
   url_inspection: "a stored index check to compare against",
   approved_keywords: "at least one approved keyword, so there is something to target",
   backlink_collection: "two stored backlink readings, so there is movement to compare",
+  umami_second_window: "a second Umami reading whose window does not overlap the first",
   onpage_crawl: "a site crawl to have been collected, so there is a reading to check",
 };
 
@@ -376,6 +409,7 @@ const PREREQUISITE_STATE_KEY: Record<Prerequisite, keyof PrerequisiteState> = {
   url_inspection: "urlInspection",
   approved_keywords: "approvedKeywords",
   backlink_collection: "backlinkCollection",
+  umami_second_window: "umamiSecondWindow",
   onpage_crawl: "onpageCrawl",
 };
 

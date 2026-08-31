@@ -204,7 +204,9 @@ export const CONNECTION_OUTPUTS: readonly ConnectionOutput[] = [
     label: "Umami",
     table: "umami_snapshots",
     succeeded: null,
-    findingSources: [],
+    // umami-rules.server.ts reads umami_snapshots (metric='stats' and
+    // metric='referrers') and files findings for the visitors category.
+    findingSources: ["umami"],
     promise: "Visits, without handing the data to anyone else.",
   },
   {

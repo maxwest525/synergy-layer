@@ -53,11 +53,12 @@ describe("the stage no screen has ever shown", () => {
   });
 
   it("says the reading is happening and the telling is not", () => {
-    // Umami, not PageSpeed: PageSpeed earned a rule module and now reaches the
-    // operator, so this example moved to a connector that is still silent.
-    const view = buildConnections([facts("umami", { storedRows: 412 })]);
-    expect(row(view, "umami").reason).toContain("412");
-    expect(row(view, "umami").reason).toMatch(/reading is happening; the telling is not/i);
+    // OpenSEO, not Umami: Umami earned a rule module (umami-rules.server.ts)
+    // and now reaches the operator, so this example moved again to a
+    // connector that is still silent.
+    const view = buildConnections([facts("openseo", { storedRows: 412 })]);
+    expect(row(view, "openseo").reason).toContain("412");
+    expect(row(view, "openseo").reason).toMatch(/reading is happening; the telling is not/i);
   });
 
   it("names the silent ones in the headline", () => {
@@ -74,11 +75,12 @@ describe("the stage no screen has ever shown", () => {
     // This sentence said "two" when there were three, then "three" when the
     // targeting pass made DataForSEO the fourth, then "five" once PageSpeed
     // and DataForSEO's targeting pass both wrote. `onpage-rules.server.ts`
-    // (site-audit) and `backlink-rules.server.ts` (backlink-findings) made it
-    // seven. It is derived from FINDING_SOURCES, not hand-counted.
-    const view = buildConnections([facts("umami", { storedRows: 412 })]);
-    expect(view.headline).toContain("seven parts");
-    expect(FINDING_SOURCES).toHaveLength(7);
+    // (site-audit), `backlink-rules.server.ts` (backlink-findings) and
+    // `umami-rules.server.ts` (umami) made it eight. It is derived from
+    // FINDING_SOURCES, not hand-counted.
+    const view = buildConnections([facts("openseo", { storedRows: 412 })]);
+    expect(view.headline).toContain("eight parts");
+    expect(FINDING_SOURCES).toHaveLength(8);
   });
 
   it("says nothing when no connection is collecting in silence", () => {

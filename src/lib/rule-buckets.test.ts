@@ -6,6 +6,7 @@ import { ALL_SEARCH_RULES } from "./finding-copy";
 import type { Ga4CheckRule } from "./ga4-rule-checks";
 import type { OnPageCheckRule } from "./onpage-rule-checks";
 import type { PageSpeedCheckRule } from "./pagespeed-rule-checks";
+import type { UmamiCheckRule } from "./umami-rule-checks";
 import type { BacklinkCheckRule } from "./backlink-rule-checks";
 
 /**
@@ -42,6 +43,17 @@ const PAGESPEED_RULES_COVERED: Record<PageSpeedCheckRule, true> = {
 };
 
 /**
+ * Same compile-time exhaustiveness for the Umami family: the module exposes
+ * only the `UmamiCheckRule` type, so a new rule id added there without a key
+ * here fails the build rather than this test at runtime.
+ */
+const UMAMI_RULES_COVERED: Record<UmamiCheckRule, true> = {
+  umami_zero_recorded: true,
+  umami_site_traffic_shift: true,
+  umami_referrer_source_stopped: true,
+};
+
+/**
  * Same compile-time exhaustiveness for the OnPage site-audit family: the
  * module exposes only the `OnPageCheckRule` type (no runtime array), so a new
  * rule id added there without a key here fails the build rather than this
@@ -72,9 +84,9 @@ const BACKLINK_RULES_COVERED: Record<BacklinkCheckRule, true> = {
  * The rule ids RULE_ASSIGNMENTS must cover, read from the actual runtime
  * unions rather than a hand-maintained list — SEO_RULES (family A) and
  * ALL_SEARCH_RULES (families B and C, via finding-copy.ts) plus the
- * compile-time-checked GA4, PageSpeed, OnPage and Backlinks ids above, minus
- * the explicit exclusion set. This is what catches drift like a new pooled rule
- * shipping without a bucket assignment.
+ * compile-time-checked GA4, PageSpeed, Umami, OnPage and Backlinks ids above,
+ * minus the explicit exclusion set. This is what catches drift like a new
+ * pooled rule shipping without a bucket assignment.
  */
 const EXPECTED_RULE_IDS = [
   ...new Set<string>([
@@ -82,6 +94,7 @@ const EXPECTED_RULE_IDS = [
     ...ALL_SEARCH_RULES,
     ...Object.keys(GA4_RULES_COVERED),
     ...Object.keys(PAGESPEED_RULES_COVERED),
+    ...Object.keys(UMAMI_RULES_COVERED),
     ...Object.keys(ONPAGE_RULES_COVERED),
     ...Object.keys(BACKLINK_RULES_COVERED),
   ]),
@@ -154,6 +167,7 @@ describe("non-volume prerequisites", () => {
         urlInspection: true,
         approvedKeywords: true,
         backlinkCollection: true,
+        umamiSecondWindow: true,
         onpageCrawl: true,
       }),
     ).toEqual([]);
@@ -167,6 +181,7 @@ describe("non-volume prerequisites", () => {
       urlInspection: true,
       approvedKeywords: true,
       backlinkCollection: true,
+      umamiSecondWindow: true,
       onpageCrawl: true,
     });
     expect(notes).toHaveLength(2);

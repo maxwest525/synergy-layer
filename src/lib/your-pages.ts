@@ -453,10 +453,11 @@ export function buildYourPages(facts: YourPagesFacts): YourPagesView {
       pageAudit: facts.lastObservedAt !== null,
       analytics: facts.sessions !== null,
       // Nothing on this page reads a stored URL inspection, approved
-      // keywords, or backlink snapshots yet.
+      // keywords, backlink snapshots, or a second Umami window yet.
       urlInspection: true,
       approvedKeywords: true,
       backlinkCollection: true,
+      umamiSecondWindow: true,
       // Stated gap: this page's duplicate-title/description findings need an
       // OnPage crawl, but this view model does not yet read
       // dataforseo_snapshots to know whether one has been collected. Passing
