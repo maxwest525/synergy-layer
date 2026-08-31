@@ -1,45 +1,53 @@
 import { describe, expect, it } from "vitest";
 
-import { FIRECRAWL_CLOUD_URL, firecrawlEndpoint } from "./firecrawl-endpoint";
+import { firecrawlEndpoint } from "./firecrawl-endpoint";
 
 describe("which Firecrawl answers a scrape", () => {
-  it("prefers the self-hosted deployment when it is fully configured", () => {
+  it("returns the self-hosted scrape and search endpoints when it is fully configured", () => {
     expect(
       firecrawlEndpoint({
         SELFHOSTED_FIRECRAWL_BASE_URL: "https://fire.example.com",
         SELFHOSTED_FIRECRAWL_API_KEY: "self",
-        FIRECRAWL_API_KEY: "cloud",
       }),
-    ).toEqual({ url: "https://fire.example.com/v2/scrape", key: "self", selfHosted: true });
+    ).toEqual({
+      url: "https://fire.example.com/v2/scrape",
+      searchUrl: "https://fire.example.com/v2/search",
+      key: "self",
+      selfHosted: true,
+    });
   });
 
   it("does not care about a trailing slash on the base URL", () => {
+    const endpoint = firecrawlEndpoint({
+      SELFHOSTED_FIRECRAWL_BASE_URL: "https://fire.example.com///",
+      SELFHOSTED_FIRECRAWL_API_KEY: "self",
+    });
+    expect(endpoint?.url).toBe("https://fire.example.com/v2/scrape");
+    expect(endpoint?.searchUrl).toBe("https://fire.example.com/v2/search");
+  });
+
+  // The metered cloud fallback was removed on 2026-08-31. There is no paid
+  // Firecrawl account, and a silent fallback to api.firecrawl.dev is the exact
+  // shape of bug this module was written to prevent: a charge nobody chose,
+  // found later on a bill. These three cases all used to return a cloud
+  // endpoint and must now refuse.
+  it("ignores a cloud key entirely — it is no longer a fallback", () => {
+    expect(firecrawlEndpoint({ FIRECRAWL_API_KEY: "cloud" })).toBeNull();
+  });
+
+  it("refuses rather than spending when the self-hosted entry is half configured", () => {
     expect(
       firecrawlEndpoint({
-        SELFHOSTED_FIRECRAWL_BASE_URL: "https://fire.example.com///",
+        SELFHOSTED_FIRECRAWL_BASE_URL: "https://fire.example.com",
+        FIRECRAWL_API_KEY: "cloud",
+      }),
+    ).toBeNull();
+    expect(
+      firecrawlEndpoint({
         SELFHOSTED_FIRECRAWL_API_KEY: "self",
-      })?.url,
-    ).toBe("https://fire.example.com/v2/scrape");
-  });
-
-  it("falls back to the metered cloud when nothing self-hosted is set", () => {
-    expect(firecrawlEndpoint({ FIRECRAWL_API_KEY: "cloud" })).toEqual({
-      url: FIRECRAWL_CLOUD_URL,
-      key: "cloud",
-      selfHosted: false,
-    });
-  });
-
-  it("falls back rather than failing when the self-hosted entry is half configured", () => {
-    // A base URL with no key is a configuration mistake. Refusing the whole
-    // audit over it would be a worse outcome than a bill, so it degrades to the
-    // cloud -- and `selfHosted: false` is what lets the caller say so out loud.
-    const endpoint = firecrawlEndpoint({
-      SELFHOSTED_FIRECRAWL_BASE_URL: "https://fire.example.com",
-      FIRECRAWL_API_KEY: "cloud",
-    });
-    expect(endpoint?.selfHosted).toBe(false);
-    expect(endpoint?.url).toBe(FIRECRAWL_CLOUD_URL);
+        FIRECRAWL_API_KEY: "cloud",
+      }),
+    ).toBeNull();
   });
 
   it("treats whitespace as absent, so a blanked secret does not become a base URL", () => {
@@ -48,11 +56,11 @@ describe("which Firecrawl answers a scrape", () => {
         SELFHOSTED_FIRECRAWL_BASE_URL: "   ",
         SELFHOSTED_FIRECRAWL_API_KEY: "   ",
         FIRECRAWL_API_KEY: "cloud",
-      })?.selfHosted,
-    ).toBe(false);
+      }),
+    ).toBeNull();
   });
 
-  it("is null when neither deployment is configured, so callers refuse rather than guess", () => {
+  it("is null when nothing is configured, so callers refuse rather than guess", () => {
     expect(firecrawlEndpoint({})).toBeNull();
   });
 });

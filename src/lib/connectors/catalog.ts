@@ -3,21 +3,22 @@ export type ConnectorKey =
   | "google_search_console"
   | "google_analytics_4"
   | "dataforseo"
-  | "firecrawl"
   | "litellm"
   | "gemini_generation"
   | "gemini_embeddings"
   | "github_executor"
   | "pagespeed_insights"
   | "serpapi"
-  | "perplexity"
   | "google_ads"
   | "n8n"
   | "vps_scraper"
   | "selfhosted_firecrawl"
   | "openseo"
   | "umami"
-  | "openai_ads";
+  | "openai_ads"
+  | "adloop"
+  | "microsoft_clarity"
+  | "bing_webmaster";
 
 export type ConnectorCatalogItem = {
   key: ConnectorKey;
@@ -112,12 +113,6 @@ export const CONNECTOR_CATALOG = [
     credentialStrategies: [["DATAFORSEO_BASIC_TOKEN"], ["DATAFORSEO_LOGIN", "DATAFORSEO_PASSWORD"]],
   }),
   item({
-    key: "firecrawl",
-    label: "Firecrawl",
-    provider: "Firecrawl",
-    credentialStrategies: [["FIRECRAWL_API_KEY"]],
-  }),
-  item({
     key: "litellm",
     label: "LiteLLM proxy",
     provider: "Self hosted",
@@ -166,12 +161,6 @@ export const CONNECTOR_CATALOG = [
     credentialStrategies: [["SERPAPI_API_KEY"]],
   }),
   item({
-    key: "perplexity",
-    label: "Perplexity",
-    provider: "Perplexity",
-    credentialStrategies: [["PERPLEXITY_API_KEY"]],
-  }),
-  item({
     key: "google_ads",
     label: "Google Ads",
     provider: "Google",
@@ -185,7 +174,16 @@ export const CONNECTOR_CATALOG = [
         "GOOGLE_ADS_OAUTH_REFRESH_TOKEN",
       ],
     ],
-    safeConfig: { customerId: "GOOGLE_ADS_CUSTOMER_ID" },
+    // A client account under a manager needs the manager's id in a
+    // `login-customer-id` header or every reporting query is refused, while the
+    // health probe (listAccessibleCustomers) does not need it at all. It is
+    // surfaced here rather than required, because a standalone account legitimately
+    // has none and `fetchCampaignPerformance` falls back to the account's own id.
+    // Requiring it would report a correctly configured standalone account as broken.
+    safeConfig: {
+      customerId: "GOOGLE_ADS_CUSTOMER_ID",
+      loginCustomerId: "GOOGLE_ADS_LOGIN_CUSTOMER_ID",
+    },
   }),
   item({
     key: "n8n",
@@ -247,6 +245,35 @@ export const CONNECTOR_CATALOG = [
       ["OPENAI_ADS_CAPI_BRIDGE_SECRET", "OPENAI_ADS_CAPI_API_KEY"],
       ["OPENAI_ADS_BRIDGE_SECRET", "OPENAI_ADS_CAPI_API_KEY"],
     ],
+  }),
+  item({
+    key: "microsoft_clarity",
+    label: "Microsoft Clarity",
+    provider: "Microsoft",
+    // Project-scoped JWT from Settings -> Data Export. There is no account-level
+    // key: another Clarity project needs another token.
+    credentialStrategies: [["CLARITY_API_TOKEN"]],
+  }),
+  item({
+    key: "bing_webmaster",
+    label: "Bing Webmaster Tools",
+    provider: "Microsoft",
+    // The key is issued per user and covers every verified site, so it proves
+    // the account and never the site. Callers pass siteUrl explicitly.
+    credentialStrategies: [["BING_WEBMASTER_API_KEY"]],
+    configRequirements: ["BING_WEBMASTER_SITE_URL"],
+    safeConfig: { siteUrl: "BING_WEBMASTER_SITE_URL" },
+  }),
+  item({
+    key: "adloop",
+    label: "AdLoop",
+    provider: "Self-hosted",
+    // The MCP server fronting Google Ads, GA4, Search Console, GTM and Merchant
+    // Center on the operator's own box. One bearer, matched by Caddy at the
+    // edge for every path, exactly as Firecrawl and Crawl4AI are.
+    credentialStrategies: [["ADLOOP_API_KEY"]],
+    configRequirements: ["ADLOOP_BASE_URL"],
+    safeConfig: { baseUrl: "ADLOOP_BASE_URL" },
   }),
 ] as const satisfies readonly ConnectorCatalogItem[];
 

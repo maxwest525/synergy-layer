@@ -46,6 +46,11 @@ export const definition: ModuleDefinition = {
           name: "health.probe",
           description: "Read the authenticated Crawl4AI health endpoint.",
           mutates: false,
+          endpoint: "GET {VPS_SCRAPER_BASE_URL}/health",
+          verified: "called",
+          verifiedOn: "2026-08-31",
+          gotcha:
+            "The container does NOT enforce its own CRAWL4AI_API_TOKEN — it answers unauthenticated on 127.0.0.1:11235. Auth is enforced only by Caddy at the edge, so VPS_SCRAPER_API_KEY must equal the token in the Caddyfile. Sending the container's own token to the public host returns 401, which reads like a bad credential and is not one.",
         },
         {
           name: "page.scrape",

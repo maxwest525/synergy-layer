@@ -296,8 +296,11 @@ export const CONNECTION_SURFACES: SurfaceConnection[] = [
   {
     key: "firecrawl",
     label: "Firecrawl",
-    provider: "Firecrawl",
-    auth: "API key",
+    // The metered vendor account was removed on 2026-08-31. The API surface
+    // below is unchanged because the self-hosted deployment speaks the same v2
+    // API — what went away is the second, billable place to send it.
+    provider: "Self-hosted",
+    auth: "Bearer, matched by Caddy at the edge",
     operations: [
       op({
         id: "fc.scrape",
@@ -323,9 +326,9 @@ export const CONNECTION_SURFACES: SurfaceConnection[] = [
       op({
         id: "fc.search",
         operation: "POST /v2/search",
-        purpose: "Search the web and scrape results in one call.",
-        status: "not_built",
-        gap: "Not built.",
+        purpose: "Grounded web search for the research capability.",
+        status: "wired",
+        evidence: "src/lib/web-research.server.ts",
       }),
       op({
         id: "fc.extract",
@@ -622,28 +625,6 @@ export const CONNECTION_SURFACES: SurfaceConnection[] = [
         purpose: "Answer with cited live sources instead of memory.",
         status: "not_built",
         gap: "Not built. The agent cannot cite a live source in an answer.",
-      }),
-    ],
-  },
-  {
-    key: "perplexity",
-    label: "Perplexity",
-    provider: "Perplexity",
-    auth: "API key",
-    operations: [
-      op({
-        id: "pplx.chat",
-        operation: "POST /chat/completions",
-        purpose: "Cited web research for the research capability.",
-        status: "wired",
-        evidence: "src/lib/web-research.server.ts",
-      }),
-      op({
-        id: "pplx.async",
-        operation: "Async research jobs",
-        purpose: "Long form deep research without holding a request open.",
-        status: "not_built",
-        gap: "Not built.",
       }),
     ],
   },

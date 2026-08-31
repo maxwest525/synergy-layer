@@ -98,35 +98,31 @@ describe("who is credited with a finding", () => {
     // Firecrawl feeds the Search Console checks, so its finding count is
     // non-zero the moment those checks run on anything. With no page reads of
     // its own it has still collected nothing.
-    const view = buildConnections([facts("firecrawl", { storedRows: 0, findings: 30 })]);
-    expect(row(view, "firecrawl").stage).toBe("configured");
-    expect(row(view, "firecrawl").reason).not.toContain("30");
+    const view = buildConnections([facts("selfhosted_firecrawl", { storedRows: 0, findings: 30 })]);
+    expect(row(view, "selfhosted_firecrawl").stage).toBe("configured");
+    expect(row(view, "selfhosted_firecrawl").reason).not.toContain("30");
   });
 
   it("refuses to let either feeder of a shared module claim its findings alone", () => {
     const view = buildConnections([
-      facts("firecrawl", { storedRows: 300, findings: 12 }),
+      facts("selfhosted_firecrawl", { storedRows: 300, findings: 12 }),
       facts("google_search_console", { storedRows: 900, findings: 12 }),
     ]);
-    expect(row(view, "firecrawl").reason).toMatch(/alongside Google Search Console/);
-    expect(row(view, "firecrawl").reason).not.toMatch(/doing its job/);
+    expect(row(view, "selfhosted_firecrawl").reason).toMatch(/alongside Google Search Console/);
+    expect(row(view, "selfhosted_firecrawl").reason).not.toMatch(/doing its job/);
     expect(row(view, "google_search_console").reason).toMatch(/alongside Firecrawl/);
   });
 
   it("lets the self-hosted crawler claim its own page reads and only its own", () => {
-    // This asserted `table: null` while the page audit hardcoded the vendor's
-    // endpoint, so no row could have come from a self-hosted deployment.
-    // `firecrawlEndpoint()` now prefers it, and `rendered_by` records which
-    // renderer read each page, so the honest answer is a scoped share rather
-    // than no table at all.
     const output = CONNECTION_OUTPUTS.find((entry) => entry.key === "selfhosted_firecrawl");
     expect(output?.table).toBe("page_metadata_observations");
     expect(output?.scope?.column).toBe("rendered_by");
     expect(output?.scope?.prefix).toBe("Firecrawl (self-hosted)");
 
-    // And the vendor's row must not swallow it back.
-    const vendor = CONNECTION_OUTPUTS.find((entry) => entry.key === "firecrawl");
-    expect(vendor?.scope?.notPrefix).toBe("Firecrawl (self-hosted)");
+    // The metered cloud deployment was removed on 2026-08-31. Its row must not
+    // come back: a "firecrawl" connection would claim page reads that the
+    // self-hosted deployment performed, and there is no vendor account behind it.
+    expect(CONNECTION_OUTPUTS.find((entry) => entry.key === "firecrawl")).toBeUndefined();
   });
 });
 
@@ -170,8 +166,10 @@ describe("the four stages", () => {
   });
 
   it("counts findings as the proof that it reaches you, not stored rows", () => {
-    const view = buildConnections([facts("firecrawl", { storedRows: 5000, findings: 0 })]);
-    expect(row(view, "firecrawl").stage).toBe("collecting");
+    const view = buildConnections([
+      facts("selfhosted_firecrawl", { storedRows: 5000, findings: 0 }),
+    ]);
+    expect(row(view, "selfhosted_firecrawl").stage).toBe("collecting");
   });
 });
 

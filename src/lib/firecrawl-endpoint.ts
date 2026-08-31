@@ -20,41 +20,37 @@
 export type FirecrawlEndpoint = {
   /** Full scrape URL, ready to POST to. */
   readonly url: string;
+  /** Full search URL on the same deployment. */
+  readonly searchUrl: string;
   readonly key: string;
-  readonly selfHosted: boolean;
+  readonly selfHosted: true;
 };
 
 function trimmed(env: Record<string, string | undefined>, name: string): string {
   return env[name]?.trim() ?? "";
 }
 
-export const FIRECRAWL_CLOUD_URL = "https://api.firecrawl.dev/v2/scrape";
-
 /**
- * The endpoint to scrape with, or null when neither deployment is configured.
+ * The endpoint to scrape or search with, or null when the self-hosted
+ * deployment is not configured.
  *
- * Self-hosted wins whenever it has both a base URL and a key. A half-configured
- * self-hosted entry falls through to the cloud rather than failing, because a
- * missing key is a configuration mistake and refusing the whole audit over it
- * would be a worse outcome than a bill.
+ * The metered cloud fallback was removed on 2026-08-31 at the operator's
+ * instruction. There is no paid Firecrawl account, the self-hosted box answers
+ * both `/v2/scrape` and `/v2/search`, and a silent fallback to
+ * `api.firecrawl.dev` is exactly the shape of bug this file was written to
+ * prevent: a charge nobody chose, discovered on a bill. A missing self-hosted
+ * key is now a configuration error the caller must see, not a reason to spend.
  */
 export function firecrawlEndpoint(
   env: Record<string, string | undefined>,
 ): FirecrawlEndpoint | null {
-  const base = trimmed(env, "SELFHOSTED_FIRECRAWL_BASE_URL");
-  const selfHostedKey = trimmed(env, "SELFHOSTED_FIRECRAWL_API_KEY");
-  if (base !== "" && selfHostedKey !== "") {
-    return {
-      url: `${base.replace(/\/+$/, "")}/v2/scrape`,
-      key: selfHostedKey,
-      selfHosted: true,
-    };
-  }
-
-  const cloudKey = trimmed(env, "FIRECRAWL_API_KEY");
-  if (cloudKey !== "") {
-    return { url: FIRECRAWL_CLOUD_URL, key: cloudKey, selfHosted: false };
-  }
-
-  return null;
+  const base = trimmed(env, "SELFHOSTED_FIRECRAWL_BASE_URL").replace(/\/+$/, "");
+  const key = trimmed(env, "SELFHOSTED_FIRECRAWL_API_KEY");
+  if (base === "" || key === "") return null;
+  return {
+    url: `${base}/v2/scrape`,
+    searchUrl: `${base}/v2/search`,
+    key,
+    selfHosted: true,
+  };
 }

@@ -34,7 +34,11 @@ type RequestDescriptor = {
 const noSafeProbe = new Set<ConnectorKey>([
   "google_search_console",
   "pagespeed_insights",
-  "perplexity",
+  // Clarity allows 10 API requests per project per DAY, total, and exposes no
+  // separate health route. A liveness check would spend 10% of the daily budget
+  // every time this screen is opened, so probing it would break the very
+  // feature it claims to verify.
+  "microsoft_clarity",
   // Every call this credential can make is a conversion write. AOOS has no
   // authenticated read against an OpenAI Ads account, and the validate-only
   // contract is still unconfirmed against authoritative documentation, so there
@@ -88,11 +92,6 @@ function configuredRequest(
         headers: { Authorization: `Basic ${token}` },
       };
     }
-    case "firecrawl":
-      return {
-        url: "https://api.firecrawl.dev/v1/team/credit-usage",
-        headers: { Authorization: `Bearer ${env["FIRECRAWL_API_KEY"]}` },
-      };
     case "litellm":
       // The proxy's own model list. It answers with the models the operator
       // configured, which is exactly what "is this reachable and is the key
@@ -147,6 +146,23 @@ function configuredRequest(
       return {
         url: `${env["OPENSEO_BASE_URL"]!.replace(/\/+$/, "")}/api/health`,
         headers: { Authorization: basic(env["OPENSEO_USERNAME"], env["OPENSEO_PASSWORD"]) },
+      };
+    case "bing_webmaster":
+      // GetUserSites takes no site parameter and returns the verified sites on
+      // the account. Free, and the only call that proves the key without
+      // asserting anything about a particular site.
+      return {
+        url: `https://ssl.bing.com/webmaster/api.svc/json/GetUserSites?apikey=${encodeURIComponent(env["BING_WEBMASTER_API_KEY"]!)}`,
+        headers: {},
+      };
+    case "adloop":
+      // AdLoop's own surface is MCP, which is POST-only and would refuse a GET.
+      // Caddy serves /rules.md from disk on the same host behind the same
+      // bearer, so this proves the edge token and that the vhost is up without
+      // opening an MCP session or touching a Google API.
+      return {
+        url: `${env["ADLOOP_BASE_URL"]!.replace(/\/+$/, "")}/rules.md`,
+        headers: { Authorization: `Bearer ${env["ADLOOP_API_KEY"]}` },
       };
     case "selfhosted_firecrawl":
       // /is-production is Firecrawl's liveness endpoint: free, instant, and it
