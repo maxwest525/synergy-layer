@@ -248,6 +248,8 @@ describe("non-volume prerequisites", () => {
       technologyCollection: false,
       brandMentionCollection: false,
       reviewedCompetitorSet: false,
+      umamiSecondWindow: true,
+      onpageCrawl: true,
     });
     expect(notes).toHaveLength(4);
     expect(notes.join(" ")).toContain("whois");
