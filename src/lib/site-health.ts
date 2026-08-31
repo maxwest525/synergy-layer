@@ -461,6 +461,13 @@ export function buildSiteHealth(facts: SiteHealthFacts): SiteHealthView {
       urlInspection: true,
       approvedKeywords: true,
       backlinkCollection: true,
+      // Stated gap: this page's site-audit findings need an OnPage crawl,
+      // but SiteHealthFacts does not yet carry whether one has been
+      // collected. Passing true keeps the banner silent rather than wrong;
+      // the rules themselves are unaffected (onpage-rule-checks.ts already
+      // returns nothing/a named absence without a crawl). Wiring a real
+      // read from dataforseo_snapshots is follow-up work.
+      onpageCrawl: true,
     }),
     neverRunNotice: facts.siteObservedAt === null ? NEVER_RUN : null,
   };

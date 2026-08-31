@@ -172,7 +172,9 @@ export const CONNECTION_OUTPUTS: readonly ConnectionOutput[] = [
     // stored SERP snapshots and the approved keyword set and files findings
     // from them. Until it existed this row was the clearest case of stage
     // three: paid rows stored, nothing turning them into anything.
-    findingSources: ["dataforseo"],
+    // `site-audit` (onpage-rules.server.ts) reads the same table's OnPage
+    // crawl snapshots and files the site-audit findings.
+    findingSources: ["dataforseo", "site-audit"],
     promise: "Backlinks, referring domains and anchor text, from a paid provider.",
   },
   {
