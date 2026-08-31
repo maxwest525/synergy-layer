@@ -361,6 +361,14 @@ function answerabilityFor(facts: GettingFoundFacts): Answerability | null {
     urlInspection: true,
     approvedKeywords: facts.approvedKeywords > 0,
     backlinkCollection: facts.backlinkSnapshots >= 2,
+    // Nothing on this page reads whois, technology-stack or brand-mention
+    // evidence, or a reviewed competitor set, so those pass true and say
+    // nothing rather than guessing -- the competition screen is where these
+    // four actually matter.
+    whoisCollection: true,
+    technologyCollection: true,
+    brandMentionCollection: true,
+    reviewedCompetitorSet: true,
     umamiSecondWindow: true,
     // None of this page's rules are OnPage crawl rules (site-audit routes to
     // health/pages), so this always reads as met, same as urlInspection above.

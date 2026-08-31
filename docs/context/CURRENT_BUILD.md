@@ -30,9 +30,48 @@ It is not authoritative documentation. Provider digests under
 `docs/integrations/<provider>/DIGEST.md` and their PLAN files remain the source of
 truth for provider behaviour and must never be overwritten by this file.
 
-Last updated: 2026-08-31, on the `claude/rules-umami` branch. Section 0
-below still describes 2026-08-21 and has NOT been rewritten; the current-state
-blocks immediately below supersede it.
+Last updated: 2026-08-31, after merging all four CODE-6 rule sessions
+(A: OnPage, B: Backlinks, C: Umami, D: discovery). Section 0 below still
+describes 2026-08-21 and has NOT been rewritten; the current-state blocks
+immediately below supersede it.
+
+## 0j. Competitor discovery findings reach the operator, 2026-08-31
+
+Session D of the four-way parallel rule build
+(`docs/handoffs/2026-08-28-parallel-rule-sessions.md`, CODE-6 in
+`BACKLOG.md`). Labs (`competitors_domain`), Domain Analytics (whois,
+technologies) and Content Analysis were all collecting snapshots nothing
+read; four rules now do, on `discovery-rule-checks.ts` (pure) and
+`discovery-findings.server.ts` (writer, `source_module: "competitor-discovery"`
+— never `"dataforseo"`), wired to a new manual workflow
+`dfs-discovery-findings` (`registry/modules/competitor-discovery.ts`). Costs
+nothing to run: it re-reads stored snapshots, calls no provider.
+
+- `overlap_list_reached_the_row_limit` and `rival_page_mentions_your_brand`
+  write `recommendations` like every other fact rule.
+- **The other two are not findings.** `same_registration_details_across_two_known_domains`
+  and `identical_technology_stack_across_two_known_domains` file a `pending`
+  row in a new table, `domain_ownership_candidates`, for the operator to
+  confirm or reject — same shape as `ad_advertiser_candidates`. Nothing writes
+  `confirmed` or touches `company_classification` from a match; only an
+  explicit operator action would, and that action does not exist as a UI yet
+  (`CODE-27`). See `COMPETITIVE_MODEL.md` §4 for the full lifecycle.
+- **Still a documented gap, not silently missing:** `collectWhoisOverviewForKnownDomains`
+  is written and tested but has no caller — no workflow node, no operator
+  button — so the whois-match rule stays correctly silent
+  (`whois_collection` prerequisite unmet) until one is built.
+- Four new non-volume `Prerequisite` members (`whois_collection`,
+  `technology_collection`, `brand_mention_collection`,
+  `reviewed_competitor_set`) in `rule-buckets.ts`, so an empty competition
+  screen would eventually name what it is missing rather than blaming volume.
+  The three existing screens that already call `unmetPrerequisites` (Your
+  pages, Site health, Getting found) pass `true` for all four: none of them
+  reads discovery evidence, so those screens say nothing about it rather than
+  guessing.
+- Fixed in the same change: `workflow-runner.server.ts`'s brand-term
+  derivation for `cap.dataforseo_content_analysis` stripped a domain's TLD but
+  left a leading `www.` on, so every mention search for a `www.`-form target
+  searched for the wrong word.
 
 ## 0i. Umami rule engine reaches the visitors category, 2026-08-31
 

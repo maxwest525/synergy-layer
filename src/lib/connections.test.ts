@@ -76,11 +76,12 @@ describe("the stage no screen has ever shown", () => {
     // targeting pass made DataForSEO the fourth, then "five" once PageSpeed
     // and DataForSEO's targeting pass both wrote. `onpage-rules.server.ts`
     // (site-audit), `backlink-rules.server.ts` (backlink-findings) and
-    // `umami-rules.server.ts` (umami) made it eight. It is derived from
+    // `umami-rules.server.ts` (umami) made it eight; `discovery-findings.server.ts`
+    // (competitor-discovery) makes it nine. It is derived from
     // FINDING_SOURCES, not hand-counted.
     const view = buildConnections([facts("openseo", { storedRows: 412 })]);
-    expect(view.headline).toContain("eight parts");
-    expect(FINDING_SOURCES).toHaveLength(8);
+    expect(view.headline).toContain("nine parts");
+    expect(FINDING_SOURCES).toHaveLength(9);
   });
 
   it("says nothing when no connection is collecting in silence", () => {

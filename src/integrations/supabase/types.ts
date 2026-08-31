@@ -2051,6 +2051,56 @@ export type Database = {
           },
         ]
       }
+      domain_ownership_candidates: {
+        Row: {
+          created_at: string
+          domain_a: string
+          domain_b: string
+          evidence: Json
+          id: string
+          matched_fields: Json
+          review_state: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          rule: string
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          domain_a: string
+          domain_b: string
+          evidence?: Json
+          id?: string
+          matched_fields?: Json
+          review_state?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          rule: string
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          domain_a?: string
+          domain_b?: string
+          evidence?: Json
+          id?: string
+          matched_fields?: Json
+          review_state?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          rule?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "domain_ownership_candidates_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       essential_concern_evaluations: {
         Row: {
           concern_id: string

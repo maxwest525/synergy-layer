@@ -6,6 +6,7 @@ import { ALL_SEARCH_RULES } from "./finding-copy";
 import type { Ga4CheckRule } from "./ga4-rule-checks";
 import type { OnPageCheckRule } from "./onpage-rule-checks";
 import type { PageSpeedCheckRule } from "./pagespeed-rule-checks";
+import type { DiscoveryCheckRule } from "./dataforseo/discovery-rule-checks";
 import type { UmamiCheckRule } from "./umami-rule-checks";
 import type { BacklinkCheckRule } from "./backlink-rule-checks";
 
@@ -40,6 +41,22 @@ const GA4_RULES_COVERED: Record<Ga4CheckRule, true> = {
 const PAGESPEED_RULES_COVERED: Record<PageSpeedCheckRule, true> = {
   page_lcp_poor: true,
   page_cls_poor: true,
+};
+
+/**
+ * Same compile-time exhaustiveness for the discovery family
+ * (dataforseo/discovery-rule-checks.ts): the module exposes only the
+ * `DiscoveryCheckRule` type, so a new rule id added there without a key here
+ * fails the build rather than this test at runtime. Covers all four rules,
+ * including the two that file an operator DECISION (a domain_ownership_candidates
+ * row) rather than a recommendation -- they still need a bucket assignment so
+ * an empty screen can name what they are waiting on.
+ */
+const DISCOVERY_RULES_COVERED: Record<DiscoveryCheckRule, true> = {
+  overlap_list_reached_the_row_limit: true,
+  same_registration_details_across_two_known_domains: true,
+  identical_technology_stack_across_two_known_domains: true,
+  rival_page_mentions_your_brand: true,
 };
 
 /**
@@ -84,9 +101,9 @@ const BACKLINK_RULES_COVERED: Record<BacklinkCheckRule, true> = {
  * The rule ids RULE_ASSIGNMENTS must cover, read from the actual runtime
  * unions rather than a hand-maintained list — SEO_RULES (family A) and
  * ALL_SEARCH_RULES (families B and C, via finding-copy.ts) plus the
- * compile-time-checked GA4, PageSpeed, Umami, OnPage and Backlinks ids above,
- * minus the explicit exclusion set. This is what catches drift like a new
- * pooled rule shipping without a bucket assignment.
+ * compile-time-checked GA4, PageSpeed, discovery, Umami, OnPage and
+ * Backlinks ids above, minus the explicit exclusion set. This is what
+ * catches drift like a new pooled rule shipping without a bucket assignment.
  */
 const EXPECTED_RULE_IDS = [
   ...new Set<string>([
@@ -94,6 +111,7 @@ const EXPECTED_RULE_IDS = [
     ...ALL_SEARCH_RULES,
     ...Object.keys(GA4_RULES_COVERED),
     ...Object.keys(PAGESPEED_RULES_COVERED),
+    ...Object.keys(DISCOVERY_RULES_COVERED),
     ...Object.keys(UMAMI_RULES_COVERED),
     ...Object.keys(ONPAGE_RULES_COVERED),
     ...Object.keys(BACKLINK_RULES_COVERED),
@@ -167,6 +185,10 @@ describe("non-volume prerequisites", () => {
         urlInspection: true,
         approvedKeywords: true,
         backlinkCollection: true,
+        whoisCollection: true,
+        technologyCollection: true,
+        brandMentionCollection: true,
+        reviewedCompetitorSet: true,
         umamiSecondWindow: true,
         onpageCrawl: true,
       }),
@@ -181,6 +203,10 @@ describe("non-volume prerequisites", () => {
       urlInspection: true,
       approvedKeywords: true,
       backlinkCollection: true,
+      whoisCollection: true,
+      technologyCollection: true,
+      brandMentionCollection: true,
+      reviewedCompetitorSet: true,
       umamiSecondWindow: true,
       onpageCrawl: true,
     });
@@ -200,9 +226,35 @@ describe("non-volume prerequisites", () => {
       urlInspection: true,
       approvedKeywords: true,
       backlinkCollection: true,
+      whoisCollection: true,
+      technologyCollection: true,
+      brandMentionCollection: true,
+      reviewedCompetitorSet: true,
       onpageCrawl: true,
     });
     const held = RULE_ASSIGNMENTS.filter((a) => a.alsoNeeds.includes("second_collection")).length;
     expect(notes[0]).toContain(String(held));
+  });
+
+  it("names the discovery family's own prerequisites when they are unmet", () => {
+    const notes = unmetPrerequisites({
+      secondCollection: true,
+      pageAudit: true,
+      analytics: true,
+      urlInspection: true,
+      approvedKeywords: true,
+      backlinkCollection: true,
+      whoisCollection: false,
+      technologyCollection: false,
+      brandMentionCollection: false,
+      reviewedCompetitorSet: false,
+      umamiSecondWindow: true,
+      onpageCrawl: true,
+    });
+    expect(notes).toHaveLength(4);
+    expect(notes.join(" ")).toContain("whois");
+    expect(notes.join(" ")).toContain("technology stack");
+    expect(notes.join(" ")).toContain("brand-mention");
+    expect(notes.join(" ")).toContain("reviewed");
   });
 });

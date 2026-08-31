@@ -452,8 +452,10 @@ export function buildSiteHealth(facts: SiteHealthFacts): SiteHealthView {
       ? "More changes are stored than were read for this page, so the counts above are a floor rather than a total."
       : null,
     // Nothing on this page reads a comparison window, analytics, a stored URL
-    // inspection, approved keywords, backlink snapshots, or a second Umami
-    // window, so those pass true and say nothing rather than guessing.
+    // inspection, approved keywords, backlink snapshots, whois or
+    // technology-stack evidence, brand mentions, a reviewed competitor set,
+    // or a second Umami window, so those pass true and say nothing rather
+    // than guessing.
     waitingOn: unmetPrerequisites({
       secondCollection: true,
       pageAudit: facts.siteObservedAt !== null,
@@ -461,6 +463,10 @@ export function buildSiteHealth(facts: SiteHealthFacts): SiteHealthView {
       urlInspection: true,
       approvedKeywords: true,
       backlinkCollection: true,
+      whoisCollection: true,
+      technologyCollection: true,
+      brandMentionCollection: true,
+      reviewedCompetitorSet: true,
       umamiSecondWindow: true,
       // Stated gap: this page's site-audit findings need an OnPage crawl,
       // but SiteHealthFacts does not yet carry whether one has been

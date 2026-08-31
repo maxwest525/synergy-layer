@@ -28,6 +28,10 @@ export type Prerequisite =
   | "url_inspection"
   | "approved_keywords"
   | "backlink_collection"
+  | "whois_collection"
+  | "technology_collection"
+  | "brand_mention_collection"
+  | "reviewed_competitor_set"
   | "umami_second_window"
   | "onpage_crawl";
 
@@ -45,6 +49,14 @@ export type PrerequisiteState = {
   readonly approvedKeywords: boolean;
   /** Two stored backlink readings exist, so there is movement to compare. */
   readonly backlinkCollection: boolean;
+  /** A whois read exists for the tenant's tracked and candidate domains. */
+  readonly whoisCollection: boolean;
+  /** A stored technology-stack read exists for two or more known domains. */
+  readonly technologyCollection: boolean;
+  /** A brand-mention read (Content Analysis) has been collected at least once. */
+  readonly brandMentionCollection: boolean;
+  /** At least one competitor candidate has been reviewed as an actual competitor. */
+  readonly reviewedCompetitorSet: boolean;
   /**
    * Two stored umami_snapshots rows for the same website whose windows do not
    * overlap (pairNonOverlappingWindows in umami-rule-checks.ts). Optional
@@ -296,6 +308,39 @@ export const RULE_ASSIGNMENTS: readonly RuleAssignment[] = [
     alsoNeeds: ["backlink_collection", "second_collection"],
     why: "The count of linking domains is a count, so it takes confidenceInCountChange like every other count-shaped rule rather than a literal: at this property's link volume a move of one or two domains sits inside ordinary variation, and the finding says so instead of being suppressed. It is pooled by construction — the whole property has one referring-domain set, not one per page. detectReferringDomainMovement returns nothing without two stored backlinks_referring_domains snapshots.",
   },
+
+  // Discovery family (dataforseo/discovery-rule-checks.ts): Labs, Domain
+  // Analytics and Content Analysis snapshots that nothing read before. Two of
+  // the four file an operator DECISION rather than a finding -- ownership is
+  // never inferred, per COMPETITIVE_MODEL.md §4 and §7.
+  {
+    rule: "overlap_list_reached_the_row_limit",
+    bucket: "fact",
+    needsPerTarget: null,
+    alsoNeeds: [],
+    why: "Whether a stored overlap lookup came back at its own requested limit is a comparison of two numbers already on the snapshot row (possibly_truncated, request_params.limit) -- no traffic level makes that more or less readable. discoverCompetitors (labs.server.ts) is the only producer, so this answers as soon as one lookup has run; there is no second-collection or volume gate.",
+  },
+  {
+    rule: "same_registration_details_across_two_known_domains",
+    bucket: "fact",
+    needsPerTarget: null,
+    alsoNeeds: ["whois_collection"],
+    why: "Two domains sharing an exact stored registrar or registration timestamp is a string-equality check over rows this system already holds -- no volume of traffic makes two dates equal or not. It cannot answer before a whois read exists for the tenant's tracked and candidate domains, and nothing schedules that read automatically (collectWhoisOverview has no caller yet). Files a pending row in domain_ownership_candidates for the operator to confirm or reject; COMPETITIVE_MODEL.md §4 and §7 forbid asserting the link as fact.",
+  },
+  {
+    rule: "identical_technology_stack_across_two_known_domains",
+    bucket: "fact",
+    needsPerTarget: null,
+    alsoNeeds: ["technology_collection"],
+    why: "Exact equality of two stored technology-stack objects needs no traffic to answer. It cannot fire before at least two known domains have a stored technology read, which today exists only for the owned property (workflow dfs-domain-technologies) -- a competitor domain needs an operator to point the same collector at it. Files a pending row in domain_ownership_candidates for the operator to confirm or reject, never an ownership fact, per COMPETITIVE_MODEL.md §4 and §7.",
+  },
+  {
+    rule: "rival_page_mentions_your_brand",
+    bucket: "fact",
+    needsPerTarget: null,
+    alsoNeeds: ["brand_mention_collection", "reviewed_competitor_set"],
+    why: "Whether a stored brand mention's domain matches an already-known competitor is a set match over two stored tables -- no traffic volume changes whether two strings are equal. It needs both a brand-mention read (workflow dfs-brand-mentions, operator-triggered) and at least one candidate reviewed as an actual competitor rather than a surface domain (directory, marketplace, review site), or an empty screen would blame volume for what is really two missing prerequisites.",
+  },
   {
     rule: "umami_zero_recorded",
     bucket: "fact",
@@ -398,6 +443,14 @@ const PREREQUISITE_COPY: Record<Prerequisite, string> = {
   url_inspection: "a stored index check to compare against",
   approved_keywords: "at least one approved keyword, so there is something to target",
   backlink_collection: "two stored backlink readings, so there is movement to compare",
+  whois_collection:
+    "a whois read across your tracked and candidate domains, so there is registration data to compare",
+  technology_collection:
+    "a stored technology stack for two or more of your tracked and candidate domains",
+  brand_mention_collection:
+    "a brand-mention read, so there is something to check for your name on other sites",
+  reviewed_competitor_set:
+    "at least one competitor candidate reviewed, so there is a known set to match a mention against",
   umami_second_window: "a second Umami reading whose window does not overlap the first",
   onpage_crawl: "a site crawl to have been collected, so there is a reading to check",
 };
@@ -409,6 +462,10 @@ const PREREQUISITE_STATE_KEY: Record<Prerequisite, keyof PrerequisiteState> = {
   url_inspection: "urlInspection",
   approved_keywords: "approvedKeywords",
   backlink_collection: "backlinkCollection",
+  whois_collection: "whoisCollection",
+  technology_collection: "technologyCollection",
+  brand_mention_collection: "brandMentionCollection",
+  reviewed_competitor_set: "reviewedCompetitorSet",
   umami_second_window: "umamiSecondWindow",
   onpage_crawl: "onpageCrawl",
 };

@@ -806,7 +806,12 @@ async function runDataForSeoNode(
       // The domain label without its TLD, the same brand derivation
       // backlink-evidence.server.ts already uses to classify anchors. Nothing
       // else in AOOS records a brand name, so inventing one is not an option.
-      const brand = target.replace(/\.[a-z.]+$/, "");
+      //
+      // Fixed 2026-08-31: this dropped the TLD but left a leading "www." on
+      // the label, so "www.trumove.com" derived the brand term "www.trumove"
+      // rather than "trumove" -- every mention search for a www-form target
+      // was searching for the wrong word. Strip it before the TLD comes off.
+      const brand = target.replace(/^www\./, "").replace(/\.[a-z.]+$/, "");
       if (!brand) return { ok: false, error: `No brand term can be derived from "${target}".` };
       const result = await searchBrandMentions(client, tenantId, brand, {
         runId,
@@ -863,7 +868,8 @@ async function runSerpCompetitorNode(client: Client, ref: string): Promise<NodeO
     ref !== "serp.competitors" &&
     ref !== "serp.competitor_intelligence" &&
     ref !== "competitor.page_observation" &&
-    ref !== "serp.targeting"
+    ref !== "serp.targeting" &&
+    ref !== "discovery.competition_findings"
   ) {
     return null;
   }
@@ -877,6 +883,13 @@ async function runSerpCompetitorNode(client: Client, ref: string): Promise<NodeO
     if (ref === "serp.targeting") {
       const { runTargetingPass } = await import("./dataforseo/targeting-rules.server");
       const result = await runTargetingPass(client, tenantId);
+      return { ok: true, output: { ...result, costUsd: 0 } };
+    }
+
+    if (ref === "discovery.competition_findings") {
+      const { runCompetitorDiscoveryFindings } =
+        await import("./dataforseo/discovery-findings.server");
+      const result = await runCompetitorDiscoveryFindings(client, tenantId);
       return { ok: true, output: { ...result, costUsd: 0 } };
     }
 
