@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  detectKeywordCannibalization,
   detectKeywordsWithoutPage,
   detectReferringDomainMovement,
   detectUnobservedKeywords,
@@ -66,6 +67,41 @@ describe("an approved keyword no page is about", () => {
 
   it("says nothing at all when the audit has read no pages, rather than accusing every keyword", () => {
     expect(detectKeywordsWithoutPage(approved("piano movers austin"), [])).toEqual([]);
+  });
+});
+
+describe("an approved keyword more than one page is about", () => {
+  const pages: PageText[] = [
+    { url: "https://x.test/movers", title: "Movers in Austin, TX", h1: "Austin movers" },
+    { url: "https://x.test/long-distance", title: "Austin movers | long distance", h1: null },
+    { url: "https://x.test/about", title: "About us", h1: "Who we are" },
+  ];
+
+  it("raises the keyword when two pages both carry the phrase", () => {
+    const found = detectKeywordCannibalization(approved("austin movers"), pages);
+    expect(found).toHaveLength(1);
+    expect(found[0]?.rule).toBe("approved_keyword_multiple_pages");
+    expect(found[0]?.target).toBe("austin movers");
+  });
+
+  it("names both competing pages in the evidence", () => {
+    const found = detectKeywordCannibalization(approved("austin movers"), pages);
+    expect(found[0]?.evidence["pages"]).toEqual([
+      "https://x.test/movers",
+      "https://x.test/long-distance",
+    ]);
+  });
+
+  it("stays silent when only one page carries the phrase", () => {
+    expect(detectKeywordCannibalization(approved("who we are"), pages)).toEqual([]);
+  });
+
+  it("stays silent when no page carries the phrase", () => {
+    expect(detectKeywordCannibalization(approved("piano movers austin"), pages)).toEqual([]);
+  });
+
+  it("says nothing at all when the audit has read no pages", () => {
+    expect(detectKeywordCannibalization(approved("austin movers"), [])).toEqual([]);
   });
 });
 

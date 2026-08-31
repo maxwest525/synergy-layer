@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database } from "@/integrations/supabase/types";
 import {
+  detectKeywordCannibalization,
   detectKeywordsWithoutPage,
   detectReferringDomainMovement,
   detectUnobservedKeywords,
@@ -30,6 +31,7 @@ type Client = SupabaseClient<Database>;
 const SUGGESTED_ACTION_BY_RULE: Record<string, string> = {
   approved_keyword_unobserved: "observe_keyword",
   approved_keyword_no_page: "write_new_page",
+  approved_keyword_multiple_pages: "review",
 };
 
 /** How far back stored SERP evidence counts as an observation of a keyword. */
@@ -163,6 +165,7 @@ export async function runTargetingPass(
   const observations = [
     ...detectUnobservedKeywords(approved, observed),
     ...detectKeywordsWithoutPage(approved, pages),
+    ...detectKeywordCannibalization(approved, pages),
     ...detectReferringDomainMovement(priorLinks, currentLinks),
   ];
 

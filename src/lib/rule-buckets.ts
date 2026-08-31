@@ -253,6 +253,13 @@ export const RULE_ASSIGNMENTS: readonly RuleAssignment[] = [
     why: 'Whether any read page carries the approved phrase in its title or H1 is read from page_metadata_observations, not inferred from counts. Google: "Other pages are discovered when Google extracts a link from a known page to a new page: for example, a hub page, such as a category page, links to a new blog post" (developers.google.com/search/docs/fundamentals/how-search-works, fetched 2026-08-21) — a page has to exist and be linked before it can rank, so a phrase with no page is a discovery gap, not a measurement question. detectKeywordsWithoutPage returns nothing when the audit has read no pages, so the page-audit prerequisite is real rather than decorative.',
   },
   {
+    rule: "approved_keyword_multiple_pages",
+    bucket: "fact",
+    needsPerTarget: null,
+    alsoNeeds: ["approved_keywords", "page_audit"],
+    why: "Whether two or more read pages both carry the approved phrase in their title or H1 is a count of stored rows, the same evidence detectKeywordsWithoutPage reads, just asking the opposite question: not-zero-and-not-one instead of zero. No traffic volume changes whether two pages share a phrase; it either does or does not. Returns nothing when the audit has read no pages, for the same reason as its sibling rule.",
+  },
+  {
     rule: "referring_domain_movement",
     bucket: "pooled",
     needsPerTarget: null,

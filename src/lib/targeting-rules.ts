@@ -18,6 +18,7 @@ import { confidenceInCountChange } from "./confidence";
 export type TargetingRule =
   | "approved_keyword_unobserved"
   | "approved_keyword_no_page"
+  | "approved_keyword_multiple_pages"
   | "question_asked_no_page"
   | "referring_domain_movement";
 
@@ -98,6 +99,50 @@ export function detectKeywordsWithoutPage(
         "use that phrase in their title or main heading. A page that is about it is the thing " +
         "that could rank for it.",
       evidence: { keyword: entry.keyword, pagesRead: pages.length },
+      confidence: 1,
+    }));
+}
+
+/**
+ * Approved keywords more than one read page carries.
+ *
+ * The inverse of `detectKeywordsWithoutPage`, and the join CODE-5 named as
+ * missing: nothing before this connected the approved-keyword list to page
+ * text to check whether *two* pages both claim the same phrase, which is
+ * cannibalisation the site itself created rather than a coincidence in what
+ * Google chose to rank. `possible_query_overlap` (search-console-rules.server.ts)
+ * catches the same shape from the query side -- two pages sharing impressions
+ * for one term -- but only after Google has already observed both; this reads
+ * the site's own wording and needs no query data at all.
+ *
+ * Same discipline as its sibling: the approved phrase itself must appear, not
+ * a token overlap a threshold would have to justify.
+ */
+export function detectKeywordCannibalization(
+  approved: readonly ApprovedKeyword[],
+  pages: readonly PageText[],
+): TargetingObservation[] {
+  if (pages.length === 0) return [];
+
+  return approved
+    .map((entry) => {
+      const phrase = normalise(entry.keyword);
+      const matches = pages.filter((page) =>
+        `${normalise(page.title ?? "")} ${normalise(page.h1 ?? "")}`.includes(phrase),
+      );
+      return { entry, matches };
+    })
+    .filter(({ matches }) => matches.length >= 2)
+    .map(({ entry, matches }) => ({
+      rule: "approved_keyword_multiple_pages" as const,
+      target: entry.keyword,
+      title: `${matches.length} pages are about "${entry.keyword}"`,
+      description:
+        `You approved "${entry.keyword}", and ${matches.length} different pages carry that ` +
+        "phrase in their title or main heading. They are competing with each other for it, " +
+        "not just with other sites. Which one should own it is your call; a wording change " +
+        "can differentiate the rest.",
+      evidence: { keyword: entry.keyword, pages: matches.map((page) => page.url) },
       confidence: 1,
     }));
 }

@@ -34,6 +34,7 @@ export const ALL_SEARCH_RULES = [
   // assignment in rule-buckets.ts.
   "approved_keyword_unobserved",
   "approved_keyword_no_page",
+  "approved_keyword_multiple_pages",
   "referring_domain_movement",
 ] as const;
 
@@ -294,6 +295,22 @@ function keywordWithoutPage(evidence: Evidence, on: string): FindingCopy {
   };
 }
 
+function keywordMultiplePages(evidence: Evidence, on: string): FindingCopy {
+  const keyword = text(evidence["keyword"]);
+  const pageCount = Array.isArray(evidence["pages"]) ? evidence["pages"].length : null;
+  return {
+    claim:
+      keyword === null
+        ? "More than one of your pages targets the same approved search"
+        : pageCount === null
+          ? `More than one page is about "${keyword}"`
+          : `${pageCount} pages are about "${keyword}"`,
+    evidence:
+      pageCount === null ? null : `In the title or heading of ${pageCount} pages read by ${on}`,
+    currentWording: null,
+  };
+}
+
 function referringDomainMovement(evidence: Evidence, on: string): FindingCopy {
   const priorCount = num(evidence["priorCount"]);
   const currentCount = num(evidence["currentCount"]);
@@ -326,6 +343,7 @@ const WRITERS: Record<SearchRule, (evidence: Evidence, on: string) => FindingCop
   site_clicks_shift: siteClicksShift,
   approved_keyword_unobserved: keywordUnobserved,
   approved_keyword_no_page: keywordWithoutPage,
+  approved_keyword_multiple_pages: keywordMultiplePages,
   referring_domain_movement: referringDomainMovement,
 };
 

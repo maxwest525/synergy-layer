@@ -146,6 +146,8 @@ const NO_LANE_REASON: Readonly<Record<string, string>> = {
     "No page is mapped to this term. It needs a page, which is a decision about what to publish rather than an edit to something that exists.",
   referring_domain_movement:
     "The sites linking to you changed. Those are other people's pages, and nothing here can edit them.",
+  approved_keyword_multiple_pages:
+    "More than one of your own pages targets this term. Fixing that means deciding which page should own it and rewording the rest -- a call this tool will not make for you.",
 };
 
 /**
