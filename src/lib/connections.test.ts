@@ -72,10 +72,12 @@ describe("the stage no screen has ever shown", () => {
 
   it("counts the writers rather than asserting how many there are", () => {
     // This sentence said "two" when there were three, then "three" when the
-    // targeting pass made DataForSEO the fourth. It is now derived.
+    // targeting pass made DataForSEO the fourth, then "five" once PageSpeed
+    // and DataForSEO's targeting pass both wrote. `backlink-rules.server.ts`
+    // is the sixth. It is derived from FINDING_SOURCES, not hand-counted.
     const view = buildConnections([facts("umami", { storedRows: 412 })]);
-    expect(view.headline).toContain("five parts");
-    expect(FINDING_SOURCES).toHaveLength(5);
+    expect(view.headline).toContain("six parts");
+    expect(FINDING_SOURCES).toHaveLength(6);
   });
 
   it("says nothing when no connection is collecting in silence", () => {

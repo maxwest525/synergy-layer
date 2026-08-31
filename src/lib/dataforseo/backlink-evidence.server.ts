@@ -48,6 +48,12 @@ function num(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
+function nested(value: unknown): Row | null {
+  return value !== null && typeof value === "object" && !Array.isArray(value)
+    ? (value as Row)
+    : null;
+}
+
 function classifyAnchor(anchor: string, brandTokens: string[]): string {
   const value = anchor.trim().toLowerCase();
   if (!value) return "empty";
@@ -201,10 +207,15 @@ export async function collectBacklinkEvidence(
       })),
     },
     followSplit: followCounts,
+    // Corrected 2026-08-28 (docs/handoffs/2026-08-28-parallel-rule-sessions.md,
+    // Session B): this previously read `row["url"] ?? row["page_address"]`
+    // and flat `row["referring_domains"]` — neither field exists on a
+    // backlinks_domain_pages item. The identifier is `page`, and referring
+    // domains live nested under `page_summary`.
     topLinkedPages: pageRows.slice(0, 20).map((row) => ({
-      url: row["url"] ?? row["page_address"] ?? null,
+      url: row["page"] ?? null,
       backlinks: num(row["backlinks"]),
-      referringDomains: num(row["referring_domains"]),
+      referringDomains: num((nested(row["page_summary"]) ?? {})["referring_domains"]),
       rank: num(row["rank"]),
     })),
     geography: Object.fromEntries(countries),
