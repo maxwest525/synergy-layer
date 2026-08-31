@@ -30,9 +30,94 @@ It is not authoritative documentation. Provider digests under
 `docs/integrations/<provider>/DIGEST.md` and their PLAN files remain the source of
 truth for provider behaviour and must never be overwritten by this file.
 
-Last updated: 2026-08-28, on the Command center queue-fixes branch. Section 0
-below still describes 2026-08-21 and has NOT been rewritten; the current-state
-blocks immediately below supersede it.
+Last updated: 2026-08-31, after merging all four CODE-6 rule sessions
+(A: OnPage, B: Backlinks, C: Umami, D: discovery). Section 0 below still
+describes 2026-08-21 and has NOT been rewritten; the current-state blocks
+immediately below supersede it.
+
+## 0j. Competitor discovery findings reach the operator, 2026-08-31
+
+Session D of the four-way parallel rule build
+(`docs/handoffs/2026-08-28-parallel-rule-sessions.md`, CODE-6 in
+`BACKLOG.md`). Labs (`competitors_domain`), Domain Analytics (whois,
+technologies) and Content Analysis were all collecting snapshots nothing
+read; four rules now do, on `discovery-rule-checks.ts` (pure) and
+`discovery-findings.server.ts` (writer, `source_module: "competitor-discovery"`
+— never `"dataforseo"`), wired to a new manual workflow
+`dfs-discovery-findings` (`registry/modules/competitor-discovery.ts`). Costs
+nothing to run: it re-reads stored snapshots, calls no provider.
+
+- `overlap_list_reached_the_row_limit` and `rival_page_mentions_your_brand`
+  write `recommendations` like every other fact rule.
+- **The other two are not findings.** `same_registration_details_across_two_known_domains`
+  and `identical_technology_stack_across_two_known_domains` file a `pending`
+  row in a new table, `domain_ownership_candidates`, for the operator to
+  confirm or reject — same shape as `ad_advertiser_candidates`. Nothing writes
+  `confirmed` or touches `company_classification` from a match; only an
+  explicit operator action would, and that action does not exist as a UI yet
+  (`CODE-27`). See `COMPETITIVE_MODEL.md` §4 for the full lifecycle.
+- **Still a documented gap, not silently missing:** `collectWhoisOverviewForKnownDomains`
+  is written and tested but has no caller — no workflow node, no operator
+  button — so the whois-match rule stays correctly silent
+  (`whois_collection` prerequisite unmet) until one is built.
+- Four new non-volume `Prerequisite` members (`whois_collection`,
+  `technology_collection`, `brand_mention_collection`,
+  `reviewed_competitor_set`) in `rule-buckets.ts`, so an empty competition
+  screen would eventually name what it is missing rather than blaming volume.
+  The three existing screens that already call `unmetPrerequisites` (Your
+  pages, Site health, Getting found) pass `true` for all four: none of them
+  reads discovery evidence, so those screens say nothing about it rather than
+  guessing.
+- Fixed in the same change: `workflow-runner.server.ts`'s brand-term
+  derivation for `cap.dataforseo_content_analysis` stripped a domain's TLD but
+  left a leading `www.` on, so every mention search for a `www.`-form target
+  searched for the wrong word.
+
+## 0i. Umami rule engine reaches the visitors category, 2026-08-31
+
+Session C of `docs/handoffs/2026-08-28-parallel-rule-sessions.md`. `cap.umami`
+had been `real` since 2026-08-18 (see 0d) with `umami_snapshots` rows stored
+and no rule reading them, so `visitors` was a category with no Umami finding.
+Three of the doc's rules shipped, each with every required adversarial-review
+correction applied: `umami_zero_recorded` (renamed from the proposed
+`umami_tracking_silent`), `umami_site_traffic_shift`, and
+`umami_referrer_source_stopped`. `umami_page_traffic_shift` and
+`umami_recording_stopped` stay killed, as the doc requires.
+
+- `src/lib/umami-rule-checks.ts` (pure, fully unit-tested),
+  `src/lib/umami-rules.server.ts` (writer), `src/registry/modules/umami-findings.ts`
+  (registry module) — new. `evaluateUmamiSnapshots` runs inline at the end of
+  `observeUmami` (`src/lib/umami/observe.server.ts`), mirroring how
+  `evaluatePageSpeedReadings` runs at the end of the PageSpeed read: a rules
+  failure never fails the observation itself.
+- `src/lib/rule-buckets.ts` gained a new `umami_second_window` prerequisite
+  (deliberately not a reuse of `second_collection` or `analytics`, both wired
+  to other providers' facts) and the three rule assignments. The three
+  call sites that build a `PrerequisiteState` (`your-pages.ts`,
+  `site-health.ts`, `getting-found.ts`) pass `umamiSecondWindow: true` as a
+  stated placeholder, the same pattern already used there for
+  `urlInspection`/`approvedKeywords`/`backlinkCollection` — none of them
+  reads Umami yet, so the field is honestly a stub, not a real check.
+- `connections.ts`'s `umami` entry now claims `findingSources: ["umami"]`.
+- `umami/client.server.ts`'s `fetchUmamiMetrics` slice-to-25 default is now
+  `UMAMI_RULE_THRESHOLDS.referrer.appSliceLimit`, read from the same object
+  the rule's completeness guard reads, instead of a hand-copied `25`.
+- `docs/integrations/umami/DIGEST.md` gained the verified provider default row
+  limit (500) for `GET /api/websites/:id/metrics`.
+
+**Inert today, honestly:** as of 0d there is exactly one stored Umami run (four
+rows, 2026-08-18, all real zeros). `umami_site_traffic_shift` and
+`umami_referrer_source_stopped` both need a second, non-overlapping stored
+window before they can fire at all — on the daily 28-day cadence that is
+roughly day 29 of collection — and the pending capability-promotion migration
+(0d) still has to be applied before the daily job even runs. `umami_zero_recorded`
+can fire today once that migration applies, on the existing four rows.
+
+**Not done, flagged in the PR body:** `finding-router.ts`'s `CATEGORY_BY_RULE`
+still lists the old `umami_tracking_silent` id, which no rule emits any more;
+harmless because `CATEGORY_BY_MODULE`'s `umami: "visitors"` entry routes all
+three current rule ids correctly by fallback, but the stale entry is worth
+deleting whenever that shared file is next touched.
 
 ## 0h. Subheadings surfaced, heading order deleted, 2026-08-28
 

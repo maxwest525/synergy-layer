@@ -1,3 +1,4 @@
+import { MIN_BASELINE } from "./confidence";
 import { RULE_CHECK_THRESHOLDS } from "./search-console-rule-checks";
 import { SEARCH_CONSOLE_THRESHOLDS, SEO_VALIDATION_THRESHOLDS } from "./rule-thresholds";
 
@@ -26,7 +27,13 @@ export type Prerequisite =
   | "analytics"
   | "url_inspection"
   | "approved_keywords"
-  | "backlink_collection";
+  | "backlink_collection"
+  | "whois_collection"
+  | "technology_collection"
+  | "brand_mention_collection"
+  | "reviewed_competitor_set"
+  | "umami_second_window"
+  | "onpage_crawl";
 
 /** What has actually happened for this tenant, read from facts each page already holds. */
 export type PrerequisiteState = {
@@ -42,6 +49,41 @@ export type PrerequisiteState = {
   readonly approvedKeywords: boolean;
   /** Two stored backlink readings exist, so there is movement to compare. */
   readonly backlinkCollection: boolean;
+  /** A whois read exists for the tenant's tracked and candidate domains. */
+  readonly whoisCollection: boolean;
+  /** A stored technology-stack read exists for two or more known domains. */
+  readonly technologyCollection: boolean;
+  /** A brand-mention read (Content Analysis) has been collected at least once. */
+  readonly brandMentionCollection: boolean;
+  /** At least one competitor candidate has been reviewed as an actual competitor. */
+  readonly reviewedCompetitorSet: boolean;
+  /**
+   * Two stored umami_snapshots rows for the same website whose windows do not
+   * overlap (pairNonOverlappingWindows in umami-rule-checks.ts). Optional
+   * because the three fact-gathering call sites (your-pages.ts, getting-found.ts,
+   * site-health.ts) do not read Umami and are outside this change's file list;
+   * an absent field reads as unmet, which is the safe default until one of
+   * them is wired to pass it.
+   */
+  readonly umamiSecondWindow?: boolean;
+  /**
+   * At least one OnPage crawl has been collected (a stored
+   * `dataforseo_snapshots` row for one of the OnPage detail kinds). None of
+   * the other six prerequisites names this: crediting `page_audit` (the
+   * Firecrawl/Crawl4AI page-metadata table) would blame the wrong pipeline
+   * for an empty site-audit screen, which is exactly the failure mode this
+   * type's own doc comment warns about.
+   *
+   * Stated gap: the three view-model builders that call `unmetPrerequisites`
+   * (`your-pages.ts`, `site-health.ts`, `getting-found.ts`) all pass `true`
+   * for this today rather than a live read of `dataforseo_snapshots`, so the
+   * banner this prerequisite would show is not yet wired to the real signal.
+   * The rules themselves are unaffected: `onpage-rule-checks.ts` already
+   * returns nothing when no crawl snapshot exists, so a missing crawl never
+   * renders as a false "all clear" — only the explanatory banner is pending.
+   * Wiring a real read is follow-up work.
+   */
+  readonly onpageCrawl: boolean;
 };
 
 export type RuleAssignment = {
@@ -266,6 +308,131 @@ export const RULE_ASSIGNMENTS: readonly RuleAssignment[] = [
     alsoNeeds: ["backlink_collection", "second_collection"],
     why: "The count of linking domains is a count, so it takes confidenceInCountChange like every other count-shaped rule rather than a literal: at this property's link volume a move of one or two domains sits inside ordinary variation, and the finding says so instead of being suppressed. It is pooled by construction — the whole property has one referring-domain set, not one per page. detectReferringDomainMovement returns nothing without two stored backlinks_referring_domains snapshots.",
   },
+
+  // Discovery family (dataforseo/discovery-rule-checks.ts): Labs, Domain
+  // Analytics and Content Analysis snapshots that nothing read before. Two of
+  // the four file an operator DECISION rather than a finding -- ownership is
+  // never inferred, per COMPETITIVE_MODEL.md §4 and §7.
+  {
+    rule: "overlap_list_reached_the_row_limit",
+    bucket: "fact",
+    needsPerTarget: null,
+    alsoNeeds: [],
+    why: "Whether a stored overlap lookup came back at its own requested limit is a comparison of two numbers already on the snapshot row (possibly_truncated, request_params.limit) -- no traffic level makes that more or less readable. discoverCompetitors (labs.server.ts) is the only producer, so this answers as soon as one lookup has run; there is no second-collection or volume gate.",
+  },
+  {
+    rule: "same_registration_details_across_two_known_domains",
+    bucket: "fact",
+    needsPerTarget: null,
+    alsoNeeds: ["whois_collection"],
+    why: "Two domains sharing an exact stored registrar or registration timestamp is a string-equality check over rows this system already holds -- no volume of traffic makes two dates equal or not. It cannot answer before a whois read exists for the tenant's tracked and candidate domains, and nothing schedules that read automatically (collectWhoisOverview has no caller yet). Files a pending row in domain_ownership_candidates for the operator to confirm or reject; COMPETITIVE_MODEL.md §4 and §7 forbid asserting the link as fact.",
+  },
+  {
+    rule: "identical_technology_stack_across_two_known_domains",
+    bucket: "fact",
+    needsPerTarget: null,
+    alsoNeeds: ["technology_collection"],
+    why: "Exact equality of two stored technology-stack objects needs no traffic to answer. It cannot fire before at least two known domains have a stored technology read, which today exists only for the owned property (workflow dfs-domain-technologies) -- a competitor domain needs an operator to point the same collector at it. Files a pending row in domain_ownership_candidates for the operator to confirm or reject, never an ownership fact, per COMPETITIVE_MODEL.md §4 and §7.",
+  },
+  {
+    rule: "rival_page_mentions_your_brand",
+    bucket: "fact",
+    needsPerTarget: null,
+    alsoNeeds: ["brand_mention_collection", "reviewed_competitor_set"],
+    why: "Whether a stored brand mention's domain matches an already-known competitor is a set match over two stored tables -- no traffic volume changes whether two strings are equal. It needs both a brand-mention read (workflow dfs-brand-mentions, operator-triggered) and at least one candidate reviewed as an actual competitor rather than a surface domain (directory, marketplace, review site), or an empty screen would blame volume for what is really two missing prerequisites.",
+  },
+  {
+    rule: "umami_zero_recorded",
+    bucket: "fact",
+    needsPerTarget: null,
+    alsoNeeds: [],
+    why: "Whether the Umami instance recorded anything at all is a row lookup answerable at any traffic volume, not a statistics question — no threshold makes 'did anything arrive' more honest than checking the stored counters. detectZeroRecorded (umami-rule-checks.ts) reads only the newest metric='stats' row per website; the stored snapshot itself is the rule's entire target set, so unlike event_disappeared this needs no second collection to say something (though it says less without one — see umami_site_traffic_shift).",
+  },
+  {
+    rule: "umami_site_traffic_shift",
+    bucket: "pooled",
+    needsPerTarget: null,
+    alsoNeeds: ["umami_second_window"],
+    why: "The pooled, site-wide version of the killed per-page umami_page_traffic_shift: site-wide visitors judged with confidenceInCountChange rather than a per-page count too small to trust alone, matching site_visibility_shift and site_clicks_shift. Gated on pairNonOverlappingWindows finding two stored metric='stats' rows for the same website whose windows do not overlap — deliberately not `second_collection`, which is wired to `facts.comparison.status === \"ready\"` (Search Console's comparison, your-pages.ts:452 / getting-found.ts:341 / site-health.ts:458): reusing it would tell the operator this rule is unblocked because Search Console has two windows, which is not true. On the current daily 28-day cadence a non-overlapping pair exists at roughly day 29 of collection (56 days of coverage); as of 2026-08-28 there is exactly one stored Umami run, so this is doubly inert today — no second window, and no volume to clear MIN_BASELINE even once one exists.",
+  },
+  {
+    rule: "umami_referrer_source_stopped",
+    bucket: "beyond_current_volume",
+    needsPerTarget: MIN_BASELINE,
+    alsoNeeds: ["umami_second_window"],
+    why: "A referrer going quiet is behaviour, not wiring, unlike event_disappeared, so it is scored with confidenceInCountChange(before, 0) rather than a hand-picked constant; MIN_BASELINE (confidence.ts) is the volume this would need per source. Pooling referrers cannot recover a single source any more than pooling pages recovers a censored query, hence beyond_current_volume rather than pooled. Same umami_second_window prerequisite as umami_site_traffic_shift, and for the same reason: this also diffs two stored windows, and naming it `second_collection` or `analytics` (both wired to other providers' facts — see umami_site_traffic_shift's why) would misname the real blocker the same way.",
+  },
+  {
+    rule: "non_indexable_pages_found",
+    bucket: "fact",
+    needsPerTarget: null,
+    alsoNeeds: ["onpage_crawl"],
+    why: 'A per-page indexation state read straight from the newest onpage_non_indexable snapshot, split by the documented consequence of each reason value (noindex vs robots.txt vs neither) — no threshold, no volume: "Do not show this page, media, or resource in search results" (developers.google.com/search/docs/crawling-indexing/robots-meta-tag) is binary. checkNonIndexablePages (onpage-rule-checks.ts) returns nothing before a crawl has stored this snapshot kind, so the crawl is a real prerequisite rather than a volume question.',
+  },
+  {
+    rule: "crawl_pages_error_status",
+    bucket: "fact",
+    needsPerTarget: null,
+    alsoNeeds: ["onpage_crawl"],
+    why: "A plain count of rows whose stored status_code cleared the RFC 9110 4xx/5xx boundary, split into the two consequences Google's own HTTP status codes doc documents (removal for 4xx-except-429, a temporary slowdown for 429/5xx) — no threshold invented, and no claim that Google itself has acted, since the crawler reading these pages is DataForSEO's, not Googlebot's. checkPagesErrorStatus (onpage-rule-checks.ts) reads the newest onpage_pages snapshot and returns nothing before one exists.",
+  },
+  {
+    rule: "redirect_chain_present",
+    bucket: "fact",
+    needsPerTarget: null,
+    alsoNeeds: ["onpage_crawl"],
+    why: "A count of redirecting addresses read from totals.totalCount alone (the returned_row_count fallback was deleted in the adversarial review specifically because it turned a deliberately-null total into a clean reading) — no threshold, and Google's redirects documentation names legitimate reasons a site holds redirects, so this is graded as a fact (which address to publish) rather than an error. checkRedirectChainPresent returns a named-absence finding rather than nothing when no onpage_redirect_chains snapshot exists, which is why the crawl is listed as a prerequisite here even though the rule technically never returns an empty array for a missing crawl — the prerequisite banner and the rule's own absence finding say the same thing in two different places, on purpose, since the finding is the more specific of the two.",
+  },
+  {
+    rule: "duplicate_titles_across_pages",
+    bucket: "fact",
+    needsPerTarget: null,
+    // Per the adversarial review's explicit instruction for this rule
+    // (docs/handoffs/2026-08-28-parallel-rule-sessions.md, duplicate_titles_across_pages
+    // correction 4): "needsPerTarget: null and empty alsoNeeds (a crawl
+    // answers it at any traffic level)". Left empty deliberately, even
+    // though checkDuplicateTitles files a named-absence finding rather than
+    // nothing before a crawl exists — that absence finding is this rule's
+    // own way of naming the gap, so a duplicate alsoNeeds banner was judged
+    // not to add anything the finding does not already say. Its sibling rule
+    // below (duplicate_descriptions_across_pages) was reviewed with the
+    // opposite instruction; both are implemented exactly as specified.
+    alsoNeeds: [],
+    why: "A count of shared-tag-value groups read from returned_row_count (onpage_duplicate_title's total_items_count is always null at the provider, confirmed against DataForSEO's documented response shape) — no threshold. Google, title-link doc: \"we may try to generate an improved title link from anchors, on-page text, or other sources\" when it detects an issue, which duplicate titles are a documented trigger for (developers.google.com/search/docs/appearance/title-link) — appearance and click-through, never a ranking claim. Routed to the pages category by finding-router.ts's own CATEGORY_BY_RULE entry, already committed there ahead of this rule shipping; this file adds no routing of its own.",
+  },
+  {
+    rule: "duplicate_descriptions_across_pages",
+    bucket: "fact",
+    needsPerTarget: null,
+    alsoNeeds: ["onpage_crawl"],
+    why: 'Same shape as duplicate_titles_across_pages, one snapshot kind over (onpage_duplicate_description). Google, snippet doc: "Identical or similar descriptions on every page of a site aren\'t helpful when individual pages appear in search results" (developers.google.com/search/docs/appearance/snippet) — appearance and click-through only. checkDuplicateDescriptions returns a named-absence finding before a readable crawl snapshot exists; the crawl prerequisite is also declared here so the pages-category empty state can name the missing crawl instead of implying missing traffic.',
+  },
+  {
+    rule: "inbound_link_to_error_page",
+    bucket: "fact",
+    needsPerTarget: null,
+    alsoNeeds: [],
+    // Deliberately not "backlink_collection": that prerequisite's own copy is
+    // "two stored backlink readings, so there is movement to compare", and
+    // this rule reads a single backlinks_domain_pages snapshot directly.
+    // Gating it on a second collection would misname why the screen is
+    // empty, the exact failure PrerequisiteState's own comment warns about.
+    why: 'A stored status code on a linked page is a direct read, not an estimate: no traffic volume makes "does this address answer with an error" more or less answerable. Google, HTTP status codes and network errors (https://developers.google.com/search/docs/crawling-indexing/http-network-errors, fetched 2026-08-28): 4xx (except 429) removes the address from the index; 429 and 5xx only slow crawling and eventually drop it. checkInboundLinksToErrorPages (backlink-rule-checks.ts) needs only the newest backlinks_domain_pages snapshot to answer, which is why this has no alsoNeeds beyond the snapshot existing at all.',
+  },
+  {
+    rule: "linked_page_never_audited",
+    bucket: "fact",
+    needsPerTarget: null,
+    alsoNeeds: ["page_audit"],
+    why: "A set difference between two stored tables (backlinks_domain_pages and page_metadata_observations) needs no threshold and cannot fire before either holds rows. checkLinkedPagesNeverAudited returns nothing when page_metadata_observations has no rows for the property, the same guard detectKeywordsWithoutPage uses (targeting-rules.ts:84-85), so page_audit is the real prerequisite. backlink_collection is deliberately not listed: its own copy names a second reading needed for movement, which this rule does not compare against.",
+  },
+  {
+    rule: "link_profile_coverage_partial",
+    bucket: "fact",
+    needsPerTarget: null,
+    alsoNeeds: ["backlink_collection"],
+    why: "A comparison of two stored counts (a snapshot's own row count against its own or the summary's total) is a fact read straight off stored rows, confidence 1, no threshold — BACKLINKS_CONFIG.referringDomainLimit decides the cap, never a copied 200. checkLinkProfileCoveragePartial reads the same two backlinks_referring_domains snapshots referring_domain_movement diffs, so it cannot answer before backlink_collection's two stored readings exist either.",
+  },
 ];
 
 const PREREQUISITE_COPY: Record<Prerequisite, string> = {
@@ -276,6 +443,16 @@ const PREREQUISITE_COPY: Record<Prerequisite, string> = {
   url_inspection: "a stored index check to compare against",
   approved_keywords: "at least one approved keyword, so there is something to target",
   backlink_collection: "two stored backlink readings, so there is movement to compare",
+  whois_collection:
+    "a whois read across your tracked and candidate domains, so there is registration data to compare",
+  technology_collection:
+    "a stored technology stack for two or more of your tracked and candidate domains",
+  brand_mention_collection:
+    "a brand-mention read, so there is something to check for your name on other sites",
+  reviewed_competitor_set:
+    "at least one competitor candidate reviewed, so there is a known set to match a mention against",
+  umami_second_window: "a second Umami reading whose window does not overlap the first",
+  onpage_crawl: "a site crawl to have been collected, so there is a reading to check",
 };
 
 const PREREQUISITE_STATE_KEY: Record<Prerequisite, keyof PrerequisiteState> = {
@@ -285,6 +462,12 @@ const PREREQUISITE_STATE_KEY: Record<Prerequisite, keyof PrerequisiteState> = {
   url_inspection: "urlInspection",
   approved_keywords: "approvedKeywords",
   backlink_collection: "backlinkCollection",
+  whois_collection: "whoisCollection",
+  technology_collection: "technologyCollection",
+  brand_mention_collection: "brandMentionCollection",
+  reviewed_competitor_set: "reviewedCompetitorSet",
+  umami_second_window: "umamiSecondWindow",
+  onpage_crawl: "onpageCrawl",
 };
 
 /** The unmet prerequisites across the given rules, worst-blocking first, as sentences. */

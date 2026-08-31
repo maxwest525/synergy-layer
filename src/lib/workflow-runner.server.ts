@@ -427,7 +427,9 @@ async function executeNode(
       (await runSeoValidationNode(client, node.ref ?? "", runId)) ??
       (await runSerpCompetitorNode(client, node.ref ?? "")) ??
       (await runAdsTransparencyNode(client, node.ref ?? "", runId)) ??
-      (await runDataForSeoNode(client, node.ref ?? "", runId));
+      (await runDataForSeoNode(client, node.ref ?? "", runId)) ??
+      (await runSiteAuditNode(client, node.ref ?? "")) ??
+      (await runBacklinkFindingsNode(client, node.ref ?? ""));
     // A key no runner recognises must refuse, not succeed. The old fall-through
     // stamped last_run_at and "healthy" for any unrecognised capability, which
     // is how a declared-but-unwired step passed as a working one.
@@ -804,7 +806,12 @@ async function runDataForSeoNode(
       // The domain label without its TLD, the same brand derivation
       // backlink-evidence.server.ts already uses to classify anchors. Nothing
       // else in AOOS records a brand name, so inventing one is not an option.
-      const brand = target.replace(/\.[a-z.]+$/, "");
+      //
+      // Fixed 2026-08-31: this dropped the TLD but left a leading "www." on
+      // the label, so "www.trumove.com" derived the brand term "www.trumove"
+      // rather than "trumove" -- every mention search for a www-form target
+      // was searching for the wrong word. Strip it before the TLD comes off.
+      const brand = target.replace(/^www\./, "").replace(/\.[a-z.]+$/, "");
       if (!brand) return { ok: false, error: `No brand term can be derived from "${target}".` };
       const result = await searchBrandMentions(client, tenantId, brand, {
         runId,
@@ -835,6 +842,24 @@ async function runDataForSeoNode(
 }
 
 /**
+ * Re-reads the stored DataForSEO Backlinks snapshots and files the three
+ * backlink findings (`backlink-rules.server.ts`). Costs nothing: no provider
+ * is called.
+ */
+async function runBacklinkFindingsNode(client: Client, ref: string): Promise<NodeOutcome | null> {
+  if (ref !== "backlinks.findings") return null;
+  try {
+    const { requireTenantId } = await import("./tenant.server");
+    const { evaluateBacklinkFindings } = await import("./backlink-rules.server");
+    const tenantId = await requireTenantId(client);
+    const result = await evaluateBacklinkFindings(client, tenantId);
+    return { ok: true, output: { ...result, costUsd: 0 } };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : String(error) };
+  }
+}
+
+/**
  * Rebuilds the competitor set from observed SERP results. Costs nothing: it
  * re-reads stored evidence and never calls the provider.
  */
@@ -843,7 +868,8 @@ async function runSerpCompetitorNode(client: Client, ref: string): Promise<NodeO
     ref !== "serp.competitors" &&
     ref !== "serp.competitor_intelligence" &&
     ref !== "competitor.page_observation" &&
-    ref !== "serp.targeting"
+    ref !== "serp.targeting" &&
+    ref !== "discovery.competition_findings"
   ) {
     return null;
   }
@@ -857,6 +883,13 @@ async function runSerpCompetitorNode(client: Client, ref: string): Promise<NodeO
     if (ref === "serp.targeting") {
       const { runTargetingPass } = await import("./dataforseo/targeting-rules.server");
       const result = await runTargetingPass(client, tenantId);
+      return { ok: true, output: { ...result, costUsd: 0 } };
+    }
+
+    if (ref === "discovery.competition_findings") {
+      const { runCompetitorDiscoveryFindings } =
+        await import("./dataforseo/discovery-findings.server");
+      const result = await runCompetitorDiscoveryFindings(client, tenantId);
       return { ok: true, output: { ...result, costUsd: 0 } };
     }
 
@@ -899,6 +932,30 @@ async function runSerpCompetitorNode(client: Client, ref: string): Promise<NodeO
       ok: false,
       error: error instanceof Error ? error.message : String(error),
     };
+  }
+}
+
+/**
+ * Site-audit rule pass: re-reads the tenant's newest stored OnPage crawl
+ * snapshots and files evidence-backed findings from them. Costs nothing and
+ * calls no provider, the same shape as `serp.targeting` above.
+ */
+async function runSiteAuditNode(client: Client, ref: string): Promise<NodeOutcome | null> {
+  if (ref !== "site-audit.rules") return null;
+  try {
+    const { requireTenantId } = await import("./tenant.server");
+    const { evaluateOnPageSnapshots } = await import("./onpage-rules.server");
+    const tenantId = await requireTenantId(client);
+    const result = await evaluateOnPageSnapshots(client, tenantId);
+    if (result.noSnapshots) {
+      return {
+        ok: true,
+        output: { noChange: true, reason: "No OnPage crawl has been collected yet." },
+      };
+    }
+    return { ok: true, output: { ...result } };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : String(error) };
   }
 }
 
