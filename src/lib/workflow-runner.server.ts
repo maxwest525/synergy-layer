@@ -428,6 +428,7 @@ async function executeNode(
       (await runSerpCompetitorNode(client, node.ref ?? "")) ??
       (await runAdsTransparencyNode(client, node.ref ?? "", runId)) ??
       (await runDataForSeoNode(client, node.ref ?? "", runId)) ??
+      (await runSiteAuditNode(client, node.ref ?? "")) ??
       (await runBacklinkFindingsNode(client, node.ref ?? ""));
     // A key no runner recognises must refuse, not succeed. The old fall-through
     // stamped last_run_at and "healthy" for any unrecognised capability, which
@@ -918,6 +919,30 @@ async function runSerpCompetitorNode(client: Client, ref: string): Promise<NodeO
       ok: false,
       error: error instanceof Error ? error.message : String(error),
     };
+  }
+}
+
+/**
+ * Site-audit rule pass: re-reads the tenant's newest stored OnPage crawl
+ * snapshots and files evidence-backed findings from them. Costs nothing and
+ * calls no provider, the same shape as `serp.targeting` above.
+ */
+async function runSiteAuditNode(client: Client, ref: string): Promise<NodeOutcome | null> {
+  if (ref !== "site-audit.rules") return null;
+  try {
+    const { requireTenantId } = await import("./tenant.server");
+    const { evaluateOnPageSnapshots } = await import("./onpage-rules.server");
+    const tenantId = await requireTenantId(client);
+    const result = await evaluateOnPageSnapshots(client, tenantId);
+    if (result.noSnapshots) {
+      return {
+        ok: true,
+        output: { noChange: true, reason: "No OnPage crawl has been collected yet." },
+      };
+    }
+    return { ok: true, output: { ...result } };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : String(error) };
   }
 }
 

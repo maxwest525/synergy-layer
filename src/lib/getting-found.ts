@@ -346,6 +346,9 @@ function answerabilityFor(facts: GettingFoundFacts): Answerability | null {
     urlInspection: true,
     approvedKeywords: facts.approvedKeywords > 0,
     backlinkCollection: facts.backlinkSnapshots >= 2,
+    // None of this page's rules are OnPage crawl rules (site-audit routes to
+    // health/pages), so this always reads as met, same as urlInspection above.
+    onpageCrawl: true,
   });
 
   if (facts.comparison.status !== "ready") {

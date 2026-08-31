@@ -26,7 +26,8 @@ export type Prerequisite =
   | "analytics"
   | "url_inspection"
   | "approved_keywords"
-  | "backlink_collection";
+  | "backlink_collection"
+  | "onpage_crawl";
 
 /** What has actually happened for this tenant, read from facts each page already holds. */
 export type PrerequisiteState = {
@@ -42,6 +43,24 @@ export type PrerequisiteState = {
   readonly approvedKeywords: boolean;
   /** Two stored backlink readings exist, so there is movement to compare. */
   readonly backlinkCollection: boolean;
+  /**
+   * At least one OnPage crawl has been collected (a stored
+   * `dataforseo_snapshots` row for one of the OnPage detail kinds). None of
+   * the other six prerequisites names this: crediting `page_audit` (the
+   * Firecrawl/Crawl4AI page-metadata table) would blame the wrong pipeline
+   * for an empty site-audit screen, which is exactly the failure mode this
+   * type's own doc comment warns about.
+   *
+   * Stated gap: the three view-model builders that call `unmetPrerequisites`
+   * (`your-pages.ts`, `site-health.ts`, `getting-found.ts`) all pass `true`
+   * for this today rather than a live read of `dataforseo_snapshots`, so the
+   * banner this prerequisite would show is not yet wired to the real signal.
+   * The rules themselves are unaffected: `onpage-rule-checks.ts` already
+   * returns nothing when no crawl snapshot exists, so a missing crawl never
+   * renders as a false "all clear" — only the explanatory banner is pending.
+   * Wiring a real read is follow-up work.
+   */
+  readonly onpageCrawl: boolean;
 };
 
 export type RuleAssignment = {
@@ -267,6 +286,51 @@ export const RULE_ASSIGNMENTS: readonly RuleAssignment[] = [
     why: "The count of linking domains is a count, so it takes confidenceInCountChange like every other count-shaped rule rather than a literal: at this property's link volume a move of one or two domains sits inside ordinary variation, and the finding says so instead of being suppressed. It is pooled by construction — the whole property has one referring-domain set, not one per page. detectReferringDomainMovement returns nothing without two stored backlinks_referring_domains snapshots.",
   },
   {
+    rule: "non_indexable_pages_found",
+    bucket: "fact",
+    needsPerTarget: null,
+    alsoNeeds: ["onpage_crawl"],
+    why: 'A per-page indexation state read straight from the newest onpage_non_indexable snapshot, split by the documented consequence of each reason value (noindex vs robots.txt vs neither) — no threshold, no volume: "Do not show this page, media, or resource in search results" (developers.google.com/search/docs/crawling-indexing/robots-meta-tag) is binary. checkNonIndexablePages (onpage-rule-checks.ts) returns nothing before a crawl has stored this snapshot kind, so the crawl is a real prerequisite rather than a volume question.',
+  },
+  {
+    rule: "crawl_pages_error_status",
+    bucket: "fact",
+    needsPerTarget: null,
+    alsoNeeds: ["onpage_crawl"],
+    why: "A plain count of rows whose stored status_code cleared the RFC 9110 4xx/5xx boundary, split into the two consequences Google's own HTTP status codes doc documents (removal for 4xx-except-429, a temporary slowdown for 429/5xx) — no threshold invented, and no claim that Google itself has acted, since the crawler reading these pages is DataForSEO's, not Googlebot's. checkPagesErrorStatus (onpage-rule-checks.ts) reads the newest onpage_pages snapshot and returns nothing before one exists.",
+  },
+  {
+    rule: "redirect_chain_present",
+    bucket: "fact",
+    needsPerTarget: null,
+    alsoNeeds: ["onpage_crawl"],
+    why: "A count of redirecting addresses read from totals.totalCount alone (the returned_row_count fallback was deleted in the adversarial review specifically because it turned a deliberately-null total into a clean reading) — no threshold, and Google's redirects documentation names legitimate reasons a site holds redirects, so this is graded as a fact (which address to publish) rather than an error. checkRedirectChainPresent returns a named-absence finding rather than nothing when no onpage_redirect_chains snapshot exists, which is why the crawl is listed as a prerequisite here even though the rule technically never returns an empty array for a missing crawl — the prerequisite banner and the rule's own absence finding say the same thing in two different places, on purpose, since the finding is the more specific of the two.",
+  },
+  {
+    rule: "duplicate_titles_across_pages",
+    bucket: "fact",
+    needsPerTarget: null,
+    // Per the adversarial review's explicit instruction for this rule
+    // (docs/handoffs/2026-08-28-parallel-rule-sessions.md, duplicate_titles_across_pages
+    // correction 4): "needsPerTarget: null and empty alsoNeeds (a crawl
+    // answers it at any traffic level)". Left empty deliberately, even
+    // though checkDuplicateTitles files a named-absence finding rather than
+    // nothing before a crawl exists — that absence finding is this rule's
+    // own way of naming the gap, so a duplicate alsoNeeds banner was judged
+    // not to add anything the finding does not already say. Its sibling rule
+    // below (duplicate_descriptions_across_pages) was reviewed with the
+    // opposite instruction; both are implemented exactly as specified.
+    alsoNeeds: [],
+    why: "A count of shared-tag-value groups read from returned_row_count (onpage_duplicate_title's total_items_count is always null at the provider, confirmed against DataForSEO's documented response shape) — no threshold. Google, title-link doc: \"we may try to generate an improved title link from anchors, on-page text, or other sources\" when it detects an issue, which duplicate titles are a documented trigger for (developers.google.com/search/docs/appearance/title-link) — appearance and click-through, never a ranking claim. Routed to the pages category by finding-router.ts's own CATEGORY_BY_RULE entry, already committed there ahead of this rule shipping; this file adds no routing of its own.",
+  },
+  {
+    rule: "duplicate_descriptions_across_pages",
+    bucket: "fact",
+    needsPerTarget: null,
+    alsoNeeds: ["onpage_crawl"],
+    why: 'Same shape as duplicate_titles_across_pages, one snapshot kind over (onpage_duplicate_description). Google, snippet doc: "Identical or similar descriptions on every page of a site aren\'t helpful when individual pages appear in search results" (developers.google.com/search/docs/appearance/snippet) — appearance and click-through only. checkDuplicateDescriptions returns a named-absence finding before a readable crawl snapshot exists; the crawl prerequisite is also declared here so the pages-category empty state can name the missing crawl instead of implying missing traffic.',
+  },
+  {
     rule: "inbound_link_to_error_page",
     bucket: "fact",
     needsPerTarget: null,
@@ -302,6 +366,7 @@ const PREREQUISITE_COPY: Record<Prerequisite, string> = {
   url_inspection: "a stored index check to compare against",
   approved_keywords: "at least one approved keyword, so there is something to target",
   backlink_collection: "two stored backlink readings, so there is movement to compare",
+  onpage_crawl: "a site crawl to have been collected, so there is a reading to check",
 };
 
 const PREREQUISITE_STATE_KEY: Record<Prerequisite, keyof PrerequisiteState> = {
@@ -311,6 +376,7 @@ const PREREQUISITE_STATE_KEY: Record<Prerequisite, keyof PrerequisiteState> = {
   url_inspection: "urlInspection",
   approved_keywords: "approvedKeywords",
   backlink_collection: "backlinkCollection",
+  onpage_crawl: "onpageCrawl",
 };
 
 /** The unmet prerequisites across the given rules, worst-blocking first, as sentences. */
