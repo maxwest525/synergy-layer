@@ -290,6 +290,8 @@ export async function preparePageWordingProposal(
           apiKey,
           model,
           prompt: buildPageWordingPrompt(evidence, guidance, optionalContext),
+          client,
+          tenantId,
         });
   const changes = buildPageWordingChanges(evidence.livePage, wording);
   const simulation = applyExactReplacements(source.content, changes);

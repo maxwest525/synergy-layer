@@ -277,6 +277,8 @@ export async function preparePageMetadataProposal(
       guidance,
       optionalContext,
     ),
+    client,
+    tenantId,
   });
   const changes = buildPageMetadataChanges(liveMetaDescription, wording);
   const simulation = applyExactReplacements(source.content, changes);

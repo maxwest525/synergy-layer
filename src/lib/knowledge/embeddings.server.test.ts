@@ -14,6 +14,8 @@ describe("Gemini knowledge embeddings", () => {
       );
     });
     const result = await embedDocuments({
+      client: {} as never,
+      tenantId: "tenant-1",
       apiKey: "secret",
       documents: [
         { title: "Authority Science", text: "Authority is capacity." },
@@ -41,7 +43,13 @@ describe("Gemini knowledge embeddings", () => {
       async (_url: string | URL | Request, _init?: RequestInit) =>
         new Response(JSON.stringify({ embedding: { values: vector } }), { status: 200 }),
     );
-    const result = await embedQuery({ apiKey: "secret", query: "authority transfer", fetcher });
+    const result = await embedQuery({
+      apiKey: "secret",
+      query: "authority transfer",
+      fetcher,
+      client: {} as never,
+      tenantId: "tenant-1",
+    });
 
     expect(result).toHaveLength(768);
     const body = JSON.parse(String(fetcher.mock.calls[0]![1]?.body));
@@ -58,9 +66,15 @@ describe("Gemini knowledge embeddings", () => {
         new Response(JSON.stringify({ embedding: { values: [1, 2, 3] } }), { status: 200 }),
     );
 
-    await expect(embedQuery({ apiKey: "secret", query: "authority", fetcher })).rejects.toThrow(
-      "768",
-    );
+    await expect(
+      embedQuery({
+        apiKey: "secret",
+        query: "authority",
+        fetcher,
+        client: {} as never,
+        tenantId: "tenant-1",
+      }),
+    ).rejects.toThrow("768");
   });
 
   it("preserves Google's safe quota detail when an embedding request fails", async () => {
@@ -78,7 +92,15 @@ describe("Gemini knowledge embeddings", () => {
         ),
     );
 
-    await expect(embedQuery({ apiKey: "secret", query: "authority", fetcher })).rejects.toThrow(
+    await expect(
+      embedQuery({
+        apiKey: "secret",
+        query: "authority",
+        fetcher,
+        client: {} as never,
+        tenantId: "tenant-1",
+      }),
+    ).rejects.toThrow(
       "Gemini embedding request failed with HTTP 429: Quota exceeded for embed_content_paid_tier_requests, limit: 0",
     );
   });
@@ -106,6 +128,8 @@ describe("embeddings routed through the LiteLLM/OpenRouter proxy", () => {
     });
 
     const result = await embedDocuments({
+      client: {} as never,
+      tenantId: "tenant-1",
       apiKey: "unused-once-the-proxy-is-configured",
       documents: [{ title: "Authority Science", text: "Authority is capacity." }],
       fetcher,
@@ -131,9 +155,15 @@ describe("embeddings routed through the LiteLLM/OpenRouter proxy", () => {
         }),
     );
 
-    await expect(embedQuery({ apiKey: "", query: "authority transfer", fetcher })).resolves.toEqual(
-      vector,
-    );
+    await expect(
+      embedQuery({
+        apiKey: "",
+        query: "authority transfer",
+        fetcher,
+        client: {} as never,
+        tenantId: "tenant-1",
+      }),
+    ).resolves.toEqual(vector);
     const body = JSON.parse(String(fetcher.mock.calls[0]![1]?.body));
     expect(body).toMatchObject({ input: ["authority transfer"], task_type: "RETRIEVAL_QUERY" });
   });
@@ -154,6 +184,8 @@ describe("embeddings routed through the LiteLLM/OpenRouter proxy", () => {
     );
 
     const result = await embedDocuments({
+      client: {} as never,
+      tenantId: "tenant-1",
       apiKey: "unused",
       documents: [
         { title: "First", text: "first" },
@@ -168,8 +200,14 @@ describe("embeddings routed through the LiteLLM/OpenRouter proxy", () => {
   it("fails rather than silently falling back when the proxy itself errors", async () => {
     const fetcher = vi.fn(async () => new Response("bad gateway", { status: 502 }));
 
-    await expect(embedQuery({ apiKey: "secret", query: "authority", fetcher })).rejects.toThrow(
-      "The model proxy returned HTTP 502",
-    );
+    await expect(
+      embedQuery({
+        apiKey: "secret",
+        query: "authority",
+        fetcher,
+        client: {} as never,
+        tenantId: "tenant-1",
+      }),
+    ).rejects.toThrow("The model proxy returned HTTP 502");
   });
 });

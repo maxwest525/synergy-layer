@@ -53,13 +53,20 @@ export const probeGovernedKnowledgeEmbedding = createServerFn({ method: "POST" }
   .inputValidator(validateKnowledgeEmbeddingProbeApproval)
   .handler(async ({ context }) => {
     const { assertOperator } = await import("../os-admin.server");
+    const { litellmConfigured } = await import("../ai/routing");
     const { embedQuery, KNOWLEDGE_EMBEDDING_MODEL } = await import("./embeddings.server");
+    const { requireTenantId } = await import("../tenant.server");
     await assertOperator(context.supabase, context.userId);
     const apiKey = process.env["GEMINI_API_KEY"]?.trim() ?? "";
-    if (!apiKey) throw new Error("GEMINI_API_KEY is not configured.");
+    if (!apiKey && !litellmConfigured(process.env)) {
+      throw new Error("Neither GEMINI_API_KEY nor the LiteLLM proxy is configured.");
+    }
+    const tenantId = await requireTenantId(context.supabase);
     const vector = await embedQuery({
       apiKey,
       query: "AOOS governed knowledge connector health probe",
+      client: context.supabase,
+      tenantId,
     });
     return {
       model: KNOWLEDGE_EMBEDDING_MODEL,
