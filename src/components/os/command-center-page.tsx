@@ -209,9 +209,15 @@ export function CommandCenterPage() {
           Marky assist · biggest win first
         </span>
         {view.assistLine.length > 0 ? (
-          <div className="flex flex-wrap items-center gap-x-[18px] gap-y-1 text-[13px] font-semibold text-foreground">
-            {view.assistLine.map((phrase) => (
-              <span key={phrase}>{phrase}</span>
+          <div className="flex flex-wrap items-center gap-x-[18px] gap-y-1 text-[13px] font-semibold">
+            {view.assistLine.map((entry) => (
+              <Link
+                key={entry.phrase}
+                to={entry.to}
+                className="text-foreground underline decoration-primary/40 decoration-2 underline-offset-4 transition-colors hover:text-primary"
+              >
+                {entry.phrase}
+              </Link>
             ))}
           </div>
         ) : (

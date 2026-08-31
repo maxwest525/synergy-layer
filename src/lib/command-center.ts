@@ -165,7 +165,13 @@ export type CommandCenterView = {
   readonly property: string | null;
   readonly tiles: readonly Tile[];
   readonly categories: readonly CategoryRow[];
-  readonly assistLine: readonly string[];
+  /**
+   * What most needs you, one phrase per waiting category. Each carries the
+   * category's own route: this used to render as plain text with nothing to
+   * click, which was the most prominent instruction on the page and the one
+   * an operator could least act on.
+   */
+  readonly assistLine: readonly { readonly phrase: string; readonly to: string }[];
   readonly topCards: readonly TopCard[];
   readonly totalWaiting: number;
   readonly suggestedNext: readonly SuggestedNextRow[];
@@ -447,7 +453,10 @@ export function buildCommandCenter(facts: CommandCenterFacts): CommandCenterView
 
   const assistLine = categories
     .filter((row) => row.waiting > 0)
-    .map((row) => waitingPhrase(row.category, row.waiting));
+    .map((row) => ({
+      phrase: waitingPhrase(row.category, row.waiting),
+      to: row.category.to,
+    }));
 
   const topCards = queue.open
     .slice(0, TOP_CARDS)

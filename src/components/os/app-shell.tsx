@@ -75,14 +75,30 @@ function NavPanel({
 
   return (
     <div className="flex h-full w-full flex-col gap-1 px-3 py-3.5">
-      <div className="flex items-center gap-2 px-2.5 pb-2.5 pt-1">
+      {/*
+        This used to render as a plain <span>. "Other categories" below
+        excludes whichever category you're currently in -- by design, so the
+        list doesn't show you the page you're already on -- but that left the
+        category you're in with no clickable link anywhere in the sidebar at
+        all: not here, not in the list below (which no longer lists it), and
+        not in navDirectory() (which never carried the category roots to begin
+        with). The only way back to a category's own landing page, from
+        anywhere inside it, was the browser's back button. Linking the heading
+        to the current category's route closes that; on "/" it points at "/",
+        which is harmless since Command center is already linked just below.
+      */}
+      <Link
+        to={current?.to ?? "/"}
+        onClick={onNavigate}
+        className="flex items-center gap-2 rounded-lg px-2.5 pb-2.5 pt-1 text-[13px] font-bold text-foreground transition-colors hover:text-primary"
+      >
         <HeadingIcon
           className="h-[15px] w-[15px] text-primary"
           strokeWidth={1.6}
           aria-hidden="true"
         />
-        <span className="text-[13px] font-bold text-foreground">{heading?.title ?? "Today"}</span>
-      </div>
+        {heading?.title ?? "Today"}
+      </Link>
 
       <p className="px-2.5 pb-0.5 pt-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-subtle">
         Start here
