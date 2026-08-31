@@ -258,18 +258,40 @@ describe("connector probes", () => {
     expect(fetcher).not.toHaveBeenCalled();
   });
 
-  // The OpenAI Ads credential can only write. A probe that reached the provider
-  // at all would be delivering a conversion, so the honest health reading is
-  // "configured, unprovable" and no request may leave.
-  it("never calls the provider to health check the OpenAI Ads conversions bridge", async () => {
-    const fetcher = vi.fn();
+  // This connector used to sit in noSafeProbe, on the recorded belief that every
+  // call the credential can make is a write and that the validate-only contract
+  // was unconfirmed. Both were wrong — validate_only is documented on the events
+  // endpoint and stores nothing — so a working integration was reporting itself
+  // as unprovable. What must stay true is that the probe cannot deliver a
+  // conversion, which is what these assertions pin down.
+  it("health checks OpenAI Ads with a validate-only call that stores nothing", async () => {
+    const fetcher = vi.fn(
+      async (_input: string | URL | Request, _init?: RequestInit): Promise<Response> =>
+        new Response("{}", { status: 200 }),
+    );
     const result = await probeConnector("openai_ads", {
       env: { OPENAI_ADS_CAPI_BRIDGE_SECRET: "bridge", OPENAI_ADS_CAPI_API_KEY: "key" },
-      fetcher,
+      fetcher: fetcher as unknown as typeof fetch,
     });
 
-    expect(result).toMatchObject({ health: "degraded", outcome: "configured_no_safe_probe" });
-    expect(fetcher).not.toHaveBeenCalled();
+    expect(result).toMatchObject({ health: "healthy", outcome: "success" });
+
+    const call = fetcher.mock.calls[0]!;
+    expect(String(call[0])).toContain("bzr.openai.com/v1/events");
+    // The pixel id is required by the provider as a query parameter.
+    expect(String(call[0])).toContain("pid=");
+    const init = call[1]!;
+    expect(init.method).toBe("POST");
+
+    const body = JSON.parse(init.body as string) as {
+      validate_only?: unknown;
+      events?: { id?: unknown }[];
+    };
+    // The whole point: without this the probe would deliver a real conversion.
+    expect(body.validate_only).toBe(true);
+    // A stable id means provider deduplication collapses repeats even if
+    // validate_only were ever ignored.
+    expect(body.events?.[0]?.id).toBe("aoos-connector-probe");
   });
 
   it("refreshes Google Ads OAuth and probes the current read-only v25 endpoint", async () => {

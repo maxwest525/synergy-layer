@@ -1,5 +1,7 @@
 import { GOVERNED_REPO } from "../execution/allowlist";
 import { GITHUB_USER_AGENT } from "../execution/execute.server";
+import { OPENAI_ADS_PROVIDER_ENDPOINT } from "../openai-ads/capi-delivery";
+import { OPENAI_ADS_PIXEL_ID } from "../openai-ads/config";
 import {
   CONNECTOR_CATALOG,
   describeConnectorReadiness,
@@ -29,6 +31,9 @@ type ProbeOptions = {
 type RequestDescriptor = {
   url: string;
   headers: Record<string, string>;
+  /** GET unless a provider has no readable route and offers a no-op write instead. */
+  method?: "GET" | "POST";
+  body?: string;
 };
 
 const noSafeProbe = new Set<ConnectorKey>([
@@ -39,11 +44,6 @@ const noSafeProbe = new Set<ConnectorKey>([
   // every time this screen is opened, so probing it would break the very
   // feature it claims to verify.
   "microsoft_clarity",
-  // Every call this credential can make is a conversion write. AOOS has no
-  // authenticated read against an OpenAI Ads account, and the validate-only
-  // contract is still unconfirmed against authoritative documentation, so there
-  // is nothing to probe that would not deliver an event.
-  "openai_ads",
 ]);
 const MAX_SCHEMA_PROBE_BODY_BYTES = 32 * 1024;
 // DataForSEO's /v3/appendix/user_data returns rates, limits, statistics, money
@@ -147,6 +147,40 @@ function configuredRequest(
         url: `${env["OPENSEO_BASE_URL"]!.replace(/\/+$/, "")}/api/health`,
         headers: { Authorization: basic(env["OPENSEO_USERNAME"], env["OPENSEO_PASSWORD"]) },
       };
+    case "openai_ads": {
+      // The provider documents `validate_only: true` on the events endpoint:
+      // it checks the payload and stores nothing. Confirmed against
+      // https://developers.openai.com/ads/conversions-api on 2026-08-31.
+      //
+      // This connector previously sat in `noSafeProbe` because the codebase
+      // recorded that every call the credential can make is a write and that
+      // the validate-only contract was unconfirmed. Both were wrong, so a
+      // working integration reported itself as unprovable.
+      //
+      // The event carries a fixed synthetic id. Nothing is stored, but a stable
+      // id means that even if validate_only were ever ignored, the provider's
+      // own deduplication would collapse repeats rather than counting a
+      // conversion per health check.
+      const key = env["OPENAI_ADS_CAPI_API_KEY"]!;
+      return {
+        url: `${OPENAI_ADS_PROVIDER_ENDPOINT}?pid=${encodeURIComponent(OPENAI_ADS_PIXEL_ID)}`,
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${key}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          validate_only: true,
+          events: [
+            {
+              id: "aoos-connector-probe",
+              type: "order_created",
+              timestamp_ms: Date.now(),
+            },
+          ],
+        }),
+      };
+    }
     case "bing_webmaster":
       // GetUserSites takes no site parameter and returns the verified sites on
       // the account. Free, and the only call that proves the key without
@@ -363,8 +397,9 @@ export async function probeConnector(
   const timeout = setTimeout(() => controller.abort(), options.timeoutMs ?? 10_000);
   try {
     const response = await (options.fetcher ?? fetch)(descriptor.url, {
-      method: "GET",
+      method: descriptor.method ?? "GET",
       headers: descriptor.headers,
+      ...(descriptor.body === undefined ? {} : { body: descriptor.body }),
       signal: controller.signal,
     });
     const schemaValid =
