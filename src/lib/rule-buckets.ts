@@ -330,6 +330,32 @@ export const RULE_ASSIGNMENTS: readonly RuleAssignment[] = [
     alsoNeeds: ["onpage_crawl"],
     why: 'Same shape as duplicate_titles_across_pages, one snapshot kind over (onpage_duplicate_description). Google, snippet doc: "Identical or similar descriptions on every page of a site aren\'t helpful when individual pages appear in search results" (developers.google.com/search/docs/appearance/snippet) — appearance and click-through only. checkDuplicateDescriptions returns a named-absence finding before a readable crawl snapshot exists; the crawl prerequisite is also declared here so the pages-category empty state can name the missing crawl instead of implying missing traffic.',
   },
+  {
+    rule: "inbound_link_to_error_page",
+    bucket: "fact",
+    needsPerTarget: null,
+    alsoNeeds: [],
+    // Deliberately not "backlink_collection": that prerequisite's own copy is
+    // "two stored backlink readings, so there is movement to compare", and
+    // this rule reads a single backlinks_domain_pages snapshot directly.
+    // Gating it on a second collection would misname why the screen is
+    // empty, the exact failure PrerequisiteState's own comment warns about.
+    why: 'A stored status code on a linked page is a direct read, not an estimate: no traffic volume makes "does this address answer with an error" more or less answerable. Google, HTTP status codes and network errors (https://developers.google.com/search/docs/crawling-indexing/http-network-errors, fetched 2026-08-28): 4xx (except 429) removes the address from the index; 429 and 5xx only slow crawling and eventually drop it. checkInboundLinksToErrorPages (backlink-rule-checks.ts) needs only the newest backlinks_domain_pages snapshot to answer, which is why this has no alsoNeeds beyond the snapshot existing at all.',
+  },
+  {
+    rule: "linked_page_never_audited",
+    bucket: "fact",
+    needsPerTarget: null,
+    alsoNeeds: ["page_audit"],
+    why: "A set difference between two stored tables (backlinks_domain_pages and page_metadata_observations) needs no threshold and cannot fire before either holds rows. checkLinkedPagesNeverAudited returns nothing when page_metadata_observations has no rows for the property, the same guard detectKeywordsWithoutPage uses (targeting-rules.ts:84-85), so page_audit is the real prerequisite. backlink_collection is deliberately not listed: its own copy names a second reading needed for movement, which this rule does not compare against.",
+  },
+  {
+    rule: "link_profile_coverage_partial",
+    bucket: "fact",
+    needsPerTarget: null,
+    alsoNeeds: ["backlink_collection"],
+    why: "A comparison of two stored counts (a snapshot's own row count against its own or the summary's total) is a fact read straight off stored rows, confidence 1, no threshold — BACKLINKS_CONFIG.referringDomainLimit decides the cap, never a copied 200. checkLinkProfileCoveragePartial reads the same two backlinks_referring_domains snapshots referring_domain_movement diffs, so it cannot answer before backlink_collection's two stored readings exist either.",
+  },
 ];
 
 const PREREQUISITE_COPY: Record<Prerequisite, string> = {
