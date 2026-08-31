@@ -172,7 +172,11 @@ export const CONNECTION_OUTPUTS: readonly ConnectionOutput[] = [
     // stored SERP snapshots and the approved keyword set and files findings
     // from them. Until it existed this row was the clearest case of stage
     // three: paid rows stored, nothing turning them into anything.
-    findingSources: ["dataforseo"],
+    //
+    // discovery-findings.server.ts reads the same table's Labs, Domain
+    // Analytics and Content Analysis snapshots and files its four rules under
+    // its own source_module, "competitor-discovery", never "dataforseo".
+    findingSources: ["dataforseo", "competitor-discovery"],
     promise: "Backlinks, referring domains and anchor text, from a paid provider.",
   },
   {

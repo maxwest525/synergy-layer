@@ -457,6 +457,12 @@ export function buildYourPages(facts: YourPagesFacts): YourPagesView {
       urlInspection: true,
       approvedKeywords: true,
       backlinkCollection: true,
+      // Nor whois, technology-stack or brand-mention evidence, or a reviewed
+      // competitor set -- those matter on the competition screen, not here.
+      whoisCollection: true,
+      technologyCollection: true,
+      brandMentionCollection: true,
+      reviewedCompetitorSet: true,
     }),
     neverRunNotice: facts.lastObservedAt === null ? NEVER_RUN : null,
     orphanNote:

@@ -134,6 +134,41 @@ unit of analysis and the two above it as attributes carried along:
    competitor ranks against the approved keyword set on forty pages, forty pages
    is the work.
 
+**The ownership candidate queue, added 2026-08-31.** Point 3 above is now backed
+by a concrete table, `domain_ownership_candidates`
+(`supabase/migrations/20260831120000_domain_ownership_candidates.sql`), built to
+the same pending/confirmed/rejected shape `ad_advertiser_candidates` already
+uses for advertiser identity claims:
+
+- Two rules populate it, both in `src/lib/dataforseo/discovery-rule-checks.ts`
+  and `discovery-findings.server.ts`:
+  `same_registration_details_across_two_known_domains` (an exact match on
+  `whois/overview`'s registrar, creation timestamp, or expiration timestamp
+  between two domains this tenant already tracks or has reviewed as a
+  competitor) and `identical_technology_stack_across_two_known_domains` (an
+  exact match on `domain_technologies`'s stored stack between the same set of
+  domains).
+- **A row is a candidate, never a fact.** `rule`, `domain_a`, `domain_b`,
+  `matched_fields` (which field or fields matched, the shared value, and how
+  many known domains share it -- no similarity score, no cut-off: either a
+  field is exactly equal on two present values, or it is not a match at all)
+  and `evidence` (snapshot ids, collection dates, and -- for the technology
+  match -- whether both reads happened on the same day) sit beside
+  `review_state`, defaulting to `pending`.
+- **Only an explicit operator confirmation action may set `review_state` to
+  `confirmed`.** No rule, writer, or scheduled job in this codebase writes
+  `confirmed` or touches `company_classification` from a match here. A
+  `rejected` row stays as a record that the operator looked and said no, the
+  same way a rejected `competitor_candidates` row does.
+- **What is still missing**, tracked as `CODE-25` in `docs/context/BACKLOG.md`:
+  no operator control triggers the whois read
+  (`collectWhoisOverviewForKnownDomains` exists and is tested, but nothing
+  calls it), and no page yet reviews a pending row and writes the confirm or
+  reject decision. Until both exist, the two rules above are correctly silent
+  for a whois match (their `whois_collection` prerequisite in
+  `rule-buckets.ts` is unmet) and functionally inert for a technology match
+  once the collector is finally pointed at more than the owned property.
+
 **Corrections this section records**, both found in the code on 2026-08-28:
 
 - `competitor-intelligence.server.ts` profiles by domain and treats URLs as a

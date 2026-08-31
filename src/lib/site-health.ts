@@ -452,8 +452,9 @@ export function buildSiteHealth(facts: SiteHealthFacts): SiteHealthView {
       ? "More changes are stored than were read for this page, so the counts above are a floor rather than a total."
       : null,
     // Nothing on this page reads a comparison window, analytics, a stored URL
-    // inspection, approved keywords, or backlink snapshots, so those pass true
-    // and say nothing rather than guessing.
+    // inspection, approved keywords, backlink snapshots, whois or
+    // technology-stack evidence, brand mentions, or a reviewed competitor
+    // set, so those pass true and say nothing rather than guessing.
     waitingOn: unmetPrerequisites({
       secondCollection: true,
       pageAudit: facts.siteObservedAt !== null,
@@ -461,6 +462,10 @@ export function buildSiteHealth(facts: SiteHealthFacts): SiteHealthView {
       urlInspection: true,
       approvedKeywords: true,
       backlinkCollection: true,
+      whoisCollection: true,
+      technologyCollection: true,
+      brandMentionCollection: true,
+      reviewedCompetitorSet: true,
     }),
     neverRunNotice: facts.siteObservedAt === null ? NEVER_RUN : null,
   };
