@@ -711,6 +711,94 @@ export type Database = {
           },
         ]
       }
+      ai_gateway_budgets: {
+        Row: {
+          alerts_fired: Json
+          ceiling_usd: number
+          created_at: string
+          hard_stop: boolean
+          id: string
+          period_month: string
+          spent_usd: number
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          alerts_fired?: Json
+          ceiling_usd?: number
+          created_at?: string
+          hard_stop?: boolean
+          id?: string
+          period_month: string
+          spent_usd?: number
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          alerts_fired?: Json
+          ceiling_usd?: number
+          created_at?: string
+          hard_stop?: boolean
+          id?: string
+          period_month?: string
+          spent_usd?: number
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_gateway_budgets_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_gateway_requests: {
+        Row: {
+          cost_usd: number
+          created_at: string
+          id: string
+          input_tokens: number
+          model: string
+          output_tokens: number
+          priced: boolean
+          surface: string
+          tenant_id: string
+        }
+        Insert: {
+          cost_usd?: number
+          created_at?: string
+          id?: string
+          input_tokens?: number
+          model: string
+          output_tokens?: number
+          priced?: boolean
+          surface: string
+          tenant_id: string
+        }
+        Update: {
+          cost_usd?: number
+          created_at?: string
+          id?: string
+          input_tokens?: number
+          model?: string
+          output_tokens?: number
+          priced?: boolean
+          surface?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_gateway_requests_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       assets: {
         Row: {
           config: Json
@@ -2305,6 +2393,65 @@ export type Database = {
           },
           {
             foreignKeyName: "ga4_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      google_ads_snapshots: {
+        Row: {
+          advertising_channel_type: string | null
+          campaign_id: string
+          campaign_name: string
+          campaign_status: string
+          clicks: number
+          collected_at: string
+          conversions: number
+          conversions_value: number
+          cost_micros: number
+          customer_id: string
+          id: string
+          impressions: number
+          segment_date: string
+          tenant_id: string
+        }
+        Insert: {
+          advertising_channel_type?: string | null
+          campaign_id: string
+          campaign_name: string
+          campaign_status: string
+          clicks?: number
+          collected_at?: string
+          conversions?: number
+          conversions_value?: number
+          cost_micros?: number
+          customer_id: string
+          id?: string
+          impressions?: number
+          segment_date: string
+          tenant_id: string
+        }
+        Update: {
+          advertising_channel_type?: string | null
+          campaign_id?: string
+          campaign_name?: string
+          campaign_status?: string
+          clicks?: number
+          collected_at?: string
+          conversions?: number
+          conversions_value?: number
+          cost_micros?: number
+          customer_id?: string
+          id?: string
+          impressions?: number
+          segment_date?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "google_ads_snapshots_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
