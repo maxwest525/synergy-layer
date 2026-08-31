@@ -172,7 +172,13 @@ export const CONNECTION_OUTPUTS: readonly ConnectionOutput[] = [
     // stored SERP snapshots and the approved keyword set and files findings
     // from them. Until it existed this row was the clearest case of stage
     // three: paid rows stored, nothing turning them into anything.
-    findingSources: ["dataforseo"],
+    // `site-audit` (onpage-rules.server.ts) reads the same table's OnPage
+    // crawl snapshots and files the site-audit findings. `backlink-findings`
+    // (backlink-rules.server.ts) reads three more Backlinks snapshot kinds
+    // from this same table (backlinks_domain_pages, backlinks_backlinks,
+    // backlinks_summary, backlinks_referring_domains) that the targeting pass
+    // does not touch.
+    findingSources: ["dataforseo", "site-audit", "backlink-findings"],
     promise: "Backlinks, referring domains and anchor text, from a paid provider.",
   },
   {

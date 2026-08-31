@@ -4,8 +4,10 @@ import { RULE_ASSIGNMENTS, unmetPrerequisites, type RuleBucket } from "./rule-bu
 import { SEARCH_CONSOLE_THRESHOLDS, SEO_RULES } from "./rule-thresholds";
 import { ALL_SEARCH_RULES } from "./finding-copy";
 import type { Ga4CheckRule } from "./ga4-rule-checks";
+import type { OnPageCheckRule } from "./onpage-rule-checks";
 import type { PageSpeedCheckRule } from "./pagespeed-rule-checks";
 import type { UmamiCheckRule } from "./umami-rule-checks";
+import type { BacklinkCheckRule } from "./backlink-rule-checks";
 
 /**
  * Rules deliberately excluded from RULE_ASSIGNMENTS: they carry their own
@@ -52,12 +54,39 @@ const UMAMI_RULES_COVERED: Record<UmamiCheckRule, true> = {
 };
 
 /**
+ * Same compile-time exhaustiveness for the OnPage site-audit family: the
+ * module exposes only the `OnPageCheckRule` type (no runtime array), so a new
+ * rule id added there without a key here fails the build rather than this
+ * test at runtime. Ships five of the eight rules named in
+ * docs/handoffs/2026-08-28-parallel-rule-sessions.md; the three crawl-meta
+ * rules are a follow-up.
+ */
+const ONPAGE_RULES_COVERED: Record<OnPageCheckRule, true> = {
+  non_indexable_pages_found: true,
+  crawl_pages_error_status: true,
+  redirect_chain_present: true,
+  duplicate_titles_across_pages: true,
+  duplicate_descriptions_across_pages: true,
+};
+
+/**
+ * Same compile-time exhaustiveness for the Backlinks family: the module
+ * exposes only the `BacklinkCheckRule` type, so a new rule id added there
+ * without a key here fails the build rather than this test at runtime.
+ */
+const BACKLINK_RULES_COVERED: Record<BacklinkCheckRule, true> = {
+  inbound_link_to_error_page: true,
+  linked_page_never_audited: true,
+  link_profile_coverage_partial: true,
+};
+
+/**
  * The rule ids RULE_ASSIGNMENTS must cover, read from the actual runtime
  * unions rather than a hand-maintained list — SEO_RULES (family A) and
  * ALL_SEARCH_RULES (families B and C, via finding-copy.ts) plus the
- * compile-time-checked GA4, PageSpeed and Umami ids above, minus the
- * explicit exclusion set. This is what catches drift like a new pooled rule
- * shipping without a bucket assignment.
+ * compile-time-checked GA4, PageSpeed, Umami, OnPage and Backlinks ids above,
+ * minus the explicit exclusion set. This is what catches drift like a new
+ * pooled rule shipping without a bucket assignment.
  */
 const EXPECTED_RULE_IDS = [
   ...new Set<string>([
@@ -66,6 +95,8 @@ const EXPECTED_RULE_IDS = [
     ...Object.keys(GA4_RULES_COVERED),
     ...Object.keys(PAGESPEED_RULES_COVERED),
     ...Object.keys(UMAMI_RULES_COVERED),
+    ...Object.keys(ONPAGE_RULES_COVERED),
+    ...Object.keys(BACKLINK_RULES_COVERED),
   ]),
 ].filter((rule) => !EXCLUDED_FROM_BUCKETING.has(rule));
 
@@ -137,6 +168,7 @@ describe("non-volume prerequisites", () => {
         approvedKeywords: true,
         backlinkCollection: true,
         umamiSecondWindow: true,
+        onpageCrawl: true,
       }),
     ).toEqual([]);
   });
@@ -150,6 +182,7 @@ describe("non-volume prerequisites", () => {
       approvedKeywords: true,
       backlinkCollection: true,
       umamiSecondWindow: true,
+      onpageCrawl: true,
     });
     expect(notes).toHaveLength(2);
     expect(notes.join(" ")).toContain("second");
@@ -167,6 +200,7 @@ describe("non-volume prerequisites", () => {
       urlInspection: true,
       approvedKeywords: true,
       backlinkCollection: true,
+      onpageCrawl: true,
     });
     const held = RULE_ASSIGNMENTS.filter((a) => a.alsoNeeds.includes("second_collection")).length;
     expect(notes[0]).toContain(String(held));
