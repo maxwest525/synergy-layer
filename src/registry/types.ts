@@ -9,8 +9,41 @@ export type CapabilityDefinition = {
   /** real | simulated | pending | mock — never claim more than is wired. */
   integrationState: "real" | "simulated" | "pending" | "mock";
   authKind?: string;
-  operations?: { name: string; description: string; mutates?: boolean }[];
+  operations?: CapabilityOperation[];
   config?: Record<string, unknown>;
+};
+
+/**
+ * One callable thing a capability exposes.
+ *
+ * `endpoint` and `verified` exist because of a bug on 2026-08-31: the Google Ads
+ * reporting read was written with `pageSize: 10000`, which v25 rejects outright.
+ * Every mocked test passed, because a mock answers whatever it is sent, and only
+ * a live call found it. Nothing in this repo recorded what that endpoint
+ * actually accepts, so there was nowhere for the correction to live except a
+ * code comment.
+ *
+ * `verified` is deliberately three-valued rather than a boolean. "We read the
+ * docs" and "we called it and it worked" are different claims, and collapsing
+ * them is how a guess becomes documentation.
+ */
+export type CapabilityOperation = {
+  name: string;
+  description: string;
+  /** True when calling this can change or spend at the provider. */
+  mutates?: boolean;
+  /** The literal request, e.g. `POST /v25/customers/{id}/googleAds:search`. */
+  endpoint?: string;
+  /**
+   * called   — exercised against the real provider, and it worked.
+   * docs     — read from the vendor's documentation, never called from here.
+   * declared — named in this registry and nothing more. Treat as unproven.
+   */
+  verified?: "called" | "docs" | "declared";
+  /** ISO date the `verified` claim was last true. */
+  verifiedOn?: string;
+  /** Anything that cost time or would: rejected params, quotas, required headers. */
+  gotcha?: string;
 };
 
 export type AgentDefinition = {

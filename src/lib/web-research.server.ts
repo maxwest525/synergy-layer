@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { firecrawlEndpoint } from "./firecrawl-endpoint";
+import { generateStructuredJson, litellmConfigured } from "./ai/structured.server";
 import { requireTenantId } from "./tenant.server";
 
 import type { Database } from "@/integrations/supabase/types";
@@ -8,7 +9,7 @@ type Client = SupabaseClient<Database>;
 
 export type WebResearchResult = {
   objective: string;
-  provider: "perplexity";
+  provider: "firecrawl";
   citations: number;
   scraped: number;
   entriesCreated: number;
@@ -16,69 +17,115 @@ export type WebResearchResult = {
   emptyResult: boolean;
 };
 
-type PerplexityAnswer = { answer: string; citations: string[] };
+type SearchAnswer = { answer: string; citations: string[] };
 
-const PERPLEXITY_URL = "https://api.perplexity.ai/chat/completions";
 const MAX_SCRAPES = 3;
+const SEARCH_LIMIT = 5;
 
-function requireKey(name: "PERPLEXITY_API_KEY"): string {
-  const value = process.env[name];
-  if (!value) throw new Error(`${name} is not configured for this project.`);
-  return value;
-}
+const BRIEFING_SYSTEM =
+  "You are a marketing research analyst. You are given search results — titles, URLs and snippets — for one research objective. Write a concise briefing using only what those results state. Never assert a number, claim or competitor the snippets do not contain. Where the results are thin, say so plainly rather than filling the gap.";
 
-/** Grounded search through Perplexity. Returns the answer plus source URLs. */
-async function searchPerplexity(objective: string): Promise<PerplexityAnswer> {
-  const response = await fetch(PERPLEXITY_URL, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${requireKey("PERPLEXITY_API_KEY")}`,
-      "Content-Type": "application/json",
+const BRIEFING_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    briefing: {
+      type: "string",
+      description: "The evidence-grounded briefing, in plain prose.",
     },
-    body: JSON.stringify({
-      model: "sonar",
-      messages: [
-        {
-          role: "system",
-          content:
-            "You are a marketing research analyst. Answer with verifiable facts only and cite sources. Be concise.",
-        },
-        { role: "user", content: objective },
-      ],
-    }),
-  });
+  },
+  required: ["briefing"],
+} as const;
 
-  const body = await response.text();
-  if (!response.ok) {
-    if (response.status === 401 && body.includes("insufficient_quota")) {
-      throw new Error(
-        "Perplexity API credits are exhausted. Buy API credits at https://console.perplexity.ai for the connected account.",
-      );
-    }
-    throw new Error(`Perplexity request failed [${response.status}]: ${body}`);
+/**
+ * Grounded search on the operator's own Firecrawl, synthesised through the
+ * LiteLLM proxy.
+ *
+ * This was Perplexity: a second metered account whose only job was to search
+ * and summarise. Firecrawl's `/v2/search` runs on the self-hosted box for
+ * nothing, and the summary is a model call the proxy already routes, so the
+ * per-question provider charge disappears entirely.
+ *
+ * The citations are the search result URLs rather than a model's own reference
+ * list, which is the stronger claim of the two: every URL here is a page the
+ * search actually returned, and the next step scrapes them.
+ */
+async function searchWeb(objective: string): Promise<SearchAnswer> {
+  const endpoint = firecrawlEndpoint(process.env);
+  if (!endpoint) {
+    throw new Error(
+      "No self-hosted Firecrawl is configured; set SELFHOSTED_FIRECRAWL_BASE_URL and SELFHOSTED_FIRECRAWL_API_KEY.",
+    );
   }
 
-  const parsed = JSON.parse(body) as {
-    choices?: { message?: { content?: string } }[];
-    citations?: string[];
+  const response = await fetch(endpoint.searchUrl, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${endpoint.key}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ query: objective, limit: SEARCH_LIMIT }),
+  });
+  if (!response.ok) {
+    throw new Error(`Firecrawl search failed [${response.status}].`);
+  }
+
+  const parsed = JSON.parse(await response.text()) as {
+    data?: { web?: SearchRow[] } | SearchRow[];
   };
-  return {
-    answer: parsed.choices?.[0]?.message?.content ?? "",
-    citations: (parsed.citations ?? []).filter((url) => typeof url === "string"),
-  };
+  const rows = Array.isArray(parsed.data) ? parsed.data : (parsed.data?.web ?? []);
+  const results = rows.filter((row): row is SearchRow => typeof row?.url === "string");
+  const citations = results.map((row) => row.url);
+
+  return { answer: await summarise(objective, results), citations };
+}
+
+type SearchRow = { url: string; title?: string; description?: string };
+
+/**
+ * The briefing.
+ *
+ * Falls back to the raw result list when no model route is configured. A
+ * research pass that files the sources it found is worth more than one that
+ * fails because a proxy is unset, and the sources are the evidence either way.
+ */
+async function summarise(objective: string, results: SearchRow[]): Promise<string> {
+  const rendered = results
+    .map(
+      (row, index) =>
+        `${index + 1}. ${row.title ?? row.url}\n   ${row.url}\n   ${row.description ?? ""}`,
+    )
+    .join("\n");
+  if (results.length === 0) return "";
+  if (!litellmConfigured(process.env)) return rendered;
+
+  try {
+    const parsed = (await generateStructuredJson({
+      system: BRIEFING_SYSTEM,
+      prompt: `Objective: ${objective}\n\nSearch results:\n${rendered}`,
+      schemaName: "research_briefing",
+      schema: BRIEFING_SCHEMA as unknown as Record<string, unknown>,
+    })) as { briefing?: unknown };
+    return typeof parsed.briefing === "string" && parsed.briefing.trim()
+      ? parsed.briefing
+      : rendered;
+  } catch {
+    // A failed summary must not lose the sources; they are the research.
+    return rendered;
+  }
 }
 
 /** Firecrawl scrape of one source. Returns markdown, or null when the page cannot be read. */
 export async function scrapeFirecrawl(
   url: string,
 ): Promise<{ title: string; markdown: string } | null> {
-  // Self-hosted Firecrawl when it is configured, the metered cloud only as a
-  // fallback. Research reads scrape up to three sources per question, so this
-  // was a steady per-call charge against an API the operator also runs himself.
+  // Self-hosted only. The metered cloud fallback was removed on 2026-08-31:
+  // research scrapes up to three sources per question, which was a steady
+  // per-call charge against an API the operator also runs himself.
   const endpoint = firecrawlEndpoint(process.env);
   if (!endpoint)
     throw new Error(
-      "No Firecrawl deployment is configured for this project, self-hosted or cloud.",
+      "No self-hosted Firecrawl is configured; set SELFHOSTED_FIRECRAWL_BASE_URL and SELFHOSTED_FIRECRAWL_API_KEY.",
     );
   const response = await fetch(endpoint.url, {
     method: "POST",
@@ -91,9 +138,6 @@ export async function scrapeFirecrawl(
 
   const body = await response.text();
   if (!response.ok) {
-    if (response.status === 402) {
-      throw new Error("Firecrawl credits are exhausted for the connected account.");
-    }
     return null;
   }
 
@@ -108,8 +152,9 @@ export async function scrapeFirecrawl(
 }
 
 /**
- * Real web research pass: Perplexity for grounded search, Firecrawl for the
- * source pages, results filed as immutable knowledge entries in kb.research.
+ * Real web research pass: self-hosted Firecrawl for both the grounded search
+ * and the source pages, the briefing synthesised through the LiteLLM proxy,
+ * results filed as immutable knowledge entries in kb.research.
  * Re-running on the same day for the same source is a no-op, so the node is
  * idempotent and a zero-result pass is still a successful run.
  */
@@ -132,7 +177,7 @@ export async function runWebResearch(client: Client): Promise<WebResearchResult>
   if (collectionError) throw new Error(collectionError.message);
   if (!collection) throw new Error("Knowledge collection kb.research does not exist.");
 
-  const search = await searchPerplexity(objective);
+  const search = await searchWeb(objective);
   const today = new Date().toISOString().slice(0, 10);
   const sources = search.citations.slice(0, MAX_SCRAPES);
 
@@ -142,10 +187,10 @@ export async function runWebResearch(client: Client): Promise<WebResearchResult>
 
   const documents: { sourceRef: string; title: string; body: string; tags: string[] }[] = [
     {
-      sourceRef: `perplexity:${today}:${objective}`,
+      sourceRef: `firecrawl-search:${today}:${objective}`,
       title: `Research briefing — ${today}`,
       body: search.answer,
-      tags: ["perplexity", "briefing"],
+      tags: ["firecrawl-search", "briefing"],
     },
   ];
 
@@ -194,7 +239,7 @@ export async function runWebResearch(client: Client): Promise<WebResearchResult>
 
   return {
     objective,
-    provider: "perplexity",
+    provider: "firecrawl",
     citations: search.citations.length,
     scraped,
     entriesCreated,

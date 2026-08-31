@@ -1,7 +1,25 @@
 import { GEMINI_API_ORIGIN } from "../gemini.server";
+import { embedViaProxy, proxyEmbeddingModel } from "../ai/embeddings.server";
 
 export const KNOWLEDGE_EMBEDDING_MODEL = "gemini-embedding-001";
 export const KNOWLEDGE_EMBEDDING_DIMENSIONS = 768;
+
+/**
+ * Whether this call should go through the proxy instead of straight to Google.
+ *
+ * Gated on the operator naming a model rather than on the proxy merely being
+ * configured, because the two paths do not produce interchangeable vectors: the
+ * direct path sends Gemini's `taskType` (`RETRIEVAL_DOCUMENT` for stored text,
+ * `RETRIEVAL_QUERY` for a search), and the OpenAI embeddings shape the proxy
+ * speaks has no field for it. Embedding queries one way against documents
+ * stored the other degrades retrieval quietly and without an error.
+ *
+ * So moving this store onto the proxy means re-embedding what is already in it.
+ * Setting `LITELLM_MODEL_EMBEDDING` is how the operator says they intend that.
+ */
+function proxyModelOrEmpty(): string {
+  return proxyEmbeddingModel(process.env);
+}
 
 type Fetcher = (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
 
@@ -67,8 +85,21 @@ async function postJson(
 }
 
 export async function embedDocuments(input: DocumentEmbeddingInput): Promise<number[][]> {
-  if (!input.apiKey.trim()) throw new Error("GEMINI_API_KEY is not configured.");
   if (input.documents.length === 0) return [];
+
+  const proxyModel = proxyModelOrEmpty();
+  if (proxyModel) {
+    const vectors = await embedViaProxy({
+      texts: input.documents.map((document) => document.text),
+      dimensions: KNOWLEDGE_EMBEDDING_DIMENSIONS,
+      model: proxyModel,
+      ...(input.fetcher ? { fetcher: input.fetcher } : {}),
+      ...(input.timeoutMs === undefined ? {} : { timeoutMs: input.timeoutMs }),
+    });
+    return vectors.map((vector) => validateVector(vector));
+  }
+
+  if (!input.apiKey.trim()) throw new Error("GEMINI_API_KEY is not configured.");
   const model = input.model?.trim() || KNOWLEDGE_EMBEDDING_MODEL;
   const fetcher = input.fetcher ?? fetch;
   const results: number[][] = [];
@@ -101,9 +132,22 @@ export async function embedDocuments(input: DocumentEmbeddingInput): Promise<num
 }
 
 export async function embedQuery(input: QueryEmbeddingInput): Promise<number[]> {
-  if (!input.apiKey.trim()) throw new Error("GEMINI_API_KEY is not configured.");
   const query = input.query.trim();
   if (!query) throw new Error("A non-empty knowledge query is required.");
+
+  const proxyModel = proxyModelOrEmpty();
+  if (proxyModel) {
+    const [vector] = await embedViaProxy({
+      texts: [query],
+      dimensions: KNOWLEDGE_EMBEDDING_DIMENSIONS,
+      model: proxyModel,
+      ...(input.fetcher ? { fetcher: input.fetcher } : {}),
+      ...(input.timeoutMs === undefined ? {} : { timeoutMs: input.timeoutMs }),
+    });
+    return validateVector(vector);
+  }
+
+  if (!input.apiKey.trim()) throw new Error("GEMINI_API_KEY is not configured.");
   const model = input.model?.trim() || KNOWLEDGE_EMBEDDING_MODEL;
   const payload = (await postJson(
     `${GEMINI_API_ORIGIN}/v1beta/models/${encodeURIComponent(model)}:embedContent?key=${encodeURIComponent(input.apiKey)}`,

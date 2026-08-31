@@ -9,14 +9,12 @@ describe("connector catalog", () => {
       "google_search_console",
       "google_analytics_4",
       "dataforseo",
-      "firecrawl",
       "litellm",
       "gemini_generation",
       "gemini_embeddings",
       "github_executor",
       "pagespeed_insights",
       "serpapi",
-      "perplexity",
       "google_ads",
       "n8n",
       "vps_scraper",
@@ -24,6 +22,9 @@ describe("connector catalog", () => {
       "openseo",
       "umami",
       "openai_ads",
+      "microsoft_clarity",
+      "bing_webmaster",
+      "adloop",
     ]);
   });
 

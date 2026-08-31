@@ -119,33 +119,12 @@ export const CONNECTION_OUTPUTS: readonly ConnectionOutput[] = [
     promise: "What visitors did once they arrived.",
   },
   {
-    key: "firecrawl",
-    label: "Firecrawl",
-    table: "page_metadata_observations",
-    // A page that could not be read is stored with the error on it. Those rows
-    // are attempts, not evidence.
-    succeeded: { column: "error", kind: "is-null" },
-    // The vendor's deployment only. "Firecrawl (self-hosted)" starts with the
-    // same word, so it is excluded rather than counted here.
-    scope: {
-      column: "rendered_by",
-      prefix: "Firecrawl",
-      notPrefix: "Firecrawl (self-hosted)",
-    },
-    // Its page reads are consumed by the Search Console rules, not by
-    // `seo-validation`, which never opens this table.
-    findingSources: ["search-console"],
-    promise: "The live wording of every page, read as a crawler sees it.",
-  },
-  {
     key: "selfhosted_firecrawl",
     label: "Firecrawl, self hosted",
-    // This was deliberately null while the page audit hardcoded the vendor's
-    // endpoint: no row could have come from a self-hosted deployment, and
-    // pointing it at the table would have credited it with another connector's
-    // work. `firecrawlEndpoint()` now prefers the self-hosted deployment, and
-    // `rendered_by` says which one read each page, so it can claim its own rows
-    // and only its own.
+    // The vendor's cloud deployment was removed entirely on 2026-08-31, so this
+    // is the only Firecrawl left. The `rendered_by` scope is kept rather than
+    // dropped: historical rows still carry the old vendor prefix, and counting
+    // those here would credit this connector with reads it did not perform.
     table: "page_metadata_observations",
     succeeded: { column: "error", kind: "is-null" },
     scope: { column: "rendered_by", prefix: "Firecrawl (self-hosted)" },

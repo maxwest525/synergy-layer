@@ -234,8 +234,23 @@ describe("connector probes", () => {
 
   it("does not spend against providers that have no read-only health endpoint", async () => {
     const fetcher = vi.fn();
-    const result = await probeConnector("perplexity", {
-      env: { PERPLEXITY_API_KEY: "secret" },
+    const result = await probeConnector("pagespeed_insights", {
+      env: { PAGESPEED_API_KEY: "secret" },
+      fetcher,
+    });
+
+    expect(result).toMatchObject({ health: "degraded", outcome: "configured_no_safe_probe" });
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
+  // Clarity's entire quota is 10 requests per project per day. A health probe
+  // is not free here in the way it is everywhere else on this screen: opening
+  // the systems page twice would spend a fifth of the day's budget, and the
+  // feature would then fail for the reason the probe existed to detect.
+  it("never spends a Clarity request to health check Clarity", async () => {
+    const fetcher = vi.fn();
+    const result = await probeConnector("microsoft_clarity", {
+      env: { CLARITY_API_TOKEN: "jwt" },
       fetcher,
     });
 
