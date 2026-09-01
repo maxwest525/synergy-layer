@@ -1,6 +1,5 @@
 # AOOS Current Build Context
 
-
 > **Open work lives in [`BACKLOG.md`](BACKLOG.md), not here and not in the handoffs.**
 > This file records current state. That one records what is still owed, with a
 > stable ID per item and a grade saying whether it was verified or only carried
@@ -18,8 +17,7 @@
 >    merged): 30 pages now ship 27,000–35,000 characters each. Any conclusion in
 >    this file drawn from thin search evidence predates that fix.
 > 2. **The page wording lane was locked to exactly two changes by the database**,
->    not by preference — `jsonb_array_length(_changes) <> 2`, an equality, since
->    20260814080000. Four layers enforced it. All four are removed and the
+>    not by preference — `jsonb_array_length(_changes) <> 2`, an equality, since 20260814080000. Four layers enforced it. All four are removed and the
 >    migration is applied, so the lane now edits subheadings too.
 
 Purpose: a lightweight, always-current handoff note so a future agent run does not
@@ -35,6 +33,46 @@ Last updated: 2026-08-31, after wiring Google Ads campaign reporting
 (A: OnPage, B: Backlinks, C: Umami, D: discovery). Section 0 below still
 describes 2026-08-21 and has NOT been rewritten; the current-state blocks
 immediately below supersede it.
+
+## 0l. Corrections from live evidence, and publish proof reads the page itself, 2026-09-01
+
+Three stale claims in this file and the backlog were contradicted by the live
+database and the live site, checked 2026-09-01. Recorded per SOURCE_OF_TRUTH
+(live production first), because each one sent the operator chasing a fix that
+was not theirs to make.
+
+- **The executor token has been configured and working since 2026-08-11.** The
+  "Still blocked" bullet below saying `GITHUB_EXECUTOR_TOKEN` is not configured
+  is wrong and stands corrected. `change_request_executions` holds preflights
+  reading "Proved with the configured token" (2026-08-11, 2026-08-14) and real
+  commits to the website repository on 2026-08-14, 08-25, 08-28 and 08-29, each
+  with its SHA and replacements recorded. One change (6aa5a3b1, corporate
+  relocation) completed the full pipeline to applied on 2026-08-14.
+- **The prerender is live in production.** Measured by direct curl 2026-09-01:
+  the homepage returns 243,067 bytes with `#root` fully populated, and
+  `/services/corporate-relocation` and `/research` serve real per-route H1s in
+  the raw HTML — including the approved values of committed changes 26725aea
+  and f8feacee. This supersedes CODE-24's 2026-08-31 empty-shell measurement
+  and closes the deploy half of OP-9. Still true: an unknown path returns 200
+  with the homepage bytes (soft-404), tracked in the backlog.
+- **Publish proof was failing for the platform's own reasons, not the
+  operator's.** The proof renderer chain had Crawl4AI answering HTTP 401 since
+  at least 2026-08-30 (CODE-29), and its Firecrawl fallback reported the
+  research page as "an unrendered application shell" while a plain fetch of
+  the same URL served the approved H1. Fixed in this change: publish proof now
+  reads the page's own prerendered HTML first, at no charge and with no
+  credential, with Crawl4AI-then-Firecrawl kept as the JavaScript fallback for
+  client-only routes (`createDirectFetchVerifier` in
+  `src/lib/execution/execute.server.ts`, source loop in `checkPublishedPage`,
+  contract updated in `docs/execution-handbook/EXECUTION_ROLLBACK.md`). A
+  pending verdict now describes the page a source actually saw rather than a
+  broken renderer's shell. The three committed-and-live changes should each
+  flip to applied on one "Check the live page" click.
+- **One change can never prove as targeted.** The homepage meta-description
+  change (78fc8c5e) edited `DefaultSeo.tsx`, but the live homepage head serves
+  the same old sentence from a different source in the website repo, so the
+  edit is committed, deployed, and invisible. That is a proposal-targeting
+  defect (CODE-30), not a publish failure.
 
 ## 0k. Google Ads reports real campaign data, 2026-08-31
 

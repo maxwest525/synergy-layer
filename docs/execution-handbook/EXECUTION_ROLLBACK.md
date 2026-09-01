@@ -3,7 +3,7 @@ id: 20260814-execution-rollback
 title: Execution and Rollback
 tags: [execution, governance, security]
 created: 2026-08-14
-updated: 2026-08-14
+updated: 2026-09-01
 related: [20260814-proposal-data-contract, 20260814-validation-gates, 20260814-tenancy-permissions]
 summary: Guarded source change, publication proof, refusal, verification, and reversal contract.
 ---
@@ -23,7 +23,7 @@ Execution requires an authenticated operator, tenant ownership, executable propo
 3. Refuse on revision or before-value drift with `Page changed — review required`; perform zero GitHub writes.
 4. Require exactly one intended replacement for each approved field.
 5. Write with an idempotent commit marker and record source repository, branch, before/after commit, and adapter response.
-6. Keep state as source-committed until the live site proves the approved after-state: for wording lanes (title/H1, meta description), the rendered public page must serve the exact approved values; for the crawl-directives lane, the deployed static file must match the committed file at the recorded commit, whole-file, no renderer involved.
+6. Keep state as source-committed until the live site proves the approved after-state: for wording lanes (title/H1, meta description), the live public page must serve the exact approved values. The proof source order is a direct fetch of the page's own HTML first (the site serves prerendered pages as of 2026-09-01; free, no credential), then the JavaScript renderers (Crawl4AI, then Firecrawl) as fallback for routes the prerender does not cover. Any one source serving every approved value is proof; a stale copy can only under-prove a forward change, because the approved new wording cannot exist in a cache older than the commit. For the crawl-directives lane, the deployed static file must match the committed file at the recorded commit, whole-file, no renderer involved.
 7. Store dated published proof separately.
 8. Wait for finalized measurement windows; do not mark a winner at publish time.
 

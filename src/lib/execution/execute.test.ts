@@ -23,6 +23,7 @@ import {
 import {
   buildRenderedScrapeRequest,
   captureMeasurementFollowupWarning,
+  createDirectFetchVerifier,
   createRenderedVerifier,
 } from "./execute.server";
 
@@ -469,6 +470,7 @@ describe("createRenderedVerifier", () => {
       },
     }),
     headers: new Headers(),
+    finalUrl: "https://fire.example/v2/scrape",
   };
 
   it("renders through Crawl4AI first and never touches Firecrawl when the box answers", async () => {
@@ -547,6 +549,38 @@ describe("extractMetaDescription", () => {
   it("returns null when the tag is absent or empty", () => {
     expect(extractMetaDescription("<title>x</title>")).toBeNull();
     expect(extractMetaDescription('<meta name="description" content="">')).toBeNull();
+  });
+});
+
+describe("createDirectFetchVerifier", () => {
+  it("reads title, H1, description and subheadings from the page's own HTML", async () => {
+    const html = `<html><head><title>Employee Relocation Movers | TruMove</title><meta name="description" content="Movers with dedicated coordinators."></head><body><h1>Employee Relocation Moving Services</h1><h2>Why choose us</h2></body></html>`;
+    const verifier = createDirectFetchVerifier({
+      fetchPage: async (url) => ({
+        status: 200,
+        text: html,
+        headers: new Headers(),
+        finalUrl: url,
+      }),
+    });
+    const page = await verifier.render("https://trumoveinc.com/services/corporate-relocation");
+    expect(page.title).toBe("Employee Relocation Movers | TruMove");
+    expect(page.heading).toBe("Employee Relocation Moving Services");
+    expect(page.metaDescription).toBe("Movers with dedicated coordinators.");
+    expect(page.subheadings).toEqual(["Why choose us"]);
+    expect(page.renderedBy).toContain("Direct fetch");
+  });
+
+  it("throws on a non-2xx response instead of reading an error page as content", async () => {
+    const verifier = createDirectFetchVerifier({
+      fetchPage: async (url) => ({
+        status: 503,
+        text: "<h1>Service unavailable</h1>",
+        headers: new Headers(),
+        finalUrl: url,
+      }),
+    });
+    await expect(verifier.render("https://trumoveinc.com/")).rejects.toThrow("HTTP 503");
   });
 });
 
@@ -755,6 +789,102 @@ describe("checkPublishedPage", () => {
       actorId: "operator",
     });
     expect(outcome.status).toBe("refused");
+  });
+});
+
+function makeFailingRenderer(message: string): RenderedVerifier {
+  return {
+    name: "BrokenRenderer",
+    render: async () => {
+      throw new Error(message);
+    },
+  };
+}
+
+describe("checkPublishedPage with a direct page fetch", () => {
+  it("proves a change from the page's own prerendered HTML with no renderer configured", async () => {
+    const { store, saved, attempts } = makeStore(makeRequest({ commitSha: "new-sha" }));
+    const outcome = await checkPublishedPage({
+      store,
+      robotsProver: null,
+      renderer: null,
+      directFetcher: makeRenderer({
+        title: "Employee Relocation Movers | TruMove",
+        heading: "Employee Relocation Moving Services",
+      }),
+      requestId: "x",
+      actorId: "operator",
+    });
+    expect(outcome.status).toBe("verified");
+    expect(saved.map((row) => row["kind"])).toEqual(["applied"]);
+    expect(attempts.at(-1)?.detail).toMatchObject({ renderedBy: "TestRenderer" });
+  });
+
+  it("falls through to the renderer when the direct fetch sees a client-only shell", async () => {
+    const { store, saved } = makeStore(makeRequest({ commitSha: "new-sha" }));
+    const outcome = await checkPublishedPage({
+      store,
+      robotsProver: null,
+      directFetcher: makeRenderer({ title: "TruMove | AI-Powered Moving", heading: null }),
+      renderer: makeRenderer({
+        title: "Employee Relocation Movers | TruMove",
+        heading: "Employee Relocation Moving Services",
+      }),
+      requestId: "x",
+      actorId: "operator",
+    });
+    expect(outcome.status).toBe("verified");
+    expect(saved.map((row) => row["kind"])).toEqual(["applied"]);
+  });
+
+  it("reports the page the direct fetch actually saw, not a broken renderer's shell", async () => {
+    const { store, attempts } = makeStore(makeRequest({ commitSha: "new-sha" }));
+    const outcome = await checkPublishedPage({
+      store,
+      robotsProver: null,
+      directFetcher: makeRenderer({ title: "Old title", heading: "Old heading" }),
+      renderer: makeRenderer({ title: null, heading: null }),
+      requestId: "x",
+      actorId: "operator",
+    });
+    expect(outcome.status).toBe("pending");
+    expect(outcome.message).toContain("does not yet serve");
+    expect(outcome.message).not.toContain("application shell");
+    expect(attempts.at(-1)?.detail).toMatchObject({ foundTitle: "Old title" });
+  });
+
+  it("still proves through the renderer when the direct fetch itself fails", async () => {
+    const { store, saved, attempts } = makeStore(makeRequest({ commitSha: "new-sha" }));
+    const outcome = await checkPublishedPage({
+      store,
+      robotsProver: null,
+      directFetcher: makeFailingRenderer("The public page returned HTTP 500 to a direct fetch."),
+      renderer: makeRenderer({
+        title: "Employee Relocation Movers | TruMove",
+        heading: "Employee Relocation Moving Services",
+      }),
+      requestId: "x",
+      actorId: "operator",
+    });
+    expect(outcome.status).toBe("verified");
+    expect(saved.map((row) => row["kind"])).toEqual(["applied"]);
+    expect(attempts.at(-1)?.status).toBe("verified");
+  });
+
+  it("fails with every source's own reason when nothing could read the page", async () => {
+    const { store, saved } = makeStore(makeRequest({ commitSha: "new-sha" }));
+    const outcome = await checkPublishedPage({
+      store,
+      robotsProver: null,
+      directFetcher: makeFailingRenderer("Direct page fetch request timed out after 20s."),
+      renderer: makeFailingRenderer("Crawl4AI request failed with HTTP 401."),
+      requestId: "x",
+      actorId: "operator",
+    });
+    expect(outcome.status).toBe("failed");
+    expect(outcome.message).toContain("timed out");
+    expect(outcome.message).toContain("HTTP 401");
+    expect(saved).toHaveLength(0);
   });
 });
 
