@@ -56,8 +56,11 @@ was not theirs to make.
   and closes the deploy half of OP-9. Still true: an unknown path returns 200
   with the homepage bytes (soft-404), tracked in the backlog.
 - **Publish proof was failing for the platform's own reasons, not the
-  operator's.** The proof renderer chain had Crawl4AI answering HTTP 401 since
-  at least 2026-08-30 (CODE-29), and its Firecrawl fallback reported the
+  operator's.** The proof renderer chain had Crawl4AI answering HTTP 401 on
+  all 34 requests of 2026-08-30 — it was clean through 08-29 02:35 UTC, and
+  nothing has rendered since, so the outage is bounded to that day and the
+  operator's green health probe on 08-31 suggests it recovered (CODE-29 holds
+  the exact bounds) — and its Firecrawl fallback reported the
   research page as "an unrendered application shell" while a plain fetch of
   the same URL served the approved H1. Fixed in this change: publish proof now
   reads the page's own prerendered HTML first, at no charge and with no
