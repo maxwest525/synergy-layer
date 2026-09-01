@@ -65,12 +65,13 @@ describe("buildReadiness source-file fact", () => {
 });
 
 describe("buildReadiness rendered-page fact", () => {
-  it("names the renderer chain that would answer, Crawl4AI first", () => {
+  it("leads with the free direct fetch and names the fallback renderer chain", () => {
     const found = fact(
       buildReadiness({ ...base, rendererName: "Crawl4AI, then Firecrawl (self-hosted)" }),
       "Rendered-page verification",
     );
     expect(found.state).toBe("configured");
+    expect(found.detail).toContain("prerendered HTML first");
     expect(found.detail).toContain("Crawl4AI, then Firecrawl (self-hosted)");
   });
 
@@ -82,12 +83,13 @@ describe("buildReadiness rendered-page fact", () => {
     expect(found.detail).toContain("Firecrawl would render this proof");
   });
 
-  it("blocks only when no renderer at all is configured", () => {
+  it("stays available with no renderer at all, because the direct fetch needs no credential", () => {
     const found = fact(
       buildReadiness({ ...base, rendererCredentialPresent: false }),
       "Rendered-page verification",
     );
-    expect(found.state).toBe("blocked");
+    expect(found.state).toBe("configured");
+    expect(found.detail).toContain("prerendered HTML directly");
     expect(found.detail).toContain("neither Crawl4AI nor a Firecrawl deployment");
   });
 });

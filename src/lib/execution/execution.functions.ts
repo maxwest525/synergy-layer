@@ -156,10 +156,13 @@ export function buildReadiness(input: {
     },
     {
       label: "Rendered-page verification",
-      state: input.rendererCredentialPresent ? "configured" : "blocked",
+      // The site serves prerendered HTML, so a free direct fetch of the page
+      // is always available as the first proof source; a JavaScript renderer
+      // is only the fallback for routes the prerender does not cover.
+      state: "configured",
       detail: input.rendererCredentialPresent
-        ? `${input.rendererName ?? "A renderer"} would render this proof, and is unproven here. No render call has been made, so proof from ${GOVERNED_ORIGIN} has not been attempted.`
-        : "No page renderer is configured: neither Crawl4AI nor a Firecrawl deployment, self-hosted or cloud. Raw HTML from this site is an application shell, so a change could not be proven live.",
+        ? `Proof reads the page's own prerendered HTML first, at no charge. ${input.rendererName ?? "A renderer"} would render this proof as the fallback for client-only routes. No check has been made, so proof from ${GOVERNED_ORIGIN} has not been attempted.`
+        : `Proof reads the page's own prerendered HTML directly, at no charge. No fallback renderer is configured for client-only routes: neither Crawl4AI nor a Firecrawl deployment, self-hosted or cloud.`,
     },
 
     {
@@ -399,12 +402,17 @@ export const checkChangeRequestPublished = createServerFn({ method: "POST" })
     await assertOperator(context.supabase, context.userId);
     const tenantId = await requireTenantId(context.supabase);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { createExecutionStore, createRenderedVerifier, createRobotsProver } =
-      await import("./execute.server");
+    const {
+      createDirectFetchVerifier,
+      createExecutionStore,
+      createRenderedVerifier,
+      createRobotsProver,
+    } = await import("./execute.server");
     const { checkPublishedPage } = await import("./execute");
     const result = await checkPublishedPage({
       store: createExecutionStore(supabaseAdmin, context.supabase, context.userId),
       renderer: createRenderedVerifier(),
+      directFetcher: createDirectFetchVerifier(),
       robotsProver: createRobotsProver(),
       requestId: data.id,
       actorId: context.userId,
