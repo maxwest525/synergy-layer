@@ -46,7 +46,11 @@ const stableGeneratedAuthRequestHelper = {
 export default defineConfig({
   // Local and self-hosted builds need a runnable production server. Lovable
   // pins its own Cloudflare preset inside the Lovable build environment.
-  nitro: { preset: "node-server" },
+  // On Vercel (which sets VERCEL=1 in its build container) the build must
+  // emit the Build Output API layout instead: with node-server, Vercel's
+  // framework detection looked for a "dist" directory that never exists and
+  // failed the deploy after a successful compile.
+  nitro: { preset: process.env["VERCEL"] ? "vercel" : "node-server" },
   tanstackStart: {
     // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
     // nitro/vite builds from this
