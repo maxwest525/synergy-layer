@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 
 import type { Database } from "@/integrations/supabase/types";
+import { supabasePublicUrl, supabasePublishableKey } from "@/integrations/supabase/public-config";
 
 export type OperatorIdentity = { userId: string; token: string };
 
@@ -19,8 +20,8 @@ export async function requireOperatorFromRequest(request: Request): Promise<Oper
     throw new Response("Unauthorized", { status: 401 });
   }
 
-  const url = process.env["SUPABASE_URL"];
-  const key = process.env["SUPABASE_PUBLISHABLE_KEY"];
+  const url = supabasePublicUrl();
+  const key = supabasePublishableKey();
   if (!url || !key) {
     throw new Response("Backend is not configured", { status: 500 });
   }

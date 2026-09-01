@@ -1,14 +1,15 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database } from "@/integrations/supabase/types";
+import { supabasePublicUrl, supabasePublishableKey } from "@/integrations/supabase/public-config";
 
 /**
  * Server-side publishable client. Registry data is public-read by policy, so
  * this never needs the service role.
  */
 export function createPublicServerClient(): SupabaseClient<Database> {
-  const url = process.env["SUPABASE_URL"]!;
-  const key = process.env["SUPABASE_PUBLISHABLE_KEY"]!;
+  const url = supabasePublicUrl()!;
+  const key = supabasePublishableKey()!;
 
   return createClient<Database>(url, key, {
     auth: { persistSession: false, autoRefreshToken: false },

@@ -3,6 +3,7 @@ import { tool } from "ai";
 import { z } from "zod";
 
 import type { Database } from "@/integrations/supabase/types";
+import { supabasePublicUrl, supabasePublishableKey } from "@/integrations/supabase/public-config";
 
 type Db = ReturnType<typeof createClient<Database>>;
 
@@ -12,8 +13,8 @@ type Db = ReturnType<typeof createClient<Database>>;
  * visibility and the agent can never see another tenant's evidence.
  */
 function operatorClient(token: string): Db {
-  const url = process.env["SUPABASE_URL"];
-  const key = process.env["SUPABASE_PUBLISHABLE_KEY"];
+  const url = supabasePublicUrl();
+  const key = supabasePublishableKey();
   if (!url || !key) throw new Error("Backend is not configured");
   return createClient<Database>(url, key, {
     auth: { persistSession: false, autoRefreshToken: false },
