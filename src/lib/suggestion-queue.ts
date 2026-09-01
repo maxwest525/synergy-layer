@@ -63,6 +63,12 @@ export type QueueSource = {
   readonly observationOnly?: boolean;
   /** Set when the operator stored a decision to keep this out of the open list. */
   readonly suppressed?: boolean;
+  /**
+   * False when nothing in AOOS can act on this row: no executable handler, no
+   * decision surface to link to, no governed fix lane, no drafted change.
+   * Omitted means actionable, so existing callers keep their behaviour.
+   */
+  readonly actionable?: boolean;
   readonly createdAt: string;
   readonly updatedAt: string;
 };
@@ -122,6 +128,11 @@ const SEVERITY_RANK: Record<AuditSeverity, UrgencyRank> = {
  */
 export function urgencyFor(source: QueueSource, now: string): UrgencyRank {
   if (source.severity !== null) return SEVERITY_RANK[source.severity];
+  // A row nothing can act on must not age its way to the top. "Enable the
+  // research capability" sat ranked as the biggest win for 27 days while its
+  // own detail page said approving it would run nothing; waiting longer never
+  // makes an unactionable row more urgent, only more stale.
+  if (source.actionable === false) return "nice_to_have";
   const days = elapsedDays(source.createdAt, now);
   if (days >= FIX_NOW_AFTER_DAYS) return "fix_now";
   if (days >= WORTH_DOING_AFTER_DAYS) return "worth_doing";

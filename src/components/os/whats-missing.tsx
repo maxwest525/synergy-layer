@@ -18,7 +18,7 @@ export function WhatsMissing({ missing, loops }: { missing: MissingReason[]; loo
       <div className="flex flex-wrap items-baseline justify-between gap-3">
         <h2 className="text-sm font-semibold text-foreground">What is missing</h2>
         <StatePill
-          label={`${loops.length - stalled} of ${loops.length} loops complete`}
+          label={stalled > 0 ? `${stalled} of ${loops.length} loops stalled` : "All loops turning"}
           tone={stalled > 0 ? "warning" : "success"}
         />
       </div>

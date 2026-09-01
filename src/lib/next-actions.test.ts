@@ -75,10 +75,85 @@ describe("next actions", () => {
     expect(reasons.some((reason) => reason.id === "missing-keywords")).toBe(true);
   });
 
-  it("marks each loop stalled at its first empty stage", () => {
+  it("marks each loop stalled at its first empty stage when nothing follows it", () => {
     const loops = buildLoopStates(empty);
     expect(loops).toHaveLength(4);
     expect(loops.every((loop) => loop.stalledStageKey !== null)).toBe(true);
     expect(loops[0]?.stalledStageKey).toBe("evidence");
+  });
+
+  it("does not call a loop stalled at an empty stage that later stages prove was passed", () => {
+    // The live contradiction this guards against: "Page change proposed: 0"
+    // rendered as the stall while 5 approved and 1 in flight sat beside it.
+    const loops = buildLoopStates({
+      ...empty,
+      gsc: { snapshots: 239, latestDate: "2026-08-30", totalsDays: 40 },
+      changes: { ...empty.changes, total: 7, proposed: 0, approved: 5, executing: 1, verified: 0 },
+    });
+    const decisions = loops.find((loop) => loop.group.key === "decisions");
+    expect(decisions?.stalledStageKey).toBe("measured");
+    expect(decisions?.gapStageKeys).toContain("proposed");
+    expect(decisions?.stallReason).toContain("never completed a full turn");
+  });
+
+  it("treats an empty middle stage as a gap, not a stall, when the loop end is filled", () => {
+    // Evidence loop: speed measured 0 while 50 keywords and 7 proposals exist
+    // after it - the loop demonstrably turned without it.
+    const loops = buildLoopStates({
+      ...empty,
+      gsc: { snapshots: 239, latestDate: "2026-08-30", totalsDays: 40 },
+      ga4: { snapshots: 18, latestAt: "2026-08-30", lastError: null, configured: true },
+      keywords: { tracked: 40, pendingCandidates: 10 },
+      changes: { ...empty.changes, total: 7, proposed: 1, approved: 1, executing: 1, verified: 1 },
+    });
+    const evidence = loops.find((loop) => loop.group.key === "evidence");
+    expect(evidence?.stalledStageKey).toBeNull();
+    expect(evidence?.gapStageKeys).toEqual(["speed"]);
+  });
+
+  it("reads the stored provider error before telling the operator what to fix", () => {
+    // The card used to say "fix the provider key" while quoting a quota error.
+    const quota = buildMissingReasons({
+      ...empty,
+      pagespeed: {
+        attempts: 11,
+        failures: 11,
+        snapshots: 0,
+        latestError: "Quota exceeded for quota metric 'Queries' and limit 'Queries per day'",
+      },
+    }).find((reason) => reason.id === "missing-pagespeed");
+    expect(quota?.instruction).toContain("Google Cloud console");
+    expect(quota?.instruction).not.toContain("key");
+
+    const other = buildMissingReasons({
+      ...empty,
+      pagespeed: { attempts: 2, failures: 2, snapshots: 0, latestError: "HTTP 500" },
+    }).find((reason) => reason.id === "missing-pagespeed");
+    expect(other?.instruction).toContain("stored provider error");
+  });
+
+  it("never states a circular blocker for the pagespeed action", () => {
+    const action = buildNextActions({
+      ...empty,
+      pagespeed: {
+        attempts: 11,
+        failures: 11,
+        snapshots: 0,
+        latestError: "Quota exceeded for quota metric 'Queries'",
+      },
+    }).find((entry) => entry.id === "evidence-pagespeed");
+    expect(action?.blockedBy).not.toBe("The last provider attempt failed.");
+    expect(action?.blockedBy).toContain("measure once");
+  });
+
+  it("no longer claims nothing is waiting while other decision cards are rendered", () => {
+    const actions = buildNextActions({
+      ...empty,
+      gsc: { snapshots: 239, latestDate: "2026-08-30", totalsDays: 40 },
+      recommendations: { proposed: 58, observed: 53 },
+    });
+    const draft = actions.find((action) => action.id === "draft-change");
+    expect(draft?.reason).not.toContain("nothing is currently waiting on a decision");
+    expect(draft?.reason).toContain("no page change is currently proposed");
   });
 });

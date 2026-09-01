@@ -8,7 +8,8 @@ import {
   pageUrlFromSuggestedAction,
   ruleFromMetadata,
 } from "./finding-router";
-import { isObservationOnly } from "./recommendation-action";
+import { hasGovernedFixPath } from "./finding-fix-target";
+import { describeSuggestedAction, isObservationOnly } from "./recommendation-action";
 import type { AuditSeverity, QueueSource } from "./suggestion-queue";
 
 /**
@@ -231,25 +232,37 @@ export const getCommandCenterFacts = createServerFn({ method: "POST" })
       updatedAt: row.updated_at ?? row.created_at,
     }));
 
-    const recommendationSources: QueueSource[] = recommendations.map((row) => ({
-      id: row.id,
-      kind: "recommendation",
-      categoryId: categoryByRecommendationId.get(row.id) ?? "pages",
-      title: row.title,
-      // The page the rule finding points at, when it points at one. Writing
-      // null here cost every rule-finding card its page address.
-      targetUrl: pageUrlFromSuggestedAction(row.suggested_action),
-      storedState: row.state,
-      fingerprint: row.issue_fingerprint,
-      severity: null,
-      // Carried so the queue can say which constraint this addresses, not only
-      // how long it has been waiting.
-      rule: ruleFromMetadata(row.metadata),
-      observationOnly: isObservationOnly(row.metadata) || row.state === "observed",
-      linkedChangeId: linkedRecommendationIds.has(row.id) ? row.id : null,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at ?? row.created_at,
-    }));
+    const recommendationSources: QueueSource[] = recommendations.map((row) => {
+      const rule = ruleFromMetadata(row.metadata);
+      const action = describeSuggestedAction(row.suggested_action);
+      return {
+        id: row.id,
+        kind: "recommendation",
+        categoryId: categoryByRecommendationId.get(row.id) ?? "pages",
+        title: row.title,
+        // The page the rule finding points at, when it points at one. Writing
+        // null here cost every rule-finding card its page address.
+        targetUrl: pageUrlFromSuggestedAction(row.suggested_action),
+        storedState: row.state,
+        fingerprint: row.issue_fingerprint,
+        severity: null,
+        // Carried so the queue can say which constraint this addresses, not only
+        // how long it has been waiting.
+        rule,
+        observationOnly: isObservationOnly(row.metadata) || row.state === "observed",
+        linkedChangeId: linkedRecommendationIds.has(row.id) ? row.id : null,
+        // Whether anything in AOOS can act on this row. A row that fails all
+        // four never age-escalates in the queue (see urgencyFor): approving it
+        // would record a decision that runs nothing.
+        actionable:
+          action.executable ||
+          action.link !== null ||
+          linkedRecommendationIds.has(row.id) ||
+          (rule !== null && rule !== undefined && hasGovernedFixPath(rule)),
+        createdAt: row.created_at,
+        updatedAt: row.updated_at ?? row.created_at,
+      };
+    });
 
     const observedAt = audit.lastObservedAt ?? new Date().toISOString();
 

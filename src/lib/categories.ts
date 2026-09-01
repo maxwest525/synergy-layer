@@ -171,12 +171,20 @@ export function categoryForPath(pathname: string): Category | undefined {
 
 export type Crumb = { readonly label: string; readonly to?: string };
 
+/** "page-changes" or "seo_runs" as words an operator reads, per the copy rules. */
+function humanizeSegment(segment: string): string {
+  const words = segment.replace(/[-_]+/g, " ").trim();
+  return words.length === 0 ? segment : words.charAt(0).toUpperCase() + words.slice(1);
+}
+
 /**
  * `trumoveinc.com › Categories › <page>`, as the boards show it.
  *
  * The property crumb is omitted rather than faked when no property is
- * connected, and an unlinked legacy route gets no trail at all: those routes
- * stay reachable by URL but are deliberately outside the new navigation.
+ * connected. A route outside the category nav used to get no trail at all,
+ * which meant the trail vanished on exactly the deep pages an operator gets
+ * lost on; it now reads property › Command center › <page>, so every page in
+ * the application carries a clickable way back to the start.
  */
 export function breadcrumbsForPath(pathname: string, property: string | null): readonly Crumb[] {
   const propertyCrumb: readonly Crumb[] = property === null ? [] : [{ label: property }];
@@ -186,7 +194,17 @@ export function breadcrumbsForPath(pathname: string, property: string | null): r
   }
 
   const category = categoryForPath(pathname);
-  if (!category) return [];
+  if (!category) {
+    // The first path segment names the workspace; deeper segments are ids and
+    // views that the page's own heading already names.
+    const segment = pathname.split("/").filter(Boolean)[0];
+    if (!segment) return [...propertyCrumb, { label: HOME_TITLE, to: "/" }];
+    return [
+      ...propertyCrumb,
+      { label: HOME_TITLE, to: "/" },
+      { label: humanizeSegment(segment), to: `/${segment}` },
+    ];
+  }
 
   return [...propertyCrumb, { label: "Categories" }, { label: category.title, to: category.to }];
 }

@@ -34,6 +34,54 @@ Last updated: 2026-08-31, after wiring Google Ads campaign reporting
 describes 2026-08-21 and has NOT been rewritten; the current-state blocks
 immediately below supersede it.
 
+## 0m. The self-contradiction pass, and every page gets a way back, 2026-09-01
+
+The operator put four screenshots side by side and the platform argued with
+itself on every one. Each contradiction traced to code, not data, and each is
+closed:
+
+- **A loop is no longer "stalled" at a stage its own numbers prove was
+  passed.** `loop-state.ts` flagged the first zero-count stage and claimed
+  "the loop cannot reach the stage after it" while the stages after it showed
+  5 approved and 1 in flight. A stage now stalls the loop only when nothing is
+  recorded at it or after it; an empty stage the loop demonstrably moved past
+  is a named gap ("holds nothing right now, while later stages carry stored
+  work"), drawn dashed, and the loop reads Turning. The "N of M loops
+  complete" badge now says what it counts: "N of M loops stalled".
+- **The PageSpeed instruction now reads the error it quotes.** "Fix the page
+  speed provider key" sat above a stored 429 naming a daily quota of zero on
+  the provider's own Google Cloud project, for an API that answers without a
+  key. The instruction and the blocker line are derived from the stored error
+  (quota errors say to fix the quota in the Cloud console), and the circular
+  "Blocked by: the last provider attempt failed" is gone - the blocker names
+  the external fix and says one successful measurement clears it.
+- **"Nothing is currently waiting on a decision" no longer renders beside 58
+  waiting recommendations.** The draft-a-change card's sentence is scoped to
+  what its rule actually checks: no page change proposed. The decisions loop
+  stage is likewise relabelled "Page change proposed", because it counts
+  change_requests and nothing else.
+- **A row nothing can act on cannot age its way to the top of Marky assist.**
+  "Enable the research capability" ranked as the biggest win for 27 days
+  while its own detail page said approving it records a decision that runs
+  nothing. `urgencyFor` now pins `actionable: false` rows at nice-to-have;
+  the Command center computes actionability from the single source of truth
+  (`recommendation-action.ts`, a drafted change, or a governed fix lane).
+- **Seeded scores are no longer presented as measurements.** The 2026-08-04
+  seed rows carry hand-written confidence (85%) and time-saved (240 minutes)
+  figures no code derives; the recommendation detail page now says exactly
+  that instead of rendering them beside the derived-confidence findings.
+- **Every page has a way back.** `breadcrumbsForPath` returned an empty trail
+  for any route outside the six categories - the breadcrumb bar blanked on
+  exactly the deep pages an operator gets lost on - and the crumbs it did
+  return rendered as dead text. Every route now gets a trail through the
+  Command center, ancestor crumbs are links, and the top bar carries a Back
+  control on every page but home.
+
+Still open from the same screenshots, filed rather than done: one shared
+definition of "waiting" across Command center, the loops, and next-best
+actions (CODE-32); the approval-time duplicate guard and shared-blocker
+rollup (CODE-31).
+
 ## 0l. Corrections from live evidence, and publish proof reads the page itself, 2026-09-01
 
 Three stale claims in this file and the backlog were contradicted by the live
