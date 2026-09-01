@@ -89,6 +89,20 @@ function plural(count: number, noun: string): string {
 }
 
 /**
+ * The stored provider error decides the PageSpeed instruction. This used to
+ * say "fix the provider key" unconditionally, which contradicted its own
+ * quoted evidence: the recorded refusal is a daily quota of zero on the
+ * provider's Google Cloud project, and the v5 API answers without a key at
+ * all. The instruction now reads the error it displays.
+ */
+function pagespeedFix(latestError: string | null): string {
+  if (latestError && /quota|queries per day/i.test(latestError)) {
+    return "Enable the PageSpeed API or raise its daily quota in the Google Cloud console for the project named in the stored error, then measure once to prove it.";
+  }
+  return "Fix the stored provider error at the provider, then measure once to prove it.";
+}
+
+/**
  * Deterministic next-best-action pass. It reads only counts that came from
  * stored rows, so the page is useful with no model call and never claims work
  * that the evidence does not support.
@@ -154,8 +168,11 @@ export function buildNextActions(facts: NextActionFacts): NextAction[] {
       id: "draft-change",
       group: "decisions",
       title: "Draft the next page change from stored search evidence",
+      // Scoped to page changes on purpose: recommendation and keyword cards
+      // can be waiting at the same time, and this sentence used to flatly
+      // contradict them by claiming nothing was waiting on any decision.
       reason:
-        "There is stored search evidence but nothing is currently waiting on a decision, so the loop has no next step.",
+        "There is stored search evidence but no page change is currently proposed, so the page-wording loop has no next decision waiting.",
       evidence: `${plural(facts.gsc.snapshots, "Search Console snapshot")} stored, ${facts.changes.total} change request(s) ever created.`,
       blockedBy: null,
       to: "/ask",
@@ -192,7 +209,10 @@ export function buildNextActions(facts: NextActionFacts): NextAction[] {
           ? "Every page speed attempt so far failed at the provider, so there is no measurement to act on."
           : "No page speed run has been attempted, so there is no measurement to act on.",
       evidence: `${facts.pagespeed.attempts} attempt(s), ${facts.pagespeed.failures} failed, 0 stored measurement(s).${facts.pagespeed.latestError ? ` Last error: ${facts.pagespeed.latestError}.` : ""}`,
-      blockedBy: facts.pagespeed.failures > 0 ? "The last provider attempt failed." : null,
+      // Never "blocked by: the last attempt failed" - that is circular, since
+      // the only way past it is another attempt. Name the external fix; one
+      // successful measurement clears this line on its own.
+      blockedBy: facts.pagespeed.failures > 0 ? pagespeedFix(facts.pagespeed.latestError) : null,
       to: "/measurement/tools",
       actionLabel: "Open measurement",
       weight: 70,
@@ -441,7 +461,7 @@ export function buildMissingReasons(facts: NextActionFacts): MissingReason[] {
         facts.pagespeed.attempts > 0
           ? `${facts.pagespeed.attempts} attempt(s), all failed at the provider${facts.pagespeed.latestError ? `: ${facts.pagespeed.latestError}` : ""}.`
           : "No page speed run has been attempted yet.",
-      instruction: "Fix the page speed provider key, then measure now.",
+      instruction: pagespeedFix(facts.pagespeed.latestError),
       to: "/measurement/tools",
       actionLabel: "Measure page speed",
     });

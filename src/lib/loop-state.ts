@@ -18,27 +18,47 @@ export type LoopStage = {
 export type LoopState = {
   group: TaxonomyGroup;
   stages: LoopStage[];
-  /** The first stage with nothing in it, or null when the loop is turning. */
+  /**
+   * The stage the loop has genuinely never turned past: the first empty stage
+   * with nothing recorded after it. An empty stage with later stages filled is
+   * a gap, not a stall - the counts to its right prove the loop reached them.
+   */
   stalledStageKey: string | null;
   stallReason: string | null;
+  /** Empty stages the loop demonstrably moved past. Real, but not blocking. */
+  gapStageKeys: string[];
 };
 
 function stall(stages: LoopStage[]): string | null {
-  const empty = stages.find((stage) => stage.count === 0);
-  return empty ? empty.key : null;
+  // A stage only blocks the loop if everything after it is also empty.
+  // "Proposed: 0" beside "Approved: 5" is not a stall - the five approvals
+  // could only exist by passing through the proposal stage.
+  for (let i = 0; i < stages.length; i += 1) {
+    const stage = stages[i];
+    if (!stage || stage.count > 0) continue;
+    if (stages.slice(i + 1).every((later) => later.count === 0)) return stage.key;
+  }
+  return null;
 }
 
 function loopFor(group: TaxonomyGroup, facts: NextActionFacts): LoopState {
   const stages = STAGE_BUILDERS[group.key](facts);
   const stalledStageKey = stall(stages);
   const stalled = stages.find((stage) => stage.key === stalledStageKey) ?? null;
+  const gapStageKeys = stages
+    .filter((stage) => stage.count === 0 && stage.key !== stalledStageKey)
+    .map((stage) => stage.key);
+  const stalledIsLast = stalled ? stages[stages.length - 1]?.key === stalled.key : false;
   return {
     group,
     stages,
     stalledStageKey,
     stallReason: stalled
-      ? `Nothing is recorded at "${stalled.label}", so the loop cannot reach the stage after it.`
+      ? stalledIsLast
+        ? `Nothing is recorded at "${stalled.label}", so the loop has never completed a full turn.`
+        : `Nothing is recorded at "${stalled.label}" or after it, so the loop stops there.`
       : null,
+    gapStageKeys,
   };
 }
 
@@ -52,8 +72,11 @@ const STAGE_BUILDERS: Record<TaxonomyGroupKey, (facts: NextActionFacts) => LoopS
       to: "/search/tools",
     },
     {
+      // Counts change_requests only. Labelled by what it counts, because
+      // "Decision proposed: 0" beside "58 recommendations proposed" elsewhere
+      // on the page read as the platform contradicting itself.
       key: "proposed",
-      label: "Decision proposed",
+      label: "Page change proposed",
       count: facts.changes.proposed,
       unit: "waiting",
       to: "/changes",

@@ -54,6 +54,19 @@ export const Route = createFileRoute("/recommendations/$id")({
   component: RecommendationDetailPage,
 });
 
+/**
+ * The 2026-08-04 seed migration wrote rows under these source modules with
+ * hand-picked confidence and time-saved values ("Enable the research
+ * capability" at 85% and 240 minutes, for instance). No rule module writes
+ * recommendations under either module today - every rule writer derives its
+ * confidence (src/lib/confidence.ts) and stores time_saved_minutes: 0 - so a
+ * row from one of these modules is a seeded row, and its scores are estimates
+ * someone typed, not measurements.
+ */
+function seededScores(sourceModule: string | null): boolean {
+  return sourceModule === "capabilities" || sourceModule === "knowledge";
+}
+
 function RecommendationDetailPage() {
   const { id } = Route.useParams();
   const { data } = useSuspenseQuery(recommendationQuery(id));
@@ -166,22 +179,42 @@ function RecommendationDetailPage() {
       <div className="grid gap-4 lg:grid-cols-2">
         <GlassCard className="p-5">
           <h2 className="text-sm font-semibold text-foreground">Impact</h2>
-          <dl className="mt-3">
-            <DetailRow label="Traffic impact" value={recommendation.traffic_impact} />
-            <DetailRow label="Revenue impact" value={recommendation.revenue_impact} />
-            <DetailRow label="Business impact" value={recommendation.business_impact} />
-            <DetailRow label="Risk" value={recommendation.risk} />
-            <DetailRow
-              label="Confidence"
-              value={`${Math.round(recommendation.confidence * 100)}%`}
-            />
-            <DetailRow label="Time saved" value={`${recommendation.time_saved_minutes} minutes`} />
-            <DetailRow
-              label="Approval"
-              value={recommendation.requires_approval ? "Required" : "Not required"}
-            />
-            <DetailRow label="Decided" value={formatWhen(recommendation.approved_at)} />
-          </dl>
+          {seededScores(recommendation.source_module) ? (
+            <>
+              <p className="mt-2 text-sm text-muted-foreground">
+                This row was seeded when the workspace was created. Its impact, risk, confidence and
+                time-saved figures were written by hand, not computed from stored evidence, so they
+                are not shown as facts.
+              </p>
+              <dl className="mt-3">
+                <DetailRow
+                  label="Approval"
+                  value={recommendation.requires_approval ? "Required" : "Not required"}
+                />
+                <DetailRow label="Decided" value={formatWhen(recommendation.approved_at)} />
+              </dl>
+            </>
+          ) : (
+            <dl className="mt-3">
+              <DetailRow label="Traffic impact" value={recommendation.traffic_impact} />
+              <DetailRow label="Revenue impact" value={recommendation.revenue_impact} />
+              <DetailRow label="Business impact" value={recommendation.business_impact} />
+              <DetailRow label="Risk" value={recommendation.risk} />
+              <DetailRow
+                label="Confidence"
+                value={`${Math.round(recommendation.confidence * 100)}%`}
+              />
+              <DetailRow
+                label="Time saved"
+                value={`${recommendation.time_saved_minutes} minutes`}
+              />
+              <DetailRow
+                label="Approval"
+                value={recommendation.requires_approval ? "Required" : "Not required"}
+              />
+              <DetailRow label="Decided" value={formatWhen(recommendation.approved_at)} />
+            </dl>
+          )}
         </GlassCard>
 
         <div className="space-y-4">

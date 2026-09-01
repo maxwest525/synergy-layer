@@ -1,5 +1,5 @@
-import { Link, useHydrated, useNavigate, useRouterState } from "@tanstack/react-router";
-import { Menu, Search } from "lucide-react";
+import { Link, useHydrated, useNavigate, useRouter, useRouterState } from "@tanstack/react-router";
+import { ChevronLeft, Menu, Search } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 
 import { categoryIcon } from "./category-icons";
@@ -213,6 +213,7 @@ function NavPanel({
 
 function TopBar({ pathname }: { pathname: string }) {
   const { view } = useCommandCenter();
+  const router = useRouter();
   // Null until the read lands, so the crumb shows no domain rather than a guess.
   const crumbs = breadcrumbsForPath(pathname, view?.property ?? null);
   return (
@@ -225,6 +226,18 @@ function TopBar({ pathname }: { pathname: string }) {
           />
           <span className="text-sm font-bold text-foreground">Marky</span>
         </Link>
+        {pathname !== "/" ? (
+          // Every page that is not the start gets a working way back to where
+          // the operator just was, without hunting for the browser control.
+          <button
+            type="button"
+            onClick={() => router.history.back()}
+            className="flex shrink-0 items-center gap-1 rounded-md border border-border/60 px-2 py-1 text-xs text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground"
+          >
+            <ChevronLeft className="h-3.5 w-3.5" strokeWidth={1.6} aria-hidden="true" />
+            Back
+          </button>
+        ) : null}
         <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-2 text-[13px]">
           {crumbs.map((crumb, index) => (
             <span key={crumb.label} className="flex min-w-0 items-center gap-2">
@@ -233,16 +246,28 @@ function TopBar({ pathname }: { pathname: string }) {
                   ›
                 </span>
               ) : null}
-              <span
-                className={cn(
-                  "truncate",
-                  index === crumbs.length - 1
-                    ? "font-semibold text-foreground"
-                    : "text-muted-foreground",
-                )}
-              >
-                {crumb.label}
-              </span>
+              {crumb.to && index !== crumbs.length - 1 ? (
+                // An ancestor crumb is a place to go back to, so it is a link.
+                // Rendering these as plain text left deep pages with a trail
+                // that named the way out and offered no way to take it.
+                <Link
+                  to={crumb.to}
+                  className="truncate text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  {crumb.label}
+                </Link>
+              ) : (
+                <span
+                  className={cn(
+                    "truncate",
+                    index === crumbs.length - 1
+                      ? "font-semibold text-foreground"
+                      : "text-muted-foreground",
+                  )}
+                >
+                  {crumb.label}
+                </span>
+              )}
             </span>
           ))}
         </nav>

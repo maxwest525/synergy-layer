@@ -263,6 +263,17 @@ describe("urgency", () => {
     expect(urgencyFor(source({ id: "a", createdAt: daysBefore(1) }), NOW)).toBe("nice_to_have");
   });
 
+  it("never lets a row nothing can act on age its way to the top", () => {
+    // The live failure: an unwired capability recommendation ranked as the
+    // biggest win for 27 days while its own page said approving it runs
+    // nothing. Waiting longer makes such a row staler, not more urgent.
+    expect(urgencyFor(source({ id: "a", createdAt: daysBefore(27), actionable: false }), NOW)).toBe(
+      "nice_to_have",
+    );
+    // Omitted means actionable, so every existing caller keeps its behaviour.
+    expect(urgencyFor(source({ id: "a", createdAt: daysBefore(27) }), NOW)).toBe("fix_now");
+  });
+
   it("writes urgency as elapsed time, because the stored field is a timestamp", () => {
     expect(urgencyLabel(source({ id: "a", createdAt: daysBefore(14) }), NOW)).toBe(
       "waiting 14 days",
