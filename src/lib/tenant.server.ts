@@ -4,6 +4,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { getRequestHeader } from "@tanstack/start-server-core";
 
 import type { Database } from "@/integrations/supabase/types";
+import { supabasePublicUrl, supabasePublishableKey } from "@/integrations/supabase/public-config";
 
 type Client = SupabaseClient<Database>;
 
@@ -36,8 +37,8 @@ function publishableFetch(key: string): typeof fetch {
  * request that presented it or be reused by a later one.
  */
 export function createRequestClient(): { db: Client; authenticated: boolean } {
-  const url = process.env["SUPABASE_URL"]!;
-  const key = process.env["SUPABASE_PUBLISHABLE_KEY"]!;
+  const url = supabasePublicUrl()!;
+  const key = supabasePublishableKey()!;
 
   let token: string | null = null;
   try {

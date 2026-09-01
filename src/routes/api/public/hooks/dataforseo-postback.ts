@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { supabasePublishableKey } from "@/integrations/supabase/public-config";
 
 /**
  * DataForSEO Standard-queue postback receiver. Verified with the project
@@ -8,7 +9,7 @@ export const Route = createFileRoute("/api/public/hooks/dataforseo-postback")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const key = process.env["SUPABASE_PUBLISHABLE_KEY"];
+        const key = supabasePublishableKey();
         const url = new URL(request.url);
         const presented = request.headers.get("apikey") ?? url.searchParams.get("key");
         if (!key || presented !== key) {
