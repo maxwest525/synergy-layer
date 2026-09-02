@@ -34,6 +34,20 @@ Last updated: 2026-08-31, after wiring Google Ads campaign reporting
 describes 2026-08-21 and has NOT been rewritten; the current-state blocks
 immediately below supersede it.
 
+## 0ab. Two monitoring controls that could only read well, 2026-09-02
+
+The cadence card had no word for a scheduler that silently stopped: a row
+whose `next_run_at` was days in the past still read "Cadence on" while its
+last stored run carried no error. It now reads "Cadence overdue" once a
+whole further cron period has passed after the row's own expected firing
+with no run recorded, a threshold taken from the schedule itself rather
+than chosen. The Command center's "All systems normal" was derived from a
+`tool_systems` column nothing ever sets to "failed", so the light could
+only be green; it now counts connections whose probe wrote `failing`, and
+until at least one connection has been probed it says "Connections have
+never been checked" instead of claiming they are fine. The next-actions
+"broken systems" count reads the same rows (CODE-53, from MON-2 and MON-4).
+
 ## 0aa. The GA4 rules say which of them ran, 2026-09-02
 
 Twenty-seven successful GA4 rule runs recorded `observations: 0` and

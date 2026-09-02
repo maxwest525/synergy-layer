@@ -16,7 +16,7 @@ const facts: CommandCenterFacts = {
   ga4: { connectionStatement: "GA4 is connected.", windowDays: 28, snapshots: [] },
   changes: { fixesLive: 0, pagesImproved: 0 },
   audit: { hasRun: false, pagesNeedingFixes: 0 },
-  health: { brokenConnections: 0, failingProviders: 0 },
+  health: { brokenConnections: 0, failingProviders: 0, connectionsChecked: 1 },
   queueSources: [],
 };
 
@@ -409,16 +409,24 @@ describe("top bar status", () => {
     });
   });
 
+  it("says nothing has checked the plumbing rather than claiming it is fine", () => {
+    expect(
+      buildCommandCenter(
+        withFacts({ health: { brokenConnections: 0, failingProviders: 0, connectionsChecked: 0 } }),
+      ).statusLine,
+    ).toEqual({ text: "Connections have never been checked", tone: "warning" });
+  });
+
   it("names a broken connection rather than staying green", () => {
     const view = buildCommandCenter(
-      withFacts({ health: { brokenConnections: 1, failingProviders: 0 } }),
+      withFacts({ health: { brokenConnections: 1, failingProviders: 0, connectionsChecked: 1 } }),
     );
     expect(view.statusLine).toEqual({ text: "1 connection needs attention", tone: "danger" });
   });
 
   it("names the providers that are failing now, not every failure ever stored", () => {
     const view = buildCommandCenter(
-      withFacts({ health: { brokenConnections: 0, failingProviders: 3 } }),
+      withFacts({ health: { brokenConnections: 0, failingProviders: 3, connectionsChecked: 1 } }),
     );
     expect(view.statusLine).toEqual({
       text: "3 measurement providers are failing",
@@ -428,7 +436,7 @@ describe("top bar status", () => {
 
   it("says provider in the singular when only one is failing", () => {
     const view = buildCommandCenter(
-      withFacts({ health: { brokenConnections: 0, failingProviders: 1 } }),
+      withFacts({ health: { brokenConnections: 0, failingProviders: 1, connectionsChecked: 1 } }),
     );
     expect(view.statusLine).toEqual({
       text: "1 measurement provider is failing",
@@ -438,7 +446,7 @@ describe("top bar status", () => {
 
   it("leads with the broken connection when both are wrong", () => {
     const view = buildCommandCenter(
-      withFacts({ health: { brokenConnections: 2, failingProviders: 5 } }),
+      withFacts({ health: { brokenConnections: 2, failingProviders: 5, connectionsChecked: 1 } }),
     );
     expect(view.statusLine).toEqual({ text: "2 connections need attention", tone: "danger" });
   });

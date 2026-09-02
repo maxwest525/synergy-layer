@@ -85,14 +85,11 @@ export const getCommandCenterFacts = createServerFn({ method: "POST" })
           .eq("tenant_id", tenantId)
           .order("created_at", { ascending: false })
           .limit(500),
-        // The two reads behind "All systems normal". Only rows the operator can
-        // see in the tool estate count, so a hidden system never turns the light
-        // red.
-        db
-          .from("tool_systems")
-          .select("verification_state")
-          .eq("tenant_id", tenantId)
-          .eq("visible_in_aoos", true),
+        // The two reads behind "All systems normal". A connection's health is
+        // written by its probe (connections.server.ts); tool_systems'
+        // verification_state, which this read once used, is never written as
+        // "failed" by anything, so the light could only ever be green (MON-4).
+        db.from("tenant_connections").select("health, last_checked_at").eq("tenant_id", tenantId),
         db
           .from("measurement_runs")
           .select("status, started_at, provider")
@@ -172,9 +169,9 @@ export const getCommandCenterFacts = createServerFn({ method: "POST" })
 
     // --- What the status light is allowed to say ----------------------------
 
-    const brokenConnections = (assertRead("Tool systems", systemResult).data ?? []).filter(
-      (row) => row.verification_state === "failed",
-    ).length;
+    const connectionRows = assertRead("Connections", systemResult).data ?? [];
+    const brokenConnections = connectionRows.filter((row) => row.health === "failing").length;
+    const connectionsChecked = connectionRows.filter((row) => row.last_checked_at !== null).length;
 
     // A provider is failing when its most recent run failed, not when it has
     // ever failed. Rows arrive newest first, so the first row seen for a
@@ -321,7 +318,7 @@ export const getCommandCenterFacts = createServerFn({ method: "POST" })
       },
       changes: { fixesLive, pagesImproved },
       audit: { hasRun: audit.lastObservedAt !== null, pagesNeedingFixes },
-      health: { brokenConnections, failingProviders },
+      health: { brokenConnections, failingProviders, connectionsChecked },
       queueSources: [...changeSources, ...recommendationSources, ...auditSources, ...siteSources],
     };
   });

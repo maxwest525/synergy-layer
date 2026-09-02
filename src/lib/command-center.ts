@@ -85,6 +85,8 @@ export type CommandCenterFacts = {
   readonly health: {
     readonly brokenConnections: number;
     readonly failingProviders: number;
+    /** Connection rows that have ever been probed. Zero means nothing has checked the plumbing. */
+    readonly connectionsChecked: number;
   };
   readonly queueSources: readonly QueueSource[];
 };
@@ -420,6 +422,12 @@ function statusLineFor(health: CommandCenterFacts["health"]): StatusLine {
           : `${health.failingProviders} measurement providers are failing`,
       tone: "warning",
     };
+  }
+  // Green is a claim, and a claim needs a check behind it. Until a probe
+  // has run against at least one connection, the honest line is that nothing
+  // has looked (MON-4).
+  if (health.connectionsChecked === 0) {
+    return { text: "Connections have never been checked", tone: "warning" };
   }
   return { text: "All systems normal", tone: "positive" };
 }
