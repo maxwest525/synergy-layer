@@ -30,6 +30,12 @@ const wording: AuditFixTarget = { changeKind: "service.page_wording", filePath: 
 const crawl: AuditFixTarget = { changeKind: "site.crawl_directives", filePath: ROBOTS_FILE };
 const metadata: AuditFixTarget = { changeKind: "page.metadata", filePath: METADATA_FILE };
 
+const FOOTER_FILE = GOVERNED_CHANGE_KINDS["site.footer_wording"][0];
+const footerWording: AuditFixTarget = {
+  changeKind: "site.footer_wording",
+  filePath: FOOTER_FILE,
+};
+
 /** Which governed change kind can fix each page level check. */
 export const PAGE_CHECK_FIX: Record<CheckId, AuditFixTarget | null> = {
   title_missing: wording,
@@ -102,11 +108,27 @@ export const SITE_CHECK_FIX: Record<SiteCheckId, AuditFixTarget | null> = {
   host_not_consolidated: null,
   mixed_content_present: null,
   homepage_slow_to_respond: null,
-  // The broker's registration wording lives on the website, which AOOS does
-  // not edit (CODE-86).
+  // Each of these four says why in its own words. The blanket reason they
+  // carried until CODE-89 -- "the wording lives on the website, which AOOS does
+  // not edit" -- was false twice over: AOOS does edit the website, that is what
+  // the executor is for, and the four do not share one reason.
+  //
+  // Adding a number the homepage does not carry is an insertion, and the
+  // executor's only mechanic is exact replacement (`github_exact_replacement`):
+  // there is no `before` text to match. Same limit as `h2_missing`.
   broker_numbers_missing: null,
+  // Two different numbers appear across the site. Which one is the broker's
+  // real registration is a fact about their FMCSA record, not about the source
+  // file, so AOOS would be guessing which to delete.
   broker_numbers_disagree: null,
-  broker_statement_missing: null,
+  // The one of the four that is fixable. The statement is a sentence that
+  // already exists, so amending it is an exact replacement. It is rendered
+  // sitewide from `src/components/trumove/Footer.tsx`, not from the homepage
+  // source, which is why the fix needs its own kind rather than the page
+  // wording lane (CODE-90).
+  broker_statement_missing: footerWording,
+  // Advice only, and the judgment is the operator's: a second number on an
+  // inner page may be a stale copy or may be a second authority they hold.
   broker_numbers_off_homepage: null,
 };
 
@@ -181,6 +203,111 @@ export function noFixReasonForPage(check: string, targetUrl: string | null): str
   if (targetUrl === null) return "This finding names no page address, so nothing can be drafted.";
   const resolved = resolvePageSource(targetUrl);
   return resolved.ok ? null : resolved.reason;
+}
+
+/**
+ * The paragraph (c) statement fix: one exact replacement of the sentence the
+ * footer already carries (CODE-90).
+ *
+ * 49 CFR § 371.107(c) requires a household goods broker to display "your status
+ * as a household goods broker and the statement that you will not transport an
+ * individual shipper's household goods, but that you will arrange for the
+ * transportation of the household goods by an FMCSA-authorized household goods
+ * motor carrier, whose charges will be determined by its published tariff."
+ * (https://www.law.cornell.edu/cfr/text/49/371.107, read 2026-09-02.)
+ *
+ * Only the last clause is ever built here, and only when the rest is already
+ * there. A site missing the whole statement needs a sentence written where
+ * none exists, which is an insertion: the executor replaces exact text and has
+ * no `before` to match, the same limit that keeps `h2_missing` and
+ * `broker_numbers_missing` unfixable. The narrow case is the live one -- the
+ * footer says the broker status, "does not transport" and "arranges", and not
+ * "tariff".
+ *
+ * The added wording is the regulation's own requirement rather than a phrasing
+ * choice, and it is appended as a whole sentence rather than spliced into the
+ * existing one: splicing would have to find the carrier noun phrase and agree
+ * with its number, and a wrong guess there rewrites a compliance statement into
+ * something ungrammatical. Nothing reaches the site on this function's say-so;
+ * it drafts a proposal the operator approves, and the executor then proves the
+ * clause rendered.
+ */
+export type BrokerStatementFix = {
+  title: string;
+  rationale: string;
+  changes: FieldChange[];
+};
+
+const TARIFF_SENTENCE =
+  "Charges for transportation are determined by the carrier's published tariff.";
+
+/**
+ * The sentence carrying the existing statement: one run of text mentioning both
+ * halves the site already has, ending at a full stop. Bounded away from quotes
+ * and braces so a match cannot run out of one JSX string literal into the next.
+ */
+const STATEMENT_SENTENCE = /[^."'`{}<>]*\bnot\s+transport\b[^."'`{}<>]*\./gi;
+const ARRANGE_FIRST = /[^."'`{}<>]*\barrang(?:e|es|ing)\b[^."'`{}<>]*\./gi;
+
+export function buildBrokerStatementFix(input: {
+  /** The governed footer file's current contents. */
+  footerContent: string;
+  /** What the rendered page was read to carry, from `licenceFactsIn`. */
+  statement: { notTransport: boolean; arrange: boolean; tariff: boolean };
+}): BrokerStatementFix | { error: string } {
+  const { statement } = input;
+  if (statement.tariff) {
+    return { error: "The site already states how the carrier's charges are determined." };
+  }
+  if (!statement.notTransport || !statement.arrange) {
+    return {
+      error:
+        "The site is missing more of the paragraph (c) statement than the tariff clause, so the fix is a sentence to write rather than one to amend. This executor replaces exact text and has nothing to replace.",
+    };
+  }
+
+  const candidates = [
+    ...new Set([
+      ...(input.footerContent.match(STATEMENT_SENTENCE) ?? []),
+      ...(input.footerContent.match(ARRANGE_FIRST) ?? []),
+    ]),
+  ].filter(
+    (sentence) => /\barrang(?:e|es|ing)\b/i.test(sentence) && /\bnot\s+transport\b/i.test(sentence),
+  );
+
+  if (candidates.length === 0) {
+    return {
+      error:
+        "The rendered page carries the statement but the governed footer file does not hold it as one sentence, so there is no single string to replace. It may be assembled from parts or come from another file.",
+    };
+  }
+  if (candidates.length > 1) {
+    return {
+      error: `The governed footer file holds ${candidates.length} sentences carrying the statement, so amending one would leave the others contradicting it.`,
+    };
+  }
+
+  const before = candidates[0]!.trim();
+  if (input.footerContent.split(before).length - 1 !== 1) {
+    return {
+      error:
+        "That sentence appears more than once in the governed footer file, so an exact replacement is ambiguous.",
+    };
+  }
+
+  return {
+    title: "Add the tariff clause to the broker statement",
+    rationale:
+      '49 CFR § 371.107(c) requires a household goods broker to display the statement that it will arrange transportation "by an FMCSA-authorized household goods motor carrier, whose charges will be determined by its published tariff." The footer already states the broker status, that it does not transport, and that it arranges. The clause about charges is the part it does not state.',
+    changes: [
+      {
+        field: "broker_statement",
+        label: "Broker statement",
+        before,
+        after: `${before} ${TARIFF_SENTENCE}`,
+      },
+    ],
+  };
 }
 
 export function fixTargetForSiteCheck(check: string): AuditFixTarget | null {

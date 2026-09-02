@@ -173,7 +173,14 @@ describe("drafting a site crawl fix straight from the card", () => {
   }
 
   it("offers the draft on exactly the site checks a governed lane fixes", () => {
-    for (const check of ["robots_blocks_site", "robots_blocks_pages", "sitemap_not_declared"]) {
+    for (const check of [
+      "robots_blocks_site",
+      "robots_blocks_pages",
+      "sitemap_not_declared",
+      // The footer lane (CODE-90). The other three broker checks stay manual,
+      // and the test below says so.
+      "broker_statement_missing",
+    ]) {
       expect(idsFor(siteFinding(check))).toContain("draft");
     }
   });
@@ -194,7 +201,6 @@ describe("drafting a site crawl fix straight from the card", () => {
       "homepage_slow_to_respond",
       "broker_numbers_missing",
       "broker_numbers_disagree",
-      "broker_statement_missing",
       "broker_numbers_off_homepage",
     ]) {
       expect(idsFor(siteFinding(check))).not.toContain("draft");

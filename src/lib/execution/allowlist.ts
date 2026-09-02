@@ -86,6 +86,12 @@ export const GOVERNED_CHANGE_KINDS = {
   "site.structured_data": ["src/platform/content/schema/index.ts"],
   "content.blog_post": ["src/pages/blog/posts.ts"],
   "page.wording": [...new Set(Object.values(GOVERNED_PAGE_SOURCES))],
+  // The sitewide footer, and the only file in this kind. It is not a page
+  // source: no URL resolves to it, because every URL renders it. The broker's
+  // paragraph (c) statement lives here (BACKLOG.md CODE-90), which is why a
+  // rule about the homepage ends up editing a component the homepage only
+  // includes.
+  "site.footer_wording": ["src/components/trumove/Footer.tsx"],
 } as const satisfies Record<string, readonly string[]>;
 
 export type GovernedChangeKind = keyof typeof GOVERNED_CHANGE_KINDS;

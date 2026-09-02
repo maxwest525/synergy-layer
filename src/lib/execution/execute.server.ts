@@ -11,6 +11,7 @@ import type {
   RenderedVerifier,
   RobotsProver,
 } from "./execute";
+import { visibleText } from "../broker-licence";
 import { firecrawlEndpoint } from "../firecrawl-endpoint";
 import { scrapePageWithVps, vpsScraperConfigured } from "../connectors/vps-scraper.server";
 import { GithubStatusError, readGithubResponseSignals } from "./github-error";
@@ -367,6 +368,7 @@ export function createDirectFetchVerifier(
         heading: extractFirstHeading(response.text),
         metaDescription: extractMetaDescription(response.text),
         subheadings: extractSubheadings(response.text),
+        visibleText: visibleText(response.text),
         renderedBy: DIRECT_FETCH_NAME,
       };
     },
@@ -463,6 +465,7 @@ export function createRenderedVerifier(
       heading: extractFirstHeading(html) ?? extractMarkdownHeading(markdown),
       metaDescription: extractMetaDescription(html),
       subheadings: extractSubheadings(html),
+      visibleText: visibleText(html),
       renderedBy,
     };
   }
@@ -484,6 +487,7 @@ export function createRenderedVerifier(
           heading: extractFirstHeading(page.html) ?? extractMarkdownHeading(page.markdown),
           metaDescription: extractMetaDescription(page.html),
           subheadings: extractSubheadings(page.html),
+          visibleText: visibleText(page.html),
           renderedBy: "Crawl4AI",
         };
       } catch (error) {
