@@ -288,9 +288,7 @@ describe("connector probes", () => {
       expect(
         fetcher.mock.calls.some(([url]) => String(url).includes("searchconsole.googleapis.com")),
       ).toBe(false);
-      expect(
-        fetcher.mock.calls.some(([url]) => String(url).includes("webmasters/v3")),
-      ).toBe(false);
+      expect(fetcher.mock.calls.some(([url]) => String(url).includes("webmasters/v3"))).toBe(false);
       expect(JSON.stringify(result)).not.toContain("temporary");
     } finally {
       globalThis.fetch = originalFetch;

@@ -1,7 +1,4 @@
-import {
-  GoogleTokenError,
-  googleAccessToken,
-} from "../google-token.server";
+import { GoogleTokenError, googleAccessToken } from "../google-token.server";
 import {
   SEARCH_CONSOLE_CREDENTIAL_NAMES,
   SEARCH_CONSOLE_SCOPE,
