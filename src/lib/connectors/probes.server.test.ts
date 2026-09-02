@@ -257,6 +257,94 @@ describe("connector probes", () => {
     expect(fetcher).not.toHaveBeenCalled();
   });
 
+  // Search Console used to sit in `noSafeProbe`, so it reported "degraded" on
+  // every check and a working credential looked identical to a dead one. Two of
+  // its three credential routes go straight to Google and are provable at the
+  // token endpoint for free, exactly like GA4.
+  it("proves a direct Search Console credential at the token endpoint and never calls the API", async () => {
+    const originalFetch = globalThis.fetch;
+    const fetcher = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(new Response('{"access_token":"temporary"}', { status: 200 }));
+    globalThis.fetch = fetcher;
+    try {
+      const result = await probeConnector("google_search_console", {
+        env: {
+          GSC_OAUTH_CLIENT_ID: "client",
+          GSC_OAUTH_CLIENT_SECRET: "secret",
+          GSC_OAUTH_REFRESH_TOKEN: "refresh",
+        },
+      });
+
+      expect(result).toMatchObject({
+        health: "healthy",
+        outcome: "success",
+        proof: {
+          endpoint: "https://oauth2.googleapis.com/token",
+          credentialKind: "oauth_refresh_token",
+          route: "direct",
+        },
+      });
+      expect(
+        fetcher.mock.calls.some(([url]) => String(url).includes("searchconsole.googleapis.com")),
+      ).toBe(false);
+      expect(
+        fetcher.mock.calls.some(([url]) => String(url).includes("webmasters/v3")),
+      ).toBe(false);
+      expect(JSON.stringify(result)).not.toContain("temporary");
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it("separates a rejected Search Console credential from an authenticated refusal", async () => {
+    const originalFetch = globalThis.fetch;
+    const env = {
+      GSC_OAUTH_CLIENT_ID: "client",
+      GSC_OAUTH_CLIENT_SECRET: "secret",
+      GSC_OAUTH_REFRESH_TOKEN: "refresh",
+    };
+    try {
+      globalThis.fetch = vi
+        .fn<typeof fetch>()
+        .mockResolvedValue(new Response("{}", { status: 400 }));
+      expect(await probeConnector("google_search_console", { env })).toMatchObject({
+        health: "failing",
+        outcome: "http_error",
+        proof: { statusCode: 400 },
+      });
+
+      globalThis.fetch = vi
+        .fn<typeof fetch>()
+        .mockResolvedValue(new Response("{}", { status: 503 }));
+      expect(await probeConnector("google_search_console", { env })).toMatchObject({
+        health: "degraded",
+        outcome: "http_error",
+        proof: { statusCode: 503 },
+      });
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  // The gateway route is the one that genuinely cannot be probed without going
+  // through someone else's service. It still reports itself unprovable, but now
+  // it names the route instead of tarring the direct credentials with it.
+  it("still reports the Lovable gateway route as unprovable, and says which route", async () => {
+    const fetcher = vi.fn();
+    const result = await probeConnector("google_search_console", {
+      env: { LOVABLE_API_KEY: "lovable", GOOGLE_SEARCH_CONSOLE_API_KEY: "connection" },
+      fetcher,
+    });
+
+    expect(result).toMatchObject({
+      health: "degraded",
+      outcome: "configured_no_safe_probe",
+      proof: { route: "lovable_gateway" },
+    });
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
   it("refreshes Google Ads OAuth and probes the current read-only v25 endpoint", async () => {
     const fetcher = vi
       .fn()
