@@ -138,6 +138,8 @@ const NO_LANE_REASON: Readonly<Record<string, string>> = {
     "People reach this page and then do nothing. That is about what the page offers and how it is laid out, which is a larger change than editing a line.",
   event_disappeared:
     "Something that used to be recorded here has stopped being recorded. That is far more often tracking that broke than content that changed. Check the tag or the form before changing the page.",
+  event_silent_yesterday:
+    "An event that fired every day recorded nothing yesterday. That is a tag, a trigger or a form to check today, not a page to edit; if it was a real quiet day, tomorrow's read will say so.",
 
   // Targeting and links. Nothing is wrong with a page in any of these.
   approved_keyword_unobserved:

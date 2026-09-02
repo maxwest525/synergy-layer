@@ -37,6 +37,7 @@ const GA4_RULES_COVERED: Record<Ga4CheckRule, true> = {
   page_traffic_gain: true,
   event_disappeared: true,
   zero_engagement_page: true,
+  event_silent_yesterday: true,
 };
 
 /**

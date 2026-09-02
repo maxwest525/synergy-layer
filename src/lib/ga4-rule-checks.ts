@@ -21,7 +21,17 @@ import { confidenceInCount, confidenceInCountChange } from "./confidence";
  */
 
 export type Ga4CheckRule =
-  "page_traffic_loss" | "page_traffic_gain" | "event_disappeared" | "zero_engagement_page";
+  | "page_traffic_loss"
+  | "page_traffic_gain"
+  | "event_disappeared"
+  | "zero_engagement_page"
+  | "event_silent_yesterday";
+
+/** One day's event totals, as runGa4Inventory stores them beside the window. */
+export type DailyEventCounts = {
+  date: string;
+  events: { eventName: string; eventCount: number }[];
+};
 
 export type Ga4ObservationDraft = {
   rule: Ga4CheckRule;
@@ -51,6 +61,14 @@ export const GA4_RULE_THRESHOLDS = {
     maxFindingsPerRun: 10,
   },
   disappearedEvent: { minPriorEventCount: 25, maxFindingsPerRun: 10 },
+  /**
+   * An event is silent when it recorded nothing yesterday after recording at
+   * least one on each of the previous seven days. Seven is the existing
+   * comparison window, and "each day" is the whole test: no volume floor is
+   * invented, so a genuinely daily event of any size qualifies and a
+   * sporadic one never does.
+   */
+  silentEvent: { priorDays: 7, maxFindingsPerRun: 10 },
   zeroEngagement: { minSessions: 50, maxFindingsPerRun: 10 },
   comparisonWindowDays: 7,
 } as const;
@@ -175,6 +193,56 @@ export function detectDisappearedEvents(current: Ga4Row[], prior: Ga4Row[]): Ga4
       // Stated assumption: 0.9 — an event that fired reliably and then
       // stopped entirely is a wiring fact, not a sampling question; capped
       // below 1 because we cannot rule out the event simply being renamed.
+      confidence: 0.9,
+    });
+  }
+  return drafts;
+}
+
+/**
+ * Events that fired on each of the previous seven days and not at all
+ * yesterday. `event_disappeared` compares two 28-day windows, so a broken tag
+ * takes 28 silent days to show; this reads the one-day totals stored beside
+ * each window and says it the next morning (MEAS-9). Automatic events count:
+ * a silent page_view is the tag itself gone.
+ */
+export function detectSilentEvents(
+  yesterday: DailyEventCounts,
+  priorDays: readonly DailyEventCounts[],
+): Ga4ObservationDraft[] {
+  const t = GA4_RULE_THRESHOLDS.silentEvent;
+  if (priorDays.length < t.priorDays) return [];
+  const window = priorDays.slice(0, t.priorDays);
+  const yesterdayByEvent = new Map(yesterday.events.map((e) => [e.eventName, e.eventCount]));
+
+  const everyDay = new Map<string, number[]>();
+  for (const event of window[0]!.events) {
+    if (event.eventCount < 1) continue;
+    const counts = window.map(
+      (day) => day.events.find((e) => e.eventName === event.eventName)?.eventCount ?? 0,
+    );
+    if (counts.every((count) => count >= 1)) everyDay.set(event.eventName, counts);
+  }
+
+  const drafts: Ga4ObservationDraft[] = [];
+  const silent = [...everyDay.entries()]
+    .filter(([name]) => (yesterdayByEvent.get(name) ?? 0) === 0)
+    .sort((a, b) => b[1].reduce((x, y) => x + y, 0) - a[1].reduce((x, y) => x + y, 0));
+  for (const [name, counts] of silent.slice(0, t.maxFindingsPerRun)) {
+    drafts.push({
+      rule: "event_silent_yesterday",
+      target: name,
+      title: `Event "${name}" recorded nothing yesterday`,
+      description: `"${name}" fired on each of the previous ${t.priorDays} days (${counts.join(", ")} events) and recorded zero on ${yesterday.date}. Check the tag, trigger or form before reading it as behaviour.`,
+      evidence: {
+        eventName: name,
+        silentDate: yesterday.date,
+        priorDays: window.map((day, index) => ({ date: day.date, eventCount: counts[index] })),
+      },
+      businessImpact: "high",
+      // Stated assumption: 0.9, as event_disappeared. A daily event that
+      // stops outright is a wiring fact; held below 1 because one quiet day
+      // can still be a real quiet day, which the next read will say.
       confidence: 0.9,
     });
   }

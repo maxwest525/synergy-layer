@@ -8,6 +8,8 @@ import {
   detectZeroEngagementPages,
   type Ga4ObservationDraft,
   type Ga4Row,
+  detectSilentEvents,
+  type DailyEventCounts,
 } from "./ga4-rule-checks";
 import { logActivity } from "./os.server";
 import { observationRecommendationRecord } from "./observation-record";
@@ -31,6 +33,7 @@ export type Ga4RuleRunResult = {
 };
 
 const CURRENT_ONLY_RULES = ["zero_engagement_page"] as const;
+const DAILY_RULES = ["event_silent_yesterday"] as const;
 const COMPARISON_RULES = ["page_traffic_loss", "page_traffic_gain", "event_disappeared"] as const;
 
 type SnapshotRow = {
@@ -43,6 +46,19 @@ type SnapshotRow = {
 function rowsOf(snapshot: SnapshotRow | null): Ga4Row[] {
   const metrics = (snapshot?.metrics ?? {}) as { rows?: Ga4Row[] };
   return metrics.rows ?? [];
+}
+
+/** The one-day totals stored beside a window, or null for a snapshot taken before they were. */
+function dailyOf(snapshot: SnapshotRow): DailyEventCounts | null {
+  const metrics = (snapshot.metrics ?? {}) as {
+    dailyDate?: unknown;
+    dailyEvents?: unknown;
+  };
+  if (typeof metrics.dailyDate !== "string" || !Array.isArray(metrics.dailyEvents)) return null;
+  return {
+    date: metrics.dailyDate,
+    events: metrics.dailyEvents as DailyEventCounts["events"],
+  };
 }
 
 /**
@@ -95,6 +111,35 @@ export async function evaluateGa4Snapshots(
   const observations: Ga4ObservationDraft[] = [...detectZeroEngagementPages(currentRows)];
   const rulesEvaluated: string[] = [...CURRENT_ONLY_RULES];
   const unmet: string[] = [];
+
+  // The daily series: one stored day per snapshot, newest first, one row per
+  // date. Yesterday is the newest snapshot's day; the seven before it are the
+  // baseline (MEAS-9).
+  const { data: dailySnapshots, error: dailyError } = await client
+    .from("ga4_snapshots")
+    .select("id, start_date, end_date, metrics")
+    .eq("tenant_id", tenantId)
+    .eq("property", property)
+    .order("end_date", { ascending: false })
+    .limit(GA4_RULE_THRESHOLDS.silentEvent.priorDays * 2);
+  if (dailyError) throw new Error(dailyError.message);
+  const dailySeries: DailyEventCounts[] = [];
+  for (const snapshot of dailySnapshots ?? []) {
+    const day = dailyOf(snapshot);
+    if (day && !dailySeries.some((stored) => stored.date === day.date)) dailySeries.push(day);
+  }
+  const yesterday = dailySeries[0]?.date === reportingDate ? dailySeries[0] : null;
+  const priorDays = dailySeries.slice(1);
+  if (yesterday && priorDays.length >= GA4_RULE_THRESHOLDS.silentEvent.priorDays) {
+    observations.push(...detectSilentEvents(yesterday, priorDays));
+    rulesEvaluated.push(...DAILY_RULES);
+  } else {
+    unmet.push(
+      yesterday
+        ? `Only ${priorDays.length} earlier daily event read(s) are stored for ${property}; ${DAILY_RULES.join(", ")} needs ${GA4_RULE_THRESHOLDS.silentEvent.priorDays} and did not run.`
+        : `No daily event read is stored for ${reportingDate} on ${property}, so ${DAILY_RULES.join(", ")} did not run.`,
+    );
+  }
   if (priorSnapshot) {
     const priorRows = rowsOf(priorSnapshot);
     observations.push(...detectPageTrafficShift(currentRows, priorRows));

@@ -42,7 +42,7 @@ export const definition: ModuleDefinition = {
       operations: [
         { name: "rules.evaluate", description: "Score stored snapshots against typed thresholds." },
       ],
-      config: { mutating: false, rulesEvaluated: 4 },
+      config: { mutating: false, rulesEvaluated: 5 },
     },
   ],
   workflows: [
