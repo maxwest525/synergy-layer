@@ -186,6 +186,8 @@ const NO_LANE_REASON: Readonly<Record<string, string>> = {
     "The competitor overlap lookup came back full, so the list is cut off rather than complete. A fuller read is a provider request, made on a click with its cost shown. Nothing on your pages needs changing for it.",
   rival_page_mentions_your_brand:
     "A site that ranks alongside you mentions your name. That page is theirs. What you can do is read what it says and decide whether to respond, ask for a link, or correct a claim, none of which this tool drafts.",
+  brand_mentioned_without_a_link:
+    "A site mentions your name and is not in the stored list of sites linking to you. The page is theirs, so the move is outreach: read what it says, then ask for a link if the mention deserves one. Nothing on your pages changes for it, and this tool drafts no message.",
   same_registration_details_across_two_known_domains:
     "Two domains you track share registration details, which may mean one owner behind both. It is filed as a candidate for review. Confirming it is a judgement about competitors, and it changes nothing on your site.",
   identical_technology_stack_across_two_known_domains:

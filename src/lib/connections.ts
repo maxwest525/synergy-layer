@@ -180,7 +180,7 @@ export const CONNECTION_OUTPUTS: readonly ConnectionOutput[] = [
     // backlinks_summary, backlinks_referring_domains) that the targeting pass
     // does not touch. discovery-findings.server.ts reads the same table's
     // Labs, Domain Analytics and Content Analysis snapshots and files its
-    // four rules under its own source_module, "competitor-discovery", never
+    // five rules under its own source_module, "competitor-discovery", never
     // "dataforseo".
     findingSources: ["dataforseo", "site-audit", "backlink-findings", "competitor-discovery"],
     promise: "Backlinks, referring domains and anchor text, from a paid provider.",

@@ -91,6 +91,7 @@ const CATEGORY_BY_RULE: Record<string, CategoryId> = {
   same_registration_details_across_two_known_domains: "competition",
   identical_technology_stack_across_two_known_domains: "competition",
   rival_page_mentions_your_brand: "competition",
+  brand_mentioned_without_a_link: "competition",
 };
 
 const CATEGORY_BY_MODULE: Record<string, CategoryId> = {
