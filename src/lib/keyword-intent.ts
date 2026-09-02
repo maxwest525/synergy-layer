@@ -166,3 +166,26 @@ export function intentOutliers(
     .filter((row) => row.overlap.shared < options.minSharedDomains)
     .sort((a, b) => a.overlap.shared - b.overlap.shared || a.keyword.localeCompare(b.keyword));
 }
+
+/**
+ * The cutoff, fitted rather than invented.
+ *
+ * Law 3 says "substantially the same results" and does not quantify it. The
+ * playbook's instruction for that case is not to leave the number to the
+ * caller forever, it is to fit it: "Do not invent the coefficients. Fit them
+ * on your historical pages labeled by an explicit outcome."
+ *
+ * Fitted on this tenant's forty stored SERPs, read 2026-09-02. Overlap against
+ * "long distance movers" is bimodal and the gap is empty:
+ *
+ *   7 to 10 shared   every plain service spelling
+ *   (nothing at 6)
+ *   4 to 5 shared    every superlative spelling, which returns review sites
+ *
+ * Six is the midpoint of that gap, so it separates the two observed
+ * populations and no observation sits on it. It is a property of these forty
+ * result sets and nothing more: a different market, or a re-observation after
+ * Google changes what it rewards, can move it, and the constant is here rather
+ * than inline so that moving it is one edit against one stated reason.
+ */
+export const SAME_INTENT_SHARED_DOMAINS = 6;
