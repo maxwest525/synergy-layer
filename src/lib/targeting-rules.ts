@@ -38,6 +38,8 @@ export type TargetingObservation = {
   readonly confidence: number;
 };
 
+import { groupByPhrase, pageCoversPhrase } from "./keyword-phrases";
+
 export type ApprovedKeyword = { readonly keyword: string };
 export type ObservedSerp = { readonly keyword: string; readonly reportingDate: string };
 export type PageText = {
@@ -136,11 +138,17 @@ export function detectUnobservedKeywords(
 }
 
 /**
- * Approved keywords no read page carries.
+ * Targets no read page carries.
  *
- * Coverage means the approved phrase itself appears in a stored title or H1.
- * A looser token overlap would decide the question with a threshold nobody
- * chose, and this lane raises no finding that way.
+ * Coverage means the page's own words include every content word of the target,
+ * so word order and the qualifiers ("best", "top rated") stop deciding it. The
+ * old test asked for the approved phrase as a literal substring, which was
+ * exactly right about one spelling and wrong about the other thirty-nine:
+ * 50 approved keywords are 14 targets, and a page titled "Long Distance Movers"
+ * answers nineteen of the spellings at once (CODE-93, keyword-phrases.ts).
+ *
+ * Still no threshold and still no score. A page either carries every content
+ * word of the target or it does not.
  */
 export function detectKeywordsWithoutPage(
   approved: readonly ApprovedKeyword[],
@@ -150,23 +158,33 @@ export function detectKeywordsWithoutPage(
   // about the audit, not about the site.
   if (pages.length === 0) return [];
 
-  const haystack = pages.map(
-    (page) => `${normalise(page.title ?? "")} ${normalise(page.h1 ?? "")}`,
-  );
+  const pageText = pages.map((page) => `${page.title ?? ""} ${page.h1 ?? ""}`).join(" ");
 
-  return approved
-    .filter((entry) => !haystack.some((text) => text.includes(normalise(entry.keyword))))
-    .map((entry) => ({
+  return groupByPhrase(approved, (entry) => entry.keyword)
+    .filter((group) => !pageCoversPhrase(pageText, group.canonical))
+    .map((group) => ({
       rule: "approved_keyword_no_page" as const,
-      target: entry.keyword,
-      title: `No page here is about "${entry.keyword}"`,
+      target: group.canonical,
+      title: `No page here is about "${group.canonical}"`,
       description:
-        `You approved "${entry.keyword}", and none of the ${pages.length} pages read so far ` +
-        "use that phrase in their title or main heading. A page that is about it is the thing " +
-        "that could rank for it.",
-      evidence: { keyword: entry.keyword, pagesRead: pages.length },
+        `You approved ${describeSpellings(group.variants)}, and none of the ${pages.length} ` +
+        "pages read so far carry those words in a title or main heading. One page that is " +
+        "about it answers every one of those searches; there is no need for one page each.",
+      evidence: {
+        keyword: group.canonical,
+        variants: group.variants,
+        approvedSpellings: group.variants.length,
+        pagesRead: pages.length,
+      },
       confidence: 1,
     }));
+}
+
+/** "X" on its own, or "X and N other ways of spelling it". */
+function describeSpellings(variants: readonly string[]): string {
+  const [first, ...rest] = variants;
+  if (rest.length === 0) return `"${first}"`;
+  return `"${first}" and ${rest.length} other ${rest.length === 1 ? "spelling" : "spellings"} of it`;
 }
 
 /**
@@ -190,25 +208,28 @@ export function detectKeywordCannibalization(
 ): TargetingObservation[] {
   if (pages.length === 0) return [];
 
-  return approved
-    .map((entry) => {
-      const phrase = normalise(entry.keyword);
+  return groupByPhrase(approved, (entry) => entry.keyword)
+    .map((group) => {
       const matches = pages.filter((page) =>
-        `${normalise(page.title ?? "")} ${normalise(page.h1 ?? "")}`.includes(phrase),
+        pageCoversPhrase(`${page.title ?? ""} ${page.h1 ?? ""}`, group.canonical),
       );
-      return { entry, matches };
+      return { group, matches };
     })
     .filter(({ matches }) => matches.length >= 2)
-    .map(({ entry, matches }) => ({
+    .map(({ group, matches }) => ({
       rule: "approved_keyword_multiple_pages" as const,
-      target: entry.keyword,
-      title: `${matches.length} pages are about "${entry.keyword}"`,
+      target: group.canonical,
+      title: `${matches.length} pages are about "${group.canonical}"`,
       description:
-        `You approved "${entry.keyword}", and ${matches.length} different pages carry that ` +
-        "phrase in their title or main heading. They are competing with each other for it, " +
-        "not just with other sites. Which one should own it is your call; a wording change " +
-        "can differentiate the rest.",
-      evidence: { keyword: entry.keyword, pages: matches.map((page) => page.url) },
+        `You approved ${describeSpellings(group.variants)}, and ${matches.length} different ` +
+        "pages carry those words in their title or main heading. They are competing with each " +
+        "other for it, not just with other sites. Which one should own it is your call; a " +
+        "wording change can differentiate the rest.",
+      evidence: {
+        keyword: group.canonical,
+        variants: group.variants,
+        pages: matches.map((page) => page.url),
+      },
       confidence: 1,
     }));
 }
