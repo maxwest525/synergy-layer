@@ -34,6 +34,18 @@ Last updated: 2026-08-31, after wiring Google Ads campaign reporting
 describes 2026-08-21 and has NOT been rewritten; the current-state blocks
 immediately below supersede it.
 
+## 0av. The two declared agents that could not run are gone, 2026-09-02
+
+`growth.analyst` and `content.strategist` were registry declarations
+rendered at `/agents` as if they could be run, while the agent runtime
+throws on every call and the runner refuses any graph with an agent
+node, so their two workflows were unrunnable by construction and both
+pinned a model slug the model layer exists to avoid. The declarations
+and the two agent rows are gone; the two workflow rows stay paused
+because each carries two recorded runs, and run history is not deleted.
+The two pending capabilities they referenced stay declared as pending.
+A declaration returns the day the runtime does (CODE-14).
+
 ## 0au. The five public hooks are tested at the handler, 2026-09-02
 
 The scheduler tick, the nightly proposal job, the DataForSEO postback and
@@ -993,7 +1005,10 @@ it never prunes — so a registry sync can neither refresh nor remove them:
 - `agent.research` — seed-only, but **still read at runtime** by
   `src/lib/web-research.server.ts`, so pruning it would break web research.
 - `wf.research_refresh`, `wf.content_generation`, `wf.publish` — seed-only
-  workflows. (`wf.seo_validation` is seeded _and_ declared in code, so it is
+  workflows.
+- `growth.weekly_scan`, `content.brief_pipeline` — declared until 2026-09-02
+  (CODE-14); each carries two recorded runs, so the rows stay until a
+  decision on the history they hold. (`wf.seo_validation` is seeded _and_ declared in code, so it is
   not an orphan.)
 - `sch.research_refresh`, `sch.seo_validation`, `sch.content_generation`,
   `sch.publish` — seed-only schedules, all disabled since
