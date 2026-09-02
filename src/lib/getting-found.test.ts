@@ -559,7 +559,9 @@ describe("what still has to happen before this volume can be judged", () => {
       }),
     );
     expect(view.answerability?.waitingOn.join(" ")).toContain("second collection");
-    expect(view.answerability?.waitingOn.join(" ")).toContain("analytics");
+    // The rules that need analytics are GA4 rules and land on Who visits your
+    // site, so this page no longer counts them among its own (CQ-8).
+    expect(view.answerability?.waitingOn.join(" ")).not.toContain("analytics");
   });
 
   it("says nothing about prerequisites once they are all met", () => {

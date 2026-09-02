@@ -24,7 +24,7 @@ import {
   type VerdictConfidence,
 } from "./outcome-verdict";
 import type { Severity } from "./page-checks";
-import { unmetPrerequisites } from "./rule-buckets";
+import { prerequisiteState, unmetPrerequisites } from "./rule-buckets";
 import type { SiteFinding } from "./site-checks";
 import {
   buildQueue,
@@ -463,32 +463,16 @@ export function buildSiteHealth(facts: SiteHealthFacts): SiteHealthView {
     truncatedNote: facts.truncated
       ? "More changes are stored than were read for this page, so the counts above are a floor rather than a total."
       : null,
-    // Nothing on this page reads a comparison window, analytics, a stored URL
-    // inspection, approved keywords, backlink snapshots, whois or
-    // technology-stack evidence, brand mentions, a reviewed competitor set,
-    // or a second Umami window, so those pass true and say nothing rather
-    // than guessing.
-    waitingOn: unmetPrerequisites({
-      secondCollection: true,
-      pageAudit: facts.siteObservedAt !== null,
-      analytics: true,
-      urlInspection: true,
-      approvedKeywords: true,
-      backlinkCollection: true,
-      whoisCollection: true,
-      technologyCollection: true,
-      brandMentionCollection: true,
-      referringDomainCollection: true,
-      reviewedCompetitorSet: true,
-      umamiSecondWindow: true,
-      // Stated gap: this page's site-audit findings need an OnPage crawl,
-      // but SiteHealthFacts does not yet carry whether one has been
-      // collected. Passing true keeps the banner silent rather than wrong;
-      // the rules themselves are unaffected (onpage-rule-checks.ts already
-      // returns nothing/a named absence without a crawl). Wiring a real
-      // read from dataforseo_snapshots is follow-up work.
-      onpageCrawl: true,
-    }),
+    waitingOn: unmetPrerequisites(
+      prerequisiteState({
+        pageAudit: facts.siteObservedAt !== null,
+        // Stated gap: the three crawl rules need an OnPage crawl and
+        // SiteHealthFacts does not carry whether one was collected, so that
+        // banner stays silent. The rules themselves return a named absence
+        // without a crawl (onpage-rule-checks.ts), never a false all clear.
+      }),
+      "health",
+    ),
     neverRunNotice: facts.siteObservedAt === null ? NEVER_RUN : null,
   };
 }
