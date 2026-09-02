@@ -351,7 +351,6 @@ function EssentialsPage() {
     snapshotCount: data.backlinks.snapshots,
     referringDomains: data.backlinks.referringDomains,
     backlinks: data.backlinks.backlinks,
-    storedSufficient: data.backlinks.storedSufficient,
   });
 
   const searchConsole: Concern[] = [
@@ -539,9 +538,7 @@ function EssentialsPage() {
       title: "Authority",
       status: authority.status,
       evidence: authority.note,
-      gap: authority.sufficient
-        ? "No authority trend exists yet because only one collection has been stored."
-        : "AOOS will not display an authority score until stored backlink evidence explicitly records the sample as sufficient.",
+      gap: "No authority score exists to show. A score would need a method nobody has written; until one is, this concern tracks the stored sample.",
     },
   ];
 

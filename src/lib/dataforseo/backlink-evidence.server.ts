@@ -9,14 +9,7 @@ import {
   collectReferringDomains,
   collectTopLinkedPages,
 } from "./backlinks.server";
-import {
-  ANCHOR_DEFAULTS,
-  HEALTH_FACTORS,
-  STRATEGY_SOURCE,
-  TOXIC_DEFAULTS,
-  scoreBacklinkHealth,
-  type HealthFactorScore,
-} from "./backlink-strategy";
+import { ANCHOR_DEFAULTS, STRATEGY_SOURCE, TOXIC_DEFAULTS } from "./backlink-strategy";
 import { fingerprint, persistSnapshot } from "./transport.server";
 
 type Client = SupabaseClient<Database>;
@@ -25,10 +18,13 @@ type Client = SupabaseClient<Database>;
  * Normalized backlink evidence.
  *
  * This module deliberately produces no recommendations. It reads the provider
- * evidence AOOS already paid for, reshapes it into the factors the imported
- * claude-seo methodology reasons about, and records which factors still have
- * no data. Heuristic thresholds are carried as context only: nothing here
- * turns a threshold into a judgement.
+ * evidence AOOS already paid for, reshapes it into counts, anchors, spam flags
+ * and history, and records which collections came back empty. Heuristic
+ * thresholds are carried as context only: nothing here turns a threshold into
+ * a judgement, and nothing here scores. A seven-factor "health score" used to
+ * sit on top of this with every factor's score hard-wired to null, so it
+ * answered "insufficient" forever and the Essentials page read that as a
+ * stored verdict (LINK-1). A score needs a method nobody has written.
  */
 
 const CAPABILITY = "cap.dataforseo_backlinks";
@@ -72,9 +68,8 @@ export type BacklinkEvidence = {
   target: string;
   collectedAt: string;
   costUsd: number;
-  factors: HealthFactorScore[];
-  missingFactors: string[];
-  health: ReturnType<typeof scoreBacklinkHealth>;
+  /** Collections that returned no rows this pass. Named, never scored. */
+  missingEvidence: string[];
   normalized: Record<string, unknown>;
 };
 
@@ -230,40 +225,15 @@ export async function collectBacklinkEvidence(
     },
   };
 
-  // Factor availability. A factor is scored only when real evidence exists;
-  // absence is reported, never imputed.
-  const factors: HealthFactorScore[] = HEALTH_FACTORS.map(({ key }) => {
-    const provenance = {
-      source: "dataforseo" as const,
-      confidence: 0.9,
-      label: "DataForSEO Backlinks API, live evidence",
-    };
-    switch (key) {
-      case "referring_domain_count":
-        return {
-          key,
-          score: null,
-          provenance: summaryRow["referring_domains"] === undefined ? null : provenance,
-        };
-      case "anchor_naturalness":
-        return { key, score: null, provenance: anchorRows.length > 0 ? provenance : null };
-      case "toxic_link_ratio":
-        return { key, score: null, provenance: domainRows.length > 0 ? provenance : null };
-      case "link_velocity":
-        return { key, score: null, provenance: historySeries.length > 0 ? provenance : null };
-      case "follow_ratio":
-        return { key, score: null, provenance: linkRows.length > 0 ? provenance : null };
-      case "geographic_relevance":
-        return { key, score: null, provenance: countries.size > 0 ? provenance : null };
-      default:
-        return { key, score: null, provenance: domainRows.length > 0 ? provenance : null };
-    }
-  });
-
-  const missingFactors = factors
-    .filter((factor) => factor.provenance === null)
-    .map((factor) => factor.key);
-  const health = scoreBacklinkHealth(factors);
+  // What came back empty. Absence is reported, never imputed and never scored.
+  const missingEvidence = [
+    summaryRow["referring_domains"] === undefined ? "summary" : null,
+    domainRows.length === 0 ? "referring_domains" : null,
+    linkRows.length === 0 ? "backlinks" : null,
+    anchorRows.length === 0 ? "anchors" : null,
+    pageRows.length === 0 ? "top_linked_pages" : null,
+    historySeries.length === 0 ? "history" : null,
+  ].filter((value): value is string => value !== null);
 
   const collectedAt = new Date().toISOString();
   const reportingDate = collectedAt.slice(0, 10);
@@ -282,9 +252,9 @@ export async function collectBacklinkEvidence(
     reportingDate,
     task: null,
     rows: [normalized],
-    totals: { missingFactors, sufficient: health.sufficient },
+    totals: { missingEvidence },
     costUsd: 0,
   });
 
-  return { target, collectedAt, costUsd, factors, missingFactors, health, normalized };
+  return { target, collectedAt, costUsd, missingEvidence, normalized };
 }

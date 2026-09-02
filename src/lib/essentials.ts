@@ -93,48 +93,28 @@ export type BacklinkSample = {
   snapshotCount: number;
   referringDomains: number;
   backlinks: number;
-  /**
-   * Explicit sufficiency verdict stored by the backlink evidence pass. Counts
-   * alone never establish this: only a stored boolean can.
-   */
-  storedSufficient: boolean | null;
 };
 
 /**
- * Authority claim gate. AOOS refuses to invent a sufficiency threshold from
- * raw counts, so a sample is sufficient only when stored evidence says so.
+ * Authority is not scored. The evidence pass stores counts, anchors, spam
+ * flags and history; no rule turns them into a score, and the card says so
+ * rather than implying a verdict that was never made (LINK-1). The old
+ * "stored sufficiency" it read was a scaffold whose every factor was
+ * hard-wired to null, so it answered "insufficient" forever.
  */
 export function backlinkAuthority(sample: BacklinkSample): {
   status: EssentialStatus;
-  sufficient: boolean;
   note: string;
 } {
   if (sample.snapshotCount <= 0) {
     return {
       status: "not_wired",
-      sufficient: false,
       note: "No backlink snapshot has been collected yet.",
-    };
-  }
-  const sampleText = `The stored sample is ${sample.referringDomains} referring domain(s) and ${sample.backlinks} link(s).`;
-  if (sample.storedSufficient === true) {
-    return {
-      status: "partial",
-      sufficient: true,
-      note: `${sampleText} Stored backlink evidence records this sample as sufficient.`,
-    };
-  }
-  if (sample.storedSufficient === false) {
-    return {
-      status: "partial",
-      sufficient: false,
-      note: `${sampleText} Stored backlink evidence records this sample as insufficient, so no score is shown.`,
     };
   }
   return {
     status: "partial",
-    sufficient: false,
-    note: `${sampleText} No stored evidence pass has judged whether this sample can support an authority score, so none is shown.`,
+    note: `The stored sample is ${sample.referringDomains} referring domain(s) and ${sample.backlinks} link(s). Nothing in AOOS scores backlink authority: the evidence pass stores counts, anchors, spam flags and history, and no rule turns them into a score.`,
   };
 }
 

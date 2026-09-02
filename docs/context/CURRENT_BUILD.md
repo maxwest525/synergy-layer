@@ -34,6 +34,16 @@ Last updated: 2026-08-31, after wiring Google Ads campaign reporting
 describes 2026-08-21 and has NOT been rewritten; the current-state blocks
 immediately below supersede it.
 
+## 0ao. Backlink authority is not scored, and the card says so, 2026-09-02
+
+A seven-factor "health score" sat on the backlink evidence pass with
+every factor hard-wired to null, so it answered "insufficient" forever,
+and the Essentials authority card read that back as a stored verdict.
+The scaffold is gone. The evidence pass records which collections came
+back empty and nothing else about health; the card says nothing in AOOS
+scores backlink authority and shows the stored sample (CODE-63, from
+LINK-1).
+
 ## 0an. Publishers that rank alongside you are no longer hidden, 2026-09-02
 
 The SERP-derived classifier's "surface" list mixed general web platforms
