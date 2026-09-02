@@ -34,6 +34,31 @@ Last updated: 2026-08-31, after wiring Google Ads campaign reporting
 describes 2026-08-21 and has NOT been rewritten; the current-state blocks
 immediately below supersede it.
 
+## 0n. Where production actually builds from, 2026-09-01
+
+Read this before believing any "Verified 2026-08-31" or "2026-09-01" closure
+below: **none of it is live.** Since 2026-08-30 the Lovable project that serves
+`trumove.marky.systems` has synced to `maxwest525/trumove-resource-center`, not
+to this repository. Everything merged here from PR #89 through PR #103 (the
+four rule sessions, the spend ceiling, Google Ads reporting, the publish-proof
+fix, the contradiction pass, the breadcrumbs) exists on GitHub `main` and
+nowhere else. OP-10's "stuck pull" reading is withdrawn; the bridge is
+disconnected, not stuck. A Vercel project was imported on 2026-09-01 and
+serves GitHub `main` at `synergy-layer.vercel.app`, but it holds no server
+secrets and no schedule targets it, so it is a shadow, not production.
+
+The evidence, the measured divergence (26 commits here, 11 in the mirror, one
+merge conflict), the step-by-step plan with a rollback per step, and the
+single-repository decision the operator has to make are in
+[`DEPLOYMENT_TOPOLOGY.md`](DEPLOYMENT_TOPOLOGY.md). `PROJECTS.md` now carries
+the warning too.
+
+Also landed in this change: the Lovable-side `optimizeDeps.exclude` fix for
+the TanStack prebundle hang (mirror commit `77e2578`, 2026-08-30) is ported into
+`vite.config.ts`, and Lovable's `20260831113553` migration file for
+`google_ads_snapshots` is kept verbatim beside this repository's idempotent
+`20260831210000`, because the live migration ledger names the former.
+
 ## 0m. The self-contradiction pass, and every page gets a way back, 2026-09-01
 
 The operator put four screenshots side by side and the platform argued with

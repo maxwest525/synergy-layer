@@ -79,6 +79,18 @@ export default defineConfig({
     // pulls it in) flattens the cycle into one stable module.
     optimizeDeps: {
       include: ["zod", "zod/v4/core", "ai", "@ai-sdk/react"],
+      // The client dep scanner reaches `@tanstack/start-server-core` through the
+      // generated auth middleware. Prebundling it fails on its `#tanstack-*`
+      // runtime imports, which leaves the optimizer hung and every module
+      // request pending, so the app never hydrates. Never prebundle it.
+      // Ported from the Lovable-side fix of 2026-08-30 (mirror commit 77e2578),
+      // which never reached this repository; see DEPLOYMENT_TOPOLOGY.md.
+      exclude: [
+        "@tanstack/react-start",
+        "@tanstack/react-start/server",
+        "@tanstack/react-start-server",
+        "@tanstack/start-server-core",
+      ],
     },
     ssr: {
       // A stale SSR prebundle of the framework server helpers resolves
