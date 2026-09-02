@@ -82,7 +82,7 @@ function PageCard({ row }: { row: PageRow }) {
               <span className={cn("font-semibold", SEVERITY_TONE[defect.severity])}>
                 {defect.label}
               </span>
-              <span className="text-muted-foreground"> — {defect.detail}</span>
+              <span className="text-muted-foreground">: {defect.detail}</span>
             </li>
           ))}
         </ul>

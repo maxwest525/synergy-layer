@@ -48,13 +48,13 @@ export const Route = createFileRoute("/competitors")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Competitor review — Marky" },
+      { title: "Competitor review · Marky" },
       {
         name: "description",
         content:
           "Review the evidence-backed competitor shortlist derived from observed SERPs: keyword overlap, SERP share, head to head positions, and observed page mechanics, before anything becomes tracked.",
       },
-      { property: "og:title", content: "Competitor review — Marky" },
+      { property: "og:title", content: "Competitor review · Marky" },
       {
         property: "og:description",
         content: "The human gate between competitor discovery and recurring competitor tracking.",
@@ -106,7 +106,7 @@ function CompetitorReviewPage() {
       toast.success(
         `${result.count} competitor${result.count === 1 ? "" : "s"} ${
           variables.decision === "approve" ? `approved and tracked (${result.tracked})` : "rejected"
-        }${result.inboxResolved ? " — inbox item cleared" : ""}`,
+        }${result.inboxResolved ? ", inbox item cleared" : ""}`,
       );
       setSelected([]);
       void queryClient.invalidateQueries({ queryKey: ["competitor-shortlist"] });
@@ -192,7 +192,7 @@ function CompetitorReviewPage() {
                 {gapMutation.isPending ? "Comparing…" : "Find searches they win and you miss"}
               </Button>
               <p id="gap-cost" className="text-xs text-muted-foreground">
-                Costs about ${estimatedGapCostUsd(trackedCount).toFixed(2)} — one paid look-up per
+                Costs about ${estimatedGapCostUsd(trackedCount).toFixed(2)}, one paid look-up per
                 approved competitor. Nothing is spent until you click, and every search it finds
                 arrives in the keyword queue for approval before anything tracks it.
               </p>
@@ -207,9 +207,9 @@ function CompetitorReviewPage() {
                 {intersectMutation.isPending ? "Comparing…" : "Compare linking sites"}
               </Button>
               <p id="intersect-cost" className="text-xs text-muted-foreground">
-                Costs about ${estimatedIntersectCostUsd().toFixed(2)} — one paid look-up across
-                every approved competitor. It stores which sites link to all of them and not to you;
-                it files nothing and tracks nothing.
+                Costs about ${estimatedIntersectCostUsd().toFixed(2)}, one paid look-up across every
+                approved competitor. It stores which sites link to all of them and not to you; it
+                files nothing and tracks nothing.
               </p>
             </div>
           ) : undefined
@@ -411,7 +411,13 @@ function CompetitorRow({
                 />
                 <StatePill label={`Company: ${COMPANY_CLASSIFICATION_LABELS[classification]}`} />
                 <StatePill label={`SERP share ${pct(row.serpShare)}`} />
-                <StatePill label={`Median position ${row.medianPosition || "—"}`} />
+                <StatePill
+                  label={
+                    row.medianPosition
+                      ? `Median position ${row.medianPosition}`
+                      : "Median position not observed"
+                  }
+                />
                 <StatePill label={`Outranks us on ${row.outranksOwned}`} />
                 <StatePill label={`We outrank on ${row.ownedOutranks}`} />
                 <StatePill label={`Confidence ${pct(row.confidence)}`} />
@@ -469,7 +475,8 @@ function CompetitorRow({
               <p className="text-foreground">Ranking evidence</p>
               <p>
                 Present in {row.serpsPresent} of {row.serpsAnalysed} observed SERPs. Best position{" "}
-                {row.bestPosition || "—"}, average {row.averagePosition || "—"}.
+                {row.bestPosition || "not observed"}, average{" "}
+                {row.averagePosition || "not observed"}.
               </p>
               {row.serpFeatures.length > 0 ? (
                 <p>Surfaces involved: {row.serpFeatures.join(", ")}</p>

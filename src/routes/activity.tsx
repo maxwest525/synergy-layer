@@ -36,13 +36,13 @@ export const Route = createFileRoute("/activity")({
   errorComponent: OperatorRouteError,
   head: () => ({
     meta: [
-      { title: "Activity feed — Marky" },
+      { title: "Activity feed · Marky" },
       {
         name: "description",
         content:
           "Every suggestion followed end to end: the change it became, the runs that carried it, the deployment events, and the measurement window that follows.",
       },
-      { property: "og:title", content: "Activity feed — Marky" },
+      { property: "og:title", content: "Activity feed · Marky" },
       {
         property: "og:description",
         content: "Suggestion to decision to run to deployment to measurement, in one trail.",

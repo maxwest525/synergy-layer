@@ -49,13 +49,13 @@ export const Route = createFileRoute("/ads/")({
   pendingComponent: RoutePending,
   head: () => ({
     meta: [
-      { title: "Competitor ads — Marky" },
+      { title: "Competitor ads · Marky" },
       {
         name: "description",
         content:
           "See which competitors are running Google ads right now, what those ads say, and confirm which advertiser accounts belong to which competitor.",
       },
-      { property: "og:title", content: "Competitor ads — Marky" },
+      { property: "og:title", content: "Competitor ads · Marky" },
       {
         property: "og:description",
         content: "Competitor ads observed in Google's public ad library, with what they say.",

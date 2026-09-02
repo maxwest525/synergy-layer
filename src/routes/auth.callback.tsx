@@ -23,12 +23,12 @@ export const Route = createFileRoute("/auth/callback")({
   },
   head: () => ({
     meta: [
-      { title: "Completing sign-in — Marky" },
+      { title: "Completing sign-in · Marky" },
       {
         name: "description",
         content: "AOOS is validating your session and checking operator access.",
       },
-      { property: "og:title", content: "Completing sign-in — Marky" },
+      { property: "og:title", content: "Completing sign-in · Marky" },
       {
         property: "og:description",
         content: "AOOS is validating your session and checking operator access.",

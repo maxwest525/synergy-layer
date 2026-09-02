@@ -27,13 +27,13 @@ export const Route = createFileRoute("/recommendations/")({
   },
   head: () => ({
     meta: [
-      { title: "Recommendation Queue — Marky" },
+      { title: "Recommendation Queue · Marky" },
       {
         name: "description",
         content:
           "Scored recommendations with traffic, revenue, and business impact, confidence, risk, and time saved before approval.",
       },
-      { property: "og:title", content: "Recommendation Queue — Marky" },
+      { property: "og:title", content: "Recommendation Queue · Marky" },
       {
         property: "og:description",
         content: "What the system thinks should happen next, and why.",

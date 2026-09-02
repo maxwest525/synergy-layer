@@ -40,7 +40,7 @@ const IGNORE: SuggestionVerb = {
 const REJECT_CHANGE: SuggestionVerb = {
   id: "ignore",
   label: "Reject",
-  consequence: "Rejects this change. This cannot be undone — a new draft would have to be written.",
+  consequence: "Rejects this change. This cannot be undone. A new draft would have to be written.",
   metered: false,
 };
 

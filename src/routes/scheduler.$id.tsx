@@ -31,8 +31,8 @@ export const Route = createFileRoute("/scheduler/$id")({
   },
   head: ({ loaderData }) => {
     const title = loaderData?.schedule
-      ? `${loaderData.schedule.name} — Scheduler — Marky`
-      : "Schedule — Marky";
+      ? `${loaderData.schedule.name} · Scheduler · Marky`
+      : "Schedule · Marky";
     const description =
       loaderData?.schedule?.description ?? "Schedule cadence, dependencies, and last outcome.";
     return {
@@ -85,7 +85,7 @@ function ScheduleDetailPage() {
             />
             <DetailRow
               label="Last duration"
-              value={schedule.last_duration_ms ? `${schedule.last_duration_ms} ms` : "—"}
+              value={schedule.last_duration_ms ? `${schedule.last_duration_ms} ms` : "not recorded"}
             />
             <DetailRow label="Consecutive failures" value={schedule.failure_count} />
           </dl>

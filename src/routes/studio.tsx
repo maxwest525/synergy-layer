@@ -8,13 +8,13 @@ export const Route = createFileRoute("/studio")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Studio — Marky" },
+      { title: "Studio · Marky" },
       {
         name: "description",
         content:
           "A private thinking surface where the operator explores marketing and SEO ideas with a reasoning agent before anything becomes a proposal.",
       },
-      { property: "og:title", content: "Studio — Marky" },
+      { property: "og:title", content: "Studio · Marky" },
       {
         property: "og:description",
         content: "Explore ideas with the AOOS reasoning agent. Nothing here changes anything.",

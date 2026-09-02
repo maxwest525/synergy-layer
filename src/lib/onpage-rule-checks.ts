@@ -339,7 +339,7 @@ export function checkPagesErrorStatus(
   }
   if (decision.length > 0) {
     sentences.push(
-      `${decision.length} answered 401 or 410 — what a deliberately retired or gated address looks like. Confirm whether ${decision.length === 1 ? "it" : "they"} should still exist rather than treating this as a fault.`,
+      `${decision.length} answered 401 or 410, which is what a deliberately retired or gated address looks like. Confirm whether ${decision.length === 1 ? "it" : "they"} should still exist rather than treating this as a fault.`,
     );
   }
   if (unreadable > 0) {
@@ -458,7 +458,7 @@ export function checkRedirectChainPresent(
   const longest = chainLengths.length > 0 ? Math.max(...chainLengths) : null;
   const overTenNote =
     longest !== null && longest > 10
-      ? ` The longest stored chain runs ${longest} hops — more than the 10 Google's crawlers follow by default ("By default, Google's crawlers follow up to 10 redirect hops," developers.google.com/search/docs/crawling-indexing/http-network-errors) — so anything past that is never reached.`
+      ? ` The longest stored chain runs ${longest} hops, more than the 10 Google's crawlers follow by default ("By default, Google's crawlers follow up to 10 redirect hops," developers.google.com/search/docs/crawling-indexing/http-network-errors), so anything past that is never reached.`
       : "";
 
   return [

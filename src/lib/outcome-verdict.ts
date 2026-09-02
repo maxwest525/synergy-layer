@@ -255,7 +255,7 @@ export function outcomeVerdict(reading: OutcomeReading): OutcomeAssessment {
     if (reading.wordingTreatment) {
       return {
         verdict: "unmeasurable",
-        reason: `The numbers fell, but this change only altered wording, and Google may be showing its own wording instead — it rewrites titles it doesn't like and no one can force the one on the page. Until what Google displays is verified, this is an unmeasured treatment, not a failed one.`,
+        reason: `The numbers fell, but this change only altered wording, and Google may be showing its own wording instead. It rewrites titles it doesn't like and no one can force the one on the page. Until what Google displays is verified, this is an unmeasured treatment, not a failed one.`,
       };
     }
 
@@ -276,7 +276,7 @@ export function outcomeVerdict(reading: OutcomeReading): OutcomeAssessment {
           : `the whole site fell as hard, ×${fallTideLabel}`;
       return {
         verdict: "neutral",
-        reason: `Fell from ${scaledBaselineImpressions} to ${reading.impressions} impressions${scalingNote}, ×${fallRatioLabel}, but ${siteClause} over the same weeks — this looks like the season, not the page.`,
+        reason: `Fell from ${scaledBaselineImpressions} to ${reading.impressions} impressions${scalingNote}, ×${fallRatioLabel}, but ${siteClause} over the same weeks, so this looks like the season, not the page.`,
       };
     }
 

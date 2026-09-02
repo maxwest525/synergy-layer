@@ -59,9 +59,9 @@ export function PageAuditCallout() {
             The page audit has never run for this site
           </p>
           <p className="mt-1 text-sm text-muted-foreground">
-            Until it reads your pages once, every page-level check — titles, descriptions,
-            structured data, indexing directives — has nothing to look at. One run reads up to 100
-            pages through Firecrawl.
+            Until it reads your pages once, every page-level check (titles, descriptions, structured
+            data, indexing directives) has nothing to look at. One run reads up to 100 pages through
+            Firecrawl.
           </p>
         </div>
         {runButton}
