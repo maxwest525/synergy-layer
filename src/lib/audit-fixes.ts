@@ -107,6 +107,7 @@ export const SITE_CHECK_FIX: Record<SiteCheckId, AuditFixTarget | null> = {
   broker_numbers_missing: null,
   broker_numbers_disagree: null,
   broker_statement_missing: null,
+  broker_numbers_off_homepage: null,
 };
 
 export function fixTargetForPageCheck(check: string): AuditFixTarget | null {

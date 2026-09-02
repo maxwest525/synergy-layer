@@ -43,6 +43,15 @@ export type LicenceFacts = {
   };
 };
 
+/** One read page showing a registration number the homepage does not show. */
+export type PageWithOtherNumbers = {
+  url: string;
+  /** USDOT numbers on this page that the homepage does not carry. */
+  usdotNumbers: string[];
+  /** MC numbers on this page that the homepage does not carry. */
+  mcNumbers: string[];
+};
+
 /** The homepage's facts beside a count of how many read pages show both numbers. */
 export type SiteLicenceFacts = {
   /** The homepage address the audit rendered, or null when it read no homepage. */
@@ -50,6 +59,12 @@ export type SiteLicenceFacts = {
   homepage: LicenceFacts | null;
   pagesRead: number;
   pagesShowingBothNumbers: number;
+  /**
+   * Pages other than the homepage that show a registration number the
+   * homepage does not (CODE-88). Absent on snapshots stored before the
+   * whole-site read existed.
+   */
+  pagesWithOtherNumbers?: PageWithOtherNumbers[];
 };
 
 export type ReadPage = {
@@ -124,6 +139,21 @@ export function siteLicenceFacts(origin: string, pages: readonly ReadPage[]): Si
   const home =
     pages.find((page) => isHomepage(page.url, origin)) ??
     pages.find((page) => page.finalUrl !== null && isHomepage(page.finalUrl, origin));
+  // Numbers the homepage itself carries. A page repeating those is the site
+  // being consistent; a page carrying a number the homepage does not is the
+  // fact worth reporting, whoever it belongs to.
+  const homeUsdot = new Set(home?.licence.usdotNumbers ?? []);
+  const homeMc = new Set(home?.licence.mcNumbers ?? []);
+  const pagesWithOtherNumbers: PageWithOtherNumbers[] = [];
+  for (const page of pages) {
+    if (page === home) continue;
+    const usdotNumbers = page.licence.usdotNumbers.filter((n) => !homeUsdot.has(n));
+    const mcNumbers = page.licence.mcNumbers.filter((n) => !homeMc.has(n));
+    if (usdotNumbers.length > 0 || mcNumbers.length > 0) {
+      pagesWithOtherNumbers.push({ url: page.url, usdotNumbers, mcNumbers });
+    }
+  }
+
   return {
     homepageUrl: home?.url ?? null,
     homepage: home?.licence ?? null,
@@ -131,5 +161,6 @@ export function siteLicenceFacts(origin: string, pages: readonly ReadPage[]): Si
     pagesShowingBothNumbers: pages.filter(
       (page) => page.licence.usdotNumbers.length > 0 && page.licence.mcNumbers.length > 0,
     ).length,
+    pagesWithOtherNumbers,
   };
 }

@@ -347,3 +347,59 @@ describe("the broker's registration on the homepage", () => {
     expect(withoutStatus[0]!.detail).toContain('lacks the words "household goods broker".');
   });
 });
+
+describe("registration numbers away from the homepage", () => {
+  const complete: LicenceFacts = {
+    usdotNumbers: ["4507647"],
+    mcNumbers: ["1784124"],
+    brokerStatusShown: true,
+    statement: { notTransport: true, arrange: true, tariff: true },
+  };
+  const licence: SiteLicenceFacts = {
+    homepageUrl: "https://example.com/",
+    homepage: complete,
+    pagesRead: 6,
+    pagesShowingBothNumbers: 5,
+    pagesWithOtherNumbers: [],
+  };
+
+  it("says nothing when every page repeats the homepage's numbers", () => {
+    expect(evaluateSite({ ...base, licence })).toEqual([]);
+  });
+
+  it("names the page and the numbers, and claims no breach", () => {
+    const findings = evaluateSite({
+      ...base,
+      licence: {
+        ...licence,
+        pagesWithOtherNumbers: [
+          {
+            url: "https://example.com/why-trumove",
+            usdotNumbers: ["2841907"],
+            mcNumbers: ["945120"],
+          },
+        ],
+      },
+    });
+    expect(findings.map((finding) => finding.check)).toEqual(["broker_numbers_off_homepage"]);
+    expect(findings[0]!.severity).toBe("advice");
+    expect(findings[0]!.detail).toContain(
+      "https://example.com/why-trumove shows USDOT 2841907 and MC 945120",
+    );
+    expect(findings[0]!.instruction).toContain("49 CFR 371.107(e)");
+    expect(findings[0]!.fixableByChangeKind).toBeNull();
+  });
+
+  it("counts the pages it did not name", () => {
+    const many = Array.from({ length: 5 }, (_, index) => ({
+      url: `https://example.com/p${index}`,
+      usdotNumbers: ["9999999"],
+      mcNumbers: [],
+    }));
+    const findings = evaluateSite({
+      ...base,
+      licence: { ...licence, pagesWithOtherNumbers: many },
+    });
+    expect(findings[0]!.detail).toContain("and 2 more page(s)");
+  });
+});
