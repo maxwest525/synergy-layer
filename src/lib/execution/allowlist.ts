@@ -101,6 +101,32 @@ export const GOVERNED_FILES: readonly string[] = [
   ...new Set(Object.values(GOVERNED_CHANGE_KINDS).flat()),
 ];
 
+/**
+ * Every value that can reach `change_requests.proposal_type`, and the database
+ * CHECK constraint that gates it.
+ *
+ * There are three separate lists deciding whether a governed change can exist,
+ * and none of them can see the others: the change kinds above, the file list in
+ * `apply_change_request_rendered_proof`, and this constraint. CODE-90 shipped a
+ * new kind past the first two and was refused by the third at the moment the
+ * operator pressed Draft, which is the worst place to find out.
+ *
+ * The two page lanes are named by their own SQL writers rather than by a change
+ * kind (`create_title_h1_proposal` and the metadata writer store the literal),
+ * so they are literals here too. Every site-level kind is derived, so adding one
+ * to `GOVERNED_CHANGE_KINDS` widens this automatically and
+ * `proposal-type-allowlist.test.ts` fails until the migration catches up.
+ */
+export const SITE_LEVEL_CHANGE_KINDS: readonly GovernedChangeKind[] = (
+  Object.keys(GOVERNED_CHANGE_KINDS) as GovernedChangeKind[]
+).filter((kind) => kind.startsWith("site."));
+
+export const GOVERNED_PROPOSAL_TYPES: readonly string[] = [
+  "page_wording",
+  "page_metadata",
+  ...SITE_LEVEL_CHANGE_KINDS,
+];
+
 export function isGovernedChangeKind(value: unknown): value is GovernedChangeKind {
   return typeof value === "string" && value in GOVERNED_CHANGE_KINDS;
 }
