@@ -1,7 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
+
+import { parseLinkIntersect } from "./dataforseo/link-intersect";
 import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { OWNERSHIP_REVIEW_DECISIONS, OWNERSHIP_RULE_LABELS } from "./dataforseo/ownership-review";
 import { COMPANY_CLASSIFICATIONS, setCompanyClassification } from "./company-classification.server";
 
 /** Client-safe mirror of the stored page observation shape. */
@@ -54,6 +57,90 @@ export const listCompetitorShortlist = createServerFn({ method: "POST" })
       .select("domain, active, approved_at")
       .eq("tenant_id", tenantId);
 
+    // The newest competitor link intersect, if an operator has run one (LINK-4).
+    const { data: intersectRows, error: intersectError } = await context.supabase
+      .from("dataforseo_snapshots")
+      .select("payload, request_params, collected_at, possibly_truncated, returned_row_count")
+      .eq("tenant_id", tenantId)
+      .eq("kind", "backlinks_domain_intersection")
+      .order("collected_at", { ascending: false })
+      .limit(1);
+    if (intersectError) throw new Error(intersectError.message);
+    const intersectSnapshot = (intersectRows ?? [])[0] ?? null;
+    let linkIntersect: {
+      collectedAt: string;
+      competitors: string[];
+      rows: ReturnType<typeof parseLinkIntersect>["rows"];
+      unparsed: number;
+      possiblyTruncated: boolean;
+    } | null = null;
+    if (intersectSnapshot) {
+      const params = (intersectSnapshot.request_params ?? {}) as { targets?: unknown };
+      const targets =
+        params.targets && typeof params.targets === "object"
+          ? (params.targets as Record<string, string>)
+          : {};
+      const items = (intersectSnapshot.payload as { rows?: unknown[] } | null)?.rows ?? [];
+      const parsed = parseLinkIntersect(items, targets);
+      linkIntersect = {
+        collectedAt: intersectSnapshot.collected_at,
+        competitors: Object.values(targets),
+        rows: parsed.rows,
+        unparsed: parsed.unparsed,
+        possiblyTruncated: intersectSnapshot.possibly_truncated,
+      };
+    }
+
+    // The newest registration read and every ownership candidate the two
+    // discovery rules have filed, so the operator can decide them here (CODE-27).
+    const [whoisRows, candidateRows] = await Promise.all([
+      context.supabase
+        .from("dataforseo_snapshots")
+        .select("collected_at, returned_row_count, request_params")
+        .eq("tenant_id", tenantId)
+        .eq("kind", "whois_overview")
+        .order("collected_at", { ascending: false })
+        .limit(1),
+      context.supabase
+        .from("domain_ownership_candidates")
+        .select(
+          "id, rule, domain_a, domain_b, matched_fields, review_state, created_at, reviewed_at",
+        )
+        .eq("tenant_id", tenantId)
+        .order("created_at", { ascending: false })
+        .limit(50),
+    ]);
+    if (whoisRows.error) throw new Error(whoisRows.error.message);
+    if (candidateRows.error) throw new Error(candidateRows.error.message);
+    const whoisSnapshot = (whoisRows.data ?? [])[0] ?? null;
+    const whoisParams = (whoisSnapshot?.request_params ?? null) as {
+      filters?: unknown;
+    } | null;
+    const whoisDomains = Array.isArray(whoisParams?.filters)
+      ? (whoisParams.filters as unknown[]).flatMap((filter) =>
+          Array.isArray(filter) && filter[0] === "domain" && Array.isArray(filter[2])
+            ? (filter[2] as unknown[]).filter((d): d is string => typeof d === "string")
+            : [],
+        )
+      : [];
+    const whoisRead = whoisSnapshot
+      ? {
+          collectedAt: whoisSnapshot.collected_at,
+          records: whoisSnapshot.returned_row_count,
+          domains: whoisDomains,
+        }
+      : null;
+    const ownershipCandidates = (candidateRows.data ?? []).map((row) => ({
+      id: row.id,
+      rule: row.rule,
+      domainA: row.domain_a,
+      domainB: row.domain_b,
+      matchedFields: row.matched_fields,
+      reviewState: row.review_state,
+      createdAt: row.created_at,
+      reviewedAt: row.reviewed_at,
+    }));
+
     const rows = (data ?? []).map((row) => {
       const metrics = (row.metrics ?? {}) as Record<string, unknown>;
       const pass = (metrics["intelligence_pass"] ?? null) as Record<string, unknown> | null;
@@ -96,7 +183,57 @@ export const listCompetitorShortlist = createServerFn({ method: "POST" })
       observed,
       tracked: tracked ?? [],
       serpsAnalysed: rows.reduce((max, row) => Math.max(max, row.serpsAnalysed), 0),
+      linkIntersect,
+      whoisRead,
+      ownershipCandidates,
     };
+  });
+
+/**
+ * The operator's decision on an ownership candidate. The two discovery rules
+ * file a question, never an assertion; this is the answer, recorded with who
+ * gave it and when (CODE-27).
+ */
+export const reviewOwnershipCandidate = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((value: unknown) =>
+    z.object({ id: z.string().uuid(), decision: z.enum(OWNERSHIP_REVIEW_DECISIONS) }).parse(value),
+  )
+  .handler(async ({ data, context }) => {
+    const { assertOperator } = await import("./os-admin.server");
+    await assertOperator(context.supabase, context.userId);
+    const { requireTenantId } = await import("./tenant.server");
+    const tenantId = await requireTenantId(context.supabase);
+
+    const { data: updated, error } = await context.supabase
+      .from("domain_ownership_candidates")
+      .update({
+        review_state: data.decision,
+        reviewed_at: new Date().toISOString(),
+        reviewed_by: context.userId,
+      })
+      .eq("tenant_id", tenantId)
+      .eq("id", data.id)
+      .eq("review_state", "pending")
+      .select("id, rule, domain_a, domain_b")
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!updated) {
+      throw new Error("That candidate is not waiting on a decision any more. Refresh the page.");
+    }
+
+    const { logActivity } = await import("./os.server");
+    await logActivity(context.supabase, {
+      tenantId,
+      actorKind: "user",
+      actorId: context.userId,
+      verb: `domain_ownership.${data.decision}`,
+      subjectKind: "capability",
+      summary: `${updated.domain_a} and ${updated.domain_b}: ${data.decision} as one owner on the ${OWNERSHIP_RULE_LABELS[updated.rule] ?? updated.rule} candidate.`,
+      payload: { candidateId: updated.id, rule: updated.rule, decision: data.decision },
+    });
+
+    return { id: updated.id, reviewState: data.decision };
   });
 
 export const updateCompanyClassification = createServerFn({ method: "POST" })

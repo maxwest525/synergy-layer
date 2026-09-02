@@ -10,6 +10,7 @@ export type PersistedConnectorReadiness = {
   config: unknown;
   health: string;
   integration_state: string;
+  last_checked_at?: string | null;
 };
 
 // What the probe observed, kept next to the outcome it produced. Without this the
@@ -28,6 +29,8 @@ export type CurrentConnectorReadiness<Row extends PersistedConnectorReadiness> =
   health: string;
   probeOutcome: ConnectorProbeOutcome | null;
   probeProof: StoredProbeProof | null;
+  /** When the probe behind this health ran. Null when no probe stands behind it (MON-20). */
+  checkedAt: string | null;
   persisted: Row | null;
 };
 
@@ -75,6 +78,8 @@ export function projectCurrentConnectorReadiness<Row extends PersistedConnectorR
       probeOutcome,
       probeProof:
         probeOutcome && persistedConnection ? storedProbeProof(persistedConnection.config) : null,
+      checkedAt:
+        probeOutcome && persistedConnection ? (persistedConnection.last_checked_at ?? null) : null,
       persisted: persistedConnection,
     };
   });

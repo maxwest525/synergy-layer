@@ -2,14 +2,8 @@ import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-q
 import { Link, createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 
-import {
-  BackLink,
-  EmptyNote,
-  formatWhen,
-  GlassCard,
-  PageHeader,
-  StatePill,
-} from "@/components/os/primitives";
+import { BackLink, EmptyNote, GlassCard, PageHeader, StatePill } from "@/components/os/primitives";
+import { formatWhen } from "@/lib/format-when";
 import { Button } from "@/components/ui/button";
 import { isSeoRunEligibleForPreparation } from "@/lib/seo-runs/eligibility";
 import { evaluateSeoRun, getSeoRun, repairSeoRunProposalEvent } from "@/lib/seo-runs/functions";
@@ -17,7 +11,7 @@ import { OperatorRouteError } from "@/components/os/route-error";
 
 export const Route = createFileRoute("/seo-runs/$id")({
   ssr: false,
-  head: () => ({ meta: [{ title: "SEO Run — Marky" }, { name: "robots", content: "noindex" }] }),
+  head: () => ({ meta: [{ title: "SEO Run · Marky" }, { name: "robots", content: "noindex" }] }),
   errorComponent: OperatorRouteError,
   component: SeoRunDetailPage,
 });

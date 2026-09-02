@@ -56,6 +56,8 @@ const CATEGORY_BY_RULE: Record<string, CategoryId> = {
   // module (dataforseo) otherwise implies.
   approved_keyword_unobserved: "search",
   approved_keyword_no_page: "search",
+  approved_keyword_multiple_pages: "search",
+  tracked_set_has_no_route_query: "search",
   // Off-site domains are a competitive question, not a page one.
   referring_domain_movement: "competition",
 
@@ -79,6 +81,14 @@ const CATEGORY_BY_RULE: Record<string, CategoryId> = {
   linked_page_never_audited: "pages",
   link_profile_coverage_partial: "competition",
 
+  // GA4. The module already routes these to visitors; they are named here
+  // because the waiting-on banner counts rules by category and must not
+  // guess from a module it does not know.
+  page_traffic_loss: "visitors",
+  page_traffic_gain: "visitors",
+  zero_engagement_page: "visitors",
+  event_disappeared: "visitors",
+
   // Umami. cap.umami is real and snapshots exist, but the visitors category
   // had no Umami rule to fill it.
   umami_tracking_silent: "visitors",
@@ -91,6 +101,7 @@ const CATEGORY_BY_RULE: Record<string, CategoryId> = {
   same_registration_details_across_two_known_domains: "competition",
   identical_technology_stack_across_two_known_domains: "competition",
   rival_page_mentions_your_brand: "competition",
+  brand_mentioned_without_a_link: "competition",
 };
 
 const CATEGORY_BY_MODULE: Record<string, CategoryId> = {
@@ -146,6 +157,11 @@ export function pageUrlFromSuggestedAction(suggestedAction: unknown): string | n
  * place. That fallback should stay rare; when it starts catching a whole module,
  * that module belongs in the table above.
  */
+/** The category a rule names for itself, or null when only its module could say. */
+export function categoryForRule(rule: string): CategoryId | null {
+  return CATEGORY_BY_RULE[rule] ?? null;
+}
+
 export function categoryForFinding(sourceModule: string | null, metadata: unknown): CategoryId {
   const rule = ruleFromMetadata(metadata);
   if (rule !== null) {

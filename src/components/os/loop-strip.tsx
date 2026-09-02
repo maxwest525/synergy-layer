@@ -36,7 +36,7 @@ export function LoopStrip({ loop }: { loop: LoopState }) {
                 className={cn(
                   "flex h-full flex-col rounded-xl border px-3 py-2.5 transition-colors",
                   stalled
-                    ? "border-amber-500/50 bg-amber-500/5"
+                    ? "border-warning/50 bg-warning/5"
                     : gap
                       ? "border-border/80 border-dashed hover:border-primary/40 hover:bg-primary/5"
                       : "border-border/60 hover:border-primary/40 hover:bg-primary/5",

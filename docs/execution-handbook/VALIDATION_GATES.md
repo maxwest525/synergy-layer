@@ -21,22 +21,39 @@ summary: Fail-closed gates for evidence, claims, intent, duplication, drift, exe
 
 > A score cannot compensate for a failed mandatory gate.
 
-| Gate          | Pass condition                                                              | Failure result                                |
-| ------------- | --------------------------------------------------------------------------- | --------------------------------------------- |
-| Target        | exact allowlisted public URL and eligible page-level finding                | no proposal                                   |
-| Render        | reachable final URL, readable title, main text, checksum                    | no proposal                                   |
-| Evidence      | sufficient dated GSC and relevant stored DataForSEO evidence                | `insufficient evidence`                       |
-| Intent        | proposed wording matches mapped page purpose and observed query job         | proposal rejected                             |
-| Claims        | every factual promise exists on the page or approved claims registry        | proposal rejected                             |
-| Competitor    | no copied competitor wording, name, or unsupported comparison               | proposal rejected                             |
-| Duplication   | title/H1 is not duplicated or materially colliding with governed pages      | proposal rejected                             |
-| Change        | proposed value materially differs from current value                        | proposal rejected                             |
-| Format        | schema, lengths, forbidden terms, and field types pass deterministic checks | proposal rejected                             |
-| Approval      | guarded operator transition has frozen the proposed request                 | execution refused                             |
-| Drift         | source revision and exact before-values match the approved baseline         | `Page changed — review required`; zero writes |
-| Adapter       | exact source target and renderer/write adapter are configured               | execution blocked                             |
-| Publish proof | public rendered title/H1 equals approved after-state                        | not applied                                   |
-| Measurement   | baseline/follow-up windows and gaps are explicit                            | comparison can display; no causal verdict     |
+| Gate          | Pass condition                                                                                                                      | Failure result                                |
+| ------------- | ----------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
+| Target        | exact allowlisted public URL and eligible page-level finding                                                                        | no proposal                                   |
+| Render        | reachable final URL, readable title, main text, checksum                                                                            | no proposal                                   |
+| Evidence      | sufficient dated GSC and relevant stored DataForSEO evidence                                                                        | `insufficient evidence`                       |
+| Intent        | proposed wording matches mapped page purpose and observed query job                                                                 | proposal rejected                             |
+| Claims        | every factual promise exists on the page or approved claims registry                                                                | proposal rejected                             |
+| Competitor    | no copied competitor wording, name, or unsupported comparison                                                                       | proposal rejected                             |
+| Duplication   | title/H1 is not duplicated or materially colliding with governed pages                                                              | proposal rejected                             |
+| Change        | proposed value materially differs from current value                                                                                | proposal rejected                             |
+| Format        | schema, lengths, forbidden terms, and field types pass deterministic checks                                                         | proposal rejected                             |
+| Approval      | guarded operator transition has frozen the proposed request                                                                         | execution refused                             |
+| Concurrency   | no other change to the same page is approved-and-not-live or still inside a measurement window, or the operator has acknowledged it | approval refused, naming the change in flight |
+| Drift         | source revision and exact before-values match the approved baseline                                                                 | `Page changed — review required`; zero writes |
+| Adapter       | exact source target and renderer/write adapter are configured                                                                       | execution blocked                             |
+| Publish proof | public rendered title/H1 equals approved after-state                                                                                | not applied                                   |
+| Measurement   | baseline/follow-up windows and gaps are explicit                                                                                    | comparison can display; no causal verdict     |
+
+## Concurrency gate, added 2026-09-02
+
+Two changes to one page inside the same measurement window share that page's
+Search Console rows, so neither outcome can be attributed on its own. On
+2026-09-01 the queue held two approved title changes for one page and a second
+change approved inside another page's 28-day window, and nothing had said so
+(BACKLOG.md CODE-31). `transition_change_request` now refuses `approve` while a
+sibling change to the same `target_url` is `approved` (not yet live) or
+`applied` with a window whose `available_after_pt` is still in the future,
+unless the call carries `_acknowledge_in_flight = true`. The acknowledgement is
+written to the audit event as `acknowledgedInFlightChangeId`. The page shows the
+sibling and the consequence before the click (`change-request-conflicts.ts`),
+and the only control that sends the acknowledgement is labelled with what it
+costs. A `proposed` sibling is not a concurrency question; it is the queue
+vocabulary question tracked as CODE-32.
 
 ## Generator boundary
 

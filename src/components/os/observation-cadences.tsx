@@ -3,10 +3,15 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 
-import { GlassCard, StatePill, formatWhen } from "@/components/os/primitives";
+import { GlassCard, StatePill } from "@/components/os/primitives";
+import { formatWhen } from "@/lib/format-when";
 import { Button } from "@/components/ui/button";
 import { getObservationCadences, setObservationCadence } from "@/lib/observation-cadence.functions";
-import { formatDuration, type CadenceStatus } from "@/lib/observation-cadence";
+import {
+  PAGESPEED_HAS_NO_CADENCE,
+  formatDuration,
+  type CadenceStatus,
+} from "@/lib/observation-cadence";
 
 function Fact({ label, value, tone }: { label: string; value: string; tone?: "danger" }) {
   return (
@@ -88,7 +93,7 @@ function CadenceCard({
   );
 }
 
-/** Read-only cadences for GA4, Umami, PageSpeed, and Search Console. */
+/** Read-only cadences for Search Console, GA4 and Umami. PageSpeed has none, and says so. */
 export function ObservationCadences() {
   const load = useServerFn(getObservationCadences);
   const save = useServerFn(setObservationCadence);
@@ -122,6 +127,7 @@ export function ObservationCadences() {
           Read-only daily reads. A cadence stays off until the source has stored its first real row,
           so nothing schedules itself on an unproven connection.
         </p>
+        <p className="mt-1 text-sm text-muted-foreground">{PAGESPEED_HAS_NO_CADENCE}</p>
       </div>
 
       {error ? (

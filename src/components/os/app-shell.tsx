@@ -1,22 +1,22 @@
+import { useQuery } from "@tanstack/react-query";
 import { Link, useHydrated, useNavigate, useRouter, useRouterState } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { ChevronLeft, Menu, Search } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 
 import { categoryIcon } from "./category-icons";
+import { formatWhen } from "@/lib/format-when";
 import { navDirectory } from "@/lib/nav-directory";
 import { useCommandCenter } from "./command-center-facts";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useOperatorSession, type OperatorSession } from "@/hooks/use-operator-session";
 import { TenantSwitcher } from "./tenant-switcher";
-import {
-  CATEGORIES,
-  breadcrumbsForPath,
-  categoryForPath,
-  navEntries,
-  type NavEntry,
-} from "@/lib/categories";
+import { breadcrumbsForPath } from "@/lib/breadcrumbs";
+import { CATEGORIES, categoryForPath, navEntries, type NavEntry } from "@/lib/categories";
 import type { StatusLine } from "@/lib/command-center";
 import type { NavTone } from "@/lib/suggestion-queue";
+import { hostReadinessSentence } from "@/lib/host-readiness";
+import { getHostReadiness } from "@/lib/host-readiness.functions";
 import { getWorkspaceAccessState } from "@/lib/operator-session-gate";
 import { cn } from "@/lib/utils";
 
@@ -296,6 +296,10 @@ function TopBar({ pathname }: { pathname: string }) {
             className={cn("h-[7px] w-[7px] rounded-full", STATUS_DOT[view.statusLine.tone])}
           />
           {view.statusLine.text}
+          {view.statusLine.asOf ? (
+            // The claim is only as current as the check behind it.
+            <span className="text-subtle">as of {formatWhen(view.statusLine.asOf)}</span>
+          ) : null}
         </span>
       ) : null}
     </header>
@@ -308,6 +312,19 @@ export function AppShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const hydrated = useHydrated();
   const [menuOpen, setMenuOpen] = useState(false);
+
+  // Whether this host holds the service-role credential every operator
+  // action needs. A host without it used to fail each action with a generic
+  // 500 and say nothing; now the absence is named once, at the top (CODE-46).
+  const loadHostReadiness = useServerFn(getHostReadiness);
+  const hostReadiness = useQuery({
+    queryKey: ["host-readiness"],
+    queryFn: () => loadHostReadiness(),
+    enabled: session.signedIn,
+    staleTime: Number.POSITIVE_INFINITY,
+    retry: false,
+  });
+  const hostNotice = hostReadiness.data ? hostReadinessSentence(hostReadiness.data) : null;
 
   const onAuthRoute = pathname.startsWith("/auth");
   const accessState = getWorkspaceAccessState({
@@ -341,6 +358,15 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-svh flex-col bg-background text-foreground">
       <TopBar pathname={pathname} />
+
+      {hostNotice ? (
+        <p
+          role="alert"
+          className="border-b border-destructive/40 bg-destructive/10 px-5 py-2 text-xs text-destructive"
+        >
+          {hostNotice}
+        </p>
+      ) : null}
 
       <div className="flex min-h-0 flex-1">
         <aside

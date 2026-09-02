@@ -11,13 +11,10 @@ import {
   GlassCard,
   PageHeader,
   StatePill,
-  toneForState,
 } from "@/components/os/primitives";
+import { toneForState } from "@/lib/state-tone";
 import {
   ApprovalGateCard,
-  humanize,
-  kindLabels,
-  findActiveRun,
   RunControlCard,
   RunHistoryTimeline,
   StepDetailPanel,
@@ -27,6 +24,7 @@ import {
   type Run,
   type RunStep,
 } from "@/components/os/workflow-detail";
+import { findActiveRun, humanize, kindLabels } from "@/lib/workflow-words";
 import { Button } from "@/components/ui/button";
 import { useOperatorSession } from "@/hooks/use-operator-session";
 import { getOperatorAccess } from "@/lib/auth.functions";
@@ -79,8 +77,8 @@ export const Route = createFileRoute("/workflows/$id")({
   },
   head: ({ loaderData }) => {
     const title = loaderData?.workflow
-      ? `${loaderData.workflow.name} — Workflows — Marky`
-      : "Workflow — Marky";
+      ? `${loaderData.workflow.name} · Workflows · Marky`
+      : "Workflow · Marky";
     const description = loaderData?.workflow?.description ?? "Workflow definition and run history.";
     return {
       meta: [

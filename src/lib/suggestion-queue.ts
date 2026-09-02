@@ -21,6 +21,15 @@ import type { CategoryId } from "./categories";
 export const WEEKLY_VISIBLE_CAP = 7;
 
 const DAY_MS = 86_400_000;
+/**
+ * Stated assumption: nothing in the research grounds these two ages. The
+ * queue reads red after a fortnight and yellow after three days because an
+ * open suggestion nobody has looked at in two weeks is the one most likely to
+ * have been forgotten, not because either number was measured. What would
+ * settle it: the median time from filing to decision across
+ * `change_requests` and `recommendations`, once enough decided rows exist to
+ * read one (AGT-15).
+ */
 const FIX_NOW_AFTER_DAYS = 14;
 const WORTH_DOING_AFTER_DAYS = 3;
 const WEEK_DAYS = 7;
@@ -203,15 +212,15 @@ function canIgnoreSource(source: QueueSource): boolean {
 /**
  * Whether the wording can be redrafted in place.
  *
- * Only `regeneratePageWordingProposal` exists, and it accepts a title/H1 change
- * request that is still `proposed`; approval freezes the wording, and the
- * page-metadata lane has no redraft path at all. Offering the verb anywhere else
- * would be a button that always fails, so it is reported as unavailable instead.
+ * The wording and the metadata lanes each have a regenerate function, and
+ * each accepts only a change request that is still `proposed`; approval
+ * freezes the draft. Offering the verb anywhere else would be a button that
+ * always fails, so it is reported as unavailable instead.
  */
 function canRegenerateSource(source: QueueSource): boolean {
   return (
     source.kind === "change" &&
-    source.proposalType === "page_wording" &&
+    (source.proposalType === "page_wording" || source.proposalType === "page_metadata") &&
     source.storedState === "proposed"
   );
 }

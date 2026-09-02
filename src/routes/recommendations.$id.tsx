@@ -3,16 +3,11 @@ import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 
-import {
-  BackLink,
-  DetailRow,
-  GlassCard,
-  PageHeader,
-  StatePill,
-  formatWhen,
-  toneForState,
-} from "@/components/os/primitives";
+import { BackLink, DetailRow, GlassCard, PageHeader, StatePill } from "@/components/os/primitives";
+import { formatWhen } from "@/lib/format-when";
+import { toneForState } from "@/lib/state-tone";
 import { Button } from "@/components/ui/button";
+import { describeImpact, describeTimeSaved } from "@/lib/impact-words";
 import { decideRecommendation } from "@/lib/os-admin.functions";
 import { getRecommendation } from "@/lib/os.functions";
 import { describeSuggestedAction, isObservationOnly } from "@/lib/recommendation-action";
@@ -35,8 +30,8 @@ export const Route = createFileRoute("/recommendations/$id")({
   },
   head: ({ loaderData }) => {
     const title = loaderData?.recommendation
-      ? `${loaderData.recommendation.title} — Recommendations — Marky`
-      : "Recommendation — Marky";
+      ? `${loaderData.recommendation.title} · Recommendations · Marky`
+      : "Recommendation · Marky";
     const description =
       loaderData?.recommendation?.description ??
       "Recommendation detail, impact scoring, and reasoning.";
@@ -196,8 +191,14 @@ function RecommendationDetailPage() {
             </>
           ) : (
             <dl className="mt-3">
-              <DetailRow label="Traffic impact" value={recommendation.traffic_impact} />
-              <DetailRow label="Revenue impact" value={recommendation.revenue_impact} />
+              <DetailRow
+                label="Traffic impact"
+                value={describeImpact(recommendation.traffic_impact)}
+              />
+              <DetailRow
+                label="Revenue impact"
+                value={describeImpact(recommendation.revenue_impact)}
+              />
               <DetailRow label="Business impact" value={recommendation.business_impact} />
               <DetailRow label="Risk" value={recommendation.risk} />
               <DetailRow
@@ -206,7 +207,7 @@ function RecommendationDetailPage() {
               />
               <DetailRow
                 label="Time saved"
-                value={`${recommendation.time_saved_minutes} minutes`}
+                value={describeTimeSaved(recommendation.time_saved_minutes)}
               />
               <DetailRow
                 label="Approval"

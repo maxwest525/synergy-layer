@@ -25,7 +25,7 @@
  * doing exactly what it should.
  */
 
-import { confidenceInCountChange, MIN_BASELINE } from "./confidence";
+import { confidenceInCountChange, MIN_BASELINE, type ConfidenceBand } from "./confidence";
 
 /**
  * The windows the research actually grounds.
@@ -73,10 +73,24 @@ export type OutcomeReading = {
   readonly wordingTreatment: boolean;
 };
 
+/** The statistical confidence a graded verdict rests on, for the screen. */
+export type VerdictConfidence = {
+  /** 0 to MAX_CONFIDENCE, as `confidenceInCountChange` computes it. */
+  readonly value: number;
+  readonly band: ConfidenceBand;
+};
+
 export type OutcomeAssessment = {
   readonly verdict: OutcomeVerdict;
   /** Why, naming the numbers it rests on. */
   readonly reason: string;
+  /**
+   * Present on the verdicts that rest on a count comparison (success,
+   * failure, and the neutral that a low confidence forces); absent where no
+   * comparison was made. Rendered beside the verdict so a 0.4 and a 0.9 do
+   * not read the same (MEAS-7).
+   */
+  readonly confidence?: VerdictConfidence;
 };
 
 function isGrounded(days: number): days is GroundedWindow {
@@ -210,8 +224,13 @@ export function outcomeVerdict(reading: OutcomeReading): OutcomeAssessment {
       : ` The ${reading.windowDays} day window compares against the 28 day baseline scaled ×${scaleLabel}, ${reading.baseline.impressions} to ${scaledBaselineImpressions}.`;
 
   const confidence = confidenceInCountChange(scaledBaselineImpressions, reading.impressions);
+  const rested = { value: confidence.value, band: confidence.band };
   if (confidence.band === "low") {
-    return { verdict: "neutral", reason: `${confidence.reason}${scalingSentence}` };
+    return {
+      verdict: "neutral",
+      reason: `${confidence.reason}${scalingSentence}`,
+      confidence: rested,
+    };
   }
 
   if (reading.impressions < scaledBaselineImpressions) {
@@ -236,7 +255,7 @@ export function outcomeVerdict(reading: OutcomeReading): OutcomeAssessment {
     if (reading.wordingTreatment) {
       return {
         verdict: "unmeasurable",
-        reason: `The numbers fell, but this change only altered wording, and Google may be showing its own wording instead — it rewrites titles it doesn't like and no one can force the one on the page. Until what Google displays is verified, this is an unmeasured treatment, not a failed one.`,
+        reason: `The numbers fell, but this change only altered wording, and Google may be showing its own wording instead. It rewrites titles it doesn't like and no one can force the one on the page. Until what Google displays is verified, this is an unmeasured treatment, not a failed one.`,
       };
     }
 
@@ -257,13 +276,14 @@ export function outcomeVerdict(reading: OutcomeReading): OutcomeAssessment {
           : `the whole site fell as hard, ×${fallTideLabel}`;
       return {
         verdict: "neutral",
-        reason: `Fell from ${scaledBaselineImpressions} to ${reading.impressions} impressions${scalingNote}, ×${fallRatioLabel}, but ${siteClause} over the same weeks — this looks like the season, not the page.`,
+        reason: `Fell from ${scaledBaselineImpressions} to ${reading.impressions} impressions${scalingNote}, ×${fallRatioLabel}, but ${siteClause} over the same weeks, so this looks like the season, not the page.`,
       };
     }
 
     return {
       verdict: "failure",
       reason: `Fell from ${scaledBaselineImpressions} to ${reading.impressions} impressions${scalingNote}, and clicks fell with it, from ${scaledBaselineClicks} to ${reading.clicks}. ${confidence.reason}`,
+      confidence: rested,
     };
   }
 
@@ -316,5 +336,6 @@ export function outcomeVerdict(reading: OutcomeReading): OutcomeAssessment {
   return {
     verdict: "success",
     reason: `Rose from ${scaledBaselineImpressions} to ${reading.impressions} impressions${scalingNote}.${tideNote}`,
+    confidence: rested,
   };
 }

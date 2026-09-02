@@ -12,8 +12,8 @@ import {
   MetricTile,
   PageHeader,
   StatePill,
-  formatWhen,
 } from "@/components/os/primitives";
+import { formatWhen } from "@/lib/format-when";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -43,13 +43,13 @@ export const Route = createFileRoute("/search/tools")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Search workspace — Marky" },
+      { title: "Search workspace · Marky" },
       {
         name: "description",
         content:
           "What Google Search Console actually observed for the selected property: finalized daily clicks, impressions, CTR, average position, pages, queries, devices, countries, and sitemap status.",
       },
-      { property: "og:title", content: "Search workspace — Marky" },
+      { property: "og:title", content: "Search workspace · Marky" },
       {
         property: "og:description",
         content: "Stored Search Console evidence, shown exactly as Google reported it.",
@@ -67,15 +67,15 @@ function fmtInt(value: number): string {
 }
 
 function fmtCtr(value: number | null): string {
-  return value === null ? "—" : `${(value * 100).toFixed(1)}%`;
+  return value === null ? "not reported" : `${(value * 100).toFixed(1)}%`;
 }
 
 function fmtPosition(value: number | null): string {
-  return value === null || value === 0 ? "—" : value.toFixed(1);
+  return value === null || value === 0 ? "not reported" : value.toFixed(1);
 }
 
 function fmtDate(value: string | null): string {
-  return value ?? "—";
+  return value ?? "not reported";
 }
 
 function trimUrl(value: string): string {
@@ -408,22 +408,22 @@ function SearchWorkspacePage() {
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <MetricTile
                 label="Clicks"
-                value={latest ? fmtInt(latest.clicks) : "—"}
+                value={latest ? fmtInt(latest.clicks) : "not reported"}
                 hint={fmtDate(data.latestDate)}
               />
               <MetricTile
                 label="Impressions"
-                value={latest ? fmtInt(latest.impressions) : "—"}
+                value={latest ? fmtInt(latest.impressions) : "not reported"}
                 hint={fmtDate(data.latestDate)}
               />
               <MetricTile
                 label="CTR"
-                value={latest ? fmtCtr(latest.ctr) : "—"}
+                value={latest ? fmtCtr(latest.ctr) : "not reported"}
                 hint="Clicks divided by impressions"
               />
               <MetricTile
                 label="Avg position"
-                value={latest ? fmtPosition(latest.position) : "—"}
+                value={latest ? fmtPosition(latest.position) : "not reported"}
                 hint="Lower is better"
               />
             </div>
@@ -670,7 +670,7 @@ function SearchWorkspacePage() {
                         <div className="flex shrink-0 items-center gap-2">
                           {finding.recommendationState ? (
                             <StatePill
-                              label={finding.recommendationState.replace(/_/g, " ")}
+                              label={finding.recommendationState}
                               tone={
                                 OPEN_FINDING_STATES.has(finding.recommendationState)
                                   ? "warning"
@@ -868,43 +868,43 @@ function SearchWorkspacePage() {
                           <div>
                             <dt className="inline">Coverage: </dt>
                             <dd className="inline text-foreground">
-                              {inspection.coverageState ?? "—"}
+                              {inspection.coverageState ?? "not reported"}
                             </dd>
                           </div>
                           <div>
                             <dt className="inline">Fetch: </dt>
                             <dd className="inline text-foreground">
-                              {inspection.pageFetchState ?? "—"}
+                              {inspection.pageFetchState ?? "not reported"}
                             </dd>
                           </div>
                           <div>
                             <dt className="inline">Indexing: </dt>
                             <dd className="inline text-foreground">
-                              {inspection.indexingState ?? "—"}
+                              {inspection.indexingState ?? "not reported"}
                             </dd>
                           </div>
                           <div>
                             <dt className="inline">robots.txt: </dt>
                             <dd className="inline text-foreground">
-                              {inspection.robotsTxtState ?? "—"}
+                              {inspection.robotsTxtState ?? "not reported"}
                             </dd>
                           </div>
                           <div>
                             <dt className="inline">Crawled as: </dt>
                             <dd className="inline text-foreground">
-                              {inspection.crawledAs ?? "—"}
+                              {inspection.crawledAs ?? "not reported"}
                             </dd>
                           </div>
                           <div className="sm:col-span-2">
                             <dt className="inline">Google canonical: </dt>
                             <dd className="inline break-all text-foreground">
-                              {inspection.googleCanonical ?? "—"}
+                              {inspection.googleCanonical ?? "not reported"}
                             </dd>
                           </div>
                           <div className="sm:col-span-2">
                             <dt className="inline">Declared canonical: </dt>
                             <dd className="inline break-all text-foreground">
-                              {inspection.userCanonical ?? "—"}
+                              {inspection.userCanonical ?? "not reported"}
                             </dd>
                           </div>
                         </dl>
@@ -1011,23 +1011,33 @@ function SearchWorkspacePage() {
                         <dl className="mt-2 grid gap-x-6 gap-y-1 text-xs text-muted-foreground sm:grid-cols-3">
                           <div>
                             <dt className="inline">Submitted URLs: </dt>
-                            <dd className="inline text-foreground">{sitemap.submitted ?? "—"}</dd>
+                            <dd className="inline text-foreground">
+                              {sitemap.submitted ?? "not reported"}
+                            </dd>
                           </div>
                           <div>
                             <dt className="inline">Indexed URLs: </dt>
-                            <dd className="inline text-foreground">{sitemap.indexed ?? "—"}</dd>
+                            <dd className="inline text-foreground">
+                              {sitemap.indexed ?? "not reported"}
+                            </dd>
                           </div>
                           <div>
                             <dt className="inline">Type: </dt>
-                            <dd className="inline text-foreground">{sitemap.type ?? "—"}</dd>
+                            <dd className="inline text-foreground">
+                              {sitemap.type ?? "not reported"}
+                            </dd>
                           </div>
                           <div>
                             <dt className="inline">Warnings: </dt>
-                            <dd className="inline text-foreground">{sitemap.warnings ?? "—"}</dd>
+                            <dd className="inline text-foreground">
+                              {sitemap.warnings ?? "not reported"}
+                            </dd>
                           </div>
                           <div>
                             <dt className="inline">Errors: </dt>
-                            <dd className="inline text-foreground">{sitemap.errors ?? "—"}</dd>
+                            <dd className="inline text-foreground">
+                              {sitemap.errors ?? "not reported"}
+                            </dd>
                           </div>
                           <div>
                             <dt className="inline">Last submitted: </dt>
@@ -1064,7 +1074,7 @@ function SearchWorkspacePage() {
                           <span
                             className={
                               submission.status === "submitted"
-                                ? "text-emerald-600"
+                                ? "text-success"
                                 : "text-destructive"
                             }
                           >

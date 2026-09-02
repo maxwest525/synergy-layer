@@ -35,8 +35,10 @@ export const runSearchConsoleObservation = createServerFn({ method: "POST" })
   .handler(async ({ context }) => {
     const { assertOperator } = await import("./os-admin.server");
     await assertOperator(context.supabase, context.userId);
+    const { requireTenantId } = await import("./tenant.server");
     const { observeSearchConsole } = await import("./search-console-observe.server");
-    return observeSearchConsole(context.supabase);
+    const tenantId = await requireTenantId(context.supabase);
+    return observeSearchConsole(context.supabase, tenantId, context.userId);
   });
 
 /** Read-only provider action: inspect Google's indexed version of one owned URL. */

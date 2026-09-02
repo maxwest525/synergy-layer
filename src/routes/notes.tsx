@@ -5,13 +5,8 @@ import { ExternalLink, Pin, PinOff, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
-import {
-  EmptyState,
-  GlassCard,
-  PageHeader,
-  PageStack,
-  formatWhen,
-} from "@/components/os/primitives";
+import { EmptyState, GlassCard, PageHeader, PageStack } from "@/components/os/primitives";
+import { formatWhen } from "@/lib/format-when";
 import { OperatorRouteError } from "@/components/os/route-error";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,13 +19,13 @@ export const Route = createFileRoute("/notes")({
   errorComponent: OperatorRouteError,
   head: () => ({
     meta: [
-      { title: "Notes pad — Marky" },
+      { title: "Notes pad · Marky" },
       {
         name: "description",
         content:
           "Private scratch space for the operator: jot a thought, pin what matters, and attach the page on the site it belongs to.",
       },
-      { property: "og:title", content: "Notes pad — Marky" },
+      { property: "og:title", content: "Notes pad · Marky" },
       {
         property: "og:description",
         content: "Private operator notes, pinned and linked to the pages they concern.",

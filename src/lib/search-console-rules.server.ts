@@ -398,8 +398,6 @@ export async function evaluateSnapshots(
             description: observation.description,
             source_module: "search-console",
             business_impact: observation.businessImpact,
-            revenue_impact: observation.businessImpact,
-            traffic_impact: observation.businessImpact,
             time_saved_minutes: 0,
             risk: "none",
             confidence: observation.confidence,

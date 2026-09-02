@@ -1,13 +1,25 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database } from "@/integrations/supabase/types";
+import { hashPostbackToken, newPostbackToken, postbackUrl } from "./postback-token";
 import { dataforseoGet, dataforseoPost, fingerprint, persistSnapshot } from "./transport.server";
-import { supabasePublishableKey } from "@/integrations/supabase/public-config";
 
 type Client = SupabaseClient<Database>;
 
 const CAPABILITY = "cap.dataforseo_serp";
 const FAMILY = "serp" as const;
+
+/**
+ * Every SERP task is posted and retrieved as `advanced`. The `regular` type
+ * returns organic and paid items only, so featured snippets, People also ask,
+ * AI overviews, local packs and the other surfaces never reached the stored
+ * rows and the competitor second pass could not name them (COMP-4). Every
+ * consumer keeps `type === "organic"` for rank; the other types are the
+ * surfaces on that SERP. The provider bills per SERP, not per result type.
+ */
+const POSTBACK_DATA = "advanced";
+const TASK_GET_ENDPOINT = "/serp/google/organic/task_get/advanced";
+const LIVE_ENDPOINT = "/serp/google/organic/live/advanced";
 
 export const SERP_CONFIG = {
   locationCode: 2840,
@@ -20,13 +32,6 @@ export const SERP_CONFIG = {
 
 function today(): string {
   return new Date().toISOString().slice(0, 10);
-}
-
-export function postbackUrl(origin: string): string {
-  // The provider sends no custom headers, so the callback is authenticated by
-  // the publishable key in the query string plus the unguessable task tag.
-  const key = supabasePublishableKey() ?? "";
-  return `${origin}/api/public/hooks/dataforseo-postback?id=$id&tag=$tag&key=${encodeURIComponent(key)}`;
 }
 
 /**
@@ -43,8 +48,13 @@ export async function queueSerpTasks(
   const reportingDate = today();
   const endpoint = "/serp/google/organic/task_post";
 
-  const pending: { keyword: string; tag: string; params: Record<string, unknown>; fp: string }[] =
-    [];
+  const pending: {
+    keyword: string;
+    tag: string;
+    params: Record<string, unknown>;
+    fp: string;
+    token: string;
+  }[] = [];
   let skipped = 0;
 
   for (const keyword of keywords) {
@@ -75,7 +85,9 @@ export async function queueSerpTasks(
       continue;
     }
 
-    pending.push({ keyword, tag: fp, params, fp });
+    // One random token per task: the provider echoes it in the callback URL,
+    // and the table stores only its hash (postback-token.ts).
+    pending.push({ keyword, tag: fp, params, fp, token: newPostbackToken() });
   }
 
   if (pending.length === 0) return { queued: 0, skipped, costUsd: 0 };
@@ -99,8 +111,8 @@ export async function queueSerpTasks(
     tasks: pending.map((entry) => ({
       ...entry.params,
       tag: entry.tag,
-      postback_url: postbackUrl(origin),
-      postback_data: "regular",
+      postback_url: postbackUrl(origin, entry.token),
+      postback_data: POSTBACK_DATA,
     })),
   });
 
@@ -112,7 +124,7 @@ export async function queueSerpTasks(
       tenant_id: tenantId,
       provider_task_id: task.id,
       tag: entry.tag,
-      endpoint: "/serp/google/organic/task_get/regular",
+      endpoint: TASK_GET_ENDPOINT,
       priority: "normal",
       keyword: entry.keyword,
       location_code: SERP_CONFIG.locationCode,
@@ -120,6 +132,7 @@ export async function queueSerpTasks(
       request_fingerprint: entry.fp,
       request_params: entry.params as never,
       state: "queued",
+      postback_token_hash: hashPostbackToken(entry.token),
     });
     if (!error) queuedCount += 1;
   }
@@ -161,7 +174,7 @@ export async function ingestSerpPostback(
       tenantId,
       capabilityKey: CAPABILITY,
       family: FAMILY,
-      endpoint: "/serp/google/organic/task_get/regular",
+      endpoint: TASK_GET_ENDPOINT,
       kind: "serp_organic",
       target: queued.keyword,
       mode: "standard",
@@ -229,7 +242,7 @@ export async function collectReadySerpTasks(
   let costUsd = 0;
 
   for (const providerTaskId of collectable) {
-    const envelope = await dataforseoGet(`/serp/google/organic/task_get/regular/${providerTaskId}`);
+    const envelope = await dataforseoGet(`${TASK_GET_ENDPOINT}/${providerTaskId}`);
     costUsd += Number(envelope.cost ?? 0);
     const stored = await ingestSerpPostback(client, tenantId, {
       tasks: (envelope.tasks ?? []) as never,
@@ -251,7 +264,7 @@ export async function liveSerp(
   tenantId: string,
   keyword: string,
 ): Promise<{ snapshotId: string; rows: number; costUsd: number }> {
-  const endpoint = "/serp/google/organic/live/regular";
+  const endpoint = LIVE_ENDPOINT;
   const params = {
     keyword,
     location_code: SERP_CONFIG.locationCode,

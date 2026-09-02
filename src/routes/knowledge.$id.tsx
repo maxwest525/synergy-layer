@@ -1,14 +1,9 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 
-import {
-  BackLink,
-  EmptyState,
-  GlassCard,
-  PageHeader,
-  StatePill,
-  formatWhen,
-} from "@/components/os/primitives";
+import { BackLink, EmptyState, GlassCard, PageHeader, StatePill } from "@/components/os/primitives";
+import { formatWhen } from "@/lib/format-when";
+import { stateLabel } from "@/lib/state-labels";
 import { getKnowledgeCollection } from "@/lib/os.functions";
 import { OperatorRouteError } from "@/components/os/route-error";
 
@@ -29,8 +24,8 @@ export const Route = createFileRoute("/knowledge/$id")({
   },
   head: ({ loaderData }) => {
     const title = loaderData?.collection
-      ? `${loaderData.collection.name} — Knowledge — Marky`
-      : "Knowledge collection — Marky";
+      ? `${loaderData.collection.name} · Knowledge · Marky`
+      : "Knowledge collection · Marky";
     const description =
       loaderData?.collection?.description ?? "Knowledge collection contents in AOOS.";
     return {
@@ -56,7 +51,7 @@ function KnowledgeCollectionPage() {
     <div className="space-y-10">
       <BackLink to="/knowledge">All knowledge</BackLink>
       <PageHeader
-        eyebrow={collection.kind.replace(/_/g, " ")}
+        eyebrow={stateLabel(collection.kind)}
         title={collection.name}
         description={collection.description ?? "No description recorded for this collection."}
         actions={<StatePill label={`${data.entries.length} entries`} tone="primary" />}

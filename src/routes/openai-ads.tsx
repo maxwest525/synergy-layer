@@ -10,8 +10,8 @@ import {
   MetricTile,
   PageHeader,
   StatePill,
-  formatWhen,
 } from "@/components/os/primitives";
+import { formatWhen } from "@/lib/format-when";
 import { OpenAiAdsCapiSettings } from "@/components/os/openai-ads-capi-settings";
 import { OperatorRouteError } from "@/components/os/route-error";
 import {
@@ -28,13 +28,13 @@ export const Route = createFileRoute("/openai-ads")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "OpenAI Ads — Marky" },
+      { title: "OpenAI Ads · Marky" },
       {
         name: "description",
         content:
           "Monitor the OpenAI Ads pixel and server-side event path for the instrumented TruMove site: event coverage, delivery health, deduplication, attribution, and the exact configuration still required.",
       },
-      { property: "og:title", content: "OpenAI Ads — Marky" },
+      { property: "og:title", content: "OpenAI Ads · Marky" },
       {
         property: "og:description",
         content:

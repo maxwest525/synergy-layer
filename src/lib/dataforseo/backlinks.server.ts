@@ -120,6 +120,57 @@ export async function collectBacklinkSummary(
   );
 }
 
+/** The provider takes at most this many targets in one intersection request. */
+export const INTERSECT_MAX_TARGETS = 20;
+
+/**
+ * Competitor link intersect, on an operator click only (LINK-4): the domains
+ * that link to every one of the given competitors and not to the owned site.
+ * One request whatever the competitor count; the targets are kept in the
+ * request params so a later read knows which index is which competitor.
+ */
+export async function collectCompetitorLinkIntersect(
+  client: Client,
+  tenantId: string,
+  ownDomain: string,
+  competitors: readonly string[],
+  workflow?: { runId?: string | null; key?: string | null },
+): Promise<BacklinksResult & { targets: Record<string, string> }> {
+  if (competitors.length === 0) {
+    throw new Error("No approved competitor to compare linking sites against.");
+  }
+  if (competitors.length > INTERSECT_MAX_TARGETS) {
+    throw new Error(
+      `The provider compares at most ${INTERSECT_MAX_TARGETS} sites in one request; ${competitors.length} competitors are tracked.`,
+    );
+  }
+  const targets = Object.fromEntries(
+    competitors.map((domain, index) => [String(index + 1), domain]),
+  );
+  const result = await backlinksCall(
+    client,
+    tenantId,
+    "/backlinks/domain_intersection/live",
+    "backlinks_domain_intersection",
+    `${ownDomain} vs ${competitors.join(",")}`,
+    {
+      targets,
+      exclude_targets: [ownDomain],
+      exclude_internal_backlinks: true,
+      limit: BACKLINKS_CONFIG.referringDomainLimit,
+      order_by: ["1.rank,desc"],
+      backlinks_status_type: "live",
+      rank_scale: BACKLINKS_CONFIG.rankScale,
+    },
+    (result) => ({
+      rows: (result[0]?.["items"] as unknown[]) ?? [],
+      totals: { intersectionsCount: result[0]?.["total_count"] ?? null },
+    }),
+    workflow,
+  );
+  return { ...result, targets };
+}
+
 /** Referring-domain baseline, the anchor for later link-gap analysis. */
 export async function collectReferringDomains(
   client: Client,

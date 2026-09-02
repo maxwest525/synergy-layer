@@ -8,9 +8,9 @@ import {
   ListSkeleton,
   MetricTile,
   StatePill,
-  formatWhen,
-  toneForState,
 } from "@/components/os/primitives";
+import { formatWhen } from "@/lib/format-when";
+import { toneForState } from "@/lib/state-tone";
 import { getDataForSeoState } from "@/lib/dataforseo.functions";
 
 function usd(value: number | string | null | undefined): string {

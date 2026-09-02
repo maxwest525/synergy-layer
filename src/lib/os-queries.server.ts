@@ -2,11 +2,6 @@ import { isActionCenterItem } from "./action-center";
 import { rows, unwrap } from "./os.server";
 import { createRequestClient, resolveTenantId } from "./tenant.server";
 
-export type Overview = {
-  counts: Record<string, number>;
-  activity: Awaited<ReturnType<typeof fetchActivity>>;
-};
-
 /**
  * Every read runs as the calling operator, so row level security decides which
  * client workspace is visible. The tenant filter below keeps administrators,
@@ -63,19 +58,6 @@ export async function fetchInbox() {
           : null,
     }))
     .filter(isActionCenterItem);
-}
-
-export async function fetchActivity(limit = 40) {
-  const { db, tenantId, ready } = await scope();
-  if (!ready) return [];
-  return rows(
-    await db
-      .from("activity_events")
-      .select("*")
-      .eq("tenant_id", tenantId!)
-      .order("occurred_at", { ascending: false })
-      .limit(limit),
-  );
 }
 
 export async function fetchAssets() {
@@ -294,8 +276,16 @@ export async function fetchSchedules() {
 
 export async function fetchSchedule(id: string) {
   const { db, ready } = await scope();
-  if (!ready) return { schedule: null, dependencies: [] };
+  if (!ready) return { schedule: null, dependencies: [], runs: [] };
   const schedule = unwrap(await db.from("schedules").select("*").eq("id", id).maybeSingle());
+  const runs = rows(
+    await db
+      .from("schedule_runs")
+      .select("id, fired_by, state, fired_at, finished_at, duration_ms, error")
+      .eq("schedule_id", id)
+      .order("fired_at", { ascending: false })
+      .limit(30),
+  );
   const dependencies = rows(
     await db
       .from("schedule_dependencies")
@@ -304,129 +294,5 @@ export async function fetchSchedule(id: string) {
       )
       .eq("schedule_id", id),
   );
-  return { schedule, dependencies };
-}
-
-export type CapabilitySummary = {
-  id: string;
-  key: string;
-  name: string;
-  integration_state: string;
-  health: string;
-};
-
-export type RunSummary = {
-  id: string;
-  state: string;
-  trigger_source: string;
-  created_at: string;
-  duration_ms: number | null;
-  error: string | null;
-  workflow_id: string | null;
-  workflows: { id: string; key: string; name: string } | null;
-};
-
-export type QuickActionCounts = {
-  openInbox: number;
-  pendingCompetitors: number;
-  pendingAdvertisers: number;
-  failedRuns: number;
-};
-
-export async function fetchOverview() {
-  const { db, tenantId, ready } = await scope();
-
-  const counts: Record<string, number> = {
-    assets: 0,
-    capabilities: 0,
-    knowledge_entries: 0,
-    agents: 0,
-    workflows: 0,
-    recommendations: 0,
-    schedules: 0,
-    inbox_items: 0,
-  };
-
-  const empty = {
-    ready: false,
-    counts,
-    capabilities: [] as CapabilitySummary[],
-    runs: [] as RunSummary[],
-    activity: [] as Awaited<ReturnType<typeof fetchActivity>>,
-    evidence: {
-      spentUsd: 0,
-      ceilingUsd: 0,
-      providerRequests: 0,
-      dataforseoSnapshots: 0,
-      searchConsoleSnapshots: 0,
-      lastDataforseoAt: null as string | null,
-      lastSearchConsoleAt: null as string | null,
-      pendingKeywordCandidates: 0,
-      trackedKeywords: 0,
-      competitorCandidates: 0,
-      trackedCompetitors: 0,
-    },
-    quickActions: {
-      openInbox: 0,
-      pendingCompetitors: 0,
-      pendingAdvertisers: 0,
-      failedRuns: 0,
-    } as QuickActionCounts,
-    pendingApprovals: 0,
-  };
-
-  if (!ready) return empty;
-
-  // One consolidated read. The database function is SECURITY INVOKER, so row
-  // level security still answers as the calling operator; the page simply stops
-  // paying twenty separate HTTP round trips for the same numbers.
-  const { data, error } = await db.rpc("command_center_overview", { _tenant_id: tenantId! });
-  if (error) {
-    throw new Error(`Command Center read failed: ${error.message}`);
-  }
-  if (!data || typeof data !== "object" || Array.isArray(data)) {
-    throw new Error("Command Center read returned a malformed payload.");
-  }
-
-  const payload = data as unknown as {
-    counts: Record<string, number>;
-    capabilities: CapabilitySummary[];
-    runs: RunSummary[];
-    activity: Awaited<ReturnType<typeof fetchActivity>>;
-    evidence: typeof empty.evidence;
-    quickActions: QuickActionCounts;
-    pendingApprovals: number;
-  };
-
-  if (
-    !payload.counts ||
-    typeof payload.counts !== "object" ||
-    !payload.evidence ||
-    !payload.quickActions
-  ) {
-    throw new Error("Command Center read returned a malformed payload.");
-  }
-
-  for (const key of Object.keys(counts)) counts[key] = Number(payload.counts?.[key] ?? 0);
-
-  return {
-    ready: true,
-    counts,
-    capabilities: payload.capabilities ?? [],
-    runs: payload.runs ?? [],
-    activity: payload.activity ?? [],
-    evidence: {
-      ...empty.evidence,
-      ...payload.evidence,
-      spentUsd: Number(payload.evidence?.spentUsd ?? 0),
-      ceilingUsd: Number(payload.evidence?.ceilingUsd ?? 0),
-    },
-    quickActions: {
-      openInbox: Number(payload.quickActions.openInbox ?? 0),
-      pendingCompetitors: Number(payload.quickActions.pendingCompetitors ?? 0),
-      pendingAdvertisers: Number(payload.quickActions.pendingAdvertisers ?? 0),
-      failedRuns: Number(payload.quickActions.failedRuns ?? 0),
-    },
-    pendingApprovals: Number(payload.pendingApprovals ?? 0),
-  };
+  return { schedule, dependencies, runs };
 }

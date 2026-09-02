@@ -14,4 +14,9 @@ Final"). Read it before querying a database or telling the operator to publish:
 the names overlap badly, the website's repo is called `brittmove-829a7519`, and
 both live on domains containing "trumove".
 
+[`docs/context/DEPLOYMENT_TOPOLOGY.md`](docs/context/DEPLOYMENT_TOPOLOGY.md)
+says where production actually builds from: since 2026-08-30 Lovable syncs
+with `maxwest525/trumove-resource-center`, not this repository, so a merge to
+`main` here is not live until the reconciliation push and a publish.
+
 Kept as a pointer rather than a copy so the two can never drift apart.

@@ -10,8 +10,8 @@ import {
   MetricTile,
   PageHeader,
   StatePill,
-  formatWhen,
 } from "@/components/os/primitives";
+import { formatWhen } from "@/lib/format-when";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { runKeywordEnrichment } from "@/lib/dataforseo.functions";
@@ -43,13 +43,13 @@ export const Route = createFileRoute("/keywords")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Keyword approval — Marky" },
+      { title: "Keyword approval · Marky" },
       {
         name: "description",
         content:
           "Review DataForSEO Labs keyword candidates with volume, CPC, competition, and provenance, then approve or reject each one before SERP observation runs.",
       },
-      { property: "og:title", content: "Keyword approval — Marky" },
+      { property: "og:title", content: "Keyword approval · Marky" },
       {
         property: "og:description",
         content: "The human gate between keyword discovery and paid SERP observation.",
@@ -74,11 +74,11 @@ function readMetrics(value: unknown): Metrics {
 }
 
 function fmtNumber(value: number | null | undefined): string {
-  return typeof value === "number" ? value.toLocaleString() : "—";
+  return typeof value === "number" ? value.toLocaleString() : "not reported";
 }
 
 function fmtMoney(value: number | null | undefined): string {
-  return typeof value === "number" ? `$${value.toFixed(2)}` : "—";
+  return typeof value === "number" ? `$${value.toFixed(2)}` : "not reported";
 }
 
 function KeywordReviewPage() {
@@ -126,7 +126,7 @@ function KeywordReviewPage() {
     onSuccess: (result, variables) => {
       toast.success(
         `${result.count} keyword${result.count === 1 ? "" : "s"} ${variables.decision === "approve" ? "approved" : "rejected"}${
-          result.inboxResolved ? " — inbox item cleared" : ""
+          result.inboxResolved ? ", inbox item cleared" : ""
         }`,
       );
       setSelected([]);
@@ -144,7 +144,7 @@ function KeywordReviewPage() {
       toast.success(
         `${
           capped
-            ? `Scored ${result.sentThisRun} of ${result.pendingTotal} pending — run again for the rest`
+            ? `Scored ${result.sentThisRun} of ${result.pendingTotal} pending. Run again for the rest`
             : `${result.enriched} keyword${result.enriched === 1 ? "" : "s"} scored`
         }${
           result.unparsed > 0
@@ -284,10 +284,10 @@ function KeywordReviewPage() {
             </Button>
           </GlassCard>
           <p id="enrich-cost" className="text-xs text-muted-foreground">
-            Costs about ${estimatedEnrichmentCostUsd().toFixed(2)} — two paid look-ups covering up
-            to {ENRICHMENT_BATCH_CAP.toLocaleString()} keywords waiting for a decision at a time;
-            the rest run on the next click. Nothing is spent until you click, and no keyword is
-            approved by it.
+            Costs about ${estimatedEnrichmentCostUsd().toFixed(2)}, two paid look-ups covering up to{" "}
+            {ENRICHMENT_BATCH_CAP.toLocaleString()} keywords waiting for a decision at a time; the
+            rest run on the next click. Nothing is spent until you click, and no keyword is approved
+            by it.
           </p>
 
           <ul className="space-y-2">
@@ -316,13 +316,19 @@ function KeywordReviewPage() {
                             label={`Competition ${
                               typeof metrics.competition === "number"
                                 ? metrics.competition.toFixed(2)
-                                : "—"
+                                : "not reported"
                             }`}
                           />
                           <StatePill
                             label={`How hard to win ${fmtNumber(metrics.keyword_difficulty)}`}
                           />
-                          <StatePill label={`What they want ${metrics.search_intent ?? "—"}`} />
+                          <StatePill
+                            label={
+                              metrics.search_intent
+                                ? `What they want ${metrics.search_intent}`
+                                : "Intent not reported"
+                            }
+                          />
                           <StatePill label={row.source} />
                           {row.seed ? <StatePill label={`Seed: ${row.seed}`} /> : null}
                         </div>

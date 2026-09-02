@@ -94,6 +94,14 @@ export const SITE_CHECK_FIX: Record<SiteCheckId, AuditFixTarget | null> = {
   sitemap_not_declared: crawl,
   sitemap_coverage_gap: null,
   pages_unreadable: null,
+  // The protocol layer is a server change every time; nothing in AOOS edits a
+  // server (CODE-25).
+  http_not_redirected: null,
+  hsts_missing: null,
+  security_headers_missing: null,
+  host_not_consolidated: null,
+  mixed_content_present: null,
+  homepage_slow_to_respond: null,
 };
 
 export function fixTargetForPageCheck(check: string): AuditFixTarget | null {

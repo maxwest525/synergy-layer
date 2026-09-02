@@ -3,7 +3,7 @@ import type { ModuleDefinition } from "../types";
 /**
  * Labs (`competitors_domain`), Domain Analytics (whois, technologies) and
  * Content Analysis all store snapshots that no rule reads. This module turns
- * them into the four rules that survived the adversarial review in
+ * them into the five rules that survived the adversarial review in
  * docs/handoffs/2026-08-28-parallel-rule-sessions.md, Session D.
  *
  * Two of the four -- the ownership pair -- never assert a link between
@@ -45,7 +45,7 @@ export const definition: ModuleDefinition = {
       key: "dfs-discovery-findings",
       name: "Competitor discovery findings",
       description:
-        "Re-reads stored Labs, Domain Analytics and Content Analysis evidence and files the four discovery rules. Costs nothing: it calls no provider, only Postgres, and it never writes an ownership link on its own -- the two ownership rules file a pending candidate for an operator to confirm or reject.",
+        "Re-reads stored Labs, Domain Analytics and Content Analysis evidence and files the five discovery rules. Costs nothing: it calls no provider, only Postgres, and it never writes an ownership link on its own -- the two ownership rules file a pending candidate for an operator to confirm or reject.",
       triggerKind: "manual",
       graph: {
         nodes: [{ key: "evaluate", kind: "capability", ref: "discovery.competition_findings" }],

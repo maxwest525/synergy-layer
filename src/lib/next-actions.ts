@@ -43,6 +43,10 @@ export type NextActionFacts = {
     nextDue: { task: string; targetDate: string } | null;
   };
   measurement: { failedRuns: number; latestProvider: string | null; latestError: string | null };
+  /** Daily reads whose due time passed a full period ago with no run recorded. */
+  cadences: {
+    overdue: { key: string; label: string; dueAt: string; lastRunAt: string | null }[];
+  };
 };
 
 export type NextActionRoute =
@@ -355,6 +359,22 @@ export function buildNextActions(facts: NextActionFacts): NextAction[] {
       to: "/measurement/tools",
       actionLabel: "Open measurement",
       weight: 22,
+    });
+  }
+
+  // A daily read whose scheduler stopped reaching AOOS leaves no failed run
+  // behind; the only trace is a due time that passed with nothing recorded.
+  for (const cadence of facts.cadences.overdue) {
+    actions.push({
+      id: `cadence-overdue-${cadence.key}`,
+      group: "system_health",
+      title: `Find out why the ${cadence.label} daily read stopped`,
+      reason: `${cadence.label} was due at ${cadence.dueAt} and a full period has passed with no run recorded, so its evidence goes stale with no failure to point at.`,
+      evidence: `Due ${cadence.dueAt}; last recorded run ${cadence.lastRunAt ?? "never"}.`,
+      blockedBy: null,
+      to: "/measurement/tools",
+      actionLabel: "Open the cadence",
+      weight: 6,
     });
   }
 

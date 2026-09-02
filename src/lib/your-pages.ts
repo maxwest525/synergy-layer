@@ -21,7 +21,7 @@
 import { bindingConstraint, type ConstraintFacts, type Constraint } from "./binding-constraint";
 import type { PageCoverage } from "./getting-found";
 import type { CheckFinding, Severity } from "./page-checks";
-import { unmetPrerequisites } from "./rule-buckets";
+import { prerequisiteState, unmetPrerequisites } from "./rule-buckets";
 import type { PeriodComparison } from "./search-console";
 import {
   buildQueue,
@@ -448,30 +448,18 @@ export function buildYourPages(facts: YourPagesFacts): YourPagesView {
     history: [...queue.ignored, ...queue.done],
     asOf: facts.lastObservedAt,
     property: facts.property,
-    waitingOn: unmetPrerequisites({
-      secondCollection: facts.comparison.status === "ready",
-      pageAudit: facts.lastObservedAt !== null,
-      analytics: facts.sessions !== null,
-      // Nothing on this page reads a stored URL inspection, approved
-      // keywords, backlink snapshots, or a second Umami window yet.
-      urlInspection: true,
-      approvedKeywords: true,
-      backlinkCollection: true,
-      // Nor whois, technology-stack or brand-mention evidence, or a reviewed
-      // competitor set -- those matter on the competition screen, not here.
-      whoisCollection: true,
-      technologyCollection: true,
-      brandMentionCollection: true,
-      reviewedCompetitorSet: true,
-      umamiSecondWindow: true,
-      // Stated gap: this page's duplicate-title/description findings need an
-      // OnPage crawl, but this view model does not yet read
-      // dataforseo_snapshots to know whether one has been collected. Passing
-      // true keeps the banner silent rather than wrong; the rules themselves
-      // are unaffected (onpage-rule-checks.ts already returns nothing/a
-      // named absence without a crawl). Wiring a real read is follow-up work.
-      onpageCrawl: true,
-    }),
+    waitingOn: unmetPrerequisites(
+      prerequisiteState({
+        secondCollection: facts.comparison.status === "ready",
+        pageAudit: facts.lastObservedAt !== null,
+        analytics: facts.sessions !== null,
+        // Stated gap: duplicate_descriptions_across_pages needs an OnPage
+        // crawl and this view model does not read dataforseo_snapshots, so
+        // that banner stays silent. The rule itself returns a named absence
+        // without a crawl (onpage-rule-checks.ts), never a false all clear.
+      }),
+      "pages",
+    ),
     neverRunNotice: facts.lastObservedAt === null ? NEVER_RUN : null,
     orphanNote:
       facts.orphanBailReason === null

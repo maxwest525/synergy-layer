@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database } from "@/integrations/supabase/types";
+import { rankByVolume } from "./keyword-ranking";
 import { KEYWORD_CONFIG } from "./keywords.server";
 import { LABS_CONFIG, labsCall } from "./labs.server";
 
@@ -131,7 +132,14 @@ export async function runKeywordGap(
   client: Client,
   tenantId: string,
   ownDomain: string,
-): Promise<{ competitors: number; filed: number; costUsd: number; unparsed: number }> {
+): Promise<{
+  competitors: number;
+  filed: number;
+  costUsd: number;
+  unparsed: number;
+  /** Gap keywords the per-run cap left for a later run, summed across competitors. */
+  beyondCap: number;
+}> {
   const competitors = await readTrackedCompetitors(client, tenantId);
   if (competitors.length === 0) {
     throw new Error(
@@ -155,6 +163,7 @@ export async function runKeywordGap(
   let filed = 0;
   let costUsd = 0;
   let unparsed = 0;
+  let beyondCap = 0;
 
   for (const competitor of competitors) {
     const call = await labsCall(
@@ -177,11 +186,14 @@ export async function runKeywordGap(
     const rows = await snapshotRows(client, call.snapshotId);
     unparsed += countUnparsedGapItems(rows);
 
-    const gaps = selectGapKeywords(rows, competitor, ownDomain)
-      .filter((gap) => (gap.searchVolume ?? 0) >= KEYWORD_CONFIG.minSearchVolume)
-      .filter((gap) => !known.has(gap.keyword))
-      .sort((a, b) => (b.searchVolume ?? 0) - (a.searchVolume ?? 0))
-      .slice(0, KEYWORD_CONFIG.maxCandidatesPerRun);
+    // Nothing is filtered on volume (CONTENT-1); the cap is one run's filing
+    // per competitor, and what it leaves is counted.
+    const ranking = rankByVolume(
+      selectGapKeywords(rows, competitor, ownDomain).filter((gap) => !known.has(gap.keyword)),
+      KEYWORD_CONFIG.maxCandidatesPerRun,
+    );
+    const gaps = ranking.filed;
+    beyondCap += ranking.beyondCap;
 
     for (const gap of gaps) {
       const { error } = await client.from("keyword_candidates").upsert(
@@ -211,5 +223,5 @@ export async function runKeywordGap(
     }
   }
 
-  return { competitors: competitors.length, filed, costUsd, unparsed };
+  return { competitors: competitors.length, filed, costUsd, unparsed, beyondCap };
 }

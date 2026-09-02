@@ -1,14 +1,10 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 
-import {
-  EmptyState,
-  GlassCard,
-  PageHeader,
-  StatePill,
-  formatWhen,
-  toneForState,
-} from "@/components/os/primitives";
+import { EmptyState, GlassCard, PageHeader, StatePill } from "@/components/os/primitives";
+import { formatWhen } from "@/lib/format-when";
+import { toneForState } from "@/lib/state-tone";
+import { isEstimated } from "@/lib/impact-words";
 import { getRecommendations } from "@/lib/os.functions";
 import { OperatorRouteError } from "@/components/os/route-error";
 
@@ -26,13 +22,13 @@ export const Route = createFileRoute("/recommendations/")({
   },
   head: () => ({
     meta: [
-      { title: "Recommendation Queue — Marky" },
+      { title: "Recommendation Queue · Marky" },
       {
         name: "description",
         content:
           "Scored recommendations with traffic, revenue, and business impact, confidence, risk, and time saved before approval.",
       },
-      { property: "og:title", content: "Recommendation Queue — Marky" },
+      { property: "og:title", content: "Recommendation Queue · Marky" },
       {
         property: "og:description",
         content: "What the system thinks should happen next, and why.",
@@ -77,8 +73,12 @@ function RecommendationsPage() {
                     />
                   </div>
                   <div className="mt-3 flex flex-wrap items-center gap-2">
-                    <StatePill label={`traffic: ${recommendation.traffic_impact}`} />
-                    <StatePill label={`revenue: ${recommendation.revenue_impact}`} />
+                    {isEstimated(recommendation.traffic_impact) ? (
+                      <StatePill label={`traffic: ${recommendation.traffic_impact}`} />
+                    ) : null}
+                    {isEstimated(recommendation.revenue_impact) ? (
+                      <StatePill label={`revenue: ${recommendation.revenue_impact}`} />
+                    ) : null}
                     <StatePill label={`business: ${recommendation.business_impact}`} />
                     <StatePill
                       label={`risk: ${recommendation.risk}`}
@@ -93,8 +93,10 @@ function RecommendationsPage() {
                       tone="primary"
                     />
                     <span className="text-xs text-muted-foreground">
-                      {recommendation.time_saved_minutes} min saved · filed{" "}
-                      {formatWhen(recommendation.created_at)}
+                      {recommendation.time_saved_minutes > 0
+                        ? `${recommendation.time_saved_minutes} min saved · `
+                        : ""}
+                      filed {formatWhen(recommendation.created_at)}
                     </span>
                   </div>
                 </GlassCard>

@@ -1,14 +1,10 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 
-import {
-  EmptyState,
-  GlassCard,
-  PageHeader,
-  StatePill,
-  formatWhen,
-  toneForState,
-} from "@/components/os/primitives";
+import { EmptyState, GlassCard, PageHeader, StatePill } from "@/components/os/primitives";
+import { formatWhen } from "@/lib/format-when";
+import { toneForState } from "@/lib/state-tone";
+import { stateLabel } from "@/lib/state-labels";
 import { getAssets } from "@/lib/os.functions";
 import { OperatorRouteError } from "@/components/os/route-error";
 
@@ -26,13 +22,13 @@ export const Route = createFileRoute("/assets/")({
   },
   head: () => ({
     meta: [
-      { title: "Assets — Marky" },
+      { title: "Assets · Marky" },
       {
         name: "description",
         content:
           "Every owned marketing asset: sites, landing pages, ad accounts, repositories, backends, datasets, and knowledge collections.",
       },
-      { property: "og:title", content: "Assets — Marky" },
+      { property: "og:title", content: "Assets · Marky" },
       { property: "og:description", content: "Everything the company owns, in one registry." },
     ],
   }),
@@ -61,7 +57,7 @@ function AssetsPage() {
         groups.map((kind) => (
           <section key={kind} className="space-y-4">
             <h2 className="text-sm font-semibold capitalize tracking-tight text-foreground">
-              {kind.replace(/_/g, " ")}
+              {stateLabel(kind)}
             </h2>
             <div className="grid gap-4 md:grid-cols-2">
               {data

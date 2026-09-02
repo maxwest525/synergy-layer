@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   changeKindForFile,
+  changeKindsForFile,
   checkSourceTarget,
   GOVERNED_BRANCH,
   GOVERNED_CHANGE_KINDS,
@@ -56,12 +57,26 @@ describe("governed change kinds", () => {
     expect(outcome.ok).toBe(false);
   });
 
-  it("maps files back to exactly one kind", () => {
+  it("maps every governed file back to a kind that lists it, and no unlisted file to any", () => {
     for (const [kind, files] of Object.entries(GOVERNED_CHANGE_KINDS)) {
-      for (const filePath of files) expect(changeKindForFile(filePath)).toBe(kind);
+      for (const filePath of files) expect(changeKindsForFile(filePath)).toContain(kind);
     }
     expect(changeKindForFile("nope.txt")).toBeNull();
+    expect(changeKindsForFile("nope.txt")).toEqual([]);
     expect(isGovernedChangeKind("page.metadata")).toBe(true);
     expect(isGovernedChangeKind("page.nonsense")).toBe(false);
+  });
+
+  it("shares each page source between the wording and metadata lanes, and nothing else", () => {
+    // A page that renders its own description is edited in its own file by
+    // either lane; the shared head files and every data file stay single-kind.
+    for (const filePath of GOVERNED_CHANGE_KINDS["page.wording"]) {
+      expect(changeKindsForFile(filePath)).toEqual(["page.metadata", "page.wording"]);
+    }
+    expect(changeKindsForFile("src/components/seo/DefaultSeo.tsx")).toEqual(["page.metadata"]);
+    expect(changeKindsForFile("src/pages/services/servicesData.ts")).toEqual([
+      "service.page_wording",
+    ]);
+    expect(GOVERNED_FILES.length).toBe(new Set(GOVERNED_FILES).size);
   });
 });

@@ -30,6 +30,24 @@ describe("the verdict beside the verify control", () => {
     expect(screen.queryByText(/too_early|not_yet|failure/)).not.toBeInTheDocument();
   });
 
+  it("prints the confidence a count-based verdict rests on, and nothing where none was computed", () => {
+    render(
+      <OutcomeVerdictContext
+        verdicts={[
+          {
+            windowDays: 28,
+            verdict: "success",
+            reason: "Rose from 40 to 120 impressions.",
+            confidence: { value: 0.62, band: "medium" },
+          },
+          { windowDays: 14, verdict: "too_early", reason: "Not closed yet.", confidence: null },
+        ]}
+      />,
+    );
+    expect(screen.getByText("Confidence 62% (medium).")).toBeInTheDocument();
+    expect(screen.getAllByText(/Confidence/)).toHaveLength(1);
+  });
+
   it("says the grading informs the decision without making it", () => {
     render(
       <OutcomeVerdictContext

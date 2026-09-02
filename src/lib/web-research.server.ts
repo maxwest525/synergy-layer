@@ -143,7 +143,7 @@ export async function runWebResearch(client: Client): Promise<WebResearchResult>
   const documents: { sourceRef: string; title: string; body: string; tags: string[] }[] = [
     {
       sourceRef: `perplexity:${today}:${objective}`,
-      title: `Research briefing — ${today}`,
+      title: `Research briefing, ${today}`,
       body: search.answer,
       tags: ["perplexity", "briefing"],
     },

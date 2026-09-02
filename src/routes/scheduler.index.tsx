@@ -4,14 +4,9 @@ import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 
 import { OperatorRouteError } from "@/components/os/route-error";
-import {
-  EmptyState,
-  GlassCard,
-  PageHeader,
-  StatePill,
-  formatWhen,
-  toneForState,
-} from "@/components/os/primitives";
+import { EmptyState, GlassCard, PageHeader, StatePill } from "@/components/os/primitives";
+import { formatWhen } from "@/lib/format-when";
+import { toneForState } from "@/lib/state-tone";
 import { Button } from "@/components/ui/button";
 import { runSchedulerTick } from "@/lib/os-admin.functions";
 import { getSchedules } from "@/lib/os.functions";
@@ -30,13 +25,13 @@ export const Route = createFileRoute("/scheduler/")({
   },
   head: () => ({
     meta: [
-      { title: "Scheduler — Marky" },
+      { title: "Scheduler · Marky" },
       {
         name: "description",
         content:
           "Dependency-aware scheduling: recurring work, chained workflows, next run times, and failure counts in one view.",
       },
-      { property: "og:title", content: "Scheduler — Marky" },
+      { property: "og:title", content: "Scheduler · Marky" },
       { property: "og:description", content: "When work runs, and what it waits on." },
     ],
   }),

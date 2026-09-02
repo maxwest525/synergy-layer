@@ -20,7 +20,18 @@ export type Ga4RuleRunResult = {
   observations: number;
   recommendations: number;
   noChange: boolean;
+  /** Rule keys that were evaluated on this run. */
+  rulesEvaluated: string[];
+  /**
+   * Sentences naming what kept a rule from running, so "0 observations" can
+   * be read as "nothing qualified" or "these rules had no prior period"
+   * (CODE-47). Empty when every registered rule ran.
+   */
+  unmet: string[];
 };
+
+const CURRENT_ONLY_RULES = ["zero_engagement_page"] as const;
+const COMPARISON_RULES = ["page_traffic_loss", "page_traffic_gain", "event_disappeared"] as const;
 
 type SnapshotRow = {
   id: string;
@@ -58,7 +69,14 @@ export async function evaluateGa4Snapshots(
     .maybeSingle();
   if (currentError) throw new Error(currentError.message);
   if (!currentSnapshot) {
-    return { reportingDate: null, observations: 0, recommendations: 0, noChange: true };
+    return {
+      reportingDate: null,
+      observations: 0,
+      recommendations: 0,
+      noChange: true,
+      rulesEvaluated: [],
+      unmet: [`No GA4 snapshot is stored for ${property}, so no rule ran.`],
+    };
   }
   const reportingDate = currentSnapshot.end_date;
 
@@ -75,10 +93,17 @@ export async function evaluateGa4Snapshots(
 
   const currentRows = rowsOf(currentSnapshot);
   const observations: Ga4ObservationDraft[] = [...detectZeroEngagementPages(currentRows)];
+  const rulesEvaluated: string[] = [...CURRENT_ONLY_RULES];
+  const unmet: string[] = [];
   if (priorSnapshot) {
     const priorRows = rowsOf(priorSnapshot);
     observations.push(...detectPageTrafficShift(currentRows, priorRows));
     observations.push(...detectDisappearedEvents(currentRows, priorRows));
+    rulesEvaluated.push(...COMPARISON_RULES);
+  } else {
+    unmet.push(
+      `No snapshot at least ${GA4_RULE_THRESHOLDS.comparisonWindowDays} days older than ${reportingDate} is stored for ${property}, so ${COMPARISON_RULES.join(", ")} did not run.`,
+    );
   }
 
   if (observations.length === 0) {
@@ -89,7 +114,14 @@ export async function evaluateGa4Snapshots(
       summary: `GA4 rules found nothing to raise for ${property} on ${reportingDate}.`,
       payload: { property, reportingDate },
     });
-    return { reportingDate, observations: 0, recommendations: 0, noChange: true };
+    return {
+      reportingDate,
+      observations: 0,
+      recommendations: 0,
+      noChange: true,
+      rulesEvaluated,
+      unmet,
+    };
   }
 
   let created = 0;
@@ -121,8 +153,6 @@ export async function evaluateGa4Snapshots(
             description: observation.description,
             source_module: "ga4",
             business_impact: observation.businessImpact,
-            revenue_impact: observation.businessImpact,
-            traffic_impact: observation.businessImpact,
             time_saved_minutes: 0,
             risk: "none",
             confidence: observation.confidence,
@@ -167,6 +197,8 @@ export async function evaluateGa4Snapshots(
     observations: observations.length,
     recommendations: created,
     noChange: false,
+    rulesEvaluated,
+    unmet,
   };
 }
 
@@ -184,6 +216,9 @@ export async function runGa4DailyRules(admin: AdminClient): Promise<{
     property: string;
     status: "succeeded" | "failed";
     observations?: number;
+    reportingDate?: string | null;
+    rulesEvaluated?: string[];
+    unmet?: string[];
     error?: string;
   }>;
 }> {
@@ -199,6 +234,9 @@ export async function runGa4DailyRules(admin: AdminClient): Promise<{
     property: string;
     status: "succeeded" | "failed";
     observations?: number;
+    reportingDate?: string | null;
+    rulesEvaluated?: string[];
+    unmet?: string[];
     error?: string;
   }> = [];
 
@@ -212,6 +250,9 @@ export async function runGa4DailyRules(admin: AdminClient): Promise<{
         property,
         status: "succeeded",
         observations: result.observations,
+        reportingDate: result.reportingDate,
+        rulesEvaluated: result.rulesEvaluated,
+        unmet: result.unmet,
       });
     } catch (ruleError) {
       results.push({

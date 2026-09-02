@@ -12,9 +12,9 @@ import {
   PageHeader,
   PageStack,
   StatePill,
-  formatWhen,
   type Tone,
 } from "@/components/os/primitives";
+import { formatWhen } from "@/lib/format-when";
 import { OperatorRouteError } from "@/components/os/route-error";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,13 +42,13 @@ export const Route = createFileRoute("/roadmap")({
   errorComponent: OperatorRouteError,
   head: () => ({
     meta: [
-      { title: "Build roadmap — Marky" },
+      { title: "Build roadmap · Marky" },
       {
         name: "description",
         content:
           "The shared build queue: add what you want built, watch it move from requested to shipped, and keep the discussion on the item itself.",
       },
-      { property: "og:title", content: "Build roadmap — Marky" },
+      { property: "og:title", content: "Build roadmap · Marky" },
       {
         property: "og:description",
         content: "Add what you want built and follow it from requested to shipped.",

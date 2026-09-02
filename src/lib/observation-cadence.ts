@@ -6,7 +6,9 @@
  * itself. This module holds the pure rules; the server function applies them.
  */
 
-export type CadenceSourceKey = "gsc" | "ga4" | "umami" | "pagespeed";
+import { nextRunAt } from "./cron";
+
+export type CadenceSourceKey = "gsc" | "ga4" | "umami";
 
 export type CadenceSource = {
   key: CadenceSourceKey;
@@ -53,16 +55,18 @@ export const OBSERVATION_SOURCES: readonly CadenceSource[] = [
     storeLabel: "Umami snapshots",
     proveHref: "/measurement/tools",
   },
-  {
-    key: "pagespeed",
-    label: "PageSpeed",
-    scheduleKey: "pagespeed-daily-observe",
-    defaultCron: "15 17 * * *",
-    provider: "pagespeed",
-    storeLabel: "PageSpeed snapshots",
-    proveHref: "/measurement/tools",
-  },
 ] as const;
+
+/**
+ * PageSpeed has no cadence. Nothing declares a `pagespeed-daily-observe`
+ * workflow, no pg_cron job targets one, and the scheduler hook's allowlist
+ * refuses the key, so the card that offered "Turn on the daily cadence" could
+ * only throw when pressed (MEAS-18). The list says so instead of offering a
+ * switch that cannot work; `observation-cadence.test.ts` proves every listed
+ * source has a declared workflow behind it.
+ */
+export const PAGESPEED_HAS_NO_CADENCE =
+  "PageSpeed is not listed: nothing in AOOS can schedule it. It is read only when you run a check yourself on the Site health page, and each reading is stored there.";
 
 export function cadenceSource(key: CadenceSourceKey): CadenceSource {
   const source = OBSERVATION_SOURCES.find((entry) => entry.key === key);
@@ -98,6 +102,11 @@ export type CadenceStatus = CadenceFacts & {
   eligible: boolean;
   /** Eligible and switched on. */
   active: boolean;
+  /**
+   * The due time passed a whole further period ago with no run recorded and
+   * no error to point at: the only trace a silently stopped scheduler leaves.
+   */
+  overdue: boolean;
   tone: "success" | "warning" | "danger" | "neutral";
   stateLabel: string;
   /** Fact plus imperative, always with one next step. */
@@ -106,10 +115,25 @@ export type CadenceStatus = CadenceFacts & {
   action: "prove" | "enable" | "disable";
 };
 
-export function deriveCadenceStatus(source: CadenceSource, facts: CadenceFacts): CadenceStatus {
+export function deriveCadenceStatus(
+  source: CadenceSource,
+  facts: CadenceFacts,
+  now: Date = new Date(),
+): CadenceStatus {
   const eligible = facts.storedRowCount > 0;
   const active = eligible && facts.scheduleExists && facts.scheduleEnabled;
   const failing = Boolean(facts.lastError);
+  // Overdue is derived from the schedule itself, not from a chosen number: the
+  // row said when it would fire next, and a whole further period has passed
+  // with no run recorded. That is the only signal a silently stopped
+  // scheduler leaves (MON-2).
+  const expectedAt = facts.nextRunAt ? new Date(facts.nextRunAt) : null;
+  const overdueAfter =
+    expectedAt && facts.cron && !Number.isNaN(expectedAt.getTime())
+      ? nextRunAt(facts.cron, expectedAt)
+      : null;
+  const overdue =
+    active && !failing && overdueAfter !== null && now.getTime() > overdueAfter.getTime();
 
   let stateLabel: string;
   let tone: CadenceStatus["tone"];
@@ -137,6 +161,12 @@ export function deriveCadenceStatus(source: CadenceSource, facts: CadenceFacts):
     action = "disable";
     actionLabel = "Turn off the daily cadence";
     instruction = `${source.label} runs daily but the last run reported an error. Read the error below, fix it, or turn the cadence off.`;
+  } else if (overdue) {
+    stateLabel = "Cadence overdue";
+    tone = "danger";
+    action = "disable";
+    actionLabel = "Turn off the daily cadence";
+    instruction = `${source.label} was expected to run at ${expectedAt!.toISOString()} and a full period has passed; nothing has recorded a run since ${facts.lastRunAt ?? "the cadence was turned on"}. Check the scheduler, or turn the cadence off.`;
   } else {
     stateLabel = "Cadence on";
     tone = "success";
@@ -153,6 +183,7 @@ export function deriveCadenceStatus(source: CadenceSource, facts: CadenceFacts):
     proveHref: source.proveHref,
     eligible,
     active,
+    overdue,
     tone,
     stateLabel,
     instruction,

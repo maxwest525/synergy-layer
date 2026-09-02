@@ -3,13 +3,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 
-import {
-  EmptyState,
-  GlassCard,
-  PageHeader,
-  StatePill,
-  formatWhen,
-} from "@/components/os/primitives";
+import { EmptyState, GlassCard, PageHeader, StatePill } from "@/components/os/primitives";
+import { formatWhen } from "@/lib/format-when";
 import { getKnowledge } from "@/lib/os.functions";
 import { Button } from "@/components/ui/button";
 import {
@@ -34,13 +29,13 @@ export const Route = createFileRoute("/knowledge/")({
   },
   head: () => ({
     meta: [
-      { title: "Knowledge — Marky" },
+      { title: "Knowledge · Marky" },
       {
         name: "description",
         content:
           "The central knowledge layer: documents, repositories, skills, prompts, playbooks, research, and agent memory.",
       },
-      { property: "og:title", content: "Knowledge — Marky" },
+      { property: "og:title", content: "Knowledge · Marky" },
       {
         property: "og:description",
         content: "Everything the operating system knows, in one layer.",

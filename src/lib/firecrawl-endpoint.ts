@@ -15,6 +15,14 @@
  * The cloud is the fallback, never the default. `selfHosted` is returned so a
  * caller can say which one answered rather than leaving the operator to guess
  * from a bill.
+ *
+ * This chooser reads presence only: it cannot tell a working self-hosted key
+ * from one the box rejects, and it never calls anything to find out. The
+ * connection probe is what validates the credential, and the page audit, the
+ * one caller that would send a hundred requests, reads that probe first and
+ * refuses by name when the last check failed (`selfHostedFirecrawlRefusal`,
+ * CODE-17). A cloud key set beside a full self-hosted pair still changes
+ * nothing here; that is the stated preference, not an oversight.
  */
 
 export type FirecrawlEndpoint = {
@@ -57,4 +65,24 @@ export function firecrawlEndpoint(
   }
 
   return null;
+}
+
+/** What the connection probe last recorded for the self-hosted deployment. */
+export type SelfHostedFirecrawlCheck = {
+  readonly health: "unknown" | "healthy" | "degraded" | "failing";
+  readonly lastCheckedAt: string | null;
+  readonly probeOutcome: string | null;
+};
+
+/**
+ * The sentence that stops a scrape before it starts when the self-hosted
+ * deployment failed its last check, or null when nothing recorded says it
+ * would be refused. A missing check is not a failed one: the first audit on a
+ * fresh workspace must not be blocked by a probe nobody has run yet.
+ */
+export function selfHostedFirecrawlRefusal(check: SelfHostedFirecrawlCheck | null): string | null {
+  if (!check || check.health !== "failing") return null;
+  const when = check.lastCheckedAt ? ` at ${check.lastCheckedAt}` : "";
+  const outcome = check.probeOutcome ? ` (${check.probeOutcome.replaceAll("_", " ")})` : "";
+  return `Self-hosted Firecrawl failed its last check${when}${outcome}, so nothing was sent to it. Re-run the check on Connection health and fix the deployment, or remove SELFHOSTED_FIRECRAWL_BASE_URL and SELFHOSTED_FIRECRAWL_API_KEY so the metered cloud is used instead.`;
 }

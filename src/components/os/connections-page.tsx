@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { Plug, TriangleAlert } from "lucide-react";
 
 import { useOperatorSession } from "@/hooks/use-operator-session";
+import { formatWhen } from "@/lib/format-when";
 import { buildConnections, type ConnectionRow, type ConnectionStage } from "@/lib/connections";
 import { getConnectionFacts } from "@/lib/connections.functions";
 import { cn } from "@/lib/utils";
@@ -51,6 +52,15 @@ function ConnectionCard({ row }: { row: ConnectionRow }) {
         </span>
       </span>
       <span className="text-xs leading-snug text-muted-foreground">{row.reason}</span>
+      {row.table !== null ? (
+        // The stage above is as of this row; without it an hour-old and a
+        // month-old "reaching you" read the same.
+        <span className="text-xs leading-snug text-subtle">
+          {row.newestAt === null
+            ? "No successful row stored yet."
+            : `Newest stored row ${formatWhen(row.newestAt)}.`}
+        </span>
+      ) : null}
       <span className="text-xs leading-snug text-subtle">{row.promise}</span>
     </li>
   );

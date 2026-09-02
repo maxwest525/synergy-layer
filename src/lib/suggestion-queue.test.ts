@@ -114,7 +114,7 @@ describe("restore and ignore legality", () => {
     expect(queue.ignored[0]?.canRestore).toBe(false);
   });
 
-  it("offers regenerate only for a title fix that is still a draft", () => {
+  it("offers regenerate only for a wording or description fix that is still a draft", () => {
     const queue = buildQueue(
       [
         source({ id: "ok", kind: "change", storedState: "proposed", proposalType: "page_wording" }),
@@ -125,7 +125,7 @@ describe("restore and ignore legality", () => {
           storedState: "applied",
           proposalType: "page_wording",
         }),
-        // The page-metadata lane has no redraft path at all.
+        // The page-metadata lane gained its redraft path on 2026-09-02 (CODE-4).
         source({
           id: "meta",
           kind: "change",
@@ -142,7 +142,7 @@ describe("restore and ignore legality", () => {
     );
     expect(byId.get("ok")).toBe(true);
     expect(byId.get("frozen")).toBe(false);
-    expect(byId.get("meta")).toBe(false);
+    expect(byId.get("meta")).toBe(true);
     expect(byId.get("finding")).toBe(false);
   });
 

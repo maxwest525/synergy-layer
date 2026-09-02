@@ -34,6 +34,668 @@ Last updated: 2026-08-31, after wiring Google Ads campaign reporting
 describes 2026-08-21 and has NOT been rewritten; the current-state blocks
 immediately below supersede it.
 
+## 0br. The site audit reads the protocol layer, 2026-09-02
+
+Under robots.txt and the sitemap, the audit now reads what plain http
+answers, what the https homepage sends and how fast, what the other host
+spelling does, and whether the homepage loads anything over plain http,
+without following redirects. Six checks each cite their sentence
+(Google's HTTPS and duplicate-URL guidance, web.dev's 800 ms first byte);
+all are server changes with no governed fix, and the hardening headers
+are named as browser hardening, not a ranking signal (CODE-25).
+
+## 0bq. Registration records are read on a click and ownership is decided by hand, 2026-09-02
+
+The whois producer had no trigger and the ownership candidates it would
+file had no page. Your competition now carries one metered click, "Read
+registration records", with its cost stated, and a "Who owns which
+domain" card that lists every candidate the two discovery rules file,
+says which detail matched, and records the operator's decision (CODE-27).
+
+## 0bp. A meta description draft can be redrafted, 2026-09-02
+
+The wording lane could regenerate a draft in place; the description
+lane could only be rejected and drafted again. `revise_page_metadata_proposal`
+(live and ledgered) is the same immutable-revision write for that lane,
+`regeneratePageMetadataProposal` redrafts under the draft's own evidence
+mode, and the suggestion card and the change page offer the verb for
+both lanes (CODE-4).
+
+## 0bo. Every "waiting" says what it counts, 2026-09-02
+
+Four surfaces used one word for four counts. Each now names its own: the
+action center lane counts page changes waiting on a yes or no, the
+suggestions panel splits its number into decisions and executions, the
+Command center's "Showing X of Y" line names the queue's three kinds,
+and the pages tile says it counts pages, not fixes (CODE-32).
+
+## 0bn. The page audit refuses a Firecrawl box that failed its check, 2026-09-02
+
+The endpoint chooser trusts a present self-hosted key; only the
+connection probe knows whether the box accepts it. The page audit now
+reads that probe before rendering and refuses by name when the last
+check failed, with the outcome and both ways out, instead of sending a
+hundred requests to a 401. A probe that has never run does not block
+(CODE-17, disarmed where it bites; the chooser is unchanged).
+
+## 0bm. A host that cannot operate says so, 2026-09-02
+
+On a host without the service-role credential every operator action
+failed with a generic 500 and nothing said why. The shell now asks the
+host whether `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are present
+(names only) and renders one banner naming the absence and where
+production runs (CODE-46, code half; the Vercel decision stays with the
+operator).
+
+## 0bl. Agent rows are read-only to operators and the runner refuses agent nodes honestly, 2026-09-02
+
+The executor behind `assertRunnableGraph` used to mark an agent row as
+executing a node and return ok having done nothing; it now refuses by
+name (CODE-19). `agents` and `agent_capabilities` carried an ALL policy
+for any operator while the only writer is the registry sync; the sync
+writes as the service role behind its operator check and the two write
+policies are gone, live and ledgered (CODE-20).
+
+## 0bk. Lint is down to the six shadcn warnings, 2026-09-02
+
+`formatWhen`, `toneForState` and the workflow step words moved out of
+component files into `src/lib` with tests, the spacing scale stopped
+being exported, and the suggestions panel memoises its items on the
+query result. The six warnings left are shadcn's own variant-helper
+exports in `ui/*`, kept as that library ships them (CODE-84, from CQ-10).
+
+## 0bj. Three chosen figures say they are chosen, 2026-09-02
+
+The card urgency ages (14 and 3 days), the PageSpeed measurement
+confidence (0.75) and the knowledge retrieval weights carried no stated
+basis. Each now carries the `Stated assumption:` comment AGENTS.md asks
+for, naming the choice and the stored data that would settle it; the
+figures are unchanged (CODE-83, from AGT-15). The website-side lead
+tracking fix (MEAS-12) is drafted but waits on push access to the
+website repository (OP-12).
+
+## 0bi. Every colour on screen resolves to a token, 2026-09-02
+
+Eight screens used amber and emerald palette classes, so the "needs
+attention" yellow was three hues, and one card shadow wrapped an oklch
+token in hsl() and never rendered. All resolve to the warning and
+success tokens now, the shadow reads the border token directly, and a
+test walks every screen file for a raw palette class or an hsl-wrapped
+token (CODE-82, from DS-2).
+
+## 0bh. Connections say when the newest row arrived, 2026-09-02
+
+"Reaching you" carried no date, so an hour-old and a month-old connection
+read the same. Each stored table now names its timestamp column,
+checked against the generated types, the facts read the newest
+successful row through the same filters as the counts, and every row
+with a store says when that row arrived or that none has (CODE-77, the
+second half of STATE-4).
+
+## 0bg. No em dashes reach the screen, 2026-09-02
+
+They had reached a dozen surfaces and stood in for an absent value on 25
+metric cells, and 44 tab titles used one while five used a middle dot.
+Every sentence now separates its clauses with a comma, colon or full
+stop; an absent value reads "not reported", "not observed" or "not
+recorded"; every tab title ends " · Marky"; and a test walks every screen
+file and the copy modules and fails on the first one back (CODE-81, from
+COPY-2).
+
+## 0bf. A stopped daily read reaches the Command center, 2026-09-02
+
+The cadence card already derived "overdue" from the schedule row, but
+nothing else read it: the next actions needed a recorded failed run and
+the status line could not see it. One shared read (`readObservationCadences`)
+now feeds the card, a next action naming the stopped read with its due
+time, and a status line that says "N daily reads are overdue" ahead of a
+failing provider (CODE-80, from MEAS-10).
+
+## 0be. Agent chat reads the workspace the operator selected, 2026-09-02
+
+The evidence tools behind Ask resolved the tenant from the operator's
+first membership row; every other server read uses the saved active
+tenant first. They now share `resolveTenantId`, so the agent answers
+about the workspace named in the shell's switcher (CODE-79, from AGT-14).
+
+## 0bd. The waiting-on banner counts the page's own rules, 2026-09-02
+
+Three pages each built the thirteen-key prerequisite state by hand and
+had drifted, and the banner counted every rule in the registry, so Your
+pages could say seventeen checks were waiting on a second collection when
+none of its rules needed one. One builder holds the not-read-here default,
+each page passes what it reads plus its category, and the count is scoped
+to rules that land on that page; every rule with a prerequisite now names
+its category by rule, pinned by test (CODE-78, from CQ-8).
+
+## 0bc. The Command center says when each number was true, 2026-09-02
+
+The category pages dated their own windows; the Command center, which
+draws on all of them, dated nothing, and "All systems normal" carried no
+time. One line under the heading now dates the search window, the visits
+window, the newest page observation and the newest connection probe, or
+names the one that is missing, and the status line says the stored moment
+its claim rests on: the newest probe for a broken connection, the newest
+run for a failing provider, the older of the two for green (CODE-76, from
+STATE-4). The Connections rows still carry no date (CODE-77).
+
+## 0bb. PageSpeed no longer offers a cadence nothing can tick, 2026-09-02
+
+The cadence card offered "Turn on the daily cadence" for PageSpeed and
+threw when pressed: no workflow, no cron job, and a hook allowlist that
+refused the key. PageSpeed is off the observation-source list; the
+section says it is read only on an operator's own check, and a test
+proves every listed source has a declared workflow behind its schedule
+key (CODE-75, from MEAS-18).
+
+## 0ba. The breadcrumb names the page you are on, 2026-09-02
+
+The trail stopped at the category on every nested view and read labels
+off the URL outside the categories. `src/lib/breadcrumbs.ts` now builds
+one crumb per path segment from names a person wrote: the category
+model, the sidebar's own labels, a short view-title map, and a kind word
+for a row under a list. The ancestor is always a link and the current
+crumb is the page the operator is on; a test walks every route file and
+fails when a segment has no name (CODE-74, from NAV-8).
+
+## 0az. The nightly proposal job frees a page once its change is decided, 2026-09-02
+
+`propose-from-evidence` used to exclude any page that had ever carried a
+change request, whatever its state, so one rejection silenced a page for
+good. It now skips a page only while a change on it is proposed, approved,
+or live inside its measurement window, by the same in-flight rule the
+approval control uses; rejected, rolled-back, verified and fully measured
+changes leave the page open again (CODE-73, from AGT-9).
+
+## 0ay. "0 min saved" reads as the absence it is, 2026-09-02
+
+Every rule writes `time_saved_minutes: 0` because nothing estimates it,
+and the screens rendered the zero as a measurement. It now reads "Not
+estimated" on the detail page, is omitted from the list line, and is no
+longer projected by the MCP read; a typed seed figure still shows as
+minutes (CODE-72, from AGT-4).
+
+## 0ax. Stored states read as words, 2026-09-02
+
+Every state pill replaced underscores and capitalised every word, so
+`awaiting_approval` read "Awaiting Approval" and `unknown` read "Unknown"
+for a connection nobody had checked. A label map now covers every
+database enum, exhaustively and checked, plus the text states the
+screens render; the pill and the eight hand-replaced sites read it, and
+a caller's own phrase passes through unchanged (CODE-71, from COPY-1).
+
+## 0aw. Who links to the rivals and not to you, on a click, 2026-09-02
+
+The competitor link intersect existed as defaults and nothing else. One
+Backlinks domain-intersection request across every approved competitor,
+with the owned site excluded, now runs on an operator click on the
+competitors page with the estimate shown; the snapshot is stored, read
+back by a pure parser, and the page lists the sites linking to all
+tracked competitors and not to you, saying when the read was made and
+when it filled its limit. It files nothing and tracks nothing (CODE-70,
+from LINK-4).
+
+## 0av. The two declared agents that could not run are gone, 2026-09-02
+
+`growth.analyst` and `content.strategist` were registry declarations
+rendered at `/agents` as if they could be run, while the agent runtime
+throws on every call and the runner refuses any graph with an agent
+node, so their two workflows were unrunnable by construction and both
+pinned a model slug the model layer exists to avoid. The declarations
+and the two agent rows are gone; the two workflow rows stay paused
+because each carries two recorded runs, and run history is not deleted.
+The two pending capabilities they referenced stay declared as pending.
+A declaration returns the day the runtime does (CODE-14).
+
+## 0au. The five public hooks are tested at the handler, 2026-09-02
+
+The scheduler tick, the nightly proposal job, the DataForSEO postback and
+the two OpenAI Ads bridges were covered at the helper level and not at
+the handler a caller reaches. Five tests now call each route's POST
+handler directly: the missing or unverified token, the schedule outside
+the allow-list, the hash-only token lookup, the body about another task,
+the unknown tenant and wrong secret answering alike, the unconfigured
+bridge, the empty-batch health checks, the exact work each hook hands on,
+and the bare failure a thrown handler returns (CODE-69, from CQ-5).
+
+## 0at. Route searches the approved set does not name, 2026-09-02
+
+The tracked keywords are forty synonyms of one head term and no route
+query, while the route-matrix operators compete on route queries. The
+targeting pass now files one finding when no approved keyword names a
+journey and Search Console has already recorded route searches reaching
+the site, listing those searches with their impressions and clicks for
+the operator to choose from. It invents no keyword and approves nothing
+(CODE-68, from COMP-1).
+
+## 0as. A schedule is claimed before it runs, 2026-09-02
+
+Two ticks that both read a schedule as due both ran it. The tick now
+claims the row with a conditional update on the very `next_run_at` it
+read, so whichever tick moves the row first owns the run and the other
+runs nothing and says so (CODE-67, from CQ-2).
+
+## 0ar. A connection's health says when it was checked, 2026-09-02
+
+Connector health is probed on a click, and the ledger card showed the
+health and the probe outcome with nothing about when that probe ran. The
+readiness projection now carries the check time, only when a probe
+stands behind the health, and the card prints it beside the outcome
+(CODE-66, from MON-20).
+
+## 0aq. Google Ads spend is shown against its budget, 2026-09-02
+
+The campaign-day report stored spend and conversions and nothing about
+the ceiling the spend runs against. The query now selects the campaign
+budget, the row keeps it (null when the API reports none, never 0) and
+the measurement page shows "budget $X a day" beside each day's spend.
+Nothing here changes a budget; the ceiling is set in Google Ads
+(CODE-65, from PAID-1).
+
+## 0ap. Authority rules read only what exists, 2026-09-02
+
+Ten authority rules were declared; the evaluator supplies observed ranks
+from stored Search Console rows and nothing else, so eight could never
+fire. They are gone with their inputs and tests. The two that read what
+exists stay: a single observed rank is not ranking capacity, and a
+top-ten rank with no satisfaction measure names the missing measurement
+(CODE-64, from CONTENT-4).
+
+## 0ao. Backlink authority is not scored, and the card says so, 2026-09-02
+
+A seven-factor "health score" sat on the backlink evidence pass with
+every factor hard-wired to null, so it answered "insufficient" forever,
+and the Essentials authority card read that back as a stored verdict.
+The scaffold is gone. The evidence pass records which collections came
+back empty and nothing else about health; the card says nothing in AOOS
+scores backlink authority and shows the stored sample (CODE-63, from
+LINK-1).
+
+## 0an. Publishers that rank alongside you are no longer hidden, 2026-09-02
+
+The SERP-derived classifier's "surface" list mixed general web platforms
+with nine moving-niche publishers and marketplaces, so moveBuddha,
+Moving.com and move.org, which the research log names as the route-matrix
+rivals, were filed as surfaces the competitor screen never presents. The
+list holds general platforms only now; what a business is stays the
+operator's declaration in `company_classification`. The four derived rows
+were corrected live, and the badge says "Ranks alongside you" rather than
+"Business competitor" (CODE-62, from COMP-2).
+
+## 0am. Keyword discovery files what it found, 2026-09-02
+
+Suggestions and gap keywords under ten monthly searches were discarded
+before an operator saw them, a number no doctrine names, and a candidate
+with no volume figure was read as zero and dropped too. Nothing is
+filtered on volume now: candidates are ordered by volume with unknown
+volumes after the known ones, the per-run cap files the top of the list,
+and the run result counts what the cap left, what had no figure and what
+was irrelevant to the seeds (CODE-61, from CONTENT-1).
+
+## 0al. A schedule the tick cannot run fails, 2026-09-02
+
+The tick recorded any schedule whose target was not a workflow as
+succeeded without doing anything. It now throws, so the firing is written
+down as failed with the reason and the row's health turns failing. No
+live row has another target kind today (CODE-60, from MON-21).
+
+## 0ak. A mention without a link is now a finding, 2026-09-02
+
+Brand-mention snapshots and referring-domain snapshots were both stored
+and never compared. The fifth discovery rule,
+`brand_mentioned_without_a_link`, files one finding per domain that names
+the brand and is absent from the newest referring-domain read, leaving
+out owned hosts and known competitors. The claim is exactly what was
+compared: a referring-domain read that filled its limit yields "not among
+the first N linking domains by rank, which is where the stored read
+stopped". Without both reads the rule names what it is waiting on and
+files nothing (CODE-59, from LINK-3).
+
+## 0aj. One Command center, 2026-09-02
+
+`/command-center` kept the legacy overview, eight count tiles and spend,
+capability and run lists that showed a zero on a first run or a failed
+read, while `/` states an absence as an absence; the navigation linked
+only `/`. The old route now redirects to `/`, and the legacy page, its
+server function and its reads are gone. The `command_center_overview`
+database routine stays with no caller (CODE-58, from NAV-1 and STATE-1).
+
+## 0ai. Scheduler firings are durable, 2026-09-02
+
+`cron.job_run_details` says "succeeded, 1 row" for every firing because
+the job only queues an HTTP request, and the HTTP outcome is kept for
+hours; the schedule row keeps only its last state, so the days the tick
+answered 500 left no trace. `schedule_runs` now keeps one row per firing:
+who fired it, state, duration, error and the workflow run it started,
+written by the tick for every claimed or blocked schedule and by the hook
+when the tick throws before claiming anything. The schedule page lists
+them. The two schedule rows that disagreed with their cron entries by
+five minutes now say the minute that actually fires (CODE-48, from MON-3).
+
+## 0ah. SERP tasks carry every surface on the page, 2026-09-02
+
+Every SERP task was posted and retrieved as `regular`, which returns
+organic and paid items only, so featured snippets, People also ask, AI
+overviews and local packs never reached the stored rows and the competitor
+second pass could not name them. Tasks are now posted and retrieved as
+`advanced`, on the scheduled path, the backlog sweep and the live
+inspection alike. Rank still reads organic items only; the other item
+types are the surfaces on that SERP, and the competitor profile's
+"surfaces involved" line fills from the next observation on. The provider
+bills per SERP, not per result type (CODE-57, from COMP-4).
+
+## 0ag. Two failures now reach the Inbox, 2026-09-02
+
+The nightly proposal job pauses itself on a terminal configuration
+failure and used to record that only on its own row, which no screen
+reads; a failed or refused governed commit or revert was stored and shown
+only in the change page's history. The job now files one needs-attention
+item the night it pauses and resolves it the night a probe succeeds; a
+failed or refused source attempt files one open item per change, naming
+the reason, and a later attempt that lands closes it (CODE-56, from MON-9
+and MON-10).
+
+## 0af. The coverage page says evaluation is not built, 2026-09-02
+
+Fifty-four concerns, fifty-four templates, zero evaluations ever: two
+readers and no writer. The coverage card said "no evaluation has been
+stored yet", which implied an evaluator waiting to run. It now says that
+nothing in AOOS grades a concern, that the page tracks who owns each and
+when it is due, and that it makes no claim about whether one is working.
+The next-actions read of the empty table is gone; the coverage read and
+the model stay for the day an evaluator exists (CODE-43, from DB-9).
+
+## 0ae. A verdict shows the confidence it rests on, 2026-09-02
+
+The verdict module already computed a confidence for every count-based
+grading and used it only to force a low-confidence reading to neutral, so
+a success resting on a 0.4 rendered exactly like one resting on a 0.9.
+The assessment now carries the confidence on the success, failure and
+low-confidence-neutral branches; the graded reading carries it through;
+and the change page and the site health outcomes tab print "Confidence N%
+(band)" under the reason, and nothing where no comparison was made
+(CODE-55, from MEAS-7).
+
+## 0ad. A blocked SEO run says why, 2026-09-02
+
+All six stored SEO runs were `preflight_blocked` with no reason on the
+row: the preflight result went to the run's event payload and nowhere the
+run screen reads. Two of the six blocked on the cloud Firecrawl connection
+being pending while the self-hosted renderer, which every page proof and
+competitor observation already uses, sat real and healthy beside it. The
+server now writes the reason to the run, the preflight accepts the
+self-hosted renderer as a stand-in for the cloud one, and migration
+`20260902080000`, applied live and ledgered, backfills the six reasons,
+lets `change_type` carry the lane's current name (`page_wording`), and
+moves the rows (CODE-44, from DB-11).
+
+## 0ac. Search Console attempts are ledgered like every other provider's, 2026-09-02
+
+A failed Search Console observation reached `capabilities.health` and an
+Inbox item, and nowhere the operator looks first: the cadence card reads
+`measurement_runs`, and the Command center counts a provider as failing
+from its newest run, and Search Console never wrote one (the CHECK on
+`provider` did not admit it). Migration `20260902070000`, applied live and
+ledgered, admits `gsc`; `run-ledger.server.ts` opens a row with service
+credentials before Google is touched and closes it with the outcome, in
+the manual observation and in the scheduled collection node alike, and
+closing the row can never mask the failure it records (CODE-54, from
+MON-5).
+
+## 0ab. Two monitoring controls that could only read well, 2026-09-02
+
+The cadence card had no word for a scheduler that silently stopped: a row
+whose `next_run_at` was days in the past still read "Cadence on" while its
+last stored run carried no error. It now reads "Cadence overdue" once a
+whole further cron period has passed after the row's own expected firing
+with no run recorded, a threshold taken from the schedule itself rather
+than chosen. The Command center's "All systems normal" was derived from a
+`tool_systems` column nothing ever sets to "failed", so the light could
+only be green; it now counts connections whose probe wrote `failing`, and
+until at least one connection has been probed it says "Connections have
+never been checked" instead of claiming they are fine. The next-actions
+"broken systems" count reads the same rows (CODE-53, from MON-2 and MON-4).
+
+## 0aa. The GA4 rules say which of them ran, 2026-09-02
+
+Twenty-seven successful GA4 rule runs recorded `observations: 0` and
+nothing more, so the findings panel could not tell "one rule ran and
+nothing qualified" from "three rules never ran because no prior snapshot
+existed" (CODE-47). The evaluator now returns the rule keys it evaluated
+and a sentence for each reason a rule could not run; the daily runner
+carries both into the `ga4.rules` step output; and the findings panel reads
+the latest stored step and prints them above the list, the way
+`unmetPrerequisites` already does for the Search Console rules. A run
+recorded before the words existed renders as having none.
+
+## 0z. A finding carries no impact it never estimated, 2026-09-02
+
+Every rule module wrote its business impact three times: once as the
+business impact, then again as the revenue impact and the traffic impact.
+111 of 115 findings read "revenue: high" or "traffic: medium" on the
+strength of nothing, on the list, on the detail page, and through the MCP
+tools; no revenue evidence is collected anywhere and no rule estimates
+traffic (AGT-3 in the review; CODE-51). The nine modules no longer write
+the two columns; migration `20260902060000`, applied live and ledgered, put
+the 111 copied rows back at the default and left their ids on an activity
+event; the default now renders as "Not estimated", the list shows a
+traffic or revenue pill only when a stored estimate exists, and the MCP
+projections stop exporting the two columns. Three seeded rows and one
+hand-set Search Console row keep the values they had.
+
+## 0y. Applied means proven live, and there is no other way in, 2026-09-02
+
+The manual "Mark applied" button left the screen on 2026-08-21, but the
+action it called did not leave the database: `transition_change_request`
+still accepted `mark_applied` from any operator, approved to applied with
+no rendered proof (AGT-2 in the review; CODE-7). Every real application
+has gone through `apply_change_request_rendered_proof`, and no applied row
+lacks a proof, so nothing stored changes. Migration `20260902050000`,
+applied live and ledgered, makes the routine refuse the action by name;
+the wrapper server function, the action type and the `approved` row of the
+state matrix are gone with it, so the pure state module and the database
+say the same thing: an approved change moves forward only when the
+rendered public page carries the exact approved wording.
+
+## 0x. The bridge secret is the one the caller's connection names, 2026-09-02
+
+The two OpenAI Ads bridge hooks verified every caller against one global
+variable and then let the payload choose the tenant by slug, so any
+tenant's caller could have written another tenant's events; they also
+advertised CORS to every origin with the secret header allow-listed, an
+invitation to a browser caller that would ship the secret (CODE-37).
+Migration `20260902040000`, applied live and ledgered, adds
+`bridge_secret_name` to the connection row, naming the server variable
+that holds its bridge secret the way `secret_name` names the provider
+credential; the default is the variable in use today, so the website and
+the live bridge are unchanged. Both hooks now resolve the tenant from the
+slug first, verify against that tenant's variable, and answer an unknown
+tenant and a wrong secret alike. The CORS surface is gone: the only caller
+is the website's server-side function. The connection settings screen shows
+the bridge secret's name and whether the host carries it, beside the
+provider credential it already showed.
+
+## 0w. A scheduled run works for the tenant its schedule names, 2026-09-02
+
+The scheduler ran every workflow through the service-role client and let
+`requireTenantId` resolve the tenant from that client, which sees every
+profile: the answer was whichever account's active workspace sorted first,
+cached for the process lifetime. With one tenant that was invisible; with a
+second it would have written every scheduled observation to the wrong
+workspace (CODE-50, from AGT-1 and CQ-1). Now the service-role client
+resolves a tenant only from an explicit id or the sole tenant, and caches
+nothing; a workflow schedule names the tenant it runs for and is refused,
+with the reason on the activity feed, when it names none; the run carries
+its own `tenant_id` to every node instead of re-resolving it; and the
+selected Search Console property is read by tenant. The four `sch.*`
+template schedules with no tenant are all disabled, so nothing changes for
+the four jobs that run today.
+
+## 0v. A callback is authenticated by something only the task knows, 2026-09-02
+
+Migration `20260902030000_postback_token_and_shared_rows.sql`, applied live
+and ledgered, closes CODE-34 and CODE-36. The DataForSEO Standard-queue
+postback had been authenticated by the project's publishable key, which
+ships in the browser bundle: any caller who read it passed the gate and
+triggered a service-role lookup. Each task now carries its own random
+token in the postback URL; the table stores the token's SHA-256 and nothing
+else; the receiver hashes what it is handed, finds the task by hash, refuses
+a body that is not about that task, and answers every refusal with the same
+401 (`src/lib/dataforseo/postback-token.ts`, pure and tested). No task was in
+flight at the switch. No rate limit was added, because its threshold would
+be an invented number.
+
+Audit rows with no tenant were readable by every authenticated account
+because `is_tenant_member(NULL)` is true by design for shared rows. The read
+policy on `activity_events` now distinguishes the two cases (a row with a
+tenant reads for its members; a row without one reads for admins and its
+own actor or subject), the write policies on the three tables that hold
+shared rows require the admin role for a row with no tenant, and the auth
+and MCP audit writers file the operator's active workspace on the row.
+
+Corrected on the way: the OP-11 claim of seven `USING (true)` registry read
+policies was stale; the live catalog holds one, on
+`essential_concern_templates`. The sign-up decision still stands.
+
+## 0u. Membership is not authority: the database-side pass, 2026-09-02
+
+Migration `20260902020000_membership_is_not_authority.sql`, applied live and
+ledgered the same day, closes the database half of the 2026-09-02 review
+(CODE-35, CODE-38, CODE-39, CODE-40, CODE-41, CODE-42, CODE-45). Approval now
+locks every lane: the immutability guard fires on the state alone rather
+than on the lane's old name, so the five approved page wording rows and the
+page metadata row can no longer be rewritten after approval. The revise
+routine accepts the lane it serves (`page_wording`), which it had refused
+since the rename, so Edit and Regenerate on a draft can now write a version
+row for the first time. Every routine that took an actor from its caller
+binds it to the session when there is one; the null-actor system path is
+the server's. Membership alone no longer advances a workflow run, reassigns
+a concern, seeds concerns, or records an audit row: each asks for the
+operator role. Provisioning creates the tenant membership it never created,
+the allow-list names the workspace an entry joins, and a profile can only
+point at a workspace the account belongs to. The three vendor schedules that
+read "on" with nothing behind them are off, with the reason on the activity
+feed. The anon role holds no table privilege in `public` and the REST API
+answers 401 where it answered 200 with an empty list.
+
+Two migrations in this directory had never run, found while repairing the
+ledger: the trigger widening in `20260819213000` and the windows CHECK in
+`20260820200000`. The second was a break waiting to happen: the live
+trigger inserts 56 and 90-day windows that the live constraint refused, so
+the next rendered proof would have failed inside the proof routine with five
+approved changes waiting on it (CODE-49). Both effects are re-issued here.
+Every hand-named migration file now has a ledger row; those two are named
+superseded and must stay ledgered, because replaying either would break.
+
+Still open from the review: the postback authenticated by the public key
+(CODE-34), audit rows with no tenant (CODE-36), the Ads bridge secret
+(CODE-37), the unbuilt concern evaluator (CODE-43), the blocked SEO runs
+(CODE-44), the Vercel origin (CODE-46), GA4 observation reasons (CODE-47),
+scheduler outcome durability (CODE-48), and the operator decisions in
+OP-11.
+
+## 0t. Security review, first hardening pass, 2026-09-02
+
+A ten-lens gap analysis ran on 2026-09-02 (security and tenancy, database
+drift, measurement, technical SEO, agent runtime, navigation, code quality,
+documentation, growth capabilities, monitoring); its digest is filed at
+`docs/handoffs/2026-09-02-gap-analysis-digest.md`, pre-refutation, and every
+finding not closed in this pass has a backlog ID. Closed here, all
+application-level and covered by tests: the two streaming model routes and
+the next-actions re-ranking now require the operator role rather than any
+valid session (sign-up is open on the auth project); the page audit requires
+the operator role; the five public hooks compare their secret in constant
+time; the three hook failure bodies no longer echo the error, so a public
+caller cannot learn which environment variable a host lacks; and the
+execution readiness read discloses credential presence only after
+authentication. `TENANCY_PERMISSIONS.md` carries the same record.
+
+Not closed here, recorded as CODE-34 through CODE-48 and OP-11: the
+database-side hardening (migration ledger, the immutability trigger that
+guards only the old lane name, the revise function that refuses the lane it
+serves, membership-only write paths, provisioning without membership, the
+anon role's default privileges), the postback authenticated by a public key,
+and the operator decisions (close sign-up, the Vercel origin).
+
+## 0s. A page's own description is now a governed edit, 2026-09-02
+
+CODE-33, opened and closed the same day. The `page.metadata` change kind now
+owns the page sources already governed under `page.wording`; the database
+proof allowlist already listed every one of them, so the executor and the
+proof routine still agree file for file. `selectMetadataSource`
+(`page-metadata-proposals.ts`, six tests) binds a description edit to the
+page's own file when that page renders its own `SeoHead` description, and to
+the shared head component or the sitewide default only when the page leaves
+the description to them. It refuses, naming both values, when the page's
+source and the live page disagree, and refuses an expression it cannot
+replace exactly. The execution readiness card names every kind that may write
+a file (`changeKindsForFile`) rather than the first one it finds. The homepage
+description, unreachable since 78fc8c5e, can be drafted against
+`src/pages/Index.tsx` again.
+
+## 0r. Changes waiting on one publish are one Inbox item, 2026-09-02
+
+CODE-31, the rollup half. Four approved changes sat committed and unproven
+while the operator learned they all waited on the same publish by asking.
+`publish-wait-rollup.ts` (pure, tested) selects approved changes that carry a
+commit and no published proof and, from two upward, words one item naming the
+count, the shared blocker and how long the oldest has waited.
+`reconcilePublishWaitRollup` keeps exactly one open needs-attention item per
+tenant for the group: it is filed when the group first reaches two, rewritten
+in place when the group changes, completed when it shrinks below two, and a
+hand-cleared item is not reopened for the same group. It runs after the daily
+Search Console observation and after every "Check the live page" click.
+
+## 0q. Every registered rule now says why it has no draft, 2026-09-02
+
+CODE-1, re-measured. The 18 rules the backlog named already had a written
+reason by 2026-08-31; what actually fell through to the generic "no governed
+fix for this finding yet" sentence were the 15 rules the four rule sessions
+registered that day (crawl errors, redirect chains, non-indexable pages, the
+two duplicate-across-pages rules, the three backlink rules, the three Umami
+rules, the two discovery findings and the two ownership candidates). Each now
+carries its own sentence in `finding-fix-target.ts`, grounded in what the
+rule measures and pointing at the real lever (hosting and routing, the
+tracking tag, a provider read on a click, a judgement the operator owns), and
+`finding-fix-target.test.ts` walks `RULE_ASSIGNMENTS` so a rule registered
+without a reason fails the build instead of rendering the generic line.
+
+## 0p. A description edit refuses a page that sets its own, 2026-09-02
+
+CODE-30, the drafting half. The homepage change 78fc8c5e edited the sitewide
+default in `DefaultSeo.tsx` and never reached the live head because
+`src/pages/Index.tsx` passes its own description to `SeoHead`, and the
+prerender emits Helmet's resolved tags (not the static `index.html` head the
+earlier note suspected). `preparePageMetadataProposal` now reads the target
+page's own governed source at the same revision and refuses, naming the file
+and the sentence it sets, before any wording is drafted
+(`findPageOwnedDescription` in `page-metadata-proposals.ts`, four tests). The
+refusal is honest and also a gap: no lane can edit a page-level description
+yet, recorded as CODE-33. 78fc8c5e itself stays approved, committed and
+unprovable until the operator rejects or rolls it back.
+
+## 0o. Approving a second change to a page now names the first, 2026-09-02
+
+CODE-31, the approval half. `transition_change_request` refuses `approve`
+while another change to the same page is approved and not yet live, or live
+with a measurement window whose rows are not readable yet, unless the call
+carries an explicit acknowledgement; the acknowledgement lands on the audit
+event as the sibling's id. The change page reads the same rule before the
+click (`src/lib/change-request-conflicts.ts`, a pure module with tests) and
+replaces the plain Approve control with "Approve anyway, measure both
+together" while a sibling is in flight, with the consequence stated beside it.
+Migration `20260902010000` is applied live and registered in the ledger; the
+old four-argument overload is dropped so the RPC stays unambiguous.
+`VALIDATION_GATES.md` gained the Concurrency gate.
+
+Not done, recorded rather than implied: the needs-attention rollup for several
+changes sharing one blocker, and the two pre-existing duplicates on the queue,
+which the guard does not retroactively resolve.
+
+Also applied live in this pass: `domain_ownership_candidates`
+(`20260831120000`), which the merged discovery workflow writes to and which
+did not exist in production until today.
+
 ## 0n. Where production actually builds from, 2026-09-01
 
 Read this before believing any "Verified 2026-08-31" or "2026-09-01" closure
@@ -544,7 +1206,10 @@ it never prunes — so a registry sync can neither refresh nor remove them:
 - `agent.research` — seed-only, but **still read at runtime** by
   `src/lib/web-research.server.ts`, so pruning it would break web research.
 - `wf.research_refresh`, `wf.content_generation`, `wf.publish` — seed-only
-  workflows. (`wf.seo_validation` is seeded _and_ declared in code, so it is
+  workflows.
+- `growth.weekly_scan`, `content.brief_pipeline` — declared until 2026-09-02
+  (CODE-14); each carries two recorded runs, so the rows stay until a
+  decision on the history they hold. (`wf.seo_validation` is seeded _and_ declared in code, so it is
   not an orphan.)
 - `sch.research_refresh`, `sch.seo_validation`, `sch.content_generation`,
   `sch.publish` — seed-only schedules, all disabled since
@@ -696,10 +1361,13 @@ prettier errors" — that is no longer true and those notes are stale.
 Unchanged from the sections below, restated because they are the things most
 likely to waste someone's afternoon:
 
-- `GITHUB_EXECUTOR_TOKEN` is not configured, so no change request has ever been
-  executed against the real repository. The UI names this exactly and refuses
-  without writing. **Where this secret lives, recorded 2026-08-28 so nobody
-  hunts for it again:** it is a fine-grained GitHub personal access token
+- `GITHUB_EXECUTOR_TOKEN` **is configured and has been since 2026-08-11**: seven
+  executions with a recorded commit and six change requests with a source
+  commit, the first on 2026-08-11 (live `change_request_executions`,
+  2026-09-02). An earlier version of this bullet said the opposite; the UI
+  names the absence exactly and refuses without writing whenever a host lacks
+  the token, which is how the Vercel shadow behaves. **Where this secret
+  lives, recorded 2026-08-28 so nobody hunts for it again:** it is a fine-grained GitHub personal access token
   created on the `maxwest525` GitHub account, scoped to the single repository
   `maxwest525/brittmove-829a7519` with Contents read/write only (the executor
   is hard-allowlisted to that repo and branch in
@@ -931,7 +1599,7 @@ secret paths are stored.
 - `src/components/os/execution-card.tsx` — six-stage plain-language status, execute + check published, attempt log, "Provider API charge: $0" with the AI build usage caveat.
 - Migration: `change_requests.source_repo/source_branch/source_commit_*/published_proof_*` and `public.change_request_executions` (tenant read, server write).
 - Applied now means proven live on the public URL; the manual "Mark applied" button is gone. Verification still requires finalized post-change Search Console rows.
-- Blocker: `GITHUB_EXECUTOR_TOKEN` is not configured, so no real commit has been attempted. The UI names this exactly and refuses without writing.
+- Corrected 2026-09-02: `GITHUB_EXECUTOR_TOKEN` is configured; real commits have been made since 2026-08-11 (see §0 above). The UI names the absence and refuses without writing only on a host that lacks the token.
 
 ## Direct measurement truth (2026-08-14)
 

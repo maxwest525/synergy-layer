@@ -10,6 +10,8 @@ type Client = SupabaseClient<Database>;
 export type TickResult = {
   claimed: number;
   blocked: number;
+  /** Due schedules another tick claimed first; not run here, not a failure. */
+  lostToAnotherTick: number;
   ran: { schedule: string; state: string }[];
 };
 
@@ -17,9 +19,49 @@ export type SchedulerTickOptions = {
   onlyKeys?: string[];
   collectSerpBacklog?: boolean;
   reconcileChangeMeasurements?: boolean;
+  /** Who fired this tick. Every firing is written down with it (CODE-48). */
+  firedBy: ScheduleFiredBy;
 };
 
-export function requireScheduleAllowlist(options: SchedulerTickOptions): Set<string> {
+export type ScheduleFiredBy = "pg_cron" | "operator";
+
+export type ScheduleFiring = {
+  tenantId: string | null;
+  scheduleId: string;
+  scheduleKey: string;
+  firedBy: ScheduleFiredBy;
+  state: "succeeded" | "failed" | "blocked";
+  firedAt: Date;
+  durationMs: number | null;
+  result: Record<string, unknown>;
+  error: string | null;
+};
+
+/**
+ * One durable row per firing. cron.job_run_details records only that the
+ * HTTP request was queued and the schedule row keeps only its last state, so
+ * until this the days a tick answered 500 left no trace (CODE-48, MON-3).
+ * A firing that cannot be written down is a failure of the tick.
+ */
+export async function recordScheduleFiring(client: Client, firing: ScheduleFiring): Promise<void> {
+  const { error } = await client.from("schedule_runs").insert({
+    tenant_id: firing.tenantId,
+    schedule_id: firing.scheduleId,
+    schedule_key: firing.scheduleKey,
+    fired_by: firing.firedBy,
+    state: firing.state,
+    fired_at: firing.firedAt.toISOString(),
+    finished_at: new Date().toISOString(),
+    duration_ms: firing.durationMs,
+    result: firing.result as never,
+    error: firing.error,
+  });
+  if (error) throw new Error(`The firing was not written down: ${error.message}`);
+}
+
+export function requireScheduleAllowlist(
+  options: Pick<SchedulerTickOptions, "onlyKeys">,
+): Set<string> {
   if (!options.onlyKeys || options.onlyKeys.length === 0) {
     throw new Error("Scheduler ticks require an explicit schedule allowlist.");
   }
@@ -33,7 +75,7 @@ export function requireScheduleAllowlist(options: SchedulerTickOptions): Set<str
 export async function tickScheduler(
   client: Client,
   now = new Date(),
-  options: SchedulerTickOptions = {},
+  options: SchedulerTickOptions,
 ): Promise<TickResult> {
   const allowedKeys = requireScheduleAllowlist(options);
   const { data: schedules, error } = await client.from("schedules").select("*").eq("enabled", true);
@@ -47,7 +89,7 @@ export async function tickScheduler(
   const allSchedules = schedules ?? [];
   const selectedSchedules = allSchedules.filter((schedule) => allowedKeys.has(schedule.key));
   const byId = new Map(allSchedules.map((schedule) => [schedule.id, schedule]));
-  const result: TickResult = { claimed: 0, blocked: 0, ran: [] };
+  const result: TickResult = { claimed: 0, blocked: 0, lostToAnotherTick: 0, ran: [] };
 
   for (const schedule of selectedSchedules) {
     const due = schedule.next_run_at === null || new Date(schedule.next_run_at) <= now;
@@ -65,6 +107,19 @@ export async function tickScheduler(
     if (blockedBy) {
       result.blocked += 1;
       const upstream = byId.get(blockedBy.depends_on_schedule_id);
+      await recordScheduleFiring(client, {
+        tenantId: schedule.tenant_id,
+        scheduleId: schedule.id,
+        scheduleKey: schedule.key,
+        firedBy: options.firedBy,
+        state: "blocked",
+        firedAt: now,
+        durationMs: null,
+        result: { upstream: upstream?.key ?? null, condition: blockedBy.condition },
+        error: upstream
+          ? `Upstream schedule "${upstream.name}" is ${upstream.last_state ?? "never run"}, so this step did not start.`
+          : "The upstream schedule this step waits on no longer exists.",
+      });
       if (upstream?.last_state === "failed") {
         await fileInboxItem(client, {
           lane: "needs_attention",
@@ -80,9 +135,34 @@ export async function tickScheduler(
       continue;
     }
 
+    // Claim before running. Two ticks that both read the row as due used to
+    // both run it (CQ-2): the claim is a conditional update on the very
+    // next_run_at this tick read, so whichever tick moves it first owns the
+    // run and the other sees no row and moves on.
+    const nextAfterClaim = nextRunAt(schedule.cron, now);
+    const claim = client
+      .from("schedules")
+      .update({
+        last_run_at: now.toISOString(),
+        next_run_at: nextAfterClaim ? nextAfterClaim.toISOString() : null,
+      })
+      .eq("id", schedule.id);
+    const { data: claimedRows, error: claimError } = await (
+      schedule.next_run_at === null
+        ? claim.is("next_run_at", null)
+        : claim.eq("next_run_at", schedule.next_run_at)
+    ).select("id");
+    if (claimError) throw new Error(claimError.message);
+    if ((claimedRows ?? []).length === 0) {
+      result.lostToAnotherTick += 1;
+      continue;
+    }
+
     result.claimed += 1;
     const startedAt = Date.now();
     let state: Database["public"]["Enums"]["run_state"] = "failed";
+    let failure: string | null = null;
+    let workflowRunId: string | null = null;
     try {
       if (schedule.target_kind === "workflow") {
         // A workflow schedule with no workflow attached must never report success:
@@ -92,13 +172,34 @@ export async function tickScheduler(
             `Schedule "${schedule.key}" is set to run a workflow but no workflow is attached.`,
           );
         }
-        const run = await runWorkflow(client, schedule.target_id, `schedule:${schedule.key}`, null);
+        // The run works for the schedule's tenant, named here rather than
+        // resolved from the service-role client (CODE-50).
+        if (!schedule.tenant_id) {
+          throw new Error(
+            `Schedule "${schedule.key}" names no client workspace, so it cannot run.`,
+          );
+        }
+        const run = await runWorkflow(
+          client,
+          schedule.target_id,
+          `schedule:${schedule.key}`,
+          null,
+          schedule.tenant_id,
+        );
         state = run.state;
+        workflowRunId = run.runId;
       } else {
-        state = "succeeded";
+        // The only target kind the tick can run is a workflow. Anything else
+        // used to be recorded as succeeded without doing anything (MON-21),
+        // which is the "configured is not connected" failure this system
+        // exists to catch.
+        throw new Error(
+          `Schedule "${schedule.key}" targets "${schedule.target_kind}", which the scheduler cannot run; only a workflow can be scheduled.`,
+        );
       }
     } catch (error) {
       state = "failed";
+      failure = (error as Error).message;
       await logActivity(client, {
         actorKind: "system",
         actorId: "scheduler",
@@ -122,6 +223,18 @@ export async function tickScheduler(
       })
       .eq("id", schedule.id);
     if (updateError) throw new Error(updateError.message);
+
+    await recordScheduleFiring(client, {
+      tenantId: schedule.tenant_id,
+      scheduleId: schedule.id,
+      scheduleKey: schedule.key,
+      firedBy: options.firedBy,
+      state: state === "succeeded" ? "succeeded" : "failed",
+      firedAt: now,
+      durationMs: Date.now() - startedAt,
+      result: { workflowRunId, state },
+      error: failure,
+    });
 
     result.ran.push({ schedule: schedule.key, state });
   }

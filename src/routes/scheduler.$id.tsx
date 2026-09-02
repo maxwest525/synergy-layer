@@ -2,15 +2,10 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 
 import { OperatorRouteError } from "@/components/os/route-error";
-import {
-  BackLink,
-  DetailRow,
-  GlassCard,
-  PageHeader,
-  StatePill,
-  formatWhen,
-  toneForState,
-} from "@/components/os/primitives";
+import { BackLink, DetailRow, GlassCard, PageHeader, StatePill } from "@/components/os/primitives";
+import { formatWhen } from "@/lib/format-when";
+import { toneForState } from "@/lib/state-tone";
+import { stateLabel } from "@/lib/state-labels";
 import { getSchedule } from "@/lib/os.functions";
 
 const scheduleQuery = (id: string) => ({
@@ -30,8 +25,8 @@ export const Route = createFileRoute("/scheduler/$id")({
   },
   head: ({ loaderData }) => {
     const title = loaderData?.schedule
-      ? `${loaderData.schedule.name} — Scheduler — Marky`
-      : "Schedule — Marky";
+      ? `${loaderData.schedule.name} · Scheduler · Marky`
+      : "Schedule · Marky";
     const description =
       loaderData?.schedule?.description ?? "Schedule cadence, dependencies, and last outcome.";
     return {
@@ -84,7 +79,7 @@ function ScheduleDetailPage() {
             />
             <DetailRow
               label="Last duration"
-              value={schedule.last_duration_ms ? `${schedule.last_duration_ms} ms` : "—"}
+              value={schedule.last_duration_ms ? `${schedule.last_duration_ms} ms` : "not recorded"}
             />
             <DetailRow label="Consecutive failures" value={schedule.failure_count} />
           </dl>
@@ -113,7 +108,7 @@ function ScheduleDetailPage() {
                         {dependency.schedules.name}
                       </Link>
                       <p className="text-xs text-muted-foreground">
-                        {dependency.condition.replace(/_/g, " ")}
+                        {stateLabel(dependency.condition)}
                       </p>
                     </div>
                     {dependency.schedules.last_state ? (
@@ -131,6 +126,39 @@ function ScheduleDetailPage() {
           )}
         </GlassCard>
       </div>
+
+      <GlassCard className="p-5">
+        <h2 className="text-sm font-semibold text-foreground">Firings</h2>
+        {data.runs.length === 0 ? (
+          <p className="mt-2 text-sm text-muted-foreground">
+            No firing recorded yet. One row is kept per firing from 2026-09-02; earlier firings left
+            only the last state above.
+          </p>
+        ) : (
+          <ul className="mt-3 space-y-3">
+            {data.runs.map((run) => (
+              <li
+                key={run.id}
+                className="flex items-start justify-between gap-3 border-b border-border/50 pb-3 last:border-b-0 last:pb-0"
+              >
+                <div className="min-w-0">
+                  <p className="text-sm text-foreground">{formatWhen(run.fired_at)}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {run.fired_by === "pg_cron"
+                      ? "Fired by the database schedule"
+                      : "Run by an operator"}
+                    {run.duration_ms !== null ? ` · ${run.duration_ms} ms` : ""}
+                  </p>
+                  {run.error ? (
+                    <p className="mt-1 text-xs text-foreground/80">{run.error}</p>
+                  ) : null}
+                </div>
+                <StatePill label={run.state} tone={toneForState(run.state)} />
+              </li>
+            ))}
+          </ul>
+        )}
+      </GlassCard>
 
       <Link to="/scheduler" className="text-sm text-primary underline-offset-4 hover:underline">
         Back to scheduler

@@ -18,4 +18,15 @@ describe("server input parsing", () => {
       }),
     ).toThrow("2,000 characters");
   });
+
+  it("carries the in-flight acknowledgement only as an explicit boolean", () => {
+    const id = "123e4567-e89b-42d3-a456-426614174000";
+    expect(parseChangeTransitionInput({ id }).acknowledgeInFlight).toBeUndefined();
+    expect(parseChangeTransitionInput({ id, acknowledgeInFlight: true }).acknowledgeInFlight).toBe(
+      true,
+    );
+    expect(() => parseChangeTransitionInput({ id, acknowledgeInFlight: "yes" })).toThrow(
+      "true or false",
+    );
+  });
 });

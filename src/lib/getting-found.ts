@@ -20,7 +20,12 @@ import {
   type ConstraintFacts,
 } from "./binding-constraint";
 import { MIN_BASELINE } from "./confidence";
-import { RULE_ASSIGNMENTS, unmetPrerequisites, type RuleAssignment } from "./rule-buckets";
+import {
+  RULE_ASSIGNMENTS,
+  prerequisiteState,
+  unmetPrerequisites,
+  type RuleAssignment,
+} from "./rule-buckets";
 import {
   buildQueue,
   compareQueueItems,
@@ -351,29 +356,19 @@ export function describeAnswerability(
 function answerabilityFor(facts: GettingFoundFacts): Answerability | null {
   if (facts.coverage === null) return null;
 
-  const waitingOn = unmetPrerequisites({
-    secondCollection: facts.comparison.status === "ready",
-    // Coverage being present already means the page audit read something.
-    pageAudit: true,
-    analytics: facts.sessions !== null,
-    // Nothing on this page reads a stored URL inspection or a second Umami
-    // window yet.
-    urlInspection: true,
-    approvedKeywords: facts.approvedKeywords > 0,
-    backlinkCollection: facts.backlinkSnapshots >= 2,
-    // Nothing on this page reads whois, technology-stack or brand-mention
-    // evidence, or a reviewed competitor set, so those pass true and say
-    // nothing rather than guessing -- the competition screen is where these
-    // four actually matter.
-    whoisCollection: true,
-    technologyCollection: true,
-    brandMentionCollection: true,
-    reviewedCompetitorSet: true,
-    umamiSecondWindow: true,
-    // None of this page's rules are OnPage crawl rules (site-audit routes to
-    // health/pages), so this always reads as met, same as urlInspection above.
-    onpageCrawl: true,
-  });
+  const waitingOn = unmetPrerequisites(
+    prerequisiteState({
+      secondCollection: facts.comparison.status === "ready",
+      // Coverage being present already means the page audit read something.
+      pageAudit: true,
+      analytics: facts.sessions !== null,
+      approvedKeywords: facts.approvedKeywords > 0,
+      backlinkCollection: facts.backlinkSnapshots >= 2,
+      // Stated gap: index_coverage_drift needs a stored URL inspection and
+      // this page does not read one, so that check's banner stays silent.
+    }),
+    "search",
+  );
 
   if (facts.comparison.status !== "ready") {
     return { line: insufficientReason(facts.comparison) ?? "", beyond: [], waitingOn };

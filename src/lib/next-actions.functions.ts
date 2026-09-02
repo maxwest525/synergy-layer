@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { NextActionFacts } from "./next-actions";
+import { parsePrioritizeActionsInput } from "./server-input";
 
 /**
  * One tenant-scoped read of the facts the next-action rules are allowed to
@@ -13,6 +14,7 @@ export const getNextActionFacts = createServerFn({ method: "GET" })
   .handler(async ({ context }): Promise<NextActionFacts> => {
     const { requireTenantId } = await import("./tenant.server");
     const { assertRead } = await import("./essentials");
+    const { readObservationCadences } = await import("./observation-cadence.server");
     const tenantId = await requireTenantId(context.supabase);
     const db = context.supabase;
 
@@ -36,8 +38,8 @@ export const getNextActionFacts = createServerFn({ method: "GET" })
       recommendations,
       systems,
       concerns,
-      concernEvaluations,
       measurementFailures,
+      connections,
     ] = await Promise.all([
       db
         .from("search_console_properties")
@@ -129,18 +131,13 @@ export const getNextActionFacts = createServerFn({ method: "GET" })
         .eq("tenant_id", tenantId)
         .is("retired_at", null),
       db
-        .from("essential_concern_evaluations")
-        .select("concern_id, status, evaluated_at")
-        .eq("tenant_id", tenantId)
-        .order("evaluated_at", { ascending: false })
-        .limit(500),
-      db
         .from("measurement_runs")
         .select("provider, status, error, started_at")
         .eq("tenant_id", tenantId)
         .neq("status", "succeeded")
         .order("started_at", { ascending: false })
         .limit(200),
+      db.from("tenant_connections").select("health").eq("tenant_id", tenantId),
     ]);
 
     assertRead("Search Console properties", properties);
@@ -162,8 +159,8 @@ export const getNextActionFacts = createServerFn({ method: "GET" })
     assertRead("Recommendations", recommendations);
     assertRead("Tool systems catalog", systems);
     assertRead("Coverage concerns", concerns);
-    assertRead("Coverage evaluations", concernEvaluations);
     assertRead("Measurement runs", measurementFailures);
+    assertRead("Connections", connections);
 
     const propertyRows = properties.data ?? [];
     const selected = propertyRows.find((row) => row.selected) ?? propertyRows[0] ?? null;
@@ -194,13 +191,11 @@ export const getNextActionFacts = createServerFn({ method: "GET" })
         (row.credential_state === "configured" ||
           row.credential_state === "encrypted_not_enumerated"),
     ).length;
-    const broken = systemRows.filter((row) => row.verification_state === "failed").length;
+    // A failing probe, not a verification_state nothing ever sets to "failed".
+    const broken = (connections.data ?? []).filter((row) => row.health === "failing").length;
 
-    const latestConcernStatus = new Map<string, string>();
-    for (const row of concernEvaluations.data ?? []) {
-      if (!latestConcernStatus.has(row.concern_id))
-        latestConcernStatus.set(row.concern_id, row.status);
-    }
+    // No rule writes a concern evaluation yet (CODE-43), so every concern
+    // with a date counts toward overdue; nothing is skipped as "working".
     const todayIso = new Date().toISOString().slice(0, 10);
     const concernRows = concerns.data ?? [];
     let unowned = 0;
@@ -209,12 +204,13 @@ export const getNextActionFacts = createServerFn({ method: "GET" })
     for (const row of concernRows) {
       if (!row.owner_name || !row.target_date) unowned += 1;
       if (!row.target_date) continue;
-      if (latestConcernStatus.get(row.id) === "working") continue;
       if (row.target_date < todayIso) overdue += 1;
       if (!nextDue || row.target_date < nextDue.targetDate)
         nextDue = { task: row.task, targetDate: row.target_date };
     }
     const measurementRows = measurementFailures.data ?? [];
+
+    const cadenceStatuses = await readObservationCadences(db, tenantId);
 
     return {
       property: selected
@@ -280,6 +276,20 @@ export const getNextActionFacts = createServerFn({ method: "GET" })
         latestProvider: measurementRows[0]?.provider ?? null,
         latestError: measurementRows[0]?.error ?? null,
       },
+      cadences: {
+        overdue: cadenceStatuses.flatMap((cadence) =>
+          cadence.overdue && cadence.nextRunAt !== null
+            ? [
+                {
+                  key: cadence.key,
+                  label: cadence.label,
+                  dueAt: cadence.nextRunAt,
+                  lastRunAt: cadence.lastRunAt,
+                },
+              ]
+            : [],
+        ),
+      },
     };
   });
 
@@ -289,8 +299,12 @@ export const getNextActionFacts = createServerFn({ method: "GET" })
  */
 export const prioritizeNextActions = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: { actions: import("./next-actions").NextAction[] }) => data)
-  .handler(async ({ data }) => {
+  .inputValidator(parsePrioritizeActionsInput)
+  .handler(async ({ data, context }) => {
+    // A model call is a metered action: operator role only, never any
+    // signed-in account (SEC-2 in the 2026-09-02 security review).
+    const { assertOperator } = await import("./os-admin.server");
+    await assertOperator(context.supabase, context.userId);
     const { prioritizeActions } = await import("./next-actions.server");
     return prioritizeActions(data.actions);
   });

@@ -1,15 +1,9 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 
-import {
-  EmptyState,
-  GlassCard,
-  PageHeader,
-  Section,
-  StatePill,
-  formatWhen,
-  toneForState,
-} from "@/components/os/primitives";
+import { EmptyState, GlassCard, PageHeader, Section, StatePill } from "@/components/os/primitives";
+import { formatWhen } from "@/lib/format-when";
+import { toneForState } from "@/lib/state-tone";
 import { getWorkflows } from "@/lib/os.functions";
 import { OperatorRouteError } from "@/components/os/route-error";
 
@@ -27,13 +21,13 @@ export const Route = createFileRoute("/workflows/")({
   },
   head: () => ({
     meta: [
-      { title: "Workflow Registry — Marky" },
+      { title: "Workflow Registry · Marky" },
       {
         name: "description",
         content:
           "Declarative workflows with full run history, step-level state, durations, and failure reasons.",
       },
-      { property: "og:title", content: "Workflow Registry — Marky" },
+      { property: "og:title", content: "Workflow Registry · Marky" },
       { property: "og:description", content: "How work runs, and what happened on every run." },
     ],
   }),

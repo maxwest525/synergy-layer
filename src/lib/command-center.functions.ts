@@ -32,6 +32,7 @@ export const getCommandCenterFacts = createServerFn({ method: "POST" })
     const { readPageAudit } = await import("./page-audit.server");
     const { describeGa4Connection, readGa4EnvPresence, ga4PropertyForSearchConsoleProperty } =
       await import("./measurement/ga4");
+    const { readObservationCadences } = await import("./observation-cadence.server");
 
     const tenantId = await requireTenantId(context.supabase);
     const db = context.supabase;
@@ -85,14 +86,11 @@ export const getCommandCenterFacts = createServerFn({ method: "POST" })
           .eq("tenant_id", tenantId)
           .order("created_at", { ascending: false })
           .limit(500),
-        // The two reads behind "All systems normal". Only rows the operator can
-        // see in the tool estate count, so a hidden system never turns the light
-        // red.
-        db
-          .from("tool_systems")
-          .select("verification_state")
-          .eq("tenant_id", tenantId)
-          .eq("visible_in_aoos", true),
+        // The two reads behind "All systems normal". A connection's health is
+        // written by its probe (connections.server.ts); tool_systems'
+        // verification_state, which this read once used, is never written as
+        // "failed" by anything, so the light could only ever be green (MON-4).
+        db.from("tenant_connections").select("health, last_checked_at").eq("tenant_id", tenantId),
         db
           .from("measurement_runs")
           .select("status, started_at, provider")
@@ -172,23 +170,36 @@ export const getCommandCenterFacts = createServerFn({ method: "POST" })
 
     // --- What the status light is allowed to say ----------------------------
 
-    const brokenConnections = (assertRead("Tool systems", systemResult).data ?? []).filter(
-      (row) => row.verification_state === "failed",
-    ).length;
+    const connectionRows = assertRead("Connections", systemResult).data ?? [];
+    const brokenConnections = connectionRows.filter((row) => row.health === "failing").length;
+    const connectionsChecked = connectionRows.filter((row) => row.last_checked_at !== null).length;
+    const lastCheckedAt = connectionRows.reduce<string | null>(
+      (newest, row) =>
+        row.last_checked_at !== null && (newest === null || row.last_checked_at > newest)
+          ? row.last_checked_at
+          : newest,
+      null,
+    );
 
     // A provider is failing when its most recent run failed, not when it has
     // ever failed. Rows arrive newest first, so the first row seen for a
     // provider is its current state; later rows are that provider's history and
     // say nothing about now. Counting every stored failure kept the bar lit for
     // days after a quota reset or a fixed credential.
+    const runRows = assertRead("Measurement runs", runResult).data ?? [];
+    // Rows arrive newest first, so the first is the newest run of any provider.
+    const latestRunAt = runRows[0]?.started_at ?? null;
     const latestRunByProvider = new Map<string, string>();
-    for (const row of assertRead("Measurement runs", runResult).data ?? []) {
+    for (const row of runRows) {
       if (row.provider === null) continue;
       if (latestRunByProvider.has(row.provider)) continue;
       latestRunByProvider.set(row.provider, row.status);
     }
     const failingProviders = [...latestRunByProvider.values()].filter(
       (status) => status === "failed",
+    ).length;
+    const overdueCadences = (await readObservationCadences(db, tenantId)).filter(
+      (cadence) => cadence.overdue,
     ).length;
 
     // --- The queue ----------------------------------------------------------
@@ -320,8 +331,15 @@ export const getCommandCenterFacts = createServerFn({ method: "POST" })
         snapshots: ga4Snapshots,
       },
       changes: { fixesLive, pagesImproved },
-      audit: { hasRun: audit.lastObservedAt !== null, pagesNeedingFixes },
-      health: { brokenConnections, failingProviders },
+      audit: { lastObservedAt: audit.lastObservedAt, pagesNeedingFixes },
+      health: {
+        brokenConnections,
+        failingProviders,
+        connectionsChecked,
+        lastCheckedAt,
+        latestRunAt,
+        overdueCadences,
+      },
       queueSources: [...changeSources, ...recommendationSources, ...auditSources, ...siteSources],
     };
   });

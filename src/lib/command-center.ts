@@ -70,7 +70,8 @@ export type CommandCenterFacts = {
     readonly pagesImproved: number;
   };
   readonly audit: {
-    readonly hasRun: boolean;
+    /** When the newest stored page observation was taken; null until the audit has run once. */
+    readonly lastObservedAt: string | null;
     readonly pagesNeedingFixes: number;
   };
   /**
@@ -85,6 +86,14 @@ export type CommandCenterFacts = {
   readonly health: {
     readonly brokenConnections: number;
     readonly failingProviders: number;
+    /** Connection rows that have ever been probed. Zero means nothing has checked the plumbing. */
+    readonly connectionsChecked: number;
+    /** The newest probe across every connection row; null until one has been probed. */
+    readonly lastCheckedAt: string | null;
+    /** When the newest stored measurement run started; null when none is stored. */
+    readonly latestRunAt: string | null;
+    /** Daily reads whose due time passed a full period ago with no run recorded. */
+    readonly overdueCadences: number;
   };
   readonly queueSources: readonly QueueSource[];
 };
@@ -177,6 +186,13 @@ export type CommandCenterView = {
   readonly suggestedNext: readonly SuggestedNextRow[];
   /** The top bar's right-hand status. */
   readonly statusLine: StatusLine;
+  /**
+   * When each number on the page was last true, in one line under the
+   * heading. The category pages date their own windows; this page draws on
+   * all of them and used to date none, so a two-minute cache and a reading
+   * from days ago looked the same (STATE-4).
+   */
+  readonly asOfLine: string;
   /** Shown instead of the assist line when the whole queue is clear. */
   readonly emptyHeadline: string | null;
 };
@@ -323,10 +339,13 @@ function pagesNeedingFixesTile(facts: CommandCenterFacts): Tile {
   const base = {
     label: "Pages needing fixes",
     icon: "file-text",
-    explanation: "Pages where a check found something worth fixing.",
+    // Pages, not fixes: one page can carry several, so this number and the
+    // "page fixes waiting" count in Your pages are different things (CODE-32).
+    explanation:
+      "Pages where a check found something worth fixing. Counts pages, not fixes: one page can carry several, so this is not the number of page fixes waiting.",
   } as const;
 
-  if (!facts.audit.hasRun) {
+  if (facts.audit.lastObservedAt === null) {
     return {
       ...base,
       value: null,
@@ -388,6 +407,8 @@ function waitingPhrase(category: Category, count: number): string {
 export type StatusLine = {
   readonly text: string;
   readonly tone: "positive" | "warning" | "danger";
+  /** The stored moment the claim rests on; null when nothing has checked yet. */
+  readonly asOf: string | null;
 };
 
 /**
@@ -410,6 +431,19 @@ function statusLineFor(health: CommandCenterFacts["health"]): StatusLine {
           ? "1 connection needs attention"
           : `${health.brokenConnections} connections need attention`,
       tone: "danger",
+      asOf: health.lastCheckedAt,
+    };
+  }
+  // A stopped scheduler records no failure, so this is the one line that
+  // can say the evidence is going stale (MEAS-10).
+  if (health.overdueCadences > 0) {
+    return {
+      text:
+        health.overdueCadences === 1
+          ? "1 daily read is overdue"
+          : `${health.overdueCadences} daily reads are overdue`,
+      tone: "danger",
+      asOf: null,
     };
   }
   if (health.failingProviders > 0) {
@@ -419,9 +453,55 @@ function statusLineFor(health: CommandCenterFacts["health"]): StatusLine {
           ? "1 measurement provider is failing"
           : `${health.failingProviders} measurement providers are failing`,
       tone: "warning",
+      asOf: health.latestRunAt,
     };
   }
-  return { text: "All systems normal", tone: "positive" };
+  // Green is a claim, and a claim needs a check behind it. Until a probe
+  // has run against at least one connection, the honest line is that nothing
+  // has looked (MON-4).
+  if (health.connectionsChecked === 0) {
+    return { text: "Connections have never been checked", tone: "warning", asOf: null };
+  }
+  // Green rests on the probes and the runs together, so it is dated by
+  // whichever is older: a fresh run does not make a week-old probe current.
+  return {
+    text: "All systems normal",
+    tone: "positive",
+    asOf: olderOf(health.lastCheckedAt, health.latestRunAt),
+  };
+}
+
+function olderOf(left: string | null, right: string | null): string | null {
+  if (left === null) return right;
+  if (right === null) return left;
+  return left < right ? left : right;
+}
+
+/** The calendar day of a stored instant or date, as the category pages print it. */
+function day(value: string): string {
+  return value.slice(0, 10);
+}
+
+export function asOfLineFor(facts: CommandCenterFacts): string {
+  const searchDate =
+    facts.search === null
+      ? null
+      : facts.search.status === "ready"
+        ? facts.search.current.endDate
+        : facts.search.latestDate;
+  const visitsDate =
+    selectGa4Comparison(facts.ga4.snapshots, facts.ga4.windowDays).current?.endDate ?? null;
+  const line = [
+    searchDate === null ? "no search window stored" : `search numbers to ${day(searchDate)}`,
+    visitsDate === null ? "no visits window stored" : `visits to ${day(visitsDate)}`,
+    facts.audit.lastObservedAt === null
+      ? "pages never read"
+      : `pages read ${day(facts.audit.lastObservedAt)}`,
+    facts.health.lastCheckedAt === null
+      ? "connections never checked"
+      : `connections checked ${day(facts.health.lastCheckedAt)}`,
+  ].join(" · ");
+  return line.charAt(0).toUpperCase() + line.slice(1);
 }
 
 /**
@@ -465,7 +545,7 @@ export function buildCommandCenter(facts: CommandCenterFacts): CommandCenterView
 
   const suggestedNext: SuggestedNextRow[] = [];
 
-  if (!facts.audit.hasRun) {
+  if (facts.audit.lastObservedAt === null) {
     // The audit control lives on the Your pages *workspace*, not on the
     // category page in front of it: only that route imports PageAuditPanel.
     // Derived from the category so the row follows it if the route moves again.
@@ -510,6 +590,7 @@ export function buildCommandCenter(facts: CommandCenterFacts): CommandCenterView
     totalWaiting: queue.open.length,
     suggestedNext,
     statusLine: statusLineFor(facts.health),
+    asOfLine: asOfLineFor(facts),
     emptyHeadline: queue.open.length === 0 ? "Nothing needs you" : null,
   };
 }

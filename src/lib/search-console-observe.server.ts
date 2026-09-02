@@ -5,6 +5,7 @@ import { fileInboxItem, logActivity } from "./os.server";
 import { reconcileAppliedChangeEvidence } from "./change-requests.server";
 import { reconcileChangeMeasurements } from "./change-measurements.server";
 import { reconcileOutcomeAlerts } from "./outcome-alerts.server";
+import { reconcilePublishWaitRollup } from "./publish-wait-rollup.server";
 import { evaluateSnapshots, type RuleRunResult } from "./search-console-rules.server";
 import { SearchConsoleFailure, collectDaily, getSelectedProperty } from "./search-console.server";
 
@@ -49,9 +50,27 @@ export type ObserveResult = {
  * Read-only daily observation. An empty result set completes successfully and
  * leaves health healthy; only a real fault degrades health and files an alert.
  */
-export async function observeSearchConsole(client: Client): Promise<ObserveResult> {
+export async function observeSearchConsole(
+  client: Client,
+  tenantId: string,
+  actorId: string | null = null,
+): Promise<ObserveResult> {
+  // One ledger row per attempt, opened before Google is touched and closed
+  // with the outcome, so a failure reaches the cadence card and the status
+  // line the way every other provider's does (CODE-54). Written with service
+  // credentials: the table has no insert policy for a session.
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { openMeasurementRun } = await import("./measurement/run-ledger.server");
+  let run: Awaited<ReturnType<typeof openMeasurementRun>> | null = null;
   try {
-    const property = await getSelectedProperty(client);
+    const property = await getSelectedProperty(client, tenantId);
+    run = await openMeasurementRun(supabaseAdmin, {
+      tenantId,
+      provider: "gsc",
+      target: property ?? "(no property selected)",
+      strategy: "daily_observation",
+      actorId,
+    });
     if (!property) {
       throw new SearchConsoleFailure(
         "validation",
@@ -77,6 +96,7 @@ export async function observeSearchConsole(client: Client): Promise<ObserveResul
         },
       });
       await setHealth(client, "healthy");
+      await run.close("succeeded");
       return {
         ok: true,
         property,
@@ -94,6 +114,10 @@ export async function observeSearchConsole(client: Client): Promise<ObserveResul
     // moment a stored verdict can newly resolve. Failure verdicts become Inbox
     // items here; nothing else consumes them automatically.
     const verdictAlerts = await reconcileOutcomeAlerts(client, property);
+    // Approved changes committed and not yet proven live share one blocker,
+    // the site publish. One Inbox item per group, kept current here daily and
+    // after every live page check.
+    const publishWait = await reconcilePublishWaitRollup(client);
     await logActivity(client, {
       verb: "capability.observation_completed",
       subjectKind: "capability",
@@ -106,9 +130,11 @@ export async function observeSearchConsole(client: Client): Promise<ObserveResul
         outcomeEvidenceReady: outcomes.newlyReady,
         outcomeEvidenceWaiting: outcomes.waiting,
         outcomeFailuresFiled: verdictAlerts.filed,
+        changesWaitingOnPublish: publishWait.waiting,
       },
     });
     await setHealth(client, "healthy");
+    await run.close("succeeded");
 
     return {
       ok: true,
@@ -126,6 +152,12 @@ export async function observeSearchConsole(client: Client): Promise<ObserveResul
             "unknown",
             error instanceof Error ? error.message : String(error),
           );
+    // Closing the ledger row must never mask the failure it records.
+    try {
+      await run?.close("failed", failure.message);
+    } catch (ledgerError) {
+      console.error("[search-console-observe]", (ledgerError as Error).message);
+    }
 
     // A transient upstream fault that survived retries is not a broken
     // connection. It is degraded, and the next scheduled run heals the gap.

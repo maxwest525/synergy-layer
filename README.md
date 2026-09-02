@@ -103,11 +103,15 @@ silently pick the convenient source.
 
 ## Build with Lovable
 
-This project is connected to [Lovable](https://lovable.dev) and continues to be
-developed in the [Lovable editor](https://lovable.dev/projects/4aa4b3cf-b3ab-4721-aff6-e0d55ce13276).
+The AOOS product is the Lovable project
+[Marky Sysyems](https://lovable.dev/projects/4aa4b3cf-b3ab-4721-aff6-e0d55ce13276),
+deployed at `trumove.marky.systems`. Since 2026-08-30 that project syncs with
+`maxwest525/trumove-resource-center`, a private repository Lovable created on
+reconnect, and **not** with this one: a merge to `main` here reaches production
+only after the reconciliation push described in
+[`docs/context/DEPLOYMENT_TOPOLOGY.md`](docs/context/DEPLOYMENT_TOPOLOGY.md)
+(§5 step 2) and a Lovable publish. Which repository stays canonical is the
+operator's decision, recorded there (§6).
 
-- **Stay in sync**: every change made in Lovable is committed straight to this repository.
-- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
-
-Because of that sync, published git history is never rewritten here. See
+Published git history is never rewritten here, in either repository. See
 [`AGENTS.md`](AGENTS.md).

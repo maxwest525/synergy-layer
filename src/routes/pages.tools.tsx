@@ -25,13 +25,13 @@ export const Route = createFileRoute("/pages/tools")({
   errorComponent: OperatorRouteError,
   head: () => ({
     meta: [
-      { title: "Site pages — Marky" },
+      { title: "Site pages · Marky" },
       {
         name: "description",
         content:
           "Every page Google reported for the connected property, with clicks, impressions and position, a live preview, and a one click title and H1 edit proposal.",
       },
-      { property: "og:title", content: "Site pages — Marky" },
+      { property: "og:title", content: "Site pages · Marky" },
       {
         property: "og:description",
         content: "Page inventory, live preview, and on page edits in one place.",
@@ -45,11 +45,11 @@ export const Route = createFileRoute("/pages/tools")({
 });
 
 function pct(value: number | null): string {
-  return value === null ? "—" : `${(value * 100).toFixed(1)}%`;
+  return value === null ? "not reported" : `${(value * 100).toFixed(1)}%`;
 }
 
 function pos(value: number | null): string {
-  return value === null ? "—" : value.toFixed(1);
+  return value === null ? "not reported" : value.toFixed(1);
 }
 
 function SitePagesRoute() {

@@ -12,6 +12,7 @@ import {
   PageHeader,
   StatePill,
 } from "@/components/os/primitives";
+import { formatWhen } from "@/lib/format-when";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AvailabilityBadge } from "@/components/os/availability-badge";
@@ -26,13 +27,13 @@ export const Route = createFileRoute("/capabilities/systems/")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Systems & operations — Marky" },
+      { title: "Systems & operations · Marky" },
       {
         name: "description",
         content:
           "The real installed tool estate: canonical systems, their operations, and whether each one is actually callable from AOOS.",
       },
-      { property: "og:title", content: "Systems & operations — Marky" },
+      { property: "og:title", content: "Systems & operations · Marky" },
       {
         property: "og:description",
         content:
@@ -254,6 +255,9 @@ function SystemsPage() {
                 </div>
                 <p className="mt-2 text-xs text-muted-foreground">
                   {connection.state} · {outcome.replaceAll("_", " ")}
+                  {/* A health is only as current as the probe behind it, and the
+                      probe runs on a click, not a schedule (MON-20). */}
+                  {connection.checkedAt ? ` · checked ${formatWhen(connection.checkedAt)}` : ""}
                 </p>
                 {proof ? <p className="mt-1 text-xs text-muted-foreground">{proof}</p> : null}
                 {connection.missing.length ? (

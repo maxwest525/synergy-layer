@@ -8,11 +8,6 @@ export const getInbox = createServerFn({ method: "GET" }).handler(async () => {
   return fetchInbox();
 });
 
-export const getOverview = createServerFn({ method: "GET" }).handler(async () => {
-  const { fetchOverview } = await import("./os-queries.server");
-  return fetchOverview();
-});
-
 export const getAssets = createServerFn({ method: "GET" }).handler(async () => {
   const { fetchAssets } = await import("./os-queries.server");
   return fetchAssets();

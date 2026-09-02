@@ -4,6 +4,8 @@ import { DESCRIPTION_MAX, DESCRIPTION_MIN } from "./page-checks";
 import {
   buildPageMetadataChanges,
   buildPageMetadataPrompt,
+  findPageOwnedDescription,
+  selectMetadataSource,
   selectUniqueLiteralSource,
   validatePageMetadataWording,
 } from "./page-metadata-proposals";
@@ -131,6 +133,123 @@ describe("page metadata changes", () => {
     expect(() => buildPageMetadataChanges(validWording.metaDescription, validWording)).toThrow(
       /must change/i,
     );
+  });
+});
+
+describe("a page that sets its own description is recognised before the sitewide default is edited", () => {
+  it("reads the literal a page passes to SeoHead", () => {
+    const source = `
+      <SeoHead
+        title="TruMove | AI-Powered Moving Made Simple"
+        description="TruMove connects you with vetted, top-rated carriers."
+        path="/"
+      />`;
+    expect(findPageOwnedDescription(source)).toBe(
+      "TruMove connects you with vetted, top-rated carriers.",
+    );
+  });
+
+  it("reads a description set directly inside a Helmet block", () => {
+    const source = `<Helmet><meta name="description" content="A page-level sentence." /></Helmet>`;
+    expect(findPageOwnedDescription(source)).toBe("A page-level sentence.");
+  });
+
+  it("reports a description built from an expression as dynamic rather than guessing it", () => {
+    const source = `<SeoHead title={title} description={post.summary} path={path} />`;
+    expect(findPageOwnedDescription(source)).toBe("dynamic");
+  });
+
+  it("returns null for a page that leaves the description to the sitewide default", () => {
+    const source = `<SeoHead title="Careers" path="/careers" /> <p>description of the role</p>`;
+    expect(findPageOwnedDescription(source)).toBeNull();
+  });
+});
+
+describe("the description is edited where the page actually sets it", () => {
+  const live = "TruMove connects you with vetted, top-rated carriers.";
+  const shared = [
+    { path: "src/components/seo/SeoHead.tsx", content: "<meta content={description} />" },
+    { path: "src/components/seo/DefaultSeo.tsx", content: `const D = "${live}";` },
+  ];
+  const sitewideDefaultPath = "src/components/seo/DefaultSeo.tsx";
+
+  it("binds to the page's own file when the page sets its own description", () => {
+    const selection = selectMetadataSource({
+      sharedFiles: shared,
+      pageSource: {
+        path: "src/pages/Index.tsx",
+        content: `<SeoHead title="Home" description="${live}" path="/" />`,
+      },
+      liveMetaDescription: live,
+      sitewideDefaultPath,
+    });
+    expect(selection.path).toBe("src/pages/Index.tsx");
+    expect(selection.pageOwned).toBe(true);
+    expect(selection.sitewideDefault).toBe(false);
+  });
+
+  it("falls back to the sitewide default only when the page leaves the description to it", () => {
+    const selection = selectMetadataSource({
+      sharedFiles: shared,
+      pageSource: { path: "src/pages/CareersPage.tsx", content: `<SeoHead title="Careers" />` },
+      liveMetaDescription: live,
+      sitewideDefaultPath,
+    });
+    expect(selection.path).toBe(sitewideDefaultPath);
+    expect(selection.sitewideDefault).toBe(true);
+    expect(selection.pageOwned).toBe(false);
+  });
+
+  it("refuses when the page's source and the live page disagree, naming both", () => {
+    expect(() =>
+      selectMetadataSource({
+        sharedFiles: shared,
+        pageSource: {
+          path: "src/pages/Index.tsx",
+          content: `<SeoHead title="Home" description="A newer sentence." path="/" />`,
+        },
+        liveMetaDescription: live,
+        sitewideDefaultPath,
+      }),
+    ).toThrow(/sets a different description/);
+  });
+
+  it("refuses a description built from an expression rather than guessing it", () => {
+    expect(() =>
+      selectMetadataSource({
+        sharedFiles: shared,
+        pageSource: {
+          path: "src/pages/blog/PostPage.tsx",
+          content: `<SeoHead title={post.title} description={post.summary} />`,
+        },
+        liveMetaDescription: live,
+        sitewideDefaultPath,
+      }),
+    ).toThrow(/expression/);
+  });
+
+  it("refuses a page file where the live sentence is not exactly one literal", () => {
+    expect(() =>
+      selectMetadataSource({
+        sharedFiles: shared,
+        pageSource: {
+          path: "src/pages/Index.tsx",
+          content: `<SeoHead description="${live}" /> <p>${live}</p>`,
+        },
+        liveMetaDescription: live,
+        sitewideDefaultPath,
+      }),
+    ).toThrow(/ambiguous/);
+  });
+
+  it("uses the shared files alone for a page with no governed source", () => {
+    const selection = selectMetadataSource({
+      sharedFiles: shared,
+      pageSource: null,
+      liveMetaDescription: live,
+      sitewideDefaultPath,
+    });
+    expect(selection.path).toBe(sitewideDefaultPath);
   });
 });
 

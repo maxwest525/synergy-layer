@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   detectKeywordCannibalization,
+  detectMissingRouteQueries,
+  isRouteQuery,
   detectKeywordsWithoutPage,
   detectReferringDomainMovement,
   detectUnobservedKeywords,
@@ -12,6 +14,51 @@ import {
 
 const approved = (...keywords: string[]): ApprovedKeyword[] =>
   keywords.map((keyword) => ({ keyword }));
+
+describe("route searches the approved set does not name", () => {
+  const approved = [{ keyword: "best long distance movers" }, { keyword: "top moving company" }];
+  const queries = [
+    { query: "movers boston to miami", impressions: 40, clicks: 2 },
+    { query: "moving from texas to florida", impressions: 25, clicks: 1 },
+    { query: "long distance movers near me", impressions: 300, clicks: 12 },
+  ];
+
+  it("names the route queries Search Console recorded when no approved keyword is one", () => {
+    const [finding, ...rest] = detectMissingRouteQueries(approved, queries);
+    expect(rest).toEqual([]);
+    expect(finding?.rule).toBe("tracked_set_has_no_route_query");
+    expect(finding?.description).toContain("2 approved keyword(s)");
+    expect(finding?.description).toContain("2 route queries");
+    expect(finding?.description).toContain("65 impression(s) and 3 click(s)");
+    expect(finding?.description).toContain('"movers boston to miami"');
+    expect(finding?.evidence["examples"]).toEqual([
+      { query: "movers boston to miami", impressions: 40, clicks: 2 },
+      { query: "moving from texas to florida", impressions: 25, clicks: 1 },
+    ]);
+    expect(finding?.confidence).toBe(1);
+  });
+
+  it("stays silent once one approved keyword names a journey", () => {
+    expect(
+      detectMissingRouteQueries([...approved, { keyword: "movers boston to miami" }], queries),
+    ).toEqual([]);
+  });
+
+  it("stays silent with no approved keyword, and with no route query to name", () => {
+    expect(detectMissingRouteQueries([], queries)).toEqual([]);
+    expect(
+      detectMissingRouteQueries(approved, [
+        { query: "long distance movers near me", impressions: 300, clicks: 12 },
+      ]),
+    ).toEqual([]);
+  });
+
+  it("does not read a brand or phrase containing the letters as a journey", () => {
+    expect(isRouteQuery("tomato movers")).toBe(false);
+    expect(isRouteQuery("customer service movers")).toBe(false);
+    expect(isRouteQuery("moving from texas")).toBe(true);
+  });
+});
 
 describe("an approved keyword nothing has looked up yet", () => {
   it("raises one finding per approved keyword with no stored SERP", () => {

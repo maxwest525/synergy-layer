@@ -4,14 +4,9 @@ import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 
 import { OpenSeoToolRunner } from "@/components/os/openseo-tool-runner";
-import {
-  EmptyState,
-  GlassCard,
-  PageHeader,
-  StatePill,
-  formatWhen,
-  toneForState,
-} from "@/components/os/primitives";
+import { EmptyState, GlassCard, PageHeader, StatePill } from "@/components/os/primitives";
+import { formatWhen } from "@/lib/format-when";
+import { toneForState } from "@/lib/state-tone";
 import { OperatorRouteError } from "@/components/os/route-error";
 import { Input } from "@/components/ui/input";
 import { getOpenSeoWorkspace, invokeOpenSeoTool } from "@/lib/openseo/functions";
@@ -21,7 +16,7 @@ export const Route = createFileRoute("/openseo")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "OpenSEO — Marky" },
+      { title: "OpenSEO · Marky" },
       {
         name: "description",
         content:

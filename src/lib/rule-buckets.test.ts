@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { RULE_ASSIGNMENTS, unmetPrerequisites, type RuleBucket } from "./rule-buckets";
+import { categoryForRule } from "./finding-router";
+import {
+  RULE_ASSIGNMENTS,
+  prerequisiteState,
+  unmetPrerequisites,
+  type RuleBucket,
+} from "./rule-buckets";
 import { SEARCH_CONSOLE_THRESHOLDS, SEO_RULES } from "./rule-thresholds";
 import { ALL_SEARCH_RULES } from "./finding-copy";
 import type { Ga4CheckRule } from "./ga4-rule-checks";
@@ -47,7 +53,7 @@ const PAGESPEED_RULES_COVERED: Record<PageSpeedCheckRule, true> = {
  * Same compile-time exhaustiveness for the discovery family
  * (dataforseo/discovery-rule-checks.ts): the module exposes only the
  * `DiscoveryCheckRule` type, so a new rule id added there without a key here
- * fails the build rather than this test at runtime. Covers all four rules,
+ * fails the build rather than this test at runtime. Covers all five rules,
  * including the two that file an operator DECISION (a domain_ownership_candidates
  * row) rather than a recommendation -- they still need a bucket assignment so
  * an empty screen can name what they are waiting on.
@@ -57,6 +63,7 @@ const DISCOVERY_RULES_COVERED: Record<DiscoveryCheckRule, true> = {
   same_registration_details_across_two_known_domains: true,
   identical_technology_stack_across_two_known_domains: true,
   rival_page_mentions_your_brand: true,
+  brand_mentioned_without_a_link: true,
 };
 
 /**
@@ -188,6 +195,7 @@ describe("non-volume prerequisites", () => {
         whoisCollection: true,
         technologyCollection: true,
         brandMentionCollection: true,
+        referringDomainCollection: true,
         reviewedCompetitorSet: true,
         umamiSecondWindow: true,
         onpageCrawl: true,
@@ -206,6 +214,7 @@ describe("non-volume prerequisites", () => {
       whoisCollection: true,
       technologyCollection: true,
       brandMentionCollection: true,
+      referringDomainCollection: true,
       reviewedCompetitorSet: true,
       umamiSecondWindow: true,
       onpageCrawl: true,
@@ -229,11 +238,43 @@ describe("non-volume prerequisites", () => {
       whoisCollection: true,
       technologyCollection: true,
       brandMentionCollection: true,
+      referringDomainCollection: true,
       reviewedCompetitorSet: true,
+      umamiSecondWindow: true,
       onpageCrawl: true,
     });
     const held = RULE_ASSIGNMENTS.filter((a) => a.alsoNeeds.includes("second_collection")).length;
     expect(notes[0]).toContain(String(held));
+  });
+
+  it("counts only the page's own rules when the page names its category", () => {
+    // Your pages once read "17 checks are waiting on a second collection" for
+    // seventeen rules that were not on that page at all (CQ-8).
+    expect(unmetPrerequisites(prerequisiteState({ secondCollection: false }), "pages")).toEqual([]);
+    const search = unmetPrerequisites(prerequisiteState({ secondCollection: false }), "search");
+    const held = RULE_ASSIGNMENTS.filter(
+      (a) => a.alsoNeeds.includes("second_collection") && categoryForRule(a.rule) === "search",
+    ).length;
+    expect(held).toBeGreaterThan(0);
+    expect(search).toHaveLength(1);
+    expect(search[0]).toContain(`${held} checks are waiting on a second collection`);
+  });
+
+  it("names a category by rule for every rule that carries a prerequisite", () => {
+    // The scoped count cannot guess from a module it does not know, so a
+    // rule with a prerequisite and no rule-level category would silently
+    // drop out of every page's banner.
+    for (const assignment of RULE_ASSIGNMENTS) {
+      if (assignment.alsoNeeds.length === 0) continue;
+      expect(categoryForRule(assignment.rule), `${assignment.rule} has no category`).not.toBeNull();
+    }
+  });
+
+  it("treats a key the page did not read as met, and a read key as read", () => {
+    const state = prerequisiteState({ pageAudit: false });
+    expect(state.pageAudit).toBe(false);
+    expect(state.secondCollection).toBe(true);
+    expect(state.umamiSecondWindow).toBe(true);
   });
 
   it("names the discovery family's own prerequisites when they are unmet", () => {
@@ -247,14 +288,16 @@ describe("non-volume prerequisites", () => {
       whoisCollection: false,
       technologyCollection: false,
       brandMentionCollection: false,
+      referringDomainCollection: false,
       reviewedCompetitorSet: false,
       umamiSecondWindow: true,
       onpageCrawl: true,
     });
-    expect(notes).toHaveLength(4);
+    expect(notes).toHaveLength(5);
     expect(notes.join(" ")).toContain("whois");
     expect(notes.join(" ")).toContain("technology stack");
     expect(notes.join(" ")).toContain("brand-mention");
+    expect(notes.join(" ")).toContain("referring-domain");
     expect(notes.join(" ")).toContain("reviewed");
   });
 });

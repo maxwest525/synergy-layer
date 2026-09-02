@@ -4,7 +4,8 @@ import { useServerFn } from "@tanstack/react-start";
 import { useState, type ReactNode } from "react";
 import { toast } from "sonner";
 
-import { GlassCard, PageHeader, StatePill, formatWhen } from "@/components/os/primitives";
+import { GlassCard, PageHeader, StatePill } from "@/components/os/primitives";
+import { formatWhen } from "@/lib/format-when";
 import { NextBestActions } from "@/components/os/next-best-actions";
 import { OperatorRouteError } from "@/components/os/route-error";
 import {
@@ -40,13 +41,13 @@ export const Route = createFileRoute("/essentials")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Essentials — Marky" },
+      { title: "Essentials · Marky" },
       {
         name: "description",
         content:
           "What marketing coverage AOOS actually has today and what is still missing, concern by concern, in plain language.",
       },
-      { property: "og:title", content: "Essentials — Marky" },
+      { property: "og:title", content: "Essentials · Marky" },
       {
         property: "og:description",
         content: "Operator status for every marketing essential, based only on stored evidence.",
@@ -303,8 +304,9 @@ function CoverageSection({
                       </>
                     ) : (
                       <p className="mt-2 text-sm text-foreground/80">
-                        No evaluation has been stored for this concern yet, so AOOS makes no claim
-                        about it either way.
+                        Not evaluated. Nothing in AOOS grades a concern yet: no rule writes an
+                        evaluation, so this page tracks who owns it and when it is due, and makes no
+                        claim about whether it is working.
                       </p>
                     )}
                     <ConcernOwnership concern={concern} />
@@ -350,7 +352,6 @@ function EssentialsPage() {
     snapshotCount: data.backlinks.snapshots,
     referringDomains: data.backlinks.referringDomains,
     backlinks: data.backlinks.backlinks,
-    storedSufficient: data.backlinks.storedSufficient,
   });
 
   const searchConsole: Concern[] = [
@@ -538,9 +539,7 @@ function EssentialsPage() {
       title: "Authority",
       status: authority.status,
       evidence: authority.note,
-      gap: authority.sufficient
-        ? "No authority trend exists yet because only one collection has been stored."
-        : "AOOS will not display an authority score until stored backlink evidence explicitly records the sample as sufficient.",
+      gap: "No authority score exists to show. A score would need a method nobody has written; until one is, this concern tracks the stored sample.",
     },
   ];
 

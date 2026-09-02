@@ -24,6 +24,14 @@ DECLARE`);
 $sync_action$;`);
   });
 
+  it("refuses an agent node in the runner rather than marking the row as working", () => {
+    // The executor behind assertRunnableGraph used to write "Executing node"
+    // onto the agent row and return ok having done nothing (CODE-19).
+    const runner = readFileSync(new URL("./workflow-runner.server.ts", import.meta.url), "utf8");
+    expect(runner).not.toContain("Executing node");
+    expect(runner).toContain("no agent runtime exists in AOOS");
+  });
+
   it("stores observation-only findings as observed and never approval-gated", () => {
     expect(
       observationRecommendationRecord({

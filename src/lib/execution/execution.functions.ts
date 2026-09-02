@@ -4,6 +4,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { parseUuidInput } from "../server-input";
 import {
   changeKindForFile,
+  changeKindsForFile,
   GOVERNED_BRANCH,
   GOVERNED_FILES,
   GOVERNED_ORIGIN,
@@ -132,7 +133,7 @@ export function buildReadiness(input: {
       label: "Exact source file",
       state: changeKind ? "stored" : "blocked",
       detail: changeKind
-        ? `One allowlisted file will be edited: ${input.filePath} (change kind ${changeKind}).`
+        ? `One allowlisted file will be edited: ${input.filePath} (change kind ${changeKindsForFile(input.filePath).join(" or ")}).`
         : `No governed change kind owns ${input.filePath ?? "no file"}. The executor may only write ${GOVERNED_FILES.join(", ")}.`,
     },
     {
@@ -213,21 +214,15 @@ export const getExecutionState = createServerFn({ method: "GET" })
   .handler(async ({ data }): Promise<ExecutionStateView> => {
     const { createRequestClient } = await import("../tenant.server");
     const { fetchExecutionAttempts, createRenderedVerifier } = await import("./execute.server");
-    const executorCredentialPresent = Boolean(process.env["GITHUB_EXECUTOR_TOKEN"]);
-    // Ask the verifier's own chooser (Crawl4AI first, Firecrawl fallback), so
-    // this view can never disagree with what a render would actually use.
-    // Reading only the Firecrawl chooser here reported the renderer absent
-    // while Crawl4AI was healthy and doing every audit render.
-    const verifier = createRenderedVerifier();
-    const rendererCredentialPresent = verifier !== null;
-    const rendererName = verifier?.name ?? null;
 
+    // Which credentials this host holds is read only after the caller is
+    // authenticated; an anonymous call learns nothing about the environment.
     const empty: ExecutionStateView = {
       isOperator: false,
       operatorCheckFailed: false,
-      executorCredentialPresent,
-      rendererCredentialPresent,
-      rendererName,
+      executorCredentialPresent: false,
+      rendererCredentialPresent: false,
+      rendererName: null,
       repo: null,
       branch: null,
       filePath: null,
@@ -243,6 +238,15 @@ export const getExecutionState = createServerFn({ method: "GET" })
     };
     const { db, authenticated } = createRequestClient();
     if (!authenticated) return empty;
+
+    const executorCredentialPresent = Boolean(process.env["GITHUB_EXECUTOR_TOKEN"]);
+    // Ask the verifier's own chooser (Crawl4AI first, Firecrawl fallback), so
+    // this view can never disagree with what a render would actually use.
+    // Reading only the Firecrawl chooser here reported the renderer absent
+    // while Crawl4AI was healthy and doing every audit render.
+    const verifier = createRenderedVerifier();
+    const rendererCredentialPresent = verifier !== null;
+    const rendererName = verifier?.name ?? null;
 
     const { data: operator, error: operatorError } = await db.rpc("is_operator");
 
@@ -427,5 +431,10 @@ export const checkChangeRequestPublished = createServerFn({ method: "POST" })
         result.proof.finalUrl,
       );
     }
+    // A proof is one of the two moments the group of changes waiting on the
+    // site publish can change, so the group's one Inbox item is refreshed here
+    // rather than a day later.
+    const { reconcilePublishWaitRollup } = await import("../publish-wait-rollup.server");
+    await reconcilePublishWaitRollup(supabaseAdmin, tenantId);
     return result;
   });

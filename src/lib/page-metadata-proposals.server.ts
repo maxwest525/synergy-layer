@@ -9,6 +9,7 @@ import {
   GOVERNED_REPO,
 } from "./execution/allowlist";
 import { createGithubApi } from "./execution/execute.server";
+import { resolvePageSource } from "./execution/page-source-map";
 import { readLivePageWording } from "./live-page-evidence.server";
 import { applyExactReplacements } from "./execution/source-change";
 import { generatePageMetadataWording } from "./gemini.server";
@@ -16,7 +17,7 @@ import { retrieveKnowledgeGuidance } from "./knowledge-retrieval.server";
 import {
   buildPageMetadataChanges,
   buildPageMetadataPrompt,
-  selectUniqueLiteralSource,
+  selectMetadataSource,
 } from "./page-metadata-proposals";
 import {
   assertCompleteEvidence,
@@ -45,6 +46,17 @@ export type PreparedPageMetadataProposal = PreparedProposal;
  */
 const SITEWIDE_DEFAULT_FILE: (typeof GOVERNED_CHANGE_KINDS)["page.metadata"][number] =
   "src/components/seo/DefaultSeo.tsx";
+
+/**
+ * The two files that carry a description for pages that do not set their own:
+ * the shared head component and the sitewide default. Every other file the
+ * metadata kind may write is a page's own source, read only for the page
+ * being drafted.
+ */
+const SHARED_HEAD_FILES: readonly (typeof GOVERNED_CHANGE_KINDS)["page.metadata"][number][] = [
+  "src/components/seo/SeoHead.tsx",
+  SITEWIDE_DEFAULT_FILE,
+];
 
 function payloadRows(value: unknown): Record<string, unknown>[] {
   const payload =
@@ -248,14 +260,33 @@ export async function preparePageMetadataProposal(
     );
   }
   const head = await github.branchHead(GOVERNED_REPO, GOVERNED_BRANCH);
-  const sources = await Promise.all(
-    GOVERNED_CHANGE_KINDS["page.metadata"].map(async (path) => ({
+  const sharedFiles = await Promise.all(
+    SHARED_HEAD_FILES.map(async (path) => ({
       path,
       content: (await github.readFile(GOVERNED_REPO, path, head)).content,
     })),
   );
-  const source = selectUniqueLiteralSource(sources, liveMetaDescription);
-  const sitewideDefault = source.path === SITEWIDE_DEFAULT_FILE;
+
+  // Targeting proof (CODE-30, CODE-33). A page whose own source sets a
+  // description overrides the shared head component and the sitewide default,
+  // so the edit has to land in that page's own file or it can never be proven
+  // on the page. Read the page's own source at the same revision and let the
+  // selection decide, refusing with the reason when it cannot.
+  const resolved = resolvePageSource(targetUrl);
+  const pageSource =
+    resolved.ok && resolved.source.changeKind === "page.wording"
+      ? {
+          path: resolved.source.filePath,
+          content: (await github.readFile(GOVERNED_REPO, resolved.source.filePath, head)).content,
+        }
+      : null;
+  const source = selectMetadataSource({
+    sharedFiles,
+    pageSource,
+    liveMetaDescription,
+    sitewideDefaultPath: SITEWIDE_DEFAULT_FILE,
+  });
+  const sitewideDefault = source.sitewideDefault;
 
   const guidance = (
     await retrieveKnowledgeGuidance(client, [targetUrl, ...queries].join(" "), { limit: 5 })

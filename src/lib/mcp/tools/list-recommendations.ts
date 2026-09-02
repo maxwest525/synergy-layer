@@ -42,7 +42,7 @@ export default defineTool({
         let query = supabase
           .from("recommendations")
           .select(
-            "id, title, description, state, source_module, confidence, business_impact, revenue_impact, traffic_impact, risk, requires_approval, issue_fingerprint, created_at",
+            "id, title, description, state, source_module, confidence, business_impact, risk, requires_approval, issue_fingerprint, created_at",
           )
           .order("created_at", { ascending: false })
           .limit(Math.min(Math.max(limit ?? 25, 1), 100));

@@ -38,6 +38,22 @@ export async function currentRoles(
   return (data ?? []).map((row) => row.role);
 }
 
+/**
+ * The account's active workspace, read with service credentials so an audit
+ * row can carry its tenant. Null when the account has none (an unprovisioned
+ * sign-in), in which case the row is readable by admins and the actor alone
+ * (activity_read, 20260902030000).
+ */
+export async function activeTenantFor(userId: string): Promise<string | null> {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data } = await supabaseAdmin
+    .from("profiles")
+    .select("active_tenant_id")
+    .eq("id", userId)
+    .maybeSingle();
+  return data?.active_tenant_id ?? null;
+}
+
 export async function recordAuthEvent(
   userId: string,
   verb: string,
@@ -46,6 +62,7 @@ export async function recordAuthEvent(
 ): Promise<void> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   await supabaseAdmin.from("activity_events").insert({
+    tenant_id: await activeTenantFor(userId),
     actor_kind: "user",
     actor_id: userId,
     verb,

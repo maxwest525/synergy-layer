@@ -20,6 +20,7 @@ function graded(overrides: Partial<GradedOutcome>): GradedOutcome {
     wordingTreatment: true,
     verdict: "success",
     reason: "Clicks rose 60% against a flat site.",
+    confidence: null,
     ...overrides,
   };
 }
@@ -67,7 +68,7 @@ describe("composeOutcomeMemorySource", () => {
       }),
     ]);
     const content = source?.content ?? "";
-    expect(content.indexOf("## A — https://a.example")).toBeGreaterThan(-1);
+    expect(content.indexOf("## A: https://a.example")).toBeGreaterThan(-1);
     expect(content.indexOf("## A")).toBeLessThan(content.indexOf("## B"));
     expect(content.indexOf("14-day window")).toBeLessThan(content.indexOf("56-day window"));
     expect((content.match(/^## /gm) ?? []).length).toBe(2);

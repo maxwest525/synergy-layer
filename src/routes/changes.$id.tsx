@@ -30,8 +30,10 @@ import {
   rollBackChangeRequest,
   verifyChangeRequest,
 } from "@/lib/change-requests.functions";
+import { IN_FLIGHT_CONSEQUENCE } from "@/lib/change-request-conflicts";
 import { describeOutcome, humanState, isChangeState } from "@/lib/change-request-state";
 import { revertChangeRequest } from "@/lib/execution/execution.functions";
+import { regeneratePageMetadataProposal } from "@/lib/page-metadata-proposals.functions";
 import {
   editPageWordingProposal,
   regeneratePageWordingProposal,
@@ -43,13 +45,13 @@ export const Route = createFileRoute("/changes/$id")({
   errorComponent: OperatorRouteError,
   head: () => ({
     meta: [
-      { title: "Proposed page change — Marky" },
+      { title: "Proposed page change · Marky" },
       {
         name: "description",
         content:
           "Review one exact proposed page change, the dated evidence behind it, and its execution and verification status.",
       },
-      { property: "og:title", content: "Proposed page change — Marky" },
+      { property: "og:title", content: "Proposed page change · Marky" },
       {
         property: "og:description",
         content:
@@ -88,6 +90,56 @@ type ProposalVersion = {
 
 function asArray<T>(value: unknown): T[] {
   return Array.isArray(value) ? (value as T[]) : [];
+}
+
+/**
+ * The description lane's revision control. There is no hand edit for a meta
+ * description yet, so the one verb is a redraft, held to the same evidence
+ * mode the draft was filed under (CODE-4).
+ */
+function MetadataRedraftPanel({
+  id,
+  revisionCount,
+  onChanged,
+}: {
+  id: string;
+  revisionCount: number;
+  onChanged: () => void;
+}) {
+  const regenerate = useServerFn(regeneratePageMetadataProposal);
+  const revision = useMutation({
+    mutationFn: () => regenerate({ data: { id } }),
+    onSuccess: (result) => {
+      toast.success(
+        result.versionNumber
+          ? `Saved immutable revision ${result.versionNumber}.`
+          : "Proposal updated.",
+      );
+      onChanged();
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+  return (
+    <GlassCard className="p-5">
+      <h2 className="text-sm font-semibold text-foreground">Draft description and revisions</h2>
+      <p className="mt-2 text-sm text-muted-foreground">
+        Redrafting calls Gemini once with the same evidence this draft was held to and saves a new
+        immutable revision. {revisionCount} revision(s) so far. There is no hand edit for a
+        description yet.
+      </p>
+      <div className="mt-3">
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={revision.isPending}
+          onClick={() => revision.mutate()}
+        >
+          {revision.isPending ? "Redrafting..." : "Redraft the description"}
+        </Button>
+      </div>
+    </GlassCard>
+  );
 }
 
 function ProposalRevisionPanel({
@@ -329,9 +381,16 @@ function ChangeRequestPage() {
   };
 
   const mutation = useMutation({
-    mutationFn: async (action: "approve" | "reject" | "verify" | "rollback") => {
+    mutationFn: async (
+      action: "approve" | "approve_despite_in_flight" | "reject" | "verify" | "rollback",
+    ) => {
       const payload = { id, notes: notes.trim() || null, revision: null };
       if (action === "approve") return approve({ data: payload });
+      // The database refuses an approval while another change to this page is
+      // in flight unless the operator acknowledges it. This is the only control
+      // that sends the acknowledgement, and it says what it costs on its face.
+      if (action === "approve_despite_in_flight")
+        return approve({ data: { ...payload, acknowledgeInFlight: true } });
       if (action === "reject") return reject({ data: payload });
       if (action === "verify") return verify({ data: payload });
       // The rolled_back state requires a recorded revert commit, so the commit
@@ -384,7 +443,14 @@ function ChangeRequestPage() {
     .flatMap((outcome) =>
       outcome.verdict === null
         ? []
-        : [{ windowDays: outcome.windowDays, verdict: outcome.verdict, reason: outcome.reason }],
+        : [
+            {
+              windowDays: outcome.windowDays,
+              verdict: outcome.verdict,
+              reason: outcome.reason,
+              confidence: outcome.confidence,
+            },
+          ],
     )
     .sort((a, b) => a.windowDays - b.windowDays);
   const fields = asArray<FieldChange>(change.changes);
@@ -472,11 +538,43 @@ function ChangeRequestPage() {
             </li>
           ))}
         </ul>
+        {state === "proposed" && data.inFlight.length > 0 ? (
+          <div className="mt-4 rounded-xl border border-border/60 p-3">
+            <p className="text-sm font-semibold text-foreground">
+              Another change to this page is still in flight.
+            </p>
+            <ul className="mt-2 space-y-1">
+              {data.inFlight.map((sibling) => (
+                <li key={sibling.id} className="text-sm text-muted-foreground">
+                  <Link
+                    to="/changes/$id"
+                    params={{ id: sibling.id }}
+                    className="text-foreground underline-offset-4 hover:underline"
+                  >
+                    {sibling.title}
+                  </Link>{" "}
+                  is {sibling.reason}.
+                </li>
+              ))}
+            </ul>
+            <p className="mt-2 text-xs text-muted-foreground">{IN_FLIGHT_CONSEQUENCE}</p>
+          </div>
+        ) : null}
         {state === "proposed" ? (
           <div className="mt-4 flex flex-wrap gap-2">
-            <Button variant="outline" disabled={busy} onClick={() => mutation.mutate("approve")}>
-              Approve change
-            </Button>
+            {data.inFlight.length === 0 ? (
+              <Button variant="outline" disabled={busy} onClick={() => mutation.mutate("approve")}>
+                Approve change
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                disabled={busy}
+                onClick={() => mutation.mutate("approve_despite_in_flight")}
+              >
+                Approve anyway, measure both together
+              </Button>
+            )}
             <Button variant="ghost" disabled={busy} onClick={() => mutation.mutate("reject")}>
               Reject change
             </Button>
@@ -492,6 +590,15 @@ function ChangeRequestPage() {
           rationale={change.rationale}
           versions={data.versions}
           editable={state === "proposed"}
+          onChanged={invalidate}
+        />
+      ) : null}
+
+      {change.proposal_type === "page_metadata" && state === "proposed" ? (
+        <MetadataRedraftPanel
+          key={`${id}:${change.revision_count}`}
+          id={id}
+          revisionCount={change.revision_count}
           onChanged={invalidate}
         />
       ) : null}
@@ -544,7 +651,7 @@ function ChangeRequestPage() {
                             key={`${row.query}-${row.date}-${rowIndex}`}
                             className="text-sm text-muted-foreground"
                           >
-                            <span className="text-foreground">{row.query}</span> — position{" "}
+                            <span className="text-foreground">{row.query}</span>, position{" "}
                             {row.position} on {row.date}, {row.impressions} impressions,{" "}
                             {row.clicks} clicks
                           </li>
@@ -567,7 +674,7 @@ function ChangeRequestPage() {
                             key={`${row.domain}-${row.url}-${rowIndex}`}
                             className="text-sm text-muted-foreground"
                           >
-                            <span className="text-foreground">{row.title}</span> — {row.domain},
+                            <span className="text-foreground">{row.title}</span>, {row.domain},
                             position {row.position} for {row.query}
                           </li>
                         ))}
@@ -585,7 +692,7 @@ function ChangeRequestPage() {
                       {group.query ?? group.source ?? "Evidence"}
                     </span>
                     {group.date
-                      ? ` — average position ${group.average_position ?? group.position ?? "unknown"} on ${group.date}, ${group.impressions ?? 0} impressions`
+                      ? `, average position ${group.average_position ?? group.position ?? "unknown"} on ${group.date}, ${group.impressions ?? 0} impressions`
                       : null}
                   </p>
                 );
@@ -652,7 +759,7 @@ function ChangeRequestPage() {
                 key={`${row.query}-${row.date}-${index}`}
                 className="text-sm text-muted-foreground"
               >
-                <span className="text-foreground">{row.query}</span> — position {row.position} on{" "}
+                <span className="text-foreground">{row.query}</span>, position {row.position} on{" "}
                 {row.date}, {row.impressions} impressions
               </li>
             ))}

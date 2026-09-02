@@ -3,14 +3,10 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 
-import {
-  EmptyState,
-  GlassCard,
-  PageHeader,
-  StatePill,
-  formatWhen,
-  toneForState,
-} from "@/components/os/primitives";
+import { EmptyState, GlassCard, PageHeader, StatePill } from "@/components/os/primitives";
+import { formatWhen } from "@/lib/format-when";
+import { toneForState } from "@/lib/state-tone";
+import { stateLabel } from "@/lib/state-labels";
 import { Button } from "@/components/ui/button";
 import { syncRegistry } from "@/lib/os-admin.functions";
 import { getCapabilities } from "@/lib/os.functions";
@@ -30,13 +26,13 @@ export const Route = createFileRoute("/capabilities/registry")({
   },
   head: () => ({
     meta: [
-      { title: "Capability Registry — Marky" },
+      { title: "Capability Registry · Marky" },
       {
         name: "description",
         content:
           "Every MCP, API, connector, skill, model, repository, and internal module the operating system can call, with its true integration state.",
       },
-      { property: "og:title", content: "Capability Registry — Marky" },
+      { property: "og:title", content: "Capability Registry · Marky" },
       {
         property: "og:description",
         content: "What the operating system can actually do, and what is only declared.",
@@ -94,7 +90,7 @@ function CapabilitiesPage() {
         kinds.map((kind) => (
           <section key={kind} className="space-y-4">
             <h2 className="text-sm font-semibold capitalize tracking-tight text-foreground">
-              {kind.replace(/_/g, " ")}
+              {stateLabel(kind)}
             </h2>
             <div className="grid gap-4 md:grid-cols-2">
               {data

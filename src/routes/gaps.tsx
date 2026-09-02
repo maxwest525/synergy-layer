@@ -30,13 +30,13 @@ export const Route = createFileRoute("/gaps")({
   errorComponent: OperatorRouteError,
   head: () => ({
     meta: [
-      { title: "Connection gaps — Marky" },
+      { title: "Connection gaps · Marky" },
       {
         name: "description",
         content:
           "Every provider operation on every connection, marked wired, partly wired, or not built, with one click to put the gap on the roadmap.",
       },
-      { property: "og:title", content: "Connection gaps — Marky" },
+      { property: "og:title", content: "Connection gaps · Marky" },
       {
         property: "og:description",
         content: "Every operation we could call, and the honest status of each one.",
@@ -166,7 +166,7 @@ function GapsRoute() {
                             tone={STATUS_TONE[entry.status]}
                           />
                           {entry.mutates ? (
-                            <span className="text-xs text-amber-400">
+                            <span className="text-xs text-warning">
                               writes at the provider, needs approval
                             </span>
                           ) : null}

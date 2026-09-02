@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
+import { allWorkflows } from "@/registry";
 import {
+  OBSERVATION_SOURCES,
   assertCadenceMayEnable,
   cadenceSource,
   deriveCadenceStatus,
@@ -23,9 +25,21 @@ const base: CadenceFacts = {
   lastErrorAt: null,
 };
 
+describe("every listed cadence has a workflow that can run it", () => {
+  // PageSpeed used to be listed with a switch that could only throw: no
+  // workflow, no cron job, and a hook allowlist that refused the key (MEAS-18).
+  it("names only sources with a declared workflow behind the schedule key", () => {
+    const declared = new Set(allWorkflows().map((workflow) => workflow.key));
+    for (const source of OBSERVATION_SOURCES) {
+      expect(declared.has(source.scheduleKey), `${source.scheduleKey} is not declared`).toBe(true);
+    }
+    expect(OBSERVATION_SOURCES.map((source) => source.key)).not.toContain("pagespeed");
+  });
+});
+
 describe("deriveCadenceStatus", () => {
   it("keeps a source with no stored rows ineligible", () => {
-    const status = deriveCadenceStatus(cadenceSource("pagespeed"), base);
+    const status = deriveCadenceStatus(cadenceSource("umami"), base);
     expect(status.eligible).toBe(false);
     expect(status.active).toBe(false);
     expect(status.action).toBe("prove");
@@ -54,6 +68,53 @@ describe("deriveCadenceStatus", () => {
     expect(status.tone).toBe("danger");
   });
 
+  it("reports an overdue cadence once a whole period has passed with no run recorded", () => {
+    const facts: CadenceFacts = {
+      ...base,
+      storedRowCount: 12,
+      scheduleExists: true,
+      scheduleEnabled: true,
+      cron: "0 16 * * *",
+      nextRunAt: "2026-09-01T16:00:00.000Z",
+      lastRunAt: "2026-08-31T16:00:04.000Z",
+    };
+    // Before the following firing the row is simply waiting.
+    const waiting = deriveCadenceStatus(
+      cadenceSource("gsc"),
+      facts,
+      new Date("2026-09-02T10:00:00Z"),
+    );
+    expect(waiting.stateLabel).toBe("Cadence on");
+    // A full period past the expected firing, with nothing recorded, is overdue.
+    const late = deriveCadenceStatus(cadenceSource("gsc"), facts, new Date("2026-09-02T16:00:01Z"));
+    expect(late.stateLabel).toBe("Cadence overdue");
+    expect(late.tone).toBe("danger");
+    expect(late.instruction).toContain("2026-09-01T16:00:00.000Z");
+    expect(late.instruction).toContain("2026-08-31T16:00:04.000Z");
+  });
+
+  it("lets a recorded error outrank overdue, and a missing cron never invents one", () => {
+    const facts: CadenceFacts = {
+      ...base,
+      storedRowCount: 12,
+      scheduleExists: true,
+      scheduleEnabled: true,
+      cron: "0 16 * * *",
+      nextRunAt: "2026-09-01T16:00:00.000Z",
+      lastError: "401 Unauthorized",
+    };
+    expect(
+      deriveCadenceStatus(cadenceSource("gsc"), facts, new Date("2026-09-03T16:00:01Z")).stateLabel,
+    ).toBe("Cadence failing");
+    expect(
+      deriveCadenceStatus(
+        cadenceSource("gsc"),
+        { ...facts, lastError: null, cron: null },
+        new Date("2026-09-03T16:00:01Z"),
+      ).stateLabel,
+    ).toBe("Cadence on");
+  });
+
   it("never treats an enabled schedule with zero rows as active", () => {
     const status = deriveCadenceStatus(cadenceSource("gsc"), {
       ...base,
@@ -66,7 +127,7 @@ describe("deriveCadenceStatus", () => {
 
 describe("assertCadenceMayEnable", () => {
   it("refuses an empty source", () => {
-    expect(() => assertCadenceMayEnable(cadenceSource("pagespeed"), 0)).toThrow(/stored 0 rows/);
+    expect(() => assertCadenceMayEnable(cadenceSource("umami"), 0)).toThrow(/stored 0 rows/);
   });
 
   it("allows a proven source", () => {

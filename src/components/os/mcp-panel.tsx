@@ -1,13 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 
-import {
-  EmptyNote,
-  GlassCard,
-  ListSkeleton,
-  StatePill,
-  formatWhen,
-  toneForState,
-} from "@/components/os/primitives";
+import { EmptyNote, GlassCard, ListSkeleton, StatePill } from "@/components/os/primitives";
+import { formatWhen } from "@/lib/format-when";
+import { toneForState } from "@/lib/state-tone";
 import { getMcpStatus } from "@/lib/mcp-status.functions";
 
 /** MCP health and active OAuth grants for the agent integrations capability. */
@@ -92,7 +87,7 @@ export function McpPanel() {
                   />
                 </div>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  {grant.operators.join(", ") || "unidentified operator"} — {grant.calls} calls,{" "}
+                  {grant.operators.join(", ") || "unidentified operator"}: {grant.calls} calls,{" "}
                   {grant.denied} denied, last {grant.lastTool ?? "call"}{" "}
                   {formatWhen(grant.lastCallAt)}
                 </p>
@@ -111,7 +106,7 @@ export function McpPanel() {
             {data.recentCalls.map((call, index) => (
               <li key={`${call.at}-${index}`} className="flex flex-wrap justify-between gap-3">
                 <span className="text-foreground">
-                  {call.tool} — {call.operator}
+                  {call.tool} by {call.operator}
                 </span>
                 <span className="text-muted-foreground">
                   {call.clientId} · {call.outcome}

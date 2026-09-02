@@ -48,6 +48,15 @@ describe("which verbs a card may offer", () => {
     ).toContain("regenerate");
     expect(
       idsFor({ id: "c2", kind: "change", proposalType: "page_metadata", storedState: "proposed" }),
+    ).toContain("regenerate");
+    // The crawl-directives lane has no redraft function, so no verb (CODE-4).
+    expect(
+      idsFor({
+        id: "c3",
+        kind: "change",
+        proposalType: "site.crawl_directives",
+        storedState: "proposed",
+      }),
     ).not.toContain("regenerate");
   });
 
@@ -177,6 +186,12 @@ describe("drafting a site crawl fix straight from the card", () => {
       "sitemap_empty",
       "sitemap_coverage_gap",
       "pages_unreadable",
+      "http_not_redirected",
+      "hsts_missing",
+      "security_headers_missing",
+      "host_not_consolidated",
+      "mixed_content_present",
+      "homepage_slow_to_respond",
     ]) {
       expect(idsFor(siteFinding(check))).not.toContain("draft");
     }

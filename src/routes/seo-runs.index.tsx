@@ -3,7 +3,8 @@ import { Link, createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 
-import { GlassCard, PageHeader, StatePill, formatWhen } from "@/components/os/primitives";
+import { GlassCard, PageHeader, StatePill } from "@/components/os/primitives";
+import { formatWhen } from "@/lib/format-when";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,7 +30,7 @@ import { OperatorRouteError } from "@/components/os/route-error";
 
 export const Route = createFileRoute("/seo-runs/")({
   ssr: false,
-  head: () => ({ meta: [{ title: "SEO Runs — Marky" }, { name: "robots", content: "noindex" }] }),
+  head: () => ({ meta: [{ title: "SEO Runs · Marky" }, { name: "robots", content: "noindex" }] }),
   errorComponent: OperatorRouteError,
   component: SeoRunsPage,
 });

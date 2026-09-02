@@ -5,12 +5,12 @@ import {
   BackLink,
   DetailRow,
   EmptyNote,
-  formatWhen,
   GlassCard,
   PageHeader,
   StatePill,
-  toneForState,
 } from "@/components/os/primitives";
+import { formatWhen } from "@/lib/format-when";
+import { toneForState } from "@/lib/state-tone";
 import { getAgent } from "@/lib/os.functions";
 import { OperatorRouteError } from "@/components/os/route-error";
 
@@ -30,7 +30,7 @@ export const Route = createFileRoute("/agents/$id")({
     return data;
   },
   head: ({ loaderData }) => {
-    const title = loaderData?.agent ? `${loaderData.agent.name} — Agents — Marky` : "Agent — Marky";
+    const title = loaderData?.agent ? `${loaderData.agent.name} · Agents · Marky` : "Agent · Marky";
     const description = loaderData?.agent?.purpose ?? "Agent detail, grants, and run history.";
     return {
       meta: [

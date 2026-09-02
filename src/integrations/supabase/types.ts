@@ -948,6 +948,7 @@ export type Database = {
           note: string | null
           revoked_at: string | null
           role: Database["public"]["Enums"]["app_role"]
+          tenant_id: string | null
           updated_at: string
         }
         Insert: {
@@ -959,6 +960,7 @@ export type Database = {
           note?: string | null
           revoked_at?: string | null
           role?: Database["public"]["Enums"]["app_role"]
+          tenant_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -970,9 +972,18 @@ export type Database = {
           note?: string | null
           revoked_at?: string | null
           role?: Database["public"]["Enums"]["app_role"]
+          tenant_id?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "authorized_operators_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       automation_jobs: {
         Row: {
@@ -1977,6 +1988,7 @@ export type Database = {
           keyword: string
           language_code: string | null
           location_code: number | null
+          postback_token_hash: string | null
           posted_at: string
           priority: string
           provider_task_id: string
@@ -1996,6 +2008,7 @@ export type Database = {
           keyword: string
           language_code?: string | null
           location_code?: number | null
+          postback_token_hash?: string | null
           posted_at?: string
           priority?: string
           provider_task_id: string
@@ -2015,6 +2028,7 @@ export type Database = {
           keyword?: string
           language_code?: string | null
           location_code?: number | null
+          postback_token_hash?: string | null
           posted_at?: string
           priority?: string
           provider_task_id?: string
@@ -2453,6 +2467,7 @@ export type Database = {
       google_ads_snapshots: {
         Row: {
           advertising_channel_type: string | null
+          budget_micros: number | null
           campaign_id: string
           campaign_name: string
           campaign_status: string
@@ -2469,6 +2484,7 @@ export type Database = {
         }
         Insert: {
           advertising_channel_type?: string | null
+          budget_micros?: number | null
           campaign_id: string
           campaign_name: string
           campaign_status: string
@@ -2485,6 +2501,7 @@ export type Database = {
         }
         Update: {
           advertising_channel_type?: string | null
+          budget_micros?: number | null
           campaign_id?: string
           campaign_name?: string
           campaign_status?: string
@@ -3017,6 +3034,7 @@ export type Database = {
       openai_ads_connections: {
         Row: {
           allowed_origins: string[]
+          bridge_secret_name: string
           canonical_origin: string
           created_at: string
           delivery_mode: string
@@ -3038,6 +3056,7 @@ export type Database = {
         }
         Insert: {
           allowed_origins?: string[]
+          bridge_secret_name?: string
           canonical_origin: string
           created_at?: string
           delivery_mode?: string
@@ -3059,6 +3078,7 @@ export type Database = {
         }
         Update: {
           allowed_origins?: string[]
+          bridge_secret_name?: string
           canonical_origin?: string
           created_at?: string
           delivery_mode?: string
@@ -3819,6 +3839,66 @@ export type Database = {
             columns: ["schedule_id"]
             isOneToOne: false
             referencedRelation: "schedules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      schedule_runs: {
+        Row: {
+          created_at: string
+          duration_ms: number | null
+          error: string | null
+          finished_at: string
+          fired_at: string
+          fired_by: string
+          id: string
+          result: Json
+          schedule_id: string
+          schedule_key: string
+          state: string
+          tenant_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          duration_ms?: number | null
+          error?: string | null
+          finished_at?: string
+          fired_at: string
+          fired_by: string
+          id?: string
+          result?: Json
+          schedule_id: string
+          schedule_key: string
+          state: string
+          tenant_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          duration_ms?: number | null
+          error?: string | null
+          finished_at?: string
+          fired_at?: string
+          fired_by?: string
+          id?: string
+          result?: Json
+          schedule_id?: string
+          schedule_key?: string
+          state?: string
+          tenant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "schedule_runs_schedule_id_fkey"
+            columns: ["schedule_id"]
+            isOneToOne: false
+            referencedRelation: "schedules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "schedule_runs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
         ]
@@ -5561,6 +5641,7 @@ export type Database = {
       }
       transition_change_request: {
         Args: {
+          _acknowledge_in_flight?: boolean
           _action: string
           _id: string
           _notes?: string

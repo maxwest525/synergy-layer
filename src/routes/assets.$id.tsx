@@ -6,12 +6,13 @@ import {
   BackLink,
   DetailRow,
   EmptyNote,
-  formatWhen,
   GlassCard,
   PageHeader,
   StatePill,
-  toneForState,
 } from "@/components/os/primitives";
+import { formatWhen } from "@/lib/format-when";
+import { toneForState } from "@/lib/state-tone";
+import { stateLabel } from "@/lib/state-labels";
 import { SearchConsolePanel } from "@/components/os/search-console-panel";
 import { getAsset } from "@/lib/os.functions";
 import { OperatorRouteError } from "@/components/os/route-error";
@@ -32,7 +33,7 @@ export const Route = createFileRoute("/assets/$id")({
     return data;
   },
   head: ({ loaderData }) => {
-    const title = loaderData?.asset ? `${loaderData.asset.name} — Assets — Marky` : "Asset — Marky";
+    const title = loaderData?.asset ? `${loaderData.asset.name} · Assets · Marky` : "Asset · Marky";
     const description =
       loaderData?.asset?.description ?? "Asset detail, health, and history in AOOS.";
     return {
@@ -58,7 +59,7 @@ function AssetDetailPage() {
     <div className="space-y-10">
       <BackLink to="/assets">All assets</BackLink>
       <PageHeader
-        eyebrow={asset.kind.replace(/_/g, " ")}
+        eyebrow={stateLabel(asset.kind)}
         title={asset.name}
         description={asset.description ?? "No description recorded for this asset yet."}
         actions={<StatePill label={asset.health} tone={toneForState(asset.health)} />}

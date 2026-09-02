@@ -50,8 +50,15 @@ describe("navigation contract", () => {
       search: null,
       ga4: { connectionStatement: "not connected", windowDays: 28, snapshots: [] },
       changes: { fixesLive: 0, pagesImproved: 0 },
-      audit: { hasRun: false, pagesNeedingFixes: 0 },
-      health: { brokenConnections: 0, failingProviders: 0 },
+      audit: { lastObservedAt: null, pagesNeedingFixes: 0 },
+      health: {
+        brokenConnections: 0,
+        failingProviders: 0,
+        connectionsChecked: 1,
+        lastCheckedAt: "2026-08-19T12:00:00.000Z",
+        latestRunAt: null,
+        overdueCadences: 0,
+      },
       queueSources: [
         {
           id: "11111111-1111-1111-1111-111111111111",

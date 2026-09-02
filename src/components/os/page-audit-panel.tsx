@@ -5,7 +5,8 @@ import { ScanSearch } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
-import { EmptyNote, GlassCard, StatePill, formatWhen } from "@/components/os/primitives";
+import { EmptyNote, GlassCard, StatePill } from "@/components/os/primitives";
+import { formatWhen } from "@/lib/format-when";
 import { Button } from "@/components/ui/button";
 import { fixTargetForPage, fixTargetForSiteCheck, noFixReasonForPage } from "@/lib/audit-fixes";
 import { proposeAuditFix } from "@/lib/audit-proposals.functions";

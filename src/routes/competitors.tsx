@@ -11,6 +11,7 @@ import {
   PageHeader,
   StatePill,
 } from "@/components/os/primitives";
+import { formatWhen } from "@/lib/format-when";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -28,10 +29,23 @@ import {
 import {
   decideCompetitorCandidates,
   listCompetitorShortlist,
+  reviewOwnershipCandidate,
   updateCompanyClassification,
 } from "@/lib/competitors.functions";
+import { DOMAIN_ANALYTICS_CONFIG } from "@/lib/dataforseo/domain-analytics.server";
+import {
+  OWNERSHIP_REVIEW_STATE_LABELS,
+  OWNERSHIP_RULE_LABELS,
+  describeMatchedFields,
+  type OwnershipReviewDecision,
+} from "@/lib/dataforseo/ownership-review";
 import { estimatedGapCostUsd } from "@/lib/dataforseo/keyword-gap.server";
-import { runCompetitorKeywordGap } from "@/lib/dataforseo.functions";
+import { estimatedIntersectCostUsd } from "@/lib/dataforseo/link-intersect";
+import {
+  runCompetitorKeywordGap,
+  runCompetitorLinkIntersect,
+  runWhoisForKnownDomains,
+} from "@/lib/dataforseo.functions";
 import { OperatorRouteError } from "@/components/os/route-error";
 
 const shortlistQuery = {
@@ -46,13 +60,13 @@ export const Route = createFileRoute("/competitors")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Competitor review — Marky" },
+      { title: "Competitor review · Marky" },
       {
         name: "description",
         content:
           "Review the evidence-backed competitor shortlist derived from observed SERPs: keyword overlap, SERP share, head to head positions, and observed page mechanics, before anything becomes tracked.",
       },
-      { property: "og:title", content: "Competitor review — Marky" },
+      { property: "og:title", content: "Competitor review · Marky" },
       {
         property: "og:description",
         content: "The human gate between competitor discovery and recurring competitor tracking.",
@@ -77,6 +91,9 @@ function CompetitorReviewPage() {
   const decide = useServerFn(decideCompetitorCandidates);
   const classify = useServerFn(updateCompanyClassification);
   const runGap = useServerFn(runCompetitorKeywordGap);
+  const runIntersect = useServerFn(runCompetitorLinkIntersect);
+  const runWhois = useServerFn(runWhoisForKnownDomains);
+  const reviewOwnership = useServerFn(reviewOwnershipCandidate);
   const trackedCount = data.tracked.filter((row) => row.active).length;
   const [selected, setSelected] = useState<string[]>([]);
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -103,7 +120,7 @@ function CompetitorReviewPage() {
       toast.success(
         `${result.count} competitor${result.count === 1 ? "" : "s"} ${
           variables.decision === "approve" ? `approved and tracked (${result.tracked})` : "rejected"
-        }${result.inboxResolved ? " — inbox item cleared" : ""}`,
+        }${result.inboxResolved ? ", inbox item cleared" : ""}`,
       );
       setSelected([]);
       void queryClient.invalidateQueries({ queryKey: ["competitor-shortlist"] });
@@ -124,6 +141,46 @@ function CompetitorReviewPage() {
         }.`,
       );
       void queryClient.invalidateQueries({ queryKey: ["keyword-candidates"] });
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+  const intersectMutation = useMutation({
+    mutationFn: () => runIntersect(),
+    onSuccess: (result) => {
+      toast.success(
+        result.created
+          ? `${result.rows} site(s) link to every one of ${result.competitors} tracked competitor(s) and not to you.`
+          : "Today's comparison already existed; nothing was spent.",
+      );
+      void queryClient.invalidateQueries({ queryKey: ["competitor-shortlist"] });
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+  const whoisMutation = useMutation({
+    mutationFn: () => runWhois(),
+    onSuccess: (result) => {
+      toast.success(
+        result.created
+          ? `${result.rows} registration record(s) read across ${result.domains} known domain(s); ${result.candidatesFiled} ownership candidate(s) filed for your decision.`
+          : "Today's registration read already existed; nothing was spent.",
+      );
+      void queryClient.invalidateQueries({ queryKey: ["competitor-shortlist"] });
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+  const ownershipMutation = useMutation({
+    mutationFn: (input: { id: string; decision: OwnershipReviewDecision }) =>
+      reviewOwnership({ data: input }),
+    onSuccess: (result) => {
+      toast.success(
+        result.reviewState === "confirmed"
+          ? "Recorded as one owner. Nothing else changes on its own."
+          : "Recorded as separate owners.",
+      );
+      void queryClient.invalidateQueries({ queryKey: ["competitor-shortlist"] });
     },
     onError: (error: Error) => toast.error(error.message),
   });
@@ -176,9 +233,40 @@ function CompetitorReviewPage() {
                 {gapMutation.isPending ? "Comparing…" : "Find searches they win and you miss"}
               </Button>
               <p id="gap-cost" className="text-xs text-muted-foreground">
-                Costs about ${estimatedGapCostUsd(trackedCount).toFixed(2)} — one paid look-up per
+                Costs about ${estimatedGapCostUsd(trackedCount).toFixed(2)}, one paid look-up per
                 approved competitor. Nothing is spent until you click, and every search it finds
                 arrives in the keyword queue for approval before anything tracks it.
+              </p>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={intersectMutation.isPending}
+                onClick={() => intersectMutation.mutate()}
+                aria-describedby="intersect-cost"
+              >
+                {intersectMutation.isPending ? "Comparing…" : "Compare linking sites"}
+              </Button>
+              <p id="intersect-cost" className="text-xs text-muted-foreground">
+                Costs about ${estimatedIntersectCostUsd().toFixed(2)}, one paid look-up across every
+                approved competitor. It stores which sites link to all of them and not to you; it
+                files nothing and tracks nothing.
+              </p>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={whoisMutation.isPending}
+                onClick={() => whoisMutation.mutate()}
+                aria-describedby="whois-cost"
+              >
+                {whoisMutation.isPending ? "Reading…" : "Read registration records"}
+              </Button>
+              <p id="whois-cost" className="text-xs text-muted-foreground">
+                Costs about ${DOMAIN_ANALYTICS_CONFIG.estimatedUsdPerRequest.toFixed(2)}, one paid
+                look-up across every tracked and reviewed competitor domain. Two domains sharing a
+                registration detail are filed below as a question for you; nothing is asserted on
+                its own.
               </p>
             </div>
           ) : undefined
@@ -191,6 +279,116 @@ function CompetitorReviewPage() {
         <MetricTile label="Other observed domains" value={String(data.observed.length)} />
         <MetricTile label="Currently tracked" value={String(data.tracked.length)} />
       </div>
+
+      {data.whoisRead || data.ownershipCandidates.length > 0 ? (
+        <GlassCard className="p-5">
+          <h2 className="text-sm font-semibold text-foreground">Who owns which domain</h2>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {data.whoisRead
+              ? `Registration records read ${formatWhen(data.whoisRead.collectedAt)}: ${data.whoisRead.records} record(s) across ${data.whoisRead.domains.length} known domain(s).`
+              : "No registration record has been read yet."}{" "}
+            A match below is a question, not a finding: only your decision records an owner.
+          </p>
+          {data.ownershipCandidates.length === 0 ? (
+            <p className="mt-3 text-sm text-muted-foreground">
+              No two known domains share a stored registration detail or technology stack.
+            </p>
+          ) : (
+            <ul className="mt-3 space-y-3">
+              {data.ownershipCandidates.map((candidate) => (
+                <li
+                  key={candidate.id}
+                  className="flex flex-col gap-1.5 border-b border-border/50 pb-3 text-sm last:border-b-0"
+                >
+                  <span className="flex flex-wrap items-baseline justify-between gap-2">
+                    <span className="text-foreground">
+                      {candidate.domainA} and {candidate.domainB}
+                    </span>
+                    <StatePill
+                      label={
+                        OWNERSHIP_REVIEW_STATE_LABELS[candidate.reviewState] ??
+                        candidate.reviewState
+                      }
+                      tone={candidate.reviewState === "pending" ? "warning" : "neutral"}
+                    />
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    {OWNERSHIP_RULE_LABELS[candidate.rule] ?? candidate.rule}:{" "}
+                    {describeMatchedFields(candidate.matchedFields)}. Filed{" "}
+                    {formatWhen(candidate.createdAt)}.
+                  </span>
+                  {candidate.reviewState === "pending" ? (
+                    <span className="flex gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={ownershipMutation.isPending}
+                        onClick={() =>
+                          ownershipMutation.mutate({ id: candidate.id, decision: "confirmed" })
+                        }
+                      >
+                        Same owner
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={ownershipMutation.isPending}
+                        onClick={() =>
+                          ownershipMutation.mutate({ id: candidate.id, decision: "rejected" })
+                        }
+                      >
+                        Separate owners
+                      </Button>
+                    </span>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          )}
+        </GlassCard>
+      ) : null}
+
+      {data.linkIntersect ? (
+        <GlassCard className="p-5">
+          <h2 className="text-sm font-semibold text-foreground">
+            Sites linking to every tracked competitor and not to you
+          </h2>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Read {formatWhen(data.linkIntersect.collectedAt)} across{" "}
+            {data.linkIntersect.competitors.join(", ")}.
+            {data.linkIntersect.possiblyTruncated
+              ? " The read filled its limit, so the list is cut off rather than complete."
+              : ""}
+            {data.linkIntersect.unparsed > 0
+              ? ` ${data.linkIntersect.unparsed} item(s) skipped: unrecognized response shape.`
+              : ""}
+          </p>
+          {data.linkIntersect.rows.length === 0 ? (
+            <p className="mt-3 text-sm text-muted-foreground">
+              No site links to all {data.linkIntersect.competitors.length} of them without linking
+              to you.
+            </p>
+          ) : (
+            <ul className="mt-3 space-y-2">
+              {data.linkIntersect.rows.slice(0, 50).map((row) => (
+                <li
+                  key={row.domain}
+                  className="flex flex-wrap items-baseline justify-between gap-2 border-b border-border/50 pb-2 text-sm last:border-b-0"
+                >
+                  <span className="text-foreground">{row.domain}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {Object.entries(row.byCompetitor)
+                      .map(([competitor, entry]) => `${entry.backlinks} link(s) to ${competitor}`)
+                      .join(" · ")}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </GlassCard>
+      ) : null}
 
       {data.shortlist.length === 0 ? (
         <EmptyState
@@ -335,12 +533,18 @@ function CompetitorRow({
               <p className="text-sm font-medium text-foreground">{row.domain}</p>
               <div className="flex flex-wrap items-center gap-2">
                 <StatePill
-                  label={row.domainClass === "competitor" ? "Business competitor" : "Surface"}
+                  label={row.domainClass === "competitor" ? "Ranks alongside you" : "Web platform"}
                   tone="primary"
                 />
                 <StatePill label={`Company: ${COMPANY_CLASSIFICATION_LABELS[classification]}`} />
                 <StatePill label={`SERP share ${pct(row.serpShare)}`} />
-                <StatePill label={`Median position ${row.medianPosition || "—"}`} />
+                <StatePill
+                  label={
+                    row.medianPosition
+                      ? `Median position ${row.medianPosition}`
+                      : "Median position not observed"
+                  }
+                />
                 <StatePill label={`Outranks us on ${row.outranksOwned}`} />
                 <StatePill label={`We outrank on ${row.ownedOutranks}`} />
                 <StatePill label={`Confidence ${pct(row.confidence)}`} />
@@ -398,7 +602,8 @@ function CompetitorRow({
               <p className="text-foreground">Ranking evidence</p>
               <p>
                 Present in {row.serpsPresent} of {row.serpsAnalysed} observed SERPs. Best position{" "}
-                {row.bestPosition || "—"}, average {row.averagePosition || "—"}.
+                {row.bestPosition || "not observed"}, average{" "}
+                {row.averagePosition || "not observed"}.
               </p>
               {row.serpFeatures.length > 0 ? (
                 <p>Surfaces involved: {row.serpFeatures.join(", ")}</p>

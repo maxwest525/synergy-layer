@@ -42,7 +42,8 @@ function canonical(url: string): string | null {
 
 /**
  * Ranks owned pages by stored impressions, keeps only pages that are visible
- * but underperforming, and excludes anything already carrying a change request.
+ * but underperforming, and excludes the pages the caller names (those with a
+ * change still open or being measured; see `pagesWithAnOpenChange`).
  */
 export function selectProposalCandidates(input: {
   rows: PageQueryRow[];

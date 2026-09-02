@@ -22,6 +22,7 @@ export const getChangeRequest = createServerFn({ method: "GET" })
         versions: [],
         measurement: { cycle: null, windows: [], observations: [], revisions: [] },
         gradedOutcomes: [],
+        inFlight: [],
       };
     const tenantId = await resolveTenantId(db);
     if (!tenantId)
@@ -32,6 +33,7 @@ export const getChangeRequest = createServerFn({ method: "GET" })
         versions: [],
         measurement: { cycle: null, windows: [], observations: [], revisions: [] },
         gradedOutcomes: [],
+        inFlight: [],
       };
     return fetchChangeRequest(db, tenantId, data.id);
   });
@@ -39,8 +41,13 @@ export const getChangeRequest = createServerFn({ method: "GET" })
 async function runTransition(
   supabase: Parameters<typeof import("./change-requests.server").transitionChangeRequest>[0],
   userId: string,
-  action: "approve" | "reject" | "mark_applied" | "verify" | "roll_back",
-  data: { id: string; notes?: string | null | undefined; revision?: string | null | undefined },
+  action: "approve" | "reject" | "verify" | "roll_back",
+  data: {
+    id: string;
+    notes?: string | null | undefined;
+    revision?: string | null | undefined;
+    acknowledgeInFlight?: boolean | undefined;
+  },
 ) {
   const { assertOperator } = await import("./os-admin.server");
   await assertOperator(supabase, userId);
@@ -51,6 +58,7 @@ async function runTransition(
     userId,
     notes: data.notes ?? null,
     revision: data.revision ?? null,
+    acknowledgeInFlight: data.acknowledgeInFlight === true,
   });
   const state = result.changeRequest.state;
   if (isChangeState(state) && state !== "proposed") {
@@ -79,18 +87,6 @@ export const rejectChangeRequest = createServerFn({ method: "POST" })
   .inputValidator(parseChangeTransitionInput)
   .handler(async ({ data, context }) =>
     runTransition(context.supabase, context.userId, "reject", data),
-  );
-
-// Uncalled from the UI, unlike its four siblings, but keep it: it wraps the
-// `transition_change_request` RPC, which is granted to `authenticated` and
-// enforces the state machine in Postgres. The transition is reachable without
-// this wrapper -- rows already exist in applied and rolled_back -- so "nothing
-// calls it" is not evidence the path is dead.
-export const markChangeRequestApplied = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator(parseChangeTransitionInput)
-  .handler(async ({ data, context }) =>
-    runTransition(context.supabase, context.userId, "mark_applied", data),
   );
 
 export const verifyChangeRequest = createServerFn({ method: "POST" })

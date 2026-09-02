@@ -11,9 +11,9 @@ import {
   MetricTile,
   PageHeader,
   StatePill,
-  formatWhen,
-  toneForState,
 } from "@/components/os/primitives";
+import { formatWhen } from "@/lib/format-when";
+import { toneForState } from "@/lib/state-tone";
 import { OperatorRouteError } from "@/components/os/route-error";
 import { UmamiPanel } from "@/components/os/umami-panel";
 import { ObservationCadences } from "@/components/os/observation-cadences";
@@ -36,7 +36,7 @@ export const Route = createFileRoute("/measurement/tools")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Measurement — Marky" },
+      { title: "Measurement · Marky" },
       {
         name: "description",
         content:
@@ -44,7 +44,7 @@ export const Route = createFileRoute("/measurement/tools")({
       },
       {
         property: "og:title",
-        content: "Measurement — Marky",
+        content: "Measurement · Marky",
       },
       {
         property: "og:description",
@@ -707,6 +707,9 @@ function MeasurementPage() {
                     <span className="text-xs text-muted-foreground">
                       {row.impressions} impression(s) · {row.clicks} click(s) ·{" "}
                       {usd(row.costMicros)} · {row.conversions} conversion(s)
+                      {row.budgetMicros !== null
+                        ? ` · budget ${usd(row.budgetMicros)} a day`
+                        : " · no budget reported"}
                     </span>
                   </li>
                 ))}

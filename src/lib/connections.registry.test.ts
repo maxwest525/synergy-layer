@@ -2,7 +2,7 @@ import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
-import { CONNECTION_OUTPUTS, FINDING_SOURCES } from "./connections";
+import { CONNECTION_OUTPUTS, FINDING_SOURCES, NEWEST_ROW_COLUMN } from "./connections";
 import { CONNECTOR_CATALOG } from "./connectors/catalog";
 
 /**
@@ -105,6 +105,18 @@ describe("the registry matches the codebase it describes", () => {
       }
     }
     expect(offenders, "these link to the category page where they meant the registry").toEqual([]);
+  });
+
+  it("names the newest-row column for every stored table", () => {
+    // Without it the date on the Connections page would read "never", which
+    // is an accusation, not an absence.
+    for (const output of CONNECTION_OUTPUTS) {
+      if (output.table === null) continue;
+      expect(
+        NEWEST_ROW_COLUMN[output.table as keyof typeof NEWEST_ROW_COLUMN],
+        `${output.table} has no newest-row column`,
+      ).toBeDefined();
+    }
   });
 
   it("gives a connection with no store no finding source either", () => {

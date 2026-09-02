@@ -37,7 +37,7 @@ Rollback is a new approved action using the stored before-state and current live
 
 ## Current state
 
-The guarded execution core, frozen-request read, exact replacement, source-revision drift refusal, source commit, and rendered proof are `IMPLEMENTED`; the live database contains source-committed and rendered-proof history. Current execution still depends on runtime GitHub credentials and operator authorization. GitHub synchronization and Lovable Publish remain separate actions; neither is implied by the other.
+There is no mark-applied: since 2026-09-02 `transition_change_request` refuses the action by name, and `applied` is reached only through `apply_change_request_rendered_proof`. The guarded execution core, frozen-request read, exact replacement, source-revision drift refusal, source commit, and rendered proof are `IMPLEMENTED`; the live database contains source-committed and rendered-proof history. Current execution still depends on runtime GitHub credentials and operator authorization. GitHub synchronization and Lovable Publish remain separate actions; neither is implied by the other.
 
 ## Related
 

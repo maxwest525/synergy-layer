@@ -101,7 +101,12 @@ export function normalizeCustomerId(raw: string): string {
   return raw.replace(/\D/g, "");
 }
 
-/** The exact GAQL this integration sends. Every campaign, day by day, for the pooled window. */
+/**
+ * The exact GAQL this integration sends. Every campaign, day by day, for the
+ * pooled window. The campaign's budget rides along (PAID-1): spend against
+ * nothing is a number without a ceiling, and the operator sets that ceiling in
+ * Google Ads, not here.
+ */
 export function buildGoogleAdsCampaignQuery(): string {
   return [
     "SELECT",
@@ -109,6 +114,7 @@ export function buildGoogleAdsCampaignQuery(): string {
     "  campaign.name,",
     "  campaign.status,",
     "  campaign.advertising_channel_type,",
+    "  campaign_budget.amount_micros,",
     "  segments.date,",
     "  metrics.impressions,",
     "  metrics.clicks,",
@@ -126,6 +132,8 @@ export type GoogleAdsCampaignDayRow = {
   campaignName: string;
   campaignStatus: string;
   advertisingChannelType: string | null;
+  /** The campaign's daily budget in micros, or null when the API sent none. Never 0 for absent. */
+  budgetMicros: number | null;
   segmentDate: string;
   impressions: number;
   clicks: number;
@@ -174,6 +182,17 @@ export function normalizeGoogleAdsReport(payload: unknown): GoogleAdsReport {
       result["metrics"] && typeof result["metrics"] === "object"
         ? (result["metrics"] as Record<string, unknown>)
         : {};
+    const budget =
+      result["campaignBudget"] && typeof result["campaignBudget"] === "object"
+        ? (result["campaignBudget"] as Record<string, unknown>)
+        : {};
+    const budgetRaw = budget["amountMicros"];
+    const budgetMicros =
+      typeof budgetRaw === "string" || typeof budgetRaw === "number"
+        ? Number.isFinite(Number(budgetRaw))
+          ? Number(budgetRaw)
+          : null
+        : null;
     const campaignId = text(campaign["id"]);
     const segmentDate = text(segments["date"]);
     if (!campaignId || !segmentDate) continue;
@@ -182,6 +201,7 @@ export function normalizeGoogleAdsReport(payload: unknown): GoogleAdsReport {
       campaignName: text(campaign["name"]),
       campaignStatus: text(campaign["status"]) || "UNKNOWN",
       advertisingChannelType: text(campaign["advertisingChannelType"]) || null,
+      budgetMicros,
       segmentDate,
       impressions: numeric(metrics["impressions"]),
       clicks: numeric(metrics["clicks"]),

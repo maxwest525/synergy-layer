@@ -7,9 +7,9 @@ import {
   PageStack,
   StatePill,
   TableShell,
-  formatWhen,
-  toneForState,
 } from "@/components/os/primitives";
+import { formatWhen } from "@/lib/format-when";
+import { toneForState } from "@/lib/state-tone";
 import { OperatorRouteError } from "@/components/os/route-error";
 import { listChangeRequests } from "@/lib/operator-views.functions";
 
@@ -23,13 +23,13 @@ export const Route = createFileRoute("/changes/")({
   errorComponent: OperatorRouteError,
   head: () => ({
     meta: [
-      { title: "Change requests — Marky" },
+      { title: "Change requests · Marky" },
       {
         name: "description",
         content:
           "Every proposed page change with its exact lifecycle state, from proposed through approved, applied, verified, or rolled back.",
       },
-      { property: "og:title", content: "Change requests — Marky" },
+      { property: "og:title", content: "Change requests · Marky" },
       {
         property: "og:description",
         content: "The full queue of proposed page changes and where each one stands.",

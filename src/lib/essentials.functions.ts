@@ -44,7 +44,6 @@ export type EssentialsFacts = {
     referringDomains: number;
     backlinks: number;
     spamScore: number | null;
-    storedSufficient: boolean | null;
   };
   pagespeed: PageSpeedFacts;
   googleAds: { campaignDayRows: number; distinctCampaigns: number; latestAt: string | null };
@@ -234,12 +233,6 @@ export const getEssentials = createServerFn({ method: "GET" })
     const backlinkRows = dfsRows.filter((row) => row.kind.startsWith("backlinks_"));
     const summary = (backlinkRows.find((row) => row.kind === "backlinks_summary")?.totals ??
       {}) as Record<string, unknown>;
-    const evidenceTotals = (backlinkRows.find((row) => row.kind === "backlinks_evidence")?.totals ??
-      null) as Record<string, unknown> | null;
-    const storedSufficient =
-      evidenceTotals && typeof evidenceTotals["sufficient"] === "boolean"
-        ? (evidenceTotals["sufficient"] as boolean)
-        : null;
 
     const systemMap: Record<string, SystemFacts | null> = {};
     for (const key of SYSTEM_KEYS) {
@@ -319,7 +312,6 @@ export const getEssentials = createServerFn({ method: "GET" })
           typeof summary["backlinks_spam_score"] === "number"
             ? summary["backlinks_spam_score"]
             : null,
-        storedSufficient,
       },
 
       pagespeed,

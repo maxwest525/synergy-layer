@@ -90,6 +90,68 @@ export const runCompetitorKeywordGap = createServerFn({ method: "POST" })
   });
 
 /**
+ * Metered. One DataForSEO Backlinks request across every approved competitor,
+ * fired only by an explicit operator click with the estimate shown on the
+ * button (LINK-4). Stores the snapshot; files nothing and tracks nothing.
+ */
+export const runCompetitorLinkIntersect = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { assertOperator } = await import("./os-admin.server");
+    await assertOperator(context.supabase, context.userId);
+    const { requireTenantId } = await import("./tenant.server");
+    const tenantId = await requireTenantId(context.supabase);
+
+    const { getSelectedProperty } = await import("./search-console.server");
+    const property = await getSelectedProperty(context.supabase);
+    const ownDomain = (property ?? "")
+      .replace(/^sc-domain:/, "")
+      .replace(/^https?:\/\//, "")
+      .replace(/\/$/, "");
+    if (!ownDomain) throw new Error("No owned property is selected to compare against.");
+
+    const { data: tracked, error } = await context.supabase
+      .from("tracked_competitors")
+      .select("domain")
+      .eq("tenant_id", tenantId)
+      .eq("active", true)
+      .order("approved_at", { ascending: true });
+    if (error) throw new Error(error.message);
+    const competitors = (tracked ?? []).map((row) => row.domain);
+
+    const { collectCompetitorLinkIntersect } = await import("./dataforseo/backlinks.server");
+    const collected = await collectCompetitorLinkIntersect(
+      context.supabase,
+      tenantId,
+      ownDomain,
+      competitors,
+    );
+
+    const { logActivity } = await import("./os.server");
+    await logActivity(context.supabase, {
+      tenantId,
+      actorKind: "user",
+      actorId: context.userId,
+      verb: "backlinks.intersect.collected",
+      subjectKind: "capability",
+      summary: `Compared the sites linking to ${competitors.length} approved competitor(s) against the site: ${collected.rows} linking domain(s) stored${collected.created ? "" : " (today's read already existed; nothing was spent)"}.`,
+      payload: {
+        competitors,
+        rows: collected.rows,
+        created: collected.created,
+        costUsd: collected.costUsd,
+      },
+    });
+
+    return {
+      competitors: competitors.length,
+      rows: collected.rows,
+      created: collected.created,
+      costUsd: collected.costUsd,
+    };
+  });
+
+/**
  * Metered: two DataForSEO Labs tasks over the pending queue, up to the batch
  * cap, fired only by an explicit operator click. Writes scores onto the
  * candidates and changes no review state.
@@ -104,4 +166,65 @@ export const runKeywordEnrichment = createServerFn({ method: "POST" })
 
     const { enrichPendingCandidates } = await import("./dataforseo/keyword-enrichment.server");
     return enrichPendingCandidates(context.supabase, tenantId);
+  });
+
+/**
+ * One paid whois read across every tracked and reviewed competitor domain,
+ * then the registration-details rule over what came back. The producer had
+ * no trigger since 08-31: the rule read an empty table forever (CODE-27).
+ * Metered, so it runs from this click only, never a schedule; a second click
+ * on the same day reuses the stored read and spends nothing.
+ */
+export const runWhoisForKnownDomains = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { assertOperator } = await import("./os-admin.server");
+    await assertOperator(context.supabase, context.userId);
+    const { requireTenantId } = await import("./tenant.server");
+    const tenantId = await requireTenantId(context.supabase);
+
+    const {
+      collectWhoisOverviewForKnownDomains,
+      readKnownCompetitorDomains,
+      runSameRegistrationDetailsCandidates,
+    } = await import("./dataforseo/discovery-findings.server");
+    const domains = [...(await readKnownCompetitorDomains(context.supabase, tenantId))];
+    if (domains.length < 2) {
+      throw new Error(
+        "Fewer than two tracked or reviewed competitor domains are known, so there is no pair to compare a registration record between.",
+      );
+    }
+    const collected = await collectWhoisOverviewForKnownDomains(
+      context.supabase,
+      tenantId,
+      domains,
+    );
+    const registrations = await runSameRegistrationDetailsCandidates(context.supabase, tenantId);
+
+    const { logActivity } = await import("./os.server");
+    await logActivity(context.supabase, {
+      tenantId,
+      actorKind: "user",
+      actorId: context.userId,
+      verb: "domain_analytics.whois.collected",
+      subjectKind: "capability",
+      summary: `Read the registration records of ${domains.length} known competitor domain(s): ${collected.rows} record(s) stored${collected.created ? "" : " (today's read already existed; nothing was spent)"}, ${registrations.candidatesFiled} ownership candidate(s) filed for review.`,
+      payload: {
+        domains,
+        rows: collected.rows,
+        created: collected.created,
+        costUsd: collected.costUsd,
+        candidatesFiled: registrations.candidatesFiled,
+        missingRecordFor: registrations.missingRecordFor,
+      },
+    });
+
+    return {
+      domains: domains.length,
+      rows: collected.rows,
+      created: collected.created,
+      costUsd: collected.costUsd,
+      candidatesFiled: registrations.candidatesFiled,
+      missingRecordFor: registrations.missingRecordFor,
+    };
   });

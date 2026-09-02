@@ -113,6 +113,7 @@ export const runSchedulerTick = createServerFn({ method: "POST" })
     return tickScheduler(context.supabase, new Date(), {
       onlyKeys: ["gsc-daily-observe"],
       collectSerpBacklog: false,
+      firedBy: "operator",
     });
   });
 
@@ -132,5 +133,9 @@ export const syncRegistry = createServerFn({ method: "POST" })
     const { assertOperator } = await import("./os-admin.server");
     await assertOperator(context.supabase, context.userId);
     const { syncRegistryDefinitions } = await import("@/registry/sync.server");
-    return syncRegistryDefinitions(context.supabase);
+    // Code-defined rows are written by the service role, behind the operator
+    // check above; an operator reads the registry and never writes it, and
+    // the policies on `agents` and `agent_capabilities` now say so (CODE-20).
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    return syncRegistryDefinitions(supabaseAdmin);
   });

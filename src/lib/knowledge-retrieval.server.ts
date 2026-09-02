@@ -26,6 +26,15 @@ export type RetrievedKnowledgeEntry = KnowledgeEntryForRanking & {
   score: number;
 };
 
+/**
+ * Stated assumption: these collection weights, and the token weights below
+ * (a title match 6, a tag match 4, a body match 1), are a chosen ordering,
+ * not measured relevance. A playbook outranks a research note at equal
+ * overlap because it is the more prescriptive document, and a title match
+ * outranks a body match because a title is the author's own summary. What
+ * would settle it: which retrieved chunks the drafting prompts actually cite,
+ * once the outcome record links a chunk to a decision (AGT-15).
+ */
 const COLLECTION_WEIGHT: Record<string, number> = {
   "kb.playbooks": 3,
   "kb.best_practices": 2,
@@ -115,7 +124,7 @@ export async function retrieveKnowledgeGuidance(
           (chunk) => ({
             id: chunk.id,
             collectionKey: "kb.playbooks",
-            title: `${chunk.sourceTitle} — ${chunk.title}`,
+            title: `${chunk.sourceTitle}: ${chunk.title}`,
             body: chunk.body,
             sourceRef: `${chunk.sourceRef}#${chunk.contentSha256.slice(0, 12)}`,
             tags: [chunk.sourceKey, ...chunk.headingPath],

@@ -7,8 +7,8 @@ import {
   PageStack,
   StatePill,
   TableShell,
-  formatWhen,
 } from "@/components/os/primitives";
+import { formatWhen } from "@/lib/format-when";
 import { OperatorRouteError } from "@/components/os/route-error";
 import { listAuthorityFindings } from "@/lib/operator-views.functions";
 
@@ -22,13 +22,13 @@ export const Route = createFileRoute("/authority")({
   errorComponent: OperatorRouteError,
   head: () => ({
     meta: [
-      { title: "Authority findings — Marky" },
+      { title: "Authority findings · Marky" },
       {
         name: "description",
         content:
           "Observed authority and trust gaps per page, with the severity, confidence, and the evidence that is still missing before a change can be proposed.",
       },
-      { property: "og:title", content: "Authority findings — Marky" },
+      { property: "og:title", content: "Authority findings · Marky" },
       {
         property: "og:description",
         content: "Where pages fall short on authority signals, and what evidence is missing.",

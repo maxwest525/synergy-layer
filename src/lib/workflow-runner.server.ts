@@ -121,9 +121,11 @@ export async function startRun(
   triggerSource: string,
   actorId: string | null,
   mode: RunMode = "manual",
+  tenant: string | null = null,
 ): Promise<RunResult> {
   const { workflow, ordered } = await loadWorkflowGraph(client, workflowId);
-  const tenantId = await requireTenantId(client);
+  // A scheduled run names its tenant; a manual run takes the operator's.
+  const tenantId = await requireTenantId(client, tenant);
 
   const { data: run, error } = await client
     .from("workflow_runs")
@@ -206,7 +208,8 @@ export async function advanceRun(
   const node = ordered[cursor];
   if (!node) throw new Error("Run position no longer matches the workflow definition.");
 
-  const tenantId = await requireTenantId(client);
+  // The run's own tenant, never re-resolved from the client.
+  const tenantId = run.tenant_id;
   const stepStart = Date.now();
   const { data: step, error: stepError } = await client
     .from("workflow_steps")
@@ -230,7 +233,7 @@ export async function advanceRun(
       ? actorId === null
         ? { ok: false, error: "An approval step needs a person to decide it." }
         : { ok: true, output: { decision: "approved", decidedBy: actorId } }
-      : await executeNode(client, node, runId);
+      : await executeNode(client, node, runId, tenantId);
 
   await client
     .from("workflow_steps")
@@ -371,10 +374,11 @@ export async function runWorkflow(
   workflowId: string,
   triggerSource: string,
   actorId: string | null,
+  tenant: string | null = null,
 ): Promise<RunResult> {
   const { ordered } = await loadWorkflowGraph(client, workflowId);
   const mutating = mutatingCapabilityKeys();
-  const started = await startRun(client, workflowId, triggerSource, actorId, "auto");
+  const started = await startRun(client, workflowId, triggerSource, actorId, "auto", tenant);
 
   let state = started.state;
   let cursor = 0;
@@ -399,6 +403,7 @@ async function executeNode(
   client: Client,
   node: WorkflowNode,
   runId: string,
+  tenantId: string,
 ): Promise<NodeOutcome> {
   if (node.kind === "condition") {
     return { ok: true, output: { evaluated: true } };
@@ -420,16 +425,16 @@ async function executeNode(
     }
 
     const specialised =
-      (await runSearchConsoleNode(client, node.ref ?? "")) ??
+      (await runSearchConsoleNode(client, node.ref ?? "", tenantId)) ??
       (await runResearchNode(client, node.ref ?? "")) ??
       (await runGa4Node(client, node.ref ?? "")) ??
       (await runUmamiNode(client, node.ref ?? "")) ??
       (await runSeoValidationNode(client, node.ref ?? "", runId)) ??
-      (await runSerpCompetitorNode(client, node.ref ?? "")) ??
-      (await runAdsTransparencyNode(client, node.ref ?? "", runId)) ??
-      (await runDataForSeoNode(client, node.ref ?? "", runId)) ??
-      (await runSiteAuditNode(client, node.ref ?? "")) ??
-      (await runBacklinkFindingsNode(client, node.ref ?? ""));
+      (await runSerpCompetitorNode(client, node.ref ?? "", tenantId)) ??
+      (await runAdsTransparencyNode(client, node.ref ?? "", runId, tenantId)) ??
+      (await runDataForSeoNode(client, node.ref ?? "", runId, tenantId)) ??
+      (await runSiteAuditNode(client, node.ref ?? "", tenantId)) ??
+      (await runBacklinkFindingsNode(client, node.ref ?? "", tenantId));
     // A key no runner recognises must refuse, not succeed. The old fall-through
     // stamped last_run_at and "healthy" for any unrecognised capability, which
     // is how a declared-but-unwired step passed as a working one.
@@ -451,38 +456,42 @@ async function executeNode(
     };
   }
 
-  const { data: agent, error } = await client
-    .from("agents")
-    .select("id, name")
-    .eq("key", node.ref ?? "")
-    .maybeSingle();
-  if (error) return { ok: false, error: error.message };
-  if (!agent) return { ok: false, error: `Unknown agent "${node.ref}"` };
-
-  await client
-    .from("agents")
-    .update({
-      current_task: `Executing node ${node.key}`,
-      last_run_at: new Date().toISOString(),
-    })
-    .eq("id", agent.id);
-
-  return { ok: true, output: { agent: agent.name, node: node.key } };
+  // No agent runtime exists: `runAgent` throws on every call and
+  // `assertRunnableGraph` refuses any graph holding an agent node before a run
+  // starts. This branch used to mark the agent row as executing the node and
+  // return ok having done nothing, so a run that reached it would have read as
+  // work done on /agents (CODE-19). It refuses by name instead.
+  return {
+    ok: false,
+    error: `Agent node "${node.key}" cannot run: no agent runtime exists in AOOS.`,
+  };
 }
 
 /**
  * Search Console nodes run the real read-only pipeline. An empty result is a
  * successful step; only a genuine fault fails the node.
  */
-async function runSearchConsoleNode(client: Client, ref: string): Promise<NodeOutcome | null> {
+async function runSearchConsoleNode(
+  client: Client,
+  ref: string,
+  tenantId: string,
+): Promise<NodeOutcome | null> {
   if (ref === "search.console") {
     const { collectDaily, getSelectedProperty } = await import("./search-console.server");
-    const property = await getSelectedProperty(client);
+    const property = await getSelectedProperty(client, tenantId);
     if (!property) {
       return { ok: false, error: "No Search Console property is selected." };
     }
     try {
-      const result = await collectDaily(client, property);
+      // The scheduled collection keeps the same ledger every other provider
+      // keeps, so a failed night reaches the cadence card (CODE-54).
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { withMeasurementRun } = await import("./measurement/run-ledger.server");
+      const result = await withMeasurementRun(
+        supabaseAdmin,
+        { tenantId, provider: "gsc", target: property, strategy: "daily_collection" },
+        () => collectDaily(client, property),
+      );
       return {
         ok: true,
         output: {
@@ -503,7 +512,7 @@ async function runSearchConsoleNode(client: Client, ref: string): Promise<NodeOu
   if (ref === "search.console.inspect") {
     const { getSelectedProperty } = await import("./search-console.server");
     const { sweepUrlInspections } = await import("./search-console-sweep.server");
-    const property = await getSelectedProperty(client);
+    const property = await getSelectedProperty(client, tenantId);
     if (!property) {
       return { ok: false, error: "No Search Console property is selected." };
     }
@@ -521,7 +530,7 @@ async function runSearchConsoleNode(client: Client, ref: string): Promise<NodeOu
   if (ref === "search.console.rules") {
     const { getSelectedProperty } = await import("./search-console.server");
     const { evaluateSnapshots } = await import("./search-console-rules.server");
-    const property = await getSelectedProperty(client);
+    const property = await getSelectedProperty(client, tenantId);
     if (!property) {
       return { ok: false, error: "No Search Console property is selected." };
     }
@@ -702,15 +711,14 @@ async function runDataForSeoNode(
   client: Client,
   ref: string,
   runId: string,
+  tenantId: string,
 ): Promise<NodeOutcome | null> {
   if (!ref.startsWith("cap.dataforseo_")) return null;
 
-  const { requireTenantId } = await import("./tenant.server");
   const { getSelectedProperty } = await import("./search-console.server");
 
   try {
-    const tenantId = await requireTenantId(client);
-    const property = await getSelectedProperty(client);
+    const property = await getSelectedProperty(client, tenantId);
     const target = (property ?? "")
       .replace(/^sc-domain:/, "")
       .replace(/^https?:\/\//, "")
@@ -738,8 +746,7 @@ async function runDataForSeoNode(
           target,
           costUsd: evidence.costUsd,
           snapshots: evidence.normalized["snapshots"],
-          missingFactors: evidence.missingFactors,
-          healthSufficient: evidence.health.sufficient,
+          missingEvidence: evidence.missingEvidence,
         },
       };
     }
@@ -846,12 +853,14 @@ async function runDataForSeoNode(
  * backlink findings (`backlink-rules.server.ts`). Costs nothing: no provider
  * is called.
  */
-async function runBacklinkFindingsNode(client: Client, ref: string): Promise<NodeOutcome | null> {
+async function runBacklinkFindingsNode(
+  client: Client,
+  ref: string,
+  tenantId: string,
+): Promise<NodeOutcome | null> {
   if (ref !== "backlinks.findings") return null;
   try {
-    const { requireTenantId } = await import("./tenant.server");
     const { evaluateBacklinkFindings } = await import("./backlink-rules.server");
-    const tenantId = await requireTenantId(client);
     const result = await evaluateBacklinkFindings(client, tenantId);
     return { ok: true, output: { ...result, costUsd: 0 } };
   } catch (error) {
@@ -863,7 +872,11 @@ async function runBacklinkFindingsNode(client: Client, ref: string): Promise<Nod
  * Rebuilds the competitor set from observed SERP results. Costs nothing: it
  * re-reads stored evidence and never calls the provider.
  */
-async function runSerpCompetitorNode(client: Client, ref: string): Promise<NodeOutcome | null> {
+async function runSerpCompetitorNode(
+  client: Client,
+  ref: string,
+  tenantId: string,
+): Promise<NodeOutcome | null> {
   if (
     ref !== "serp.competitors" &&
     ref !== "serp.competitor_intelligence" &&
@@ -874,11 +887,8 @@ async function runSerpCompetitorNode(client: Client, ref: string): Promise<NodeO
     return null;
   }
   try {
-    const { requireTenantId } = await import("./tenant.server");
     const { getSelectedProperty } = await import("./search-console.server");
     const { deriveCompetitorsFromSerp } = await import("./dataforseo/competitors.server");
-
-    const tenantId = await requireTenantId(client);
 
     if (ref === "serp.targeting") {
       const { runTargetingPass } = await import("./dataforseo/targeting-rules.server");
@@ -893,7 +903,7 @@ async function runSerpCompetitorNode(client: Client, ref: string): Promise<NodeO
       return { ok: true, output: { ...result, costUsd: 0 } };
     }
 
-    const property = await getSelectedProperty(client);
+    const property = await getSelectedProperty(client, tenantId);
     const own = (property ?? "")
       .replace(/^sc-domain:/, "")
       .replace(/^https?:\/\//, "")
@@ -940,12 +950,14 @@ async function runSerpCompetitorNode(client: Client, ref: string): Promise<NodeO
  * snapshots and files evidence-backed findings from them. Costs nothing and
  * calls no provider, the same shape as `serp.targeting` above.
  */
-async function runSiteAuditNode(client: Client, ref: string): Promise<NodeOutcome | null> {
+async function runSiteAuditNode(
+  client: Client,
+  ref: string,
+  tenantId: string,
+): Promise<NodeOutcome | null> {
   if (ref !== "site-audit.rules") return null;
   try {
-    const { requireTenantId } = await import("./tenant.server");
     const { evaluateOnPageSnapshots } = await import("./onpage-rules.server");
-    const tenantId = await requireTenantId(client);
     const result = await evaluateOnPageSnapshots(client, tenantId);
     if (result.noSnapshots) {
       return {
@@ -969,6 +981,7 @@ async function runAdsTransparencyNode(
   client: Client,
   ref: string,
   runId: string,
+  tenantId: string,
 ): Promise<NodeOutcome | null> {
   const handled = new Set([
     "cap.serpapi_ads_transparency",
@@ -981,9 +994,6 @@ async function runAdsTransparencyNode(
   if (!handled.has(ref)) return null;
 
   try {
-    const { requireTenantId } = await import("./tenant.server");
-    const tenantId = await requireTenantId(client);
-
     // Fail closed on the registry state. cap.serpapi_ads_transparency is the
     // single exception: its only action is the free account probe, which is
     // exactly how a pending gate is meant to become reachable. Every other Ads

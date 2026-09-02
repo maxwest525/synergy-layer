@@ -9,8 +9,8 @@ import {
   GlassCard,
   MetricTile,
   StatePill,
-  formatWhen,
 } from "@/components/os/primitives";
+import { formatWhen } from "@/lib/format-when";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -108,6 +108,14 @@ function ConnectionCard({ connection, canEdit }: { connection: ConnectionView; c
             connection.secretPresent
               ? `Present on the server as ${connection.secretName}`
               : `Missing. Add ${connection.secretName} in Project Settings, Secrets.`
+          }
+        />
+        <DetailRow
+          label="Bridge secret"
+          value={
+            connection.bridgeSecretPresent
+              ? `Present on the server as ${connection.bridgeSecretName}; the website must present the same value.`
+              : `Missing. Add ${connection.bridgeSecretName} in Project Settings, Secrets, or the bridge refuses every call.`
           }
         />
         <DetailRow label="Last changed" value={formatWhen(connection.updatedAt)} />

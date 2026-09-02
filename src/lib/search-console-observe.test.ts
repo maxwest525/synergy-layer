@@ -6,6 +6,7 @@ import { reconcileAppliedChangeEvidence } from "./change-requests.server";
 import { reconcileChangeMeasurements } from "./change-measurements.server";
 import { logActivity } from "./os.server";
 import { reconcileOutcomeAlerts } from "./outcome-alerts.server";
+import { reconcilePublishWaitRollup } from "./publish-wait-rollup.server";
 import { observeSearchConsole } from "./search-console-observe.server";
 import { collectDaily, getSelectedProperty } from "./search-console.server";
 
@@ -41,11 +42,30 @@ vi.mock("./change-requests.server", () => ({
 vi.mock("./outcome-alerts.server", () => ({
   reconcileOutcomeAlerts: vi.fn(async () => ({ failed: 0, filed: 0 })),
 }));
+vi.mock("./publish-wait-rollup.server", () => ({
+  reconcilePublishWaitRollup: vi.fn(async () => ({
+    waiting: 0,
+    filed: false,
+    updated: false,
+    completed: false,
+  })),
+}));
 
 vi.mock("./os.server", () => ({
   fileInboxItem: vi.fn(async () => undefined),
   logActivity: vi.fn(async () => undefined),
 }));
+
+const ledgerCloses: Array<{ status: string; error: string | null | undefined }> = [];
+vi.mock("./measurement/run-ledger.server", () => ({
+  openMeasurementRun: vi.fn(async () => ({
+    id: "run-1",
+    close: vi.fn(async (status: string, error?: string | null) => {
+      ledgerCloses.push({ status, error });
+    }),
+  })),
+}));
+vi.mock("@/integrations/supabase/client.server", () => ({ supabaseAdmin: {} }));
 
 function observationClient() {
   const updates: Array<{ table: string; values: Record<string, unknown> }> = [];
@@ -67,19 +87,23 @@ function observationClient() {
 describe("Search Console observation tracking", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    ledgerCloses.length = 0;
   });
 
   it("timestamps the selected property and records a completed observation even when the latest day already existed", async () => {
     const { client, updates } = observationClient();
-    const result = await observeSearchConsole(client);
+    const result = await observeSearchConsole(client, "tenant-1");
 
     expect(result.ok).toBe(true);
-    expect(getSelectedProperty).toHaveBeenCalledWith(client);
+    expect(getSelectedProperty).toHaveBeenCalledWith(client, "tenant-1");
     expect(collectDaily).toHaveBeenCalledWith(client, "sc-domain:trumoveinc.com");
     expect(reconcileAppliedChangeEvidence).toHaveBeenCalledWith(client);
     expect(reconcileChangeMeasurements).toHaveBeenCalledWith(client);
     // After the day's windows are captured, failure verdicts reach the Inbox.
     expect(reconcileOutcomeAlerts).toHaveBeenCalledWith(client, "sc-domain:trumoveinc.com");
+    // The group of changes waiting on the site publish is refreshed in the same
+    // pass, after the verdict alerts, so the Inbox reads the day's true state.
+    expect(reconcilePublishWaitRollup).toHaveBeenCalledWith(client);
     expect(
       updates.some(
         (entry) =>

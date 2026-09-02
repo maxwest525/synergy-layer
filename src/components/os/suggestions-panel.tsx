@@ -5,7 +5,9 @@ import { Check, GitPullRequestArrow, Loader2, TriangleAlert } from "lucide-react
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
-import { EmptyNote, StatePill, formatWhen, toneForState } from "./primitives";
+import { EmptyNote, StatePill } from "./primitives";
+import { formatWhen } from "@/lib/format-when";
+import { toneForState } from "@/lib/state-tone";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -177,8 +179,12 @@ export function SuggestionsPanel({ collapsed = false }: { collapsed?: boolean })
     refetchOnWindowFocus: true,
   });
 
-  const items = query.data?.items ?? [];
-  const waiting = (query.data?.counts.propose ?? 0) + (query.data?.counts.execute ?? 0);
+  // A fresh array on every render made the memo below recompute every time.
+  const items = useMemo(() => query.data?.items ?? [], [query.data]);
+  const counts = query.data?.counts ?? { propose: 0, approve: 0, execute: 0, measure: 0 };
+  // Two things wait on the operator here, and the sentence names both rather
+  // than folding them into one "waiting" (CODE-32).
+  const waiting = counts.propose + counts.execute;
 
   const decidable = useMemo(() => items.filter(isDecidable), [items]);
   const selectedIds = useMemo(
@@ -260,7 +266,7 @@ export function SuggestionsPanel({ collapsed = false }: { collapsed?: boolean })
               ? "Reading stored state…"
               : query.isError
                 ? "Could not read the pipeline. Sign in again, then reopen this panel."
-                : `${items.length} item(s), ${waiting} waiting on you. Updated ${formatWhen(
+                : `${items.length} item(s): ${counts.propose} waiting on your yes or no, ${counts.execute} approved and waiting for you to execute. Updated ${formatWhen(
                     query.data?.fetchedAt,
                   )}.`}
           </p>
