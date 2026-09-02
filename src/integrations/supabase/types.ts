@@ -4561,6 +4561,78 @@ export type Database = {
           },
         ]
       }
+      site_watch_reads: {
+        Row: {
+          canonical: string | null
+          created_at: string
+          error: string | null
+          final_url: string | null
+          id: string
+          noindex: boolean | null
+          observed_at: string
+          observed_on: string
+          origin: string
+          property: string
+          robots: string | null
+          run_id: string | null
+          status: number | null
+          tenant_id: string
+          title: string | null
+          url: string
+        }
+        Insert: {
+          canonical?: string | null
+          created_at?: string
+          error?: string | null
+          final_url?: string | null
+          id?: string
+          noindex?: boolean | null
+          observed_at?: string
+          observed_on: string
+          origin: string
+          property: string
+          robots?: string | null
+          run_id?: string | null
+          status?: number | null
+          tenant_id: string
+          title?: string | null
+          url: string
+        }
+        Update: {
+          canonical?: string | null
+          created_at?: string
+          error?: string | null
+          final_url?: string | null
+          id?: string
+          noindex?: boolean | null
+          observed_at?: string
+          observed_on?: string
+          origin?: string
+          property?: string
+          robots?: string | null
+          run_id?: string | null
+          status?: number | null
+          tenant_id?: string
+          title?: string | null
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "site_watch_reads_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "measurement_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "site_watch_reads_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       suggestion_suppressions: {
         Row: {
           created_at: string

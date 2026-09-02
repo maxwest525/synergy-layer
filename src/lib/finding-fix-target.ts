@@ -167,6 +167,15 @@ const NO_LANE_REASON: Readonly<Record<string, string>> = {
   duplicate_descriptions_across_pages:
     "Several pages share the same description, usually because they all fall back to the sitewide default. A page that should say something of its own needs its own edit, and which pages deserve one is your call.",
 
+  // The nightly live-site read. What changed overnight is answered in hosting,
+  // routing or the page's directives, never in its words.
+  page_stopped_answering:
+    "This address answered a page one night and an error the next. That is fixed on the server or in the site's routing, by restoring the page or redirecting the address, not by editing words on a page that is not answering.",
+  page_went_noindex:
+    "This page told crawlers not to list it last night and did not the night before. Whether it should be listed is a decision about the page's directives, not its wording; remove the directive if the page belongs in search results.",
+  page_canonical_changed:
+    "This page now names a different address as its original. Which address should be the original is a decision about the site's structure, not a wording change; restore the earlier canonical if the change was not intended.",
+
   // Links from other sites. The link is theirs; the address is yours.
   inbound_link_to_error_page:
     "Other sites link to a page that answers with an error. The link is theirs; what you control is the address, so the fix is to restore the page or redirect that address to the right one, which lives in hosting and routing rather than in page wording.",

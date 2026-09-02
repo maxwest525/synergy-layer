@@ -8,7 +8,7 @@
 
 import { nextRunAt } from "./cron";
 
-export type CadenceSourceKey = "gsc" | "ga4" | "umami";
+export type CadenceSourceKey = "gsc" | "ga4" | "umami" | "site";
 
 export type CadenceSource = {
   key: CadenceSourceKey;
@@ -53,6 +53,17 @@ export const OBSERVATION_SOURCES: readonly CadenceSource[] = [
     defaultCron: "45 16 * * *",
     provider: "umami",
     storeLabel: "Umami snapshots",
+    proveHref: "/measurement/tools",
+  },
+  {
+    key: "site",
+    label: "Live site",
+    scheduleKey: "site-nightly-watch",
+    // After the three provider reads and before the 17:15 proposal pass, so
+    // what changed overnight is evidence the same morning (CODE-87).
+    defaultCron: "55 16 * * *",
+    provider: "site_watch",
+    storeLabel: "live-site reads",
     proveHref: "/measurement/tools",
   },
 ] as const;

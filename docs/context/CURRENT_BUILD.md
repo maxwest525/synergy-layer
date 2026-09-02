@@ -34,6 +34,46 @@ Last updated: 2026-08-31, after wiring Google Ads campaign reporting
 describes 2026-08-21 and has NOT been rewritten; the current-state blocks
 immediately below supersede it.
 
+## 0bu. The live site is read every night, 2026-09-02
+
+Between an operator's audit clicks nothing read the site itself, and Search
+Console reports what Google saw days ago, so a page that started answering
+404, went noindex or changed its canonical was found at the next audit, not
+the next morning (IDEA-22, gap digest MON-17, now CODE-87).
+
+`site-watch.server.ts` fetches every sitemap address of the selected property
+directly, at most `SITE_WATCH_PAGE_LIMIT` (200, a stated bound; the remainder
+is counted in the run's result), and stores one `site_watch_reads` row per
+address and UTC date: status, final address, robots directive, noindex,
+canonical, title, or the error when the server did not answer. Each address
+is then compared with its most recent earlier read (`site-watch-rule-checks.ts`,
+pure, tested) and three rules file under Site health: `page_stopped_answering`
+(2xx then 4xx or 5xx, quoting Google's status codes sentence for the
+4xx-except-429 case and grading 429 and 5xx lower as the documented
+slowdown), `page_went_noindex` (quoting the robots meta tag sentence) and
+`page_canonical_changed` (the fact alone; nothing quoted). An unanswered read
+is never compared, so one flaky night files nothing. Each run opens and
+closes a `measurement_runs` row with provider `site_watch`.
+
+Wiring: capability `site.watch` and workflow `site-nightly-watch` in the
+site-audit registry module, `runSiteWatchNode` in the runner, the scheduler
+hook's allowlist, a fourth observation cadence ("Live site", schedule key
+`site-nightly-watch`, default cron `55 16 * * *`, after the three provider
+reads and before the 17:15 proposal pass), the prerequisite
+`site_watch_second_night` in the rule registry, and a "Live site, every
+night" card on Site health with "Read the live site now" (free, operator).
+The cadence obeys the same rule as the others: one stored read first, then
+it can be turned on. The pg_cron job `aoos-site-nightly-watch` (`55 16 * * *`)
+was created live on 2026-09-02 beside the three observation jobs; until the
+mirror push (§0n) and a publish carry the allowlist, each firing answers 400
+"Unsupported schedule" and writes nothing. Migration `20260902150000` was
+applied live and ledgered, and the capability and workflow rows were written
+live in the shape the registry sync writes them.
+
+Site health's prerequisite banner reads the count of stored nights, so
+until two exist it says "two nights of live-site reads" is what the three
+rules wait on, and the card says the same in its own words.
+
 ## 0bt. The homepage is read for the broker's federal registration, 2026-09-02
 
 49 CFR § 371.107 tells a household goods broker what its homepage and website

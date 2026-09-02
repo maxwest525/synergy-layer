@@ -265,6 +265,21 @@ export const FINDING_SOURCES: readonly string[] = [
   ...new Set(CONNECTION_OUTPUTS.flatMap((output) => output.findingSources)),
 ].sort();
 
+/**
+ * Modules that file findings from AOOS's own reads of the operator's site,
+ * with no connector behind them: the nightly live-site read (CODE-87)
+ * fetches the pages directly. Listed so the registry test still names every
+ * writer, and counted with the connector-backed sources wherever the number
+ * of parts that turn evidence into a suggestion is stated.
+ */
+export const DIRECT_READ_SOURCES: readonly string[] = ["site-watch"];
+
+/** Every module that writes a finding, connector-backed or not. */
+export const EVERY_FINDING_SOURCE: readonly string[] = [
+  ...FINDING_SOURCES,
+  ...DIRECT_READ_SOURCES,
+].sort();
+
 /** What one connection is, from the reads. */
 export type ConnectionFacts = {
   readonly key: string;
@@ -435,7 +450,21 @@ function statusFor(rows: readonly ConnectionRow[]): ConnectionsView["status"] {
 }
 
 /** "two", "three" - the count is part of a sentence, not a statistic. */
-const WORD_FOR = ["no", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"];
+const WORD_FOR = [
+  "no",
+  "one",
+  "two",
+  "three",
+  "four",
+  "five",
+  "six",
+  "seven",
+  "eight",
+  "nine",
+  "ten",
+  "eleven",
+  "twelve",
+];
 
 function headlineFor(rows: readonly ConnectionRow[]): string | null {
   const silent = rows.filter((row) => row.stage === "collecting");
@@ -443,7 +472,7 @@ function headlineFor(rows: readonly ConnectionRow[]): string | null {
   const named = silent.map((row) => row.label).join(", ");
   // Counted from the registry rather than written down, because the number was
   // wrong the first time this sentence was written.
-  const count = FINDING_SOURCES.length;
+  const count = EVERY_FINDING_SOURCE.length;
   const parts = `${WORD_FOR[count] ?? count} parts`;
   return `${named} ${silent.length === 1 ? "is storing evidence" : "are storing evidence"} that never becomes anything you see. Only ${parts} of this system turn evidence into a suggestion, so everything outside them collects and stops. That is a wiring gap, not a fault in the tool.`;
 }

@@ -11,6 +11,7 @@ import { SEARCH_CONSOLE_THRESHOLDS, SEO_RULES } from "./rule-thresholds";
 import { ALL_SEARCH_RULES } from "./finding-copy";
 import type { Ga4CheckRule } from "./ga4-rule-checks";
 import type { OnPageCheckRule } from "./onpage-rule-checks";
+import type { SiteWatchRule } from "./site-watch-rule-checks";
 import type { PageSpeedCheckRule } from "./pagespeed-rule-checks";
 import type { DiscoveryCheckRule } from "./dataforseo/discovery-rule-checks";
 import type { UmamiCheckRule } from "./umami-rule-checks";
@@ -94,6 +95,13 @@ const ONPAGE_RULES_COVERED: Record<OnPageCheckRule, true> = {
   duplicate_descriptions_across_pages: true,
 };
 
+/** Same compile-time exhaustiveness for the nightly live-site read (CODE-87). */
+const SITE_WATCH_RULES_COVERED: Record<SiteWatchRule, true> = {
+  page_stopped_answering: true,
+  page_went_noindex: true,
+  page_canonical_changed: true,
+};
+
 /**
  * Same compile-time exhaustiveness for the Backlinks family: the module
  * exposes only the `BacklinkCheckRule` type, so a new rule id added there
@@ -123,6 +131,7 @@ const EXPECTED_RULE_IDS = [
     ...Object.keys(UMAMI_RULES_COVERED),
     ...Object.keys(ONPAGE_RULES_COVERED),
     ...Object.keys(BACKLINK_RULES_COVERED),
+    ...Object.keys(SITE_WATCH_RULES_COVERED),
   ]),
 ].filter((rule) => !EXCLUDED_FROM_BUCKETING.has(rule));
 
@@ -200,6 +209,7 @@ describe("non-volume prerequisites", () => {
         reviewedCompetitorSet: true,
         umamiSecondWindow: true,
         onpageCrawl: true,
+        siteWatchSecondNight: true,
       }),
     ).toEqual([]);
   });
@@ -219,6 +229,7 @@ describe("non-volume prerequisites", () => {
       reviewedCompetitorSet: true,
       umamiSecondWindow: true,
       onpageCrawl: true,
+      siteWatchSecondNight: true,
     });
     expect(notes).toHaveLength(2);
     expect(notes.join(" ")).toContain("second");
@@ -243,6 +254,7 @@ describe("non-volume prerequisites", () => {
       reviewedCompetitorSet: true,
       umamiSecondWindow: true,
       onpageCrawl: true,
+      siteWatchSecondNight: true,
     });
     const held = RULE_ASSIGNMENTS.filter((a) => a.alsoNeeds.includes("second_collection")).length;
     expect(notes[0]).toContain(String(held));
@@ -293,6 +305,7 @@ describe("non-volume prerequisites", () => {
       reviewedCompetitorSet: false,
       umamiSecondWindow: true,
       onpageCrawl: true,
+      siteWatchSecondNight: true,
     });
     expect(notes).toHaveLength(5);
     expect(notes.join(" ")).toContain("whois");

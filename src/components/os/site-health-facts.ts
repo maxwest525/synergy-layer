@@ -54,6 +54,7 @@ export function useSiteHealth(): SiteHealthQuery {
       siteObservedAt: extras.data.siteObservedAt,
       outcomes: extras.data.outcomes,
       speed: extras.data.speed,
+      siteWatchNights: extras.data.siteWatchNights,
       queueSources: facts.queueSources.filter((source) => source.categoryId === CATEGORY_ID),
     }),
     isPending,
