@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import type { LicenceFacts, SiteLicenceFacts } from "./broker-licence";
 import {
   declaredSitemapsFrom,
   evaluateSite,
@@ -272,5 +273,77 @@ describe("the protocol layer under the crawl directives", () => {
     expect(findings[0]?.check).toBe("homepage_slow_to_respond");
     expect(findings[0]?.detail).toContain("1900 ms");
     expect(findings[0]?.detail).toContain("One sample, not a field measurement");
+  });
+});
+
+describe("the broker's registration on the homepage", () => {
+  const complete: LicenceFacts = {
+    usdotNumbers: ["4507647"],
+    mcNumbers: ["1784124"],
+    brokerStatusShown: true,
+    statement: { notTransport: true, arrange: true, tariff: true },
+  };
+  const licence: SiteLicenceFacts = {
+    homepageUrl: "https://example.com/",
+    homepage: complete,
+    pagesRead: 12,
+    pagesShowingBothNumbers: 12,
+  };
+  const checksOf = (facts: SiteLicenceFacts) =>
+    evaluateSite({ ...base, licence: facts }).map((finding) => finding.check);
+
+  it("says nothing about a snapshot stored before the registration read existed", () => {
+    expect(evaluateSite(base)).toEqual([]);
+  });
+
+  it("says nothing when the audit read no homepage", () => {
+    expect(
+      checksOf({ ...licence, homepageUrl: null, homepage: null, pagesShowingBothNumbers: 0 }),
+    ).toEqual([]);
+  });
+
+  it("finds nothing on a homepage that shows both numbers and the whole statement", () => {
+    expect(checksOf(licence)).toEqual([]);
+  });
+
+  it("names the number that is missing and quotes paragraph (b)", () => {
+    const findings = evaluateSite({
+      ...base,
+      licence: { ...licence, homepage: { ...complete, mcNumbers: [] }, pagesShowingBothNumbers: 3 },
+    });
+    expect(findings.map((finding) => finding.check)).toEqual(["broker_numbers_missing"]);
+    expect(findings[0]!.detail).toBe(
+      "The visible text of https://example.com/ holds no MC number. 3 of 12 read pages show both numbers.",
+    );
+    expect(findings[0]!.instruction).toContain("49 CFR 371.107(b)");
+    expect(findings[0]!.fixableByChangeKind).toBeNull();
+  });
+
+  it("reports two numbers under one label", () => {
+    const findings = evaluateSite({
+      ...base,
+      licence: { ...licence, homepage: { ...complete, usdotNumbers: ["4507647", "2841907"] } },
+    });
+    expect(findings.map((finding) => finding.check)).toEqual(["broker_numbers_disagree"]);
+    expect(findings[0]!.detail).toContain("USDOT 4507647 and 2841907");
+  });
+
+  it("names each absent part of the statement and quotes paragraph (c)", () => {
+    const findings = evaluateSite({
+      ...base,
+      licence: {
+        ...licence,
+        homepage: { ...complete, statement: { notTransport: true, arrange: true, tariff: false } },
+      },
+    });
+    expect(findings.map((finding) => finding.check)).toEqual(["broker_statement_missing"]);
+    expect(findings[0]!.detail).toContain('lacks the statement\'s "tariff".');
+    expect(findings[0]!.instruction).toContain("49 CFR 371.107(c)");
+
+    const withoutStatus = evaluateSite({
+      ...base,
+      licence: { ...licence, homepage: { ...complete, brokerStatusShown: false } },
+    });
+    expect(withoutStatus[0]!.detail).toContain('lacks the words "household goods broker".');
   });
 });

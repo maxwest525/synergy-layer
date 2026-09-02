@@ -34,6 +34,39 @@ Last updated: 2026-08-31, after wiring Google Ads campaign reporting
 describes 2026-08-21 and has NOT been rewritten; the current-state blocks
 immediately below supersede it.
 
+## 0bt. The homepage is read for the broker's federal registration, 2026-09-02
+
+49 CFR § 371.107 tells a household goods broker what its homepage and website
+must show: paragraph (b), the USDOT and MC numbers "in your advertisements and
+Internet Web homepage(s)"; paragraph (c), "your status as a household goods
+broker" and the statement that you will not transport the goods but will
+arrange a carrier "whose charges will be determined by its published tariff".
+The audit rendered the homepage on every run and asked neither question
+(IDEA-12, now CODE-86).
+
+`src/lib/broker-licence.ts` reads a rendered page's visible text, tags
+stripped, for the numbers written next to a USDOT or MC label, the words
+"household goods broker", and the three parts of the statement ("not
+transport", "arrange", "tariff"). Every audited page stores the result under
+`details.licence`; the site snapshot stores the homepage's under
+`facts.licence` beside a count of read pages that show both numbers; and
+`evaluateSite` raises `broker_numbers_missing`, `broker_numbers_disagree`
+(two numbers under one label) and `broker_statement_missing`, each quoting
+the paragraph it rests on. A homepage the audit did not read raises nothing.
+Paragraph (a), the street address, is not read, because no detector tells a
+postal address from other words without guessing. None of the three carries
+a governed fix: the words live on the website, which AOOS does not edit.
+
+Read on the live homepage on 2026-09-02, raw HTML: USDOT 4507647 and MC
+1784124 present, with the label and the number in separate elements (which
+is why the text is read after tags are stripped); "Household Goods Broker",
+"not transport" and "arrange" present; "tariff" absent. The next audit click
+will therefore raise `broker_statement_missing` naming that word. The
+website source also carries a second USDOT number, 2841907, in a
+demonstration widget (`TheTruMoveWay.tsx`); wherever that renders, the page's
+stored `licence` facts will show two numbers. Not live until the mirror push
+(§0n).
+
 ## 0bs. A silent GA4 event is named the next morning, 2026-09-02
 
 The daily GA4 read now also reads yesterday alone and stores the

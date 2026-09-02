@@ -11,6 +11,8 @@
  * health renders, not something this module reads from HTML.
  */
 
+import { licenceFactsIn, type LicenceFacts } from "./broker-licence";
+
 export type PageFacts = {
   title: string | null;
   metaDescription: string | null;
@@ -33,6 +35,8 @@ export type PageFacts = {
   ogImage: string | null;
   hasFavicon: boolean;
   hasMetaRefresh?: boolean;
+  /** The broker registration facts of this page (CODE-86); absent on older observations. */
+  licence?: LicenceFacts;
 };
 
 export type CheckId =
@@ -766,6 +770,7 @@ export function extractPageFacts(html: string, markdown: string, pageUrl: string
     hasMetaRefresh: metaTags(html).some(
       (tag) => attr(tag, "http-equiv")?.toLowerCase() === "refresh",
     ),
+    licence: licenceFactsIn(html),
   };
 }
 

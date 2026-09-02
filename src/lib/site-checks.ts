@@ -5,6 +5,7 @@
  * managed to read. Nothing here fetches, guesses, or estimates.
  */
 
+import type { SiteLicenceFacts } from "./broker-licence";
 import type { Severity } from "./page-checks";
 import { blockedPaths } from "./robots-rules";
 
@@ -23,7 +24,10 @@ export type SiteCheckId =
   | "security_headers_missing"
   | "host_not_consolidated"
   | "mixed_content_present"
-  | "homepage_slow_to_respond";
+  | "homepage_slow_to_respond"
+  | "broker_numbers_missing"
+  | "broker_numbers_disagree"
+  | "broker_statement_missing";
 
 /**
  * What the site answered at the protocol layer, read directly by the audit
@@ -85,6 +89,8 @@ export type SiteFacts = {
   declaredPages?: string[];
   /** Absent on snapshots stored before the protocol read existed. */
   protocol?: ProtocolFacts;
+  /** Absent on snapshots stored before the broker registration read existed. */
+  licence?: SiteLicenceFacts;
 };
 
 export type SiteFinding = {
@@ -331,8 +337,85 @@ export function evaluateSite(facts: SiteFacts): SiteFinding[] {
     });
   }
 
+  if (facts.licence) findings.push(...evaluateLicence(facts.licence));
+
   const order: Record<Severity, number> = { critical: 0, warning: 1, advice: 2 };
   return findings.sort((a, b) => order[a.severity] - order[b.severity]);
+}
+
+const PARAGRAPH_B =
+  '49 CFR 371.107(b): "You must prominently display your U.S. DOT registration number(s) and MC license number issued by the FMCSA in your advertisements and Internet Web homepage(s)."';
+const PARAGRAPH_C =
+  '49 CFR 371.107(c): "You must prominently display in your advertisements and Internet website(s) your status as a household goods broker and the statement that you will not transport an individual shipper\'s household goods, but that you will arrange for the transportation of the household goods by an FMCSA-authorized household goods motor carrier, whose charges will be determined by its published tariff."';
+
+/**
+ * What the homepage shows of the broker's federal registration, against
+ * 49 CFR 371.107 paragraphs (b) and (c) as quoted in broker-licence.ts
+ * (CODE-86). A homepage the audit did not read raises nothing: an absent
+ * reading is not a missing number. Paragraph (a), the street address, is not
+ * checked because it cannot be read without guessing. Every finding is a
+ * wording change on the website, which AOOS does not edit, so none carries a
+ * governed fix.
+ */
+function evaluateLicence(facts: SiteLicenceFacts): SiteFinding[] {
+  const findings: SiteFinding[] = [];
+  const home = facts.homepage;
+  const url = facts.homepageUrl;
+  if (home === null || url === null) return findings;
+  const coverage = `${facts.pagesShowingBothNumbers} of ${facts.pagesRead} read pages show both numbers.`;
+
+  const missing = [
+    ...(home.usdotNumbers.length === 0 ? ["USDOT number"] : []),
+    ...(home.mcNumbers.length === 0 ? ["MC number"] : []),
+  ];
+  if (missing.length > 0) {
+    findings.push({
+      check: "broker_numbers_missing",
+      label: "The homepage does not show the broker's registration numbers",
+      severity: "warning",
+      instruction: `Show the USDOT number and the MC number in the homepage text. ${PARAGRAPH_B}`,
+      detail: `The visible text of ${url} holds no ${missing.join(" and no ")}. ${coverage}`,
+      fixableByChangeKind: null,
+    });
+  }
+
+  const disagreeing = [
+    ...(home.usdotNumbers.length > 1 ? [`USDOT ${home.usdotNumbers.join(" and ")}`] : []),
+    ...(home.mcNumbers.length > 1 ? [`MC ${home.mcNumbers.join(" and ")}`] : []),
+  ];
+  if (disagreeing.length > 0) {
+    findings.push({
+      check: "broker_numbers_disagree",
+      label: "The homepage shows more than one number under one registration label",
+      severity: "warning",
+      instruction:
+        "Keep one USDOT number and one MC number on the homepage, the ones FMCSA issued to this broker, and remove any other.",
+      detail: `${url} shows ${disagreeing.join("; ")}. ${PARAGRAPH_B}`,
+      fixableByChangeKind: null,
+    });
+  }
+
+  const absentWords = [
+    ...(home.statement.notTransport ? [] : ['"not transport"']),
+    ...(home.statement.arrange ? [] : ['"arrange"']),
+    ...(home.statement.tariff ? [] : ['"tariff"']),
+  ];
+  if (!home.brokerStatusShown || absentWords.length > 0) {
+    const parts = [
+      ...(home.brokerStatusShown ? [] : ['the words "household goods broker"']),
+      ...(absentWords.length > 0 ? [`the statement's ${absentWords.join(", ")}`] : []),
+    ];
+    findings.push({
+      check: "broker_statement_missing",
+      label: "The homepage does not carry the broker statement in full",
+      severity: "warning",
+      instruction: `State on the homepage that this is a household goods broker that will not transport the goods but will arrange a carrier whose charges follow its published tariff. ${PARAGRAPH_C}`,
+      detail: `The visible text of ${url} lacks ${parts.join(" and ")}. The statement is read as three words, "not transport", "arrange" and "tariff", so wording that says the same thing differently reads as absent.`,
+      fixableByChangeKind: null,
+    });
+  }
+
+  return findings;
 }
 
 /**
