@@ -179,7 +179,6 @@ export async function evaluateAuthorityForTarget(
     queryClass,
     observedRanks,
     knowledgeChunkIds: knowledge.map((chunk) => chunk.id),
-    publishingSurface: "owned",
   };
   const findings = evaluateAuthorityRules(evidence);
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
