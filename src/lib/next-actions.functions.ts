@@ -39,6 +39,7 @@ export const getNextActionFacts = createServerFn({ method: "GET" })
       concerns,
       concernEvaluations,
       measurementFailures,
+      connections,
     ] = await Promise.all([
       db
         .from("search_console_properties")
@@ -142,6 +143,7 @@ export const getNextActionFacts = createServerFn({ method: "GET" })
         .neq("status", "succeeded")
         .order("started_at", { ascending: false })
         .limit(200),
+      db.from("tenant_connections").select("health").eq("tenant_id", tenantId),
     ]);
 
     assertRead("Search Console properties", properties);
@@ -165,6 +167,7 @@ export const getNextActionFacts = createServerFn({ method: "GET" })
     assertRead("Coverage concerns", concerns);
     assertRead("Coverage evaluations", concernEvaluations);
     assertRead("Measurement runs", measurementFailures);
+    assertRead("Connections", connections);
 
     const propertyRows = properties.data ?? [];
     const selected = propertyRows.find((row) => row.selected) ?? propertyRows[0] ?? null;
@@ -195,7 +198,8 @@ export const getNextActionFacts = createServerFn({ method: "GET" })
         (row.credential_state === "configured" ||
           row.credential_state === "encrypted_not_enumerated"),
     ).length;
-    const broken = systemRows.filter((row) => row.verification_state === "failed").length;
+    // A failing probe, not a verification_state nothing ever sets to "failed".
+    const broken = (connections.data ?? []).filter((row) => row.health === "failing").length;
 
     const latestConcernStatus = new Map<string, string>();
     for (const row of concernEvaluations.data ?? []) {

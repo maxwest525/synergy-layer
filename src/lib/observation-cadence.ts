@@ -6,6 +6,8 @@
  * itself. This module holds the pure rules; the server function applies them.
  */
 
+import { nextRunAt } from "./cron";
+
 export type CadenceSourceKey = "gsc" | "ga4" | "umami" | "pagespeed";
 
 export type CadenceSource = {
@@ -106,10 +108,25 @@ export type CadenceStatus = CadenceFacts & {
   action: "prove" | "enable" | "disable";
 };
 
-export function deriveCadenceStatus(source: CadenceSource, facts: CadenceFacts): CadenceStatus {
+export function deriveCadenceStatus(
+  source: CadenceSource,
+  facts: CadenceFacts,
+  now: Date = new Date(),
+): CadenceStatus {
   const eligible = facts.storedRowCount > 0;
   const active = eligible && facts.scheduleExists && facts.scheduleEnabled;
   const failing = Boolean(facts.lastError);
+  // Overdue is derived from the schedule itself, not from a chosen number: the
+  // row said when it would fire next, and a whole further period has passed
+  // with no run recorded. That is the only signal a silently stopped
+  // scheduler leaves (MON-2).
+  const expectedAt = facts.nextRunAt ? new Date(facts.nextRunAt) : null;
+  const overdueAfter =
+    expectedAt && facts.cron && !Number.isNaN(expectedAt.getTime())
+      ? nextRunAt(facts.cron, expectedAt)
+      : null;
+  const overdue =
+    active && !failing && overdueAfter !== null && now.getTime() > overdueAfter.getTime();
 
   let stateLabel: string;
   let tone: CadenceStatus["tone"];
@@ -137,6 +154,12 @@ export function deriveCadenceStatus(source: CadenceSource, facts: CadenceFacts):
     action = "disable";
     actionLabel = "Turn off the daily cadence";
     instruction = `${source.label} runs daily but the last run reported an error. Read the error below, fix it, or turn the cadence off.`;
+  } else if (overdue) {
+    stateLabel = "Cadence overdue";
+    tone = "danger";
+    action = "disable";
+    actionLabel = "Turn off the daily cadence";
+    instruction = `${source.label} was expected to run at ${expectedAt!.toISOString()} and a full period has passed; nothing has recorded a run since ${facts.lastRunAt ?? "the cadence was turned on"}. Check the scheduler, or turn the cadence off.`;
   } else {
     stateLabel = "Cadence on";
     tone = "success";
