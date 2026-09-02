@@ -243,6 +243,13 @@ export const RULE_ASSIGNMENTS: readonly RuleAssignment[] = [
     why: "Reads the query dimension; a censored query table can hide exactly the overlap this rule looks for. The per-page impression count needed is the existing threshold, kept as the volume this would need, not lowered. seo-validation.server.ts:412-437 requires `periodsAvailable >= t.queryOverlap.minPeriods` (two consecutive finalized periods), so it also cannot fire before a second collection.",
   },
   {
+    rule: "serp_rotation",
+    bucket: "fact",
+    needsPerTarget: null,
+    alsoNeeds: ["second_collection"],
+    why: "Not volume-gated, and deliberately so. Rotation is a fact about which page Google chose on each date, and a query with two impressions across two dates that changed hands has rotated exactly as much as one with two thousand. What it needs is dates, not traffic: detectSerpRotation (search-console-rule-checks.ts) reports only queries whose chosen page changed, so a single stored snapshot can never produce one. This is the rule the co-listing test cannot replace -- DataForSEO's own published skill argues Google host-crowds to roughly one result per domain, so two competing pages are rarely listed together and their absence proves nothing. Reads the query dimension, so the same censorship caveat applies as everywhere else.",
+  },
+  {
     rule: "query_coverage_gap",
     bucket: "beyond_current_volume",
     needsPerTarget: RULE_CHECK_THRESHOLDS.coverageGap.minImpressions,

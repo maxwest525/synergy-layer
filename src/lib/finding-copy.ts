@@ -23,6 +23,7 @@ export const ALL_SEARCH_RULES = [
   "weak_ctr_page",
   "visibility_gain",
   "possible_query_overlap",
+  "serp_rotation",
   "zero_impression_page",
   "query_coverage_gap",
   "index_coverage_drift",
@@ -165,6 +166,35 @@ function queryOverlap(evidence: Evidence, on: string): FindingCopy {
       pages.length === 0
         ? null
         : `${pages.length} pages split the same search on ${on}, so none of them wins it`,
+    currentWording: null,
+  };
+}
+
+/**
+ * Rotation, in the operator's words.
+ *
+ * Deliberately not "cannibalisation": the word carries a remedy with it, and
+ * the remedy here is the operator's to choose. What is being reported is that
+ * Google kept changing its mind, and which of their pages it changed between.
+ */
+function serpRotation(evidence: Evidence, on: string): FindingCopy {
+  const query = text(evidence["query"]);
+  const dates = num(evidence["datesObserved"]);
+  const contenders = Array.isArray(evidence["contenders"]) ? evidence["contenders"] : [];
+  const first = contenders[0] as { page?: unknown; datesWon?: unknown } | undefined;
+  const second = contenders[1] as { page?: unknown; datesWon?: unknown } | undefined;
+  const firstPage = text(first?.page);
+  const secondPage = text(second?.page);
+
+  return {
+    claim:
+      query === null
+        ? "Google keeps swapping which of your pages it shows"
+        : `Google keeps swapping which page it shows for "${query}"`,
+    evidence:
+      dates === null || firstPage === null || secondPage === null
+        ? null
+        : `Across ${dates} days on ${on} it chose ${firstPage} on ${num(first?.datesWon) ?? 0} and ${secondPage} on ${num(second?.datesWon) ?? 0}`,
     currentWording: null,
   };
 }
@@ -360,6 +390,7 @@ const WRITERS: Record<SearchRule, (evidence: Evidence, on: string) => FindingCop
   weak_ctr_page: weakCtr,
   visibility_gain: visibilityGain,
   possible_query_overlap: queryOverlap,
+  serp_rotation: serpRotation,
   zero_impression_page: zeroImpressions,
   query_coverage_gap: coverageGap,
   index_coverage_drift: coverageDrift,

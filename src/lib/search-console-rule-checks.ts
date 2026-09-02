@@ -1,5 +1,6 @@
 import type { Database } from "@/integrations/supabase/types";
 import { confidenceInCount } from "./confidence";
+import { type DatedPageQueryRow, describeRotation, readRotation } from "./serp-rotation";
 
 /**
  * Pure rule checks over already-stored Search Console and page-audit data.
@@ -13,7 +14,11 @@ import { confidenceInCount } from "./confidence";
  */
 
 export type CheckRule =
-  "possible_query_overlap" | "zero_impression_page" | "query_coverage_gap" | "index_coverage_drift";
+  | "possible_query_overlap"
+  | "zero_impression_page"
+  | "query_coverage_gap"
+  | "index_coverage_drift"
+  | "serp_rotation";
 
 /**
  * Google's own documentation on why any rule reading the `query` dimension is
@@ -54,6 +59,56 @@ export const RULE_CHECK_THRESHOLDS = {
  * Two or more of our pages competing for the same query, with neither already
  * settled in the top results. keys on page_query rows are [page, query].
  */
+/**
+ * Which page Google kept choosing, across every date on record (CODE-97).
+ *
+ * `detectQueryOverlap` above asks the co-listing question: do two of our pages
+ * appear on one SERP together. DataForSEO's own published skill argues that is
+ * the wrong test, because Google host-crowds to roughly one result per domain,
+ * so two competing pages will rarely be listed side by side and their absence
+ * proves nothing. Both rules stay: co-listing catches a live split, and this
+ * catches the case the other cannot see, where Google keeps changing its mind
+ * over weeks and every single day looks settled.
+ *
+ * The input is every dated page-and-query row, not one window. Nothing here
+ * carries a threshold: rotation is a fact about the observations, and the only
+ * judgement is confidence, which is scaled by the impressions behind it exactly
+ * as the other rules scale theirs.
+ */
+export function detectSerpRotation(rows: DatedPageQueryRow[]): ObservationDraft[] {
+  const reading = readRotation(rows);
+  return reading.rotating.map((query) => {
+    // One observed date cannot show a change, so the reading already excludes
+    // it. Confidence still rises with the dates behind the claim: two dates is
+    // a swap, fifteen is a pattern.
+    const confidence = confidenceInCount(query.datesObserved, reading.datesInWindow);
+    const [first, second] = query.contenders;
+    return {
+      rule: "serp_rotation",
+      target: query.query,
+      title: `Google keeps changing which page answers "${query.query}"`,
+      description: describeRotation(query),
+      evidence: {
+        query: query.query,
+        datesObserved: query.datesObserved,
+        datesInWindow: reading.datesInWindow,
+        bestPosition: query.bestPosition,
+        impressions: query.impressions,
+        clicks: query.clicks,
+        contenders: query.contenders,
+        timeline: query.timeline,
+        confidenceReason: confidence.reason,
+        // Recorded because the remedy turns on it and the vendor's own
+        // correction is that the reflex is wrong: a commercial and an
+        // informational page want canonicalisation, not a merge and a 301.
+        method: "rotation across dated page and query snapshots",
+      },
+      businessImpact: query.clicks > 0 ? "high" : "medium",
+      confidence: confidence.value,
+    };
+  });
+}
+
 export function detectQueryOverlap(pageQueryRows: PerformanceRow[]): ObservationDraft[] {
   const t = RULE_CHECK_THRESHOLDS.queryOverlap;
   const byQuery = new Map<string, Array<{ page: string; impressions: number; position: number }>>();

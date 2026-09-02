@@ -32,6 +32,7 @@ const CATEGORY_BY_RULE: Record<string, CategoryId> = {
   high_impression_low_ctr: "search",
   zero_click_page: "search",
   possible_query_overlap: "search",
+  serp_rotation: "search",
   significant_period_change: "search",
   research_page_traction: "search",
 

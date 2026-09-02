@@ -5,11 +5,12 @@ import type { Database } from "@/integrations/supabase/types";
 import { logActivity } from "./os.server";
 import { observationRecommendationRecord } from "./observation-record";
 import {
+  QUERY_DIMENSION_CAVEAT,
   detectInspectionDrift,
   detectQueryCoverageGaps,
   detectQueryOverlap,
+  detectSerpRotation,
   detectZeroImpressionPages,
-  QUERY_DIMENSION_CAVEAT,
   type InspectionFacts,
   type PageMetaFacts,
 } from "./search-console-rule-checks";
@@ -42,6 +43,7 @@ type Client = SupabaseClient<Database>;
  */
 export { SEARCH_CONSOLE_THRESHOLDS } from "./rule-thresholds";
 import { SEARCH_CONSOLE_THRESHOLDS } from "./rule-thresholds";
+import type { DatedPageQueryRow } from "./serp-rotation";
 
 export type Rule =
   | "striking_distance_query"
@@ -53,7 +55,8 @@ export type Rule =
   | "query_coverage_gap"
   | "index_coverage_drift"
   | "site_visibility_shift"
-  | "site_clicks_shift";
+  | "site_clicks_shift"
+  | "serp_rotation";
 
 type Observation = {
   rule: Rule;
@@ -262,6 +265,54 @@ export function evaluate(current: SnapshotRow[], prior: SnapshotRow[]): Observat
  * page+query snapshot, audited page metadata, and the latest URL inspection
  * per page. All reads are bounded; none touch the Search Console API.
  */
+/**
+ * Every dated page-and-query row this property has stored, flattened.
+ *
+ * Deliberately not the two windows `evaluate` compares. Rotation is a question
+ * about a run of dates, and a rule that only ever sees one window cannot ask
+ * it: every individual day looks settled while the choice changes underneath.
+ * That is why twenty-four stored snapshots sat here for a month with nothing
+ * reading across them.
+ *
+ * Bounded by ROTATION_SNAPSHOT_LIMIT rather than by a date range, so a property
+ * that collects daily and one that collects weekly both get a usable run, and
+ * neither can load an unbounded history into memory.
+ */
+const ROTATION_SNAPSHOT_LIMIT = 180;
+
+async function readDatedPageQueryRows(
+  client: Client,
+  property: string,
+): Promise<DatedPageQueryRow[]> {
+  const { data, error } = await client
+    .from("search_console_snapshots")
+    .select("period_end_pt, payload")
+    .eq("property", property)
+    .eq("kind", "page_query")
+    .order("period_end_pt", { ascending: false })
+    .limit(ROTATION_SNAPSHOT_LIMIT);
+  if (error) throw new SearchConsoleFailure("persistence", error.message);
+
+  const rows: DatedPageQueryRow[] = [];
+  for (const snapshot of data ?? []) {
+    const payload = (snapshot.payload ?? {}) as { rows?: QueryRow[] };
+    for (const row of payload.rows ?? []) {
+      const page = row.keys?.[0];
+      const query = row.keys?.[1];
+      if (!page || !query) continue;
+      rows.push({
+        date: snapshot.period_end_pt,
+        page,
+        query,
+        position: row.position,
+        impressions: row.impressions,
+        clicks: row.clicks,
+      });
+    }
+  }
+  return rows;
+}
+
 async function evaluateStoredContext(
   client: Client,
   property: string,
@@ -314,6 +365,7 @@ async function evaluateStoredContext(
     ...detectZeroImpressionPages([...metaByUrl.keys()], pageRows),
     ...detectQueryCoverageGaps(pageQueryRows, metaByUrl),
     ...detectInspectionDrift([...latestInspections.values()], new Date()),
+    ...detectSerpRotation(await readDatedPageQueryRows(client, property)),
   ];
 }
 

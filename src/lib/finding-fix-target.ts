@@ -86,6 +86,8 @@ const FIX_LANES: Readonly<Record<string, FixLane>> = {
  * rewriting words could not have fixed what the rule found.
  */
 const NO_LANE_REASON: Readonly<Record<string, string>> = {
+  serp_rotation:
+    "Which of your pages should answer this query is a decision about what each page is for, and the remedy differs by case: a commercial and an informational page usually want canonicalisation rather than a merge and a redirect. Nothing here can make that choice, so the dates and the pages are reported and the call is left to you.",
   zero_impression_page:
     "This page has never been shown in search at all, so changing its words would change nothing. What it needs first is to be reachable and listed: check that nothing blocks it and that your sitemap includes it.",
   index_coverage_drift:
