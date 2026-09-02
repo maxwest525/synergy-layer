@@ -45,7 +45,7 @@ export const getObservationCadences = createServerFn({ method: "POST" })
     const { requireTenantId } = await import("./tenant.server");
     const tenantId = await requireTenantId(context.supabase);
 
-    const [roles, schedules, runs, gsc, ga4, umami, pagespeed] = await Promise.all([
+    const [roles, schedules, runs, gsc, ga4, umami] = await Promise.all([
       context.supabase.from("user_roles").select("role").eq("user_id", context.userId),
       context.supabase
         .from("schedules")
@@ -79,12 +79,6 @@ export const getObservationCadences = createServerFn({ method: "POST" })
         .eq("tenant_id", tenantId)
         .order("collected_at", { ascending: false })
         .limit(1),
-      context.supabase
-        .from("pagespeed_snapshots")
-        .select("collected_at", { count: "exact" })
-        .eq("tenant_id", tenantId)
-        .order("collected_at", { ascending: false })
-        .limit(1),
     ]);
 
     for (const [label, result] of [
@@ -94,7 +88,6 @@ export const getObservationCadences = createServerFn({ method: "POST" })
       ["Search Console snapshots", gsc],
       ["GA4 snapshots", ga4],
       ["Umami snapshots", umami],
-      ["PageSpeed snapshots", pagespeed],
     ] as const) {
       if (result.error) throw new Error(`Could not read ${label}: ${result.error.message}`);
     }
@@ -123,11 +116,6 @@ export const getObservationCadences = createServerFn({ method: "POST" })
         count: umami.count ?? 0,
         at: umami.data?.[0]?.collected_at ?? null,
         rows: numberFrom(umami.data?.[0]?.returned_row_count),
-      },
-      pagespeed: {
-        count: pagespeed.count ?? 0,
-        at: pagespeed.data?.[0]?.collected_at ?? null,
-        rows: pagespeed.count ? 1 : null,
       },
     };
 
@@ -174,7 +162,7 @@ export const setObservationCadence = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) =>
     z
       .object({
-        source: z.enum(["gsc", "ga4", "umami", "pagespeed"]),
+        source: z.enum(["gsc", "ga4", "umami"]),
         enabled: z.boolean(),
       })
       .parse(input),
@@ -207,11 +195,6 @@ export const setObservationCadence = createServerFn({ method: "POST" })
           case "umami":
             return context.supabase
               .from("umami_snapshots")
-              .select("id", options)
-              .eq("tenant_id", tenantId);
-          case "pagespeed":
-            return context.supabase
-              .from("pagespeed_snapshots")
               .select("id", options)
               .eq("tenant_id", tenantId);
         }

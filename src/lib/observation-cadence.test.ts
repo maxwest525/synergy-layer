@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
+import { allWorkflows } from "@/registry";
 import {
+  OBSERVATION_SOURCES,
   assertCadenceMayEnable,
   cadenceSource,
   deriveCadenceStatus,
@@ -23,9 +25,21 @@ const base: CadenceFacts = {
   lastErrorAt: null,
 };
 
+describe("every listed cadence has a workflow that can run it", () => {
+  // PageSpeed used to be listed with a switch that could only throw: no
+  // workflow, no cron job, and a hook allowlist that refused the key (MEAS-18).
+  it("names only sources with a declared workflow behind the schedule key", () => {
+    const declared = new Set(allWorkflows().map((workflow) => workflow.key));
+    for (const source of OBSERVATION_SOURCES) {
+      expect(declared.has(source.scheduleKey), `${source.scheduleKey} is not declared`).toBe(true);
+    }
+    expect(OBSERVATION_SOURCES.map((source) => source.key)).not.toContain("pagespeed");
+  });
+});
+
 describe("deriveCadenceStatus", () => {
   it("keeps a source with no stored rows ineligible", () => {
-    const status = deriveCadenceStatus(cadenceSource("pagespeed"), base);
+    const status = deriveCadenceStatus(cadenceSource("umami"), base);
     expect(status.eligible).toBe(false);
     expect(status.active).toBe(false);
     expect(status.action).toBe("prove");
@@ -113,7 +127,7 @@ describe("deriveCadenceStatus", () => {
 
 describe("assertCadenceMayEnable", () => {
   it("refuses an empty source", () => {
-    expect(() => assertCadenceMayEnable(cadenceSource("pagespeed"), 0)).toThrow(/stored 0 rows/);
+    expect(() => assertCadenceMayEnable(cadenceSource("umami"), 0)).toThrow(/stored 0 rows/);
   });
 
   it("allows a proven source", () => {
