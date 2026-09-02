@@ -34,6 +34,15 @@ Last updated: 2026-08-31, after wiring Google Ads campaign reporting
 describes 2026-08-21 and has NOT been rewritten; the current-state blocks
 immediately below supersede it.
 
+## 0bl. Agent rows are read-only to operators and the runner refuses agent nodes honestly, 2026-09-02
+
+The executor behind `assertRunnableGraph` used to mark an agent row as
+executing a node and return ok having done nothing; it now refuses by
+name (CODE-19). `agents` and `agent_capabilities` carried an ALL policy
+for any operator while the only writer is the registry sync; the sync
+writes as the service role behind its operator check and the two write
+policies are gone, live and ledgered (CODE-20).
+
 ## 0bk. Lint is down to the six shadcn warnings, 2026-09-02
 
 `formatWhen`, `toneForState` and the workflow step words moved out of

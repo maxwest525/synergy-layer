@@ -456,23 +456,15 @@ async function executeNode(
     };
   }
 
-  const { data: agent, error } = await client
-    .from("agents")
-    .select("id, name")
-    .eq("key", node.ref ?? "")
-    .maybeSingle();
-  if (error) return { ok: false, error: error.message };
-  if (!agent) return { ok: false, error: `Unknown agent "${node.ref}"` };
-
-  await client
-    .from("agents")
-    .update({
-      current_task: `Executing node ${node.key}`,
-      last_run_at: new Date().toISOString(),
-    })
-    .eq("id", agent.id);
-
-  return { ok: true, output: { agent: agent.name, node: node.key } };
+  // No agent runtime exists: `runAgent` throws on every call and
+  // `assertRunnableGraph` refuses any graph holding an agent node before a run
+  // starts. This branch used to mark the agent row as executing the node and
+  // return ok having done nothing, so a run that reached it would have read as
+  // work done on /agents (CODE-19). It refuses by name instead.
+  return {
+    ok: false,
+    error: `Agent node "${node.key}" cannot run: no agent runtime exists in AOOS.`,
+  };
 }
 
 /**
