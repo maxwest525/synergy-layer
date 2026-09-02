@@ -5,6 +5,7 @@ const AUTOMATED_SCHEDULE_KEYS = new Set([
   "gsc-daily-observe",
   "ga4-daily-observe",
   "umami-daily-observe",
+  "site-nightly-watch",
 ]);
 
 /** Dedicated pg_cron entry point for the free daily observation workflows. */

@@ -46,7 +46,7 @@ export async function readObservationCadences(
   db: Client,
   tenantId: string,
 ): Promise<CadenceStatus[]> {
-  const [schedules, runs, gsc, ga4, umami] = await Promise.all([
+  const [schedules, runs, gsc, ga4, umami, site] = await Promise.all([
     db
       .from("schedules")
       .select("key, enabled, cron, next_run_at, last_run_at, last_duration_ms, last_state")
@@ -79,6 +79,12 @@ export async function readObservationCadences(
       .eq("tenant_id", tenantId)
       .order("collected_at", { ascending: false })
       .limit(1),
+    db
+      .from("site_watch_reads")
+      .select("observed_at", { count: "exact" })
+      .eq("tenant_id", tenantId)
+      .order("observed_at", { ascending: false })
+      .limit(1),
   ]);
 
   for (const [label, result] of [
@@ -87,6 +93,7 @@ export async function readObservationCadences(
     ["Search Console snapshots", gsc],
     ["GA4 snapshots", ga4],
     ["Umami snapshots", umami],
+    ["live-site reads", site],
   ] as const) {
     if (result.error) throw new Error(`Could not read ${label}: ${result.error.message}`);
   }
@@ -115,6 +122,12 @@ export async function readObservationCadences(
       count: umami.count ?? 0,
       at: umami.data?.[0]?.collected_at ?? null,
       rows: numberFrom(umami.data?.[0]?.returned_row_count),
+    },
+    site: {
+      count: site.count ?? 0,
+      at: site.data?.[0]?.observed_at ?? null,
+      // One row per page, not per run, so a per-run row count is not stored.
+      rows: null,
     },
   };
 

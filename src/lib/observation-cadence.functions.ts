@@ -34,7 +34,7 @@ export const setObservationCadence = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) =>
     z
       .object({
-        source: z.enum(["gsc", "ga4", "umami"]),
+        source: z.enum(["gsc", "ga4", "umami", "site"]),
         enabled: z.boolean(),
       })
       .parse(input),
@@ -67,6 +67,11 @@ export const setObservationCadence = createServerFn({ method: "POST" })
           case "umami":
             return context.supabase
               .from("umami_snapshots")
+              .select("id", options)
+              .eq("tenant_id", tenantId);
+          case "site":
+            return context.supabase
+              .from("site_watch_reads")
               .select("id", options)
               .eq("tenant_id", tenantId);
         }

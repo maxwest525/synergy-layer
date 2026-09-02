@@ -78,10 +78,11 @@ describe("the stage no screen has ever shown", () => {
     // and DataForSEO's targeting pass both wrote. `onpage-rules.server.ts`
     // (site-audit), `backlink-rules.server.ts` (backlink-findings) and
     // `umami-rules.server.ts` (umami) made it eight; `discovery-findings.server.ts`
-    // (competitor-discovery) makes it nine. It is derived from
-    // FINDING_SOURCES, not hand-counted.
+    // (competitor-discovery) makes it nine connector-backed sources, and the
+    // nightly live-site read (site-watch, CODE-87), which has no connector,
+    // makes ten writers. It is derived from the registry, not hand-counted.
     const view = buildConnections([facts("openseo", { storedRows: 412 })]);
-    expect(view.headline).toContain("nine parts");
+    expect(view.headline).toContain("ten parts");
     expect(FINDING_SOURCES).toHaveLength(9);
   });
 
