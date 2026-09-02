@@ -34,6 +34,14 @@ Last updated: 2026-08-31, after wiring Google Ads campaign reporting
 describes 2026-08-21 and has NOT been rewritten; the current-state blocks
 immediately below supersede it.
 
+## 0bo. Every "waiting" says what it counts, 2026-09-02
+
+Four surfaces used one word for four counts. Each now names its own: the
+action center lane counts page changes waiting on a yes or no, the
+suggestions panel splits its number into decisions and executions, the
+Command center's "Showing X of Y" line names the queue's three kinds,
+and the pages tile says it counts pages, not fixes (CODE-32).
+
 ## 0bn. The page audit refuses a Firecrawl box that failed its check, 2026-09-02
 
 The endpoint chooser trusts a present self-hosted key; only the

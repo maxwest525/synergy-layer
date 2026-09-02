@@ -235,7 +235,8 @@ export function CommandCenterPage() {
             ))}
           </div>
           <p className="text-xs tabular-nums text-subtle">
-            Showing {view.topCards.length} of {view.totalWaiting} waiting across all categories
+            Showing {view.topCards.length} of {view.totalWaiting} suggestions waiting across all
+            categories: page changes, findings and page checks
           </p>
         </>
       ) : null}

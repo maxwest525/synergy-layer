@@ -4,7 +4,10 @@ export type ActionCenterLane =
 export const ACTION_CENTER_PRESENTATION_LANES = [
   {
     key: "pending_approval",
-    label: "Decisions waiting on you",
+    // Counts change requests only, and says so: "decisions" beside the
+    // Command center's queue and the recommendations count read as three
+    // numbers for one thing (CODE-32).
+    label: "Page changes waiting on your yes or no",
     hint: "Nothing here happens until you approve it.",
   },
   {

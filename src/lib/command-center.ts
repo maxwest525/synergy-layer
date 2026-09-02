@@ -339,7 +339,10 @@ function pagesNeedingFixesTile(facts: CommandCenterFacts): Tile {
   const base = {
     label: "Pages needing fixes",
     icon: "file-text",
-    explanation: "Pages where a check found something worth fixing.",
+    // Pages, not fixes: one page can carry several, so this number and the
+    // "page fixes waiting" count in Your pages are different things (CODE-32).
+    explanation:
+      "Pages where a check found something worth fixing. Counts pages, not fixes: one page can carry several, so this is not the number of page fixes waiting.",
   } as const;
 
   if (facts.audit.lastObservedAt === null) {

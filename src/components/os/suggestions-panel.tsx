@@ -181,7 +181,10 @@ export function SuggestionsPanel({ collapsed = false }: { collapsed?: boolean })
 
   // A fresh array on every render made the memo below recompute every time.
   const items = useMemo(() => query.data?.items ?? [], [query.data]);
-  const waiting = (query.data?.counts.propose ?? 0) + (query.data?.counts.execute ?? 0);
+  const counts = query.data?.counts ?? { propose: 0, approve: 0, execute: 0, measure: 0 };
+  // Two things wait on the operator here, and the sentence names both rather
+  // than folding them into one "waiting" (CODE-32).
+  const waiting = counts.propose + counts.execute;
 
   const decidable = useMemo(() => items.filter(isDecidable), [items]);
   const selectedIds = useMemo(
@@ -263,7 +266,7 @@ export function SuggestionsPanel({ collapsed = false }: { collapsed?: boolean })
               ? "Reading stored state…"
               : query.isError
                 ? "Could not read the pipeline. Sign in again, then reopen this panel."
-                : `${items.length} item(s), ${waiting} waiting on you. Updated ${formatWhen(
+                : `${items.length} item(s): ${counts.propose} waiting on your yes or no, ${counts.execute} approved and waiting for you to execute. Updated ${formatWhen(
                     query.data?.fetchedAt,
                   )}.`}
           </p>
