@@ -125,8 +125,6 @@ export async function evaluateOnPageSnapshots(
         description: observation.description,
         source_module: "site-audit",
         business_impact: observation.businessImpact,
-        revenue_impact: observation.businessImpact,
-        traffic_impact: observation.businessImpact,
         time_saved_minutes: 0,
         risk: "none",
         confidence: observation.confidence,

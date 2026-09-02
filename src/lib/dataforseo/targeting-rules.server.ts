@@ -126,8 +126,6 @@ async function persist(
       state: "proposed",
       requires_approval: false,
       business_impact: "medium",
-      revenue_impact: "medium",
-      traffic_impact: "medium",
       time_saved_minutes: 0,
       risk: "none",
       confidence: observation.confidence,

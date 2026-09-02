@@ -783,8 +783,6 @@ export async function runSeoValidation(
             description: finding.description,
             source_module: "seo-validation",
             business_impact: finding.businessImpact,
-            revenue_impact: finding.businessImpact,
-            traffic_impact: finding.businessImpact,
             time_saved_minutes: 0,
             risk: "none",
             confidence: finding.confidence.value,

@@ -164,8 +164,6 @@ async function fileFinding(
       // variable reference here would slip past that scan silently.
       source_module: "competitor-discovery",
       business_impact: draft.businessImpact,
-      revenue_impact: draft.businessImpact,
-      traffic_impact: draft.businessImpact,
       time_saved_minutes: 0,
       risk: "none",
       confidence: draft.confidence,

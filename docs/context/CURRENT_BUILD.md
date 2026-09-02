@@ -34,6 +34,21 @@ Last updated: 2026-08-31, after wiring Google Ads campaign reporting
 describes 2026-08-21 and has NOT been rewritten; the current-state blocks
 immediately below supersede it.
 
+## 0z. A finding carries no impact it never estimated, 2026-09-02
+
+Every rule module wrote its business impact three times: once as the
+business impact, then again as the revenue impact and the traffic impact.
+111 of 115 findings read "revenue: high" or "traffic: medium" on the
+strength of nothing, on the list, on the detail page, and through the MCP
+tools; no revenue evidence is collected anywhere and no rule estimates
+traffic (AGT-3 in the review; CODE-51). The nine modules no longer write
+the two columns; migration `20260902060000`, applied live and ledgered, put
+the 111 copied rows back at the default and left their ids on an activity
+event; the default now renders as "Not estimated", the list shows a
+traffic or revenue pill only when a stored estimate exists, and the MCP
+projections stop exporting the two columns. Three seeded rows and one
+hand-set Search Console row keep the values they had.
+
 ## 0y. Applied means proven live, and there is no other way in, 2026-09-02
 
 The manual "Mark applied" button left the screen on 2026-08-21, but the

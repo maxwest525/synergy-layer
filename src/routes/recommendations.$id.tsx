@@ -13,6 +13,7 @@ import {
   toneForState,
 } from "@/components/os/primitives";
 import { Button } from "@/components/ui/button";
+import { describeImpact } from "@/lib/impact-words";
 import { decideRecommendation } from "@/lib/os-admin.functions";
 import { getRecommendation } from "@/lib/os.functions";
 import { describeSuggestedAction, isObservationOnly } from "@/lib/recommendation-action";
@@ -196,8 +197,14 @@ function RecommendationDetailPage() {
             </>
           ) : (
             <dl className="mt-3">
-              <DetailRow label="Traffic impact" value={recommendation.traffic_impact} />
-              <DetailRow label="Revenue impact" value={recommendation.revenue_impact} />
+              <DetailRow
+                label="Traffic impact"
+                value={describeImpact(recommendation.traffic_impact)}
+              />
+              <DetailRow
+                label="Revenue impact"
+                value={describeImpact(recommendation.revenue_impact)}
+              />
               <DetailRow label="Business impact" value={recommendation.business_impact} />
               <DetailRow label="Risk" value={recommendation.risk} />
               <DetailRow

@@ -169,8 +169,6 @@ export async function evaluateUmamiSnapshots(
         description: observation.description,
         source_module: "umami",
         business_impact: observation.businessImpact,
-        revenue_impact: observation.businessImpact,
-        traffic_impact: observation.businessImpact,
         time_saved_minutes: 0,
         risk: "none",
         confidence: observation.confidence,
