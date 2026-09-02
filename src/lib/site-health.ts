@@ -17,7 +17,12 @@
  */
 
 import { cohortVerdict } from "./cohort-verdict";
-import { GROUNDED_WINDOWS, outcomeVerdict, type OutcomeVerdict } from "./outcome-verdict";
+import {
+  GROUNDED_WINDOWS,
+  outcomeVerdict,
+  type OutcomeVerdict,
+  type VerdictConfidence,
+} from "./outcome-verdict";
 import type { Severity } from "./page-checks";
 import { unmetPrerequisites } from "./rule-buckets";
 import type { SiteFinding } from "./site-checks";
@@ -82,6 +87,8 @@ export type GradedOutcome = StoredOutcome & {
   /** Null when this reading is stored but not graded, with `ungraded` saying why. */
   readonly verdict: OutcomeVerdict | null;
   readonly reason: string;
+  /** The confidence a count-based verdict rests on; null when none was computed. */
+  readonly confidence: VerdictConfidence | null;
 };
 
 export type SpeedReading = {
@@ -194,7 +201,7 @@ function ungradedReason(outcome: StoredOutcome): string | null {
 export function gradeOutcomes(outcomes: readonly StoredOutcome[]): GradedOutcome[] {
   return outcomes.map((outcome) => {
     const ungraded = ungradedReason(outcome);
-    if (ungraded !== null) return { ...outcome, verdict: null, reason: ungraded };
+    if (ungraded !== null) return { ...outcome, verdict: null, reason: ungraded, confidence: null };
     const assessment = outcomeVerdict({
       windowDays: outcome.windowDays,
       daysSinceLive: outcome.daysSinceLive,
@@ -205,7 +212,12 @@ export function gradeOutcomes(outcomes: readonly StoredOutcome[]): GradedOutcome
       siteTrend: outcome.siteTrend,
       wordingTreatment: outcome.wordingTreatment,
     });
-    return { ...outcome, verdict: assessment.verdict, reason: assessment.reason };
+    return {
+      ...outcome,
+      verdict: assessment.verdict,
+      reason: assessment.reason,
+      confidence: assessment.confidence ?? null,
+    };
   });
 }
 
