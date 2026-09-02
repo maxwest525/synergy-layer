@@ -24,6 +24,8 @@ export type SiteHealthExtras = {
   readonly speed: readonly SpeedReading[];
   /** True when a read hit its own limit, so the counts are a floor, not a total. */
   readonly truncated: boolean;
+  /** Distinct UTC dates the nightly live-site read has stored (CODE-87). */
+  readonly siteWatchNights: number;
 };
 
 function scoreOf(value: unknown): number | null {
@@ -43,7 +45,7 @@ export const getSiteHealthExtras = createServerFn({ method: "POST" })
     const audit = await readPageAudit(db, tenantId);
 
     const { fetchStoredOutcomes } = await import("./change-outcomes.server");
-    const [{ outcomes, truncated }, speedResult] = await Promise.all([
+    const [{ outcomes, truncated }, speedResult, watchResult] = await Promise.all([
       fetchStoredOutcomes(db, tenantId, now, audit.property),
       db
         .from("pagespeed_snapshots")
@@ -51,7 +53,18 @@ export const getSiteHealthExtras = createServerFn({ method: "POST" })
         .eq("tenant_id", tenantId)
         .order("collected_at", { ascending: false })
         .limit(50),
+      // One row per page per night; the distinct dates are counted here. Bounded
+      // to the newest rows, which is more than enough to tell one night from two.
+      db
+        .from("site_watch_reads")
+        .select("observed_on")
+        .eq("tenant_id", tenantId)
+        .order("observed_on", { ascending: false })
+        .limit(1000),
     ]);
+    const siteWatchNights = new Set(
+      (assertRead("Live-site reads", watchResult).data ?? []).map((row) => row.observed_on),
+    ).size;
 
     const speed: SpeedReading[] = (assertRead("Speed snapshots", speedResult).data ?? []).map(
       (row) => ({
@@ -69,5 +82,6 @@ export const getSiteHealthExtras = createServerFn({ method: "POST" })
       outcomes,
       speed,
       truncated,
+      siteWatchNights,
     };
   });

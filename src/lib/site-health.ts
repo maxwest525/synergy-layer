@@ -111,6 +111,12 @@ export type SiteHealthFacts = {
   readonly siteObservedAt: string | null;
   readonly outcomes: readonly StoredOutcome[];
   readonly speed: readonly SpeedReading[];
+  /**
+   * Distinct nights the live-site read has stored (CODE-87). Absent on a
+   * caller that did not read it, in which case the banner treats the
+   * prerequisite as met rather than guessing.
+   */
+  readonly siteWatchNights?: number;
   readonly queueSources: readonly QueueSource[];
 };
 
@@ -466,6 +472,11 @@ export function buildSiteHealth(facts: SiteHealthFacts): SiteHealthView {
     waitingOn: unmetPrerequisites(
       prerequisiteState({
         pageAudit: facts.siteObservedAt !== null,
+        // The three nightly rules compare two nights; until two are stored the
+        // banner says so instead of showing an empty list (CODE-87).
+        ...(facts.siteWatchNights === undefined
+          ? {}
+          : { siteWatchSecondNight: facts.siteWatchNights >= 2 }),
         // Stated gap: the three crawl rules need an OnPage crawl and
         // SiteHealthFacts does not carry whether one was collected, so that
         // banner stays silent. The rules themselves return a named absence

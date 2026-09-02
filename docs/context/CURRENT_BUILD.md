@@ -70,9 +70,9 @@ mirror push (§0n) and a publish carry the allowlist, each firing answers 400
 applied live and ledgered, and the capability and workflow rows were written
 live in the shape the registry sync writes them.
 
-Not read: the Site health prerequisite banner does not yet carry
-`siteWatchSecondNight`, the same stated gap as the OnPage crawl there; the
-card itself says when only one night is stored.
+Site health's prerequisite banner reads the count of stored nights, so
+until two exist it says "two nights of live-site reads" is what the three
+rules wait on, and the card says the same in its own words.
 
 ## 0bt. The homepage is read for the broker's federal registration, 2026-09-02
 
