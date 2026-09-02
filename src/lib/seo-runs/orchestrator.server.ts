@@ -3,6 +3,24 @@ import { SEO_REQUIRED_CONNECTORS, type ConnectorProof, type SeoPreflight } from 
 
 const acceptableHealth = new Set(["healthy", "degraded"]);
 
+/**
+ * A required connector that another connection can stand in for. The
+ * preflight asked for cloud Firecrawl by name while the self-hosted
+ * renderer, which every page proof and competitor observation already
+ * uses, sat real and healthy beside it; six runs blocked on that alone
+ * (CODE-44).
+ */
+export const CONNECTOR_STAND_INS: Readonly<Record<string, readonly string[]>> = {
+  firecrawl: ["selfhosted_firecrawl"],
+};
+
+function usable(row: ConnectorProof | undefined): "missing" | "unhealthy" | "ok" {
+  if (!row || row.integrationState !== "real") return "missing";
+  const configuredWithoutProbe = row.probeOutcome === "configured_no_safe_probe";
+  if (!acceptableHealth.has(row.health) && !configuredWithoutProbe) return "unhealthy";
+  return "ok";
+}
+
 type PersistedSeoConnector = {
   capability_key: string;
   config: unknown;
@@ -31,13 +49,13 @@ export function assessSeoPreflight(
   const unhealthyConnectors: string[] = [];
 
   for (const key of SEO_REQUIRED_CONNECTORS) {
-    const row = byKey.get(key);
-    if (!row || row.integrationState !== "real") {
-      missingConnectors.push(key);
-      continue;
-    }
-    const configuredWithoutProbe = row.probeOutcome === "configured_no_safe_probe";
-    if (!acceptableHealth.has(row.health) && !configuredWithoutProbe) unhealthyConnectors.push(key);
+    const candidates = [key, ...(CONNECTOR_STAND_INS[key] ?? [])];
+    const states = candidates.map((candidate) => usable(byKey.get(candidate)));
+    if (states.includes("ok")) continue;
+    // Nothing usable: report the primary as missing when no candidate is
+    // real, otherwise as unhealthy (something real answered badly).
+    if (states.includes("unhealthy")) unhealthyConnectors.push(key);
+    else missingConnectors.push(key);
   }
 
   const missingEvidence = [

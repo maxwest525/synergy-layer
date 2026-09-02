@@ -8,6 +8,41 @@ import {
 } from "./types";
 
 describe("SEO run preflight", () => {
+  const real = (capabilityKey: string) => ({
+    capabilityKey,
+    integrationState: "real",
+    health: "healthy",
+    probeOutcome: "success" as const,
+  });
+  const evidence = { searchConsoleRows: 7, dataForSeoSnapshots: 56 };
+
+  it("lets the self-hosted renderer stand in for the cloud one", () => {
+    const withoutCloud = SEO_REQUIRED_CONNECTORS.filter((key) => key !== "firecrawl").map(real);
+    expect(
+      assessSeoPreflight([...withoutCloud, real("selfhosted_firecrawl")], evidence),
+    ).toMatchObject({
+      ready: true,
+      missingConnectors: [],
+      unhealthyConnectors: [],
+    });
+    expect(
+      assessSeoPreflight(
+        [...withoutCloud, { ...real("firecrawl"), integrationState: "pending" }],
+        evidence,
+      ).missingConnectors,
+    ).toEqual(["firecrawl"]);
+  });
+
+  it("reports the primary as unhealthy when a real candidate answered badly and none is usable", () => {
+    const withoutCloud = SEO_REQUIRED_CONNECTORS.filter((key) => key !== "firecrawl").map(real);
+    const result = assessSeoPreflight(
+      [...withoutCloud, { ...real("selfhosted_firecrawl"), health: "failing" }],
+      evidence,
+    );
+    expect(result.unhealthyConnectors).toEqual(["firecrawl"]);
+    expect(result.missingConnectors).toEqual([]);
+  });
+
   it("blocks when a required real connector or real evidence is missing", () => {
     const result = assessSeoPreflight([], { searchConsoleRows: 0, dataForSeoSnapshots: 0 });
     expect(result.ready).toBe(false);
