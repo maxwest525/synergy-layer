@@ -491,7 +491,15 @@ async function runSearchConsoleNode(
       return { ok: false, error: "No Search Console property is selected." };
     }
     try {
-      const result = await collectDaily(client, property);
+      // The scheduled collection keeps the same ledger every other provider
+      // keeps, so a failed night reaches the cadence card (CODE-54).
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { withMeasurementRun } = await import("./measurement/run-ledger.server");
+      const result = await withMeasurementRun(
+        supabaseAdmin,
+        { tenantId, provider: "gsc", target: property, strategy: "daily_collection" },
+        () => collectDaily(client, property),
+      );
       return {
         ok: true,
         output: {
