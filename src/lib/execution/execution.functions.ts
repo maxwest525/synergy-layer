@@ -4,6 +4,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { parseUuidInput } from "../server-input";
 import {
   changeKindForFile,
+  changeKindsForFile,
   GOVERNED_BRANCH,
   GOVERNED_FILES,
   GOVERNED_ORIGIN,
@@ -132,7 +133,7 @@ export function buildReadiness(input: {
       label: "Exact source file",
       state: changeKind ? "stored" : "blocked",
       detail: changeKind
-        ? `One allowlisted file will be edited: ${input.filePath} (change kind ${changeKind}).`
+        ? `One allowlisted file will be edited: ${input.filePath} (change kind ${changeKindsForFile(input.filePath).join(" or ")}).`
         : `No governed change kind owns ${input.filePath ?? "no file"}. The executor may only write ${GOVERNED_FILES.join(", ")}.`,
     },
     {

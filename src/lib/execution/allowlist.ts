@@ -73,7 +73,15 @@ export const GOVERNED_PAGE_SOURCES = {
  */
 export const GOVERNED_CHANGE_KINDS = {
   "service.page_wording": [GOVERNED_FILE],
-  "page.metadata": ["src/components/seo/SeoHead.tsx", "src/components/seo/DefaultSeo.tsx"],
+  // The shared head component and the sitewide default first (audit fixes bind
+  // to index 0), then every page source: a page that renders its own
+  // `<SeoHead description="...">` overrides the sitewide default, so its
+  // description can only be changed in its own file (BACKLOG.md CODE-33).
+  "page.metadata": [
+    "src/components/seo/SeoHead.tsx",
+    "src/components/seo/DefaultSeo.tsx",
+    ...new Set(Object.values(GOVERNED_PAGE_SOURCES)),
+  ],
   "site.crawl_directives": ["public/robots.txt", "public/sitemap.xml"],
   "site.structured_data": ["src/platform/content/schema/index.ts"],
   "content.blog_post": ["src/pages/blog/posts.ts"],
@@ -82,19 +90,32 @@ export const GOVERNED_CHANGE_KINDS = {
 
 export type GovernedChangeKind = keyof typeof GOVERNED_CHANGE_KINDS;
 
-/** Every file any governed kind may touch. */
-export const GOVERNED_FILES: readonly string[] = Object.values(GOVERNED_CHANGE_KINDS).flat();
+/** Every file any governed kind may touch, each once, however many kinds share it. */
+export const GOVERNED_FILES: readonly string[] = [
+  ...new Set(Object.values(GOVERNED_CHANGE_KINDS).flat()),
+];
 
 export function isGovernedChangeKind(value: unknown): value is GovernedChangeKind {
   return typeof value === "string" && value in GOVERNED_CHANGE_KINDS;
 }
 
-/** The change kind that owns a file, or null when no kind may write it. */
-export function changeKindForFile(filePath: string | null | undefined): GovernedChangeKind | null {
+/**
+ * Every change kind that may write a file. A page source is written by both
+ * the wording lane and the metadata lane, so a file can belong to more than
+ * one kind; the kinds share the same exact-replacement mechanic and the same
+ * proof list, and which lane a change came from is on the change itself.
+ */
+export function changeKindsForFile(filePath: string | null | undefined): GovernedChangeKind[] {
+  const kinds: GovernedChangeKind[] = [];
   for (const [kind, files] of Object.entries(GOVERNED_CHANGE_KINDS)) {
-    if (files.includes(filePath as never)) return kind as GovernedChangeKind;
+    if (files.includes(filePath as never)) kinds.push(kind as GovernedChangeKind);
   }
-  return null;
+  return kinds;
+}
+
+/** The first change kind that owns a file, or null when no kind may write it. */
+export function changeKindForFile(filePath: string | null | undefined): GovernedChangeKind | null {
+  return changeKindsForFile(filePath)[0] ?? null;
 }
 
 export type GovernedTarget = {
