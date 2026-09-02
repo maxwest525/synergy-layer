@@ -34,6 +34,20 @@ Last updated: 2026-08-31, after wiring Google Ads campaign reporting
 describes 2026-08-21 and has NOT been rewritten; the current-state blocks
 immediately below supersede it.
 
+## 0y. Applied means proven live, and there is no other way in, 2026-09-02
+
+The manual "Mark applied" button left the screen on 2026-08-21, but the
+action it called did not leave the database: `transition_change_request`
+still accepted `mark_applied` from any operator, approved to applied with
+no rendered proof (AGT-2 in the review; CODE-7). Every real application
+has gone through `apply_change_request_rendered_proof`, and no applied row
+lacks a proof, so nothing stored changes. Migration `20260902050000`,
+applied live and ledgered, makes the routine refuse the action by name;
+the wrapper server function, the action type and the `approved` row of the
+state matrix are gone with it, so the pure state module and the database
+say the same thing: an approved change moves forward only when the
+rendered public page carries the exact approved wording.
+
 ## 0x. The bridge secret is the one the caller's connection names, 2026-09-02
 
 The two OpenAI Ads bridge hooks verified every caller against one global

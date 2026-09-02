@@ -18,20 +18,26 @@ export const CHANGE_STATES = [
 
 export type ChangeState = (typeof CHANGE_STATES)[number];
 
-export type ChangeAction = "approve" | "reject" | "mark_applied" | "verify" | "roll_back";
+/**
+ * Applied is not an action here: a change reaches `applied` only through
+ * `apply_change_request_rendered_proof`, from a rendered page carrying the
+ * exact approved wording. No operator label does it (CODE-7).
+ */
+export type ChangeAction = "approve" | "reject" | "verify" | "roll_back";
 
 /** Terminal state each action moves the request into. */
 export const ACTION_RESULT: Record<ChangeAction, ChangeState> = {
   approve: "approved",
   reject: "rejected",
-  mark_applied: "applied",
   verify: "verified",
   roll_back: "rolled_back",
 };
 
 const ALLOWED: Record<ChangeState, ChangeAction[]> = {
   proposed: ["approve", "reject"],
-  approved: ["mark_applied"],
+  // Nothing an operator can click moves an approved change forward; the
+  // rendered proof does, in the database.
+  approved: [],
   applied: ["verify", "roll_back"],
   verified: ["roll_back"],
   rejected: [],
@@ -74,8 +80,6 @@ function pastTense(action: ChangeAction): string {
       return "approved";
     case "reject":
       return "rejected";
-    case "mark_applied":
-      return "marked applied";
     case "verify":
       return "verified";
     default:

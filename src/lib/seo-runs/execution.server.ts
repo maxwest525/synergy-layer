@@ -21,7 +21,7 @@ const transitionEvent: Record<
   applied: {
     state: "executed",
     summary:
-      "The approved change is marked applied. Rendered proof and verification remain separate.",
+      "The approved change is applied: the rendered public page carries the exact approved wording. Verification remains separate.",
   },
   verified: {
     state: "verified",
