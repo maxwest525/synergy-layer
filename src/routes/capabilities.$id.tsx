@@ -11,6 +11,7 @@ import {
   StatePill,
   toneForState,
 } from "@/components/os/primitives";
+import { stateLabel } from "@/lib/state-labels";
 import { DataForSeoPanel } from "@/components/os/dataforseo-panel";
 import { McpPanel } from "@/components/os/mcp-panel";
 import { SearchConsolePanel } from "@/components/os/search-console-panel";
@@ -66,7 +67,7 @@ function CapabilityDetailPage() {
     <div className="space-y-10">
       <BackLink to="/capabilities/registry">All capabilities</BackLink>
       <PageHeader
-        eyebrow={capability.kind.replace(/_/g, " ")}
+        eyebrow={stateLabel(capability.kind)}
         title={capability.name}
         description={capability.description ?? "No description recorded for this capability."}
         actions={
