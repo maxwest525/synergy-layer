@@ -49,7 +49,7 @@ These labels describe current implementation state. Recommendation certainty use
 
 This handbook contains 15 named contracts. It does not assert that all 15 are fully wired.
 
-Updated 2026-08-21: the executable slice is no longer only title/H1 proposals. Page metadata proposals, the page audit's 30 checks, the bucketed finding rules and the targeting layer all now reach the suggestion queue, and four modules write recommendations. Execution against the real repository remains `BLOCKED` on `GITHUB_EXECUTOR_TOKEN`. Other components remain governed detection or design contracts until their adapters and tests exist. Current state is in [`docs/context/CURRENT_BUILD.md`](../context/CURRENT_BUILD.md).
+Updated 2026-08-21: the executable slice is no longer only title/H1 proposals. Page metadata proposals, the page audit's 30 checks, the bucketed finding rules and the targeting layer all now reach the suggestion queue, and four modules write recommendations. Execution against the real repository is `IMPLEMENTED` and proven: commits to the website repository have been recorded since 2026-08-11 (corrected 2026-09-02; an earlier sentence here said it was blocked on the token). Other components remain governed detection or design contracts until their adapters and tests exist. Current state is in [`docs/context/CURRENT_BUILD.md`](../context/CURRENT_BUILD.md).
 
 ## Topic map
 

@@ -1,4 +1,5 @@
 <!-- LOVABLE:BEGIN -->
+
 > [!IMPORTANT]
 > This project is connected to [Lovable](https://lovable.dev). Avoid rewriting
 > published git history — force pushing, or rebasing/amending/squashing commits
@@ -7,7 +8,17 @@
 >
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
+
 <!-- LOVABLE:END -->
+
+> **Correction, 2026-09-02.** The notice above is Lovable's and is out of date
+> for this repository. Since 2026-08-30 the Marky Sysyems project syncs with
+> `maxwest525/trumove-resource-center`, a repository Lovable created on
+> reconnect; commits to `main` here do **not** reach Lovable, and production
+> builds from that other repository. The history rule still holds. Until the
+> operator decides `DEPLOYMENT_TOPOLOGY.md` §6, every merge to `main` must be
+> followed by the reconciliation push in §5 step 2 there, then a Lovable
+> publish, before it is live.
 
 # Working in this repository
 
@@ -22,23 +33,23 @@ build has got to. This file is the contract for making changes.
    live, what is blocked, and what is waiting on a human. It is the fastest way
    to avoid rebuilding something that exists or wiring something that is
    deliberately not wired. Its companion `docs/context/BACKLOG.md` records what
-   is still *owed* — every open item, with a stable ID and a grade saying
+   is still _owed_ — every open item, with a stable ID and a grade saying
    whether it was verified against the code or only carried forward from an
    older note. Look for work there, not at the bottom of a handoff.
 2. **Documentation-first for anything touching a provider.** Authoritative
    vendor documentation is read and digested into
-   `docs/integrations/<provider>/DIGEST.md` *before* integration code is
+   `docs/integrations/<provider>/DIGEST.md` _before_ integration code is
    written. No exceptions, no digests written from memory, no secrets in a
    digest.
 3. **Check the governing contract.** If you are touching a schema, threshold,
    lifecycle, permission or execution guard, the matching document in
-   `docs/execution-handbook/` is updated in the *same* change.
+   `docs/execution-handbook/` is updated in the _same_ change.
 
 ## The rules that will fail review
 
 - **No demo data.** Every number is a stored row. A failed read renders a named
   absence, never a zero. Absence is stated in words.
-- **No lying controls.** A verb that is not legal renders *nothing* — never a
+- **No lying controls.** A verb that is not legal renders _nothing_ — never a
   disabled button, never one that throws. Where an operator would reasonably
   expect a control, an on-screen sentence explains why it is absent.
 - **No invented thresholds.** Every rule cites primary-source wording or carries
@@ -77,7 +88,7 @@ the minimal implementation. See `src/lib/suggestion-queue.test.ts` and
 `src/components/os/site-health-page.test.tsx` for the house style.
 
 One gotcha worth knowing before it surprises you: the 16 files in
-`docs/execution-handbook/` are *input data*, ingested as governed knowledge, so
+`docs/execution-handbook/` are _input data_, ingested as governed knowledge, so
 editing any of them moves the pinned token estimate in
 `scripts/ingest-governed-knowledge.test.ts`. Re-run the script and paste the new
 total. That failure is the expected cost of a documentation change, not a
@@ -128,7 +139,9 @@ mismatch, the fix is to sync the lockfile in a commit, not to loosen the hook.
 
 ## Git
 
-- Work on a branch and open a pull request. `main` syncs to Lovable.
+- Work on a branch and open a pull request. `main` does **not** sync to
+  Lovable since 2026-08-30; see the correction at the top and
+  `docs/context/DEPLOYMENT_TOPOLOGY.md`.
 - **Never rewrite published history** — no force push, no rebase, amend or
   squash of pushed commits. See the Lovable notice above.
 - `src/routeTree.gen.ts` is generated. Never edit it by hand, and never mutate
@@ -185,15 +198,15 @@ publish, or check what the running deployment actually answers.
 
 Update the record you invalidated, in the same change:
 
-| You changed | Update |
-| --- | --- |
-| What is live, blocked, or waiting on a human | `docs/context/CURRENT_BUILD.md` |
-| A schema, threshold, lifecycle, permission or execution guard | the matching `docs/execution-handbook/` contract |
-| Provider behaviour you learned from vendor documentation | `docs/integrations/<provider>/DIGEST.md` |
-| A phase of the category-page redesign | `docs/superpowers/plans/category-page-redesign-STATE.md` |
-| Work someone else will pick up | a dated file in `docs/handoffs/`, with its status on the first line |
-| An item listed in the backlog | `docs/context/BACKLOG.md` — move it to §D with the commit that closed it |
-| Work you found and are not doing | add it to `docs/context/BACKLOG.md` with a new ID |
+| You changed                                                   | Update                                                                   |
+| ------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| What is live, blocked, or waiting on a human                  | `docs/context/CURRENT_BUILD.md`                                          |
+| A schema, threshold, lifecycle, permission or execution guard | the matching `docs/execution-handbook/` contract                         |
+| Provider behaviour you learned from vendor documentation      | `docs/integrations/<provider>/DIGEST.md`                                 |
+| A phase of the category-page redesign                         | `docs/superpowers/plans/category-page-redesign-STATE.md`                 |
+| Work someone else will pick up                                | a dated file in `docs/handoffs/`, with its status on the first line      |
+| An item listed in the backlog                                 | `docs/context/BACKLOG.md` — move it to §D with the commit that closed it |
+| Work you found and are not doing                              | add it to `docs/context/BACKLOG.md` with a new ID                        |
 
 A handoff whose status line is wrong is worse than no handoff. When you finish
 the work a handoff describes, close it in the same change.

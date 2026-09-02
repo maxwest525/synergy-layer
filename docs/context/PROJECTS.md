@@ -2,16 +2,16 @@
 
 The one-screen answer, then the detail.
 
-| What                    | Where                                                              |
-| ----------------------- | ------------------------------------------------------------------ |
-| **The company**         | TruMove Inc                                                        |
-| **Public website**      | **trumoveinc.com**                                                 |
-| ↳ Lovable project       | **TruMove Website Final** (`3c0c30e5-798a-425c-b077-6d5e8cb04e5b`) |
-| ↳ GitHub repo           | **`maxwest525/brittmove-829a7519`**                                |
-| **Marketing OS (AOOS)** | **trumove.marky.systems**                                          |
-| ↳ Lovable project       | **Marky Sysyems** (`4aa4b3cf-b3ab-4721-aff6-e0d55ce13276`)         |
-| ↳ GitHub repo           | **`maxwest525/synergy-layer`**                                     |
-| **Instagram**           | **@trumoveinc**                                                    |
+| What                    | Where                                                                                                                                                                                                                          |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **The company**         | TruMove Inc                                                                                                                                                                                                                    |
+| **Public website**      | **trumoveinc.com**                                                                                                                                                                                                             |
+| ↳ Lovable project       | **TruMove Website Final** (`3c0c30e5-798a-425c-b077-6d5e8cb04e5b`)                                                                                                                                                             |
+| ↳ GitHub repo           | **`maxwest525/brittmove-829a7519`**                                                                                                                                                                                            |
+| **Marketing OS (AOOS)** | **trumove.marky.systems**                                                                                                                                                                                                      |
+| ↳ Lovable project       | **Marky Sysyems** (`4aa4b3cf-b3ab-4721-aff6-e0d55ce13276`)                                                                                                                                                                     |
+| ↳ GitHub repo           | **`maxwest525/synergy-layer`** (where the work happens; CI, docs, migrations) and **`maxwest525/trumove-resource-center`** (what Lovable syncs with and production builds from since 2026-08-30; see `DEPLOYMENT_TOPOLOGY.md`) |
+| **Instagram**           | **@trumoveinc**                                                                                                                                                                                                                |
 
 Two things, four names each. The website's repo is `brittmove-829a7519`, which
 says nothing about TruMove; AOOS's Lovable slug is `trumove-resource-center`,
@@ -90,10 +90,10 @@ naming anything else is refused by the database.
 
 ## Which one do I publish?
 
-| If the change was to…                                            | Publish                                |
-| ---------------------------------------------------------------- | -------------------------------------- |
-| `synergy-layer` — findings, rules, UI, migrations                | **Marky Sysyems** (`4aa4b3cf`)         |
-| `brittmove-829a7519` — page content, SEO tags, prerender, robots | **TruMove Website Final** (`3c0c30e5`) |
+| If the change was to…                                            | Publish                                                                                                                                                                                         |
+| ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `synergy-layer` — findings, rules, UI, migrations                | **Marky Sysyems** (`4aa4b3cf`), and only after the merge has been pushed to `trumove-resource-center` `main` (`DEPLOYMENT_TOPOLOGY.md` §5 step 2); a publish before that push ships nothing new |
+| `brittmove-829a7519` — page content, SEO tags, prerender, robots | **TruMove Website Final** (`3c0c30e5`)                                                                                                                                                          |
 
 Rule of thumb: **a change a customer could see is TruMove. A change only the
 operator sees is Marky.**
