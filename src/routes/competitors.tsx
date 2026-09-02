@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import {
   EmptyState,
+  formatWhen,
   GlassCard,
   MetricTile,
   PageHeader,
@@ -31,7 +32,8 @@ import {
   updateCompanyClassification,
 } from "@/lib/competitors.functions";
 import { estimatedGapCostUsd } from "@/lib/dataforseo/keyword-gap.server";
-import { runCompetitorKeywordGap } from "@/lib/dataforseo.functions";
+import { estimatedIntersectCostUsd } from "@/lib/dataforseo/link-intersect";
+import { runCompetitorKeywordGap, runCompetitorLinkIntersect } from "@/lib/dataforseo.functions";
 import { OperatorRouteError } from "@/components/os/route-error";
 
 const shortlistQuery = {
@@ -77,6 +79,7 @@ function CompetitorReviewPage() {
   const decide = useServerFn(decideCompetitorCandidates);
   const classify = useServerFn(updateCompanyClassification);
   const runGap = useServerFn(runCompetitorKeywordGap);
+  const runIntersect = useServerFn(runCompetitorLinkIntersect);
   const trackedCount = data.tracked.filter((row) => row.active).length;
   const [selected, setSelected] = useState<string[]>([]);
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -124,6 +127,19 @@ function CompetitorReviewPage() {
         }.`,
       );
       void queryClient.invalidateQueries({ queryKey: ["keyword-candidates"] });
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+  const intersectMutation = useMutation({
+    mutationFn: () => runIntersect(),
+    onSuccess: (result) => {
+      toast.success(
+        result.created
+          ? `${result.rows} site(s) link to every one of ${result.competitors} tracked competitor(s) and not to you.`
+          : "Today's comparison already existed; nothing was spent.",
+      );
+      void queryClient.invalidateQueries({ queryKey: ["competitor-shortlist"] });
     },
     onError: (error: Error) => toast.error(error.message),
   });
@@ -180,6 +196,21 @@ function CompetitorReviewPage() {
                 approved competitor. Nothing is spent until you click, and every search it finds
                 arrives in the keyword queue for approval before anything tracks it.
               </p>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={intersectMutation.isPending}
+                onClick={() => intersectMutation.mutate()}
+                aria-describedby="intersect-cost"
+              >
+                {intersectMutation.isPending ? "Comparing…" : "Compare linking sites"}
+              </Button>
+              <p id="intersect-cost" className="text-xs text-muted-foreground">
+                Costs about ${estimatedIntersectCostUsd().toFixed(2)} — one paid look-up across
+                every approved competitor. It stores which sites link to all of them and not to you;
+                it files nothing and tracks nothing.
+              </p>
             </div>
           ) : undefined
         }
@@ -191,6 +222,46 @@ function CompetitorReviewPage() {
         <MetricTile label="Other observed domains" value={String(data.observed.length)} />
         <MetricTile label="Currently tracked" value={String(data.tracked.length)} />
       </div>
+
+      {data.linkIntersect ? (
+        <GlassCard className="p-5">
+          <h2 className="text-sm font-semibold text-foreground">
+            Sites linking to every tracked competitor and not to you
+          </h2>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Read {formatWhen(data.linkIntersect.collectedAt)} across{" "}
+            {data.linkIntersect.competitors.join(", ")}.
+            {data.linkIntersect.possiblyTruncated
+              ? " The read filled its limit, so the list is cut off rather than complete."
+              : ""}
+            {data.linkIntersect.unparsed > 0
+              ? ` ${data.linkIntersect.unparsed} item(s) skipped: unrecognized response shape.`
+              : ""}
+          </p>
+          {data.linkIntersect.rows.length === 0 ? (
+            <p className="mt-3 text-sm text-muted-foreground">
+              No site links to all {data.linkIntersect.competitors.length} of them without linking
+              to you.
+            </p>
+          ) : (
+            <ul className="mt-3 space-y-2">
+              {data.linkIntersect.rows.slice(0, 50).map((row) => (
+                <li
+                  key={row.domain}
+                  className="flex flex-wrap items-baseline justify-between gap-2 border-b border-border/50 pb-2 text-sm last:border-b-0"
+                >
+                  <span className="text-foreground">{row.domain}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {Object.entries(row.byCompetitor)
+                      .map(([competitor, entry]) => `${entry.backlinks} link(s) to ${competitor}`)
+                      .join(" · ")}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </GlassCard>
+      ) : null}
 
       {data.shortlist.length === 0 ? (
         <EmptyState

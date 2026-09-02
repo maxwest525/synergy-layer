@@ -1,4 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
+
+import { parseLinkIntersect } from "./dataforseo/link-intersect";
 import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -54,6 +56,40 @@ export const listCompetitorShortlist = createServerFn({ method: "POST" })
       .select("domain, active, approved_at")
       .eq("tenant_id", tenantId);
 
+    // The newest competitor link intersect, if an operator has run one (LINK-4).
+    const { data: intersectRows, error: intersectError } = await context.supabase
+      .from("dataforseo_snapshots")
+      .select("payload, request_params, collected_at, possibly_truncated, returned_row_count")
+      .eq("tenant_id", tenantId)
+      .eq("kind", "backlinks_domain_intersection")
+      .order("collected_at", { ascending: false })
+      .limit(1);
+    if (intersectError) throw new Error(intersectError.message);
+    const intersectSnapshot = (intersectRows ?? [])[0] ?? null;
+    let linkIntersect: {
+      collectedAt: string;
+      competitors: string[];
+      rows: ReturnType<typeof parseLinkIntersect>["rows"];
+      unparsed: number;
+      possiblyTruncated: boolean;
+    } | null = null;
+    if (intersectSnapshot) {
+      const params = (intersectSnapshot.request_params ?? {}) as { targets?: unknown };
+      const targets =
+        params.targets && typeof params.targets === "object"
+          ? (params.targets as Record<string, string>)
+          : {};
+      const items = (intersectSnapshot.payload as { rows?: unknown[] } | null)?.rows ?? [];
+      const parsed = parseLinkIntersect(items, targets);
+      linkIntersect = {
+        collectedAt: intersectSnapshot.collected_at,
+        competitors: Object.values(targets),
+        rows: parsed.rows,
+        unparsed: parsed.unparsed,
+        possiblyTruncated: intersectSnapshot.possibly_truncated,
+      };
+    }
+
     const rows = (data ?? []).map((row) => {
       const metrics = (row.metrics ?? {}) as Record<string, unknown>;
       const pass = (metrics["intelligence_pass"] ?? null) as Record<string, unknown> | null;
@@ -96,6 +132,7 @@ export const listCompetitorShortlist = createServerFn({ method: "POST" })
       observed,
       tracked: tracked ?? [],
       serpsAnalysed: rows.reduce((max, row) => Math.max(max, row.serpsAnalysed), 0),
+      linkIntersect,
     };
   });
 
