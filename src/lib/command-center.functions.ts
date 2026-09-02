@@ -172,14 +172,24 @@ export const getCommandCenterFacts = createServerFn({ method: "POST" })
     const connectionRows = assertRead("Connections", systemResult).data ?? [];
     const brokenConnections = connectionRows.filter((row) => row.health === "failing").length;
     const connectionsChecked = connectionRows.filter((row) => row.last_checked_at !== null).length;
+    const lastCheckedAt = connectionRows.reduce<string | null>(
+      (newest, row) =>
+        row.last_checked_at !== null && (newest === null || row.last_checked_at > newest)
+          ? row.last_checked_at
+          : newest,
+      null,
+    );
 
     // A provider is failing when its most recent run failed, not when it has
     // ever failed. Rows arrive newest first, so the first row seen for a
     // provider is its current state; later rows are that provider's history and
     // say nothing about now. Counting every stored failure kept the bar lit for
     // days after a quota reset or a fixed credential.
+    const runRows = assertRead("Measurement runs", runResult).data ?? [];
+    // Rows arrive newest first, so the first is the newest run of any provider.
+    const latestRunAt = runRows[0]?.started_at ?? null;
     const latestRunByProvider = new Map<string, string>();
-    for (const row of assertRead("Measurement runs", runResult).data ?? []) {
+    for (const row of runRows) {
       if (row.provider === null) continue;
       if (latestRunByProvider.has(row.provider)) continue;
       latestRunByProvider.set(row.provider, row.status);
@@ -317,8 +327,14 @@ export const getCommandCenterFacts = createServerFn({ method: "POST" })
         snapshots: ga4Snapshots,
       },
       changes: { fixesLive, pagesImproved },
-      audit: { hasRun: audit.lastObservedAt !== null, pagesNeedingFixes },
-      health: { brokenConnections, failingProviders, connectionsChecked },
+      audit: { lastObservedAt: audit.lastObservedAt, pagesNeedingFixes },
+      health: {
+        brokenConnections,
+        failingProviders,
+        connectionsChecked,
+        lastCheckedAt,
+        latestRunAt,
+      },
       queueSources: [...changeSources, ...recommendationSources, ...auditSources, ...siteSources],
     };
   });

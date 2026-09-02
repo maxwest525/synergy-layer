@@ -193,6 +193,8 @@ export function CommandCenterPage() {
         <p className="text-[13px] text-muted-foreground">
           What needs you first, and the fastest way to clear it.
         </p>
+        {/* Every number below is a stored reading; this is when each was taken. */}
+        <p className="text-xs text-subtle">{view.asOfLine}</p>
       </div>
 
       {/*
