@@ -34,6 +34,14 @@ Last updated: 2026-08-31, after wiring Google Ads campaign reporting
 describes 2026-08-21 and has NOT been rewritten; the current-state blocks
 immediately below supersede it.
 
+## 0ar. A connection's health says when it was checked, 2026-09-02
+
+Connector health is probed on a click, and the ledger card showed the
+health and the probe outcome with nothing about when that probe ran. The
+readiness projection now carries the check time, only when a probe
+stands behind the health, and the card prints it beside the outcome
+(CODE-66, from MON-20).
+
 ## 0aq. Google Ads spend is shown against its budget, 2026-09-02
 
 The campaign-day report stored spend and conversions and nothing about

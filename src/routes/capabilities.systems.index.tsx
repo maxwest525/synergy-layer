@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { OperatorRouteError } from "@/components/os/route-error";
 import {
   EmptyState,
+  formatWhen,
   GlassCard,
   MetricTile,
   PageHeader,
@@ -254,6 +255,9 @@ function SystemsPage() {
                 </div>
                 <p className="mt-2 text-xs text-muted-foreground">
                   {connection.state} · {outcome.replaceAll("_", " ")}
+                  {/* A health is only as current as the probe behind it, and the
+                      probe runs on a click, not a schedule (MON-20). */}
+                  {connection.checkedAt ? ` · checked ${formatWhen(connection.checkedAt)}` : ""}
                 </p>
                 {proof ? <p className="mt-1 text-xs text-muted-foreground">{proof}</p> : null}
                 {connection.missing.length ? (

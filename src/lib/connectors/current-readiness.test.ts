@@ -8,12 +8,13 @@ const configuredEnv = {
   N8N_SEO_WORKFLOW_WEBHOOK_URL: "https://n8n.example.com/webhook/aoos-governed-seo",
 };
 
-function n8nRow(config: unknown, health = "healthy") {
+function n8nRow(config: unknown, health = "healthy", lastCheckedAt: string | null = null) {
   return {
     capability_key: "n8n",
     config,
     health,
     integration_state: "real",
+    last_checked_at: lastCheckedAt,
   };
 }
 
@@ -41,6 +42,18 @@ describe("projectCurrentConnectorReadiness", () => {
 
     expect(n8n.health).toBe("failing");
     expect(n8n.probeOutcome).toBe("http_error");
+  });
+
+  it("carries the check time only when a probe outcome stands behind the health", () => {
+    const checked = projectN8n(
+      n8nRow({ probe_outcome: "success" }, "healthy", "2026-09-02T06:00:00.000Z"),
+    );
+    expect(checked.checkedAt).toBe("2026-09-02T06:00:00.000Z");
+
+    // A date on a row no probe wrote is not a check time (MON-20).
+    const unproven = projectN8n(n8nRow({}, "healthy", "2026-09-02T06:00:00.000Z"));
+    expect(unproven.health).toBe("never_checked");
+    expect(unproven.checkedAt).toBeNull();
   });
 
   it("reads a configured connector with no stored row as never checked", () => {
