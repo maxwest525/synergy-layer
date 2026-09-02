@@ -11,23 +11,30 @@ import { describeSuggestedAction, isObservationOnly } from "./recommendation-act
 describe("change request transitions", () => {
   it("allows the intended forward path", () => {
     expect(canTransition("proposed", "approve")).toBe(true);
-    expect(canTransition("approved", "mark_applied")).toBe(true);
     expect(canTransition("applied", "verify")).toBe(true);
     expect(canTransition("applied", "roll_back")).toBe(true);
     expect(canTransition("verified", "roll_back")).toBe(true);
   });
 
   it("refuses invalid moves", () => {
-    expect(decideTransition("proposed", "mark_applied").kind).toBe("invalid");
+    expect(decideTransition("proposed", "roll_back").kind).toBe("invalid");
     expect(decideTransition("proposed", "verify").kind).toBe("invalid");
     expect(decideTransition("approved", "verify").kind).toBe("invalid");
     expect(decideTransition("rejected", "approve").kind).toBe("invalid");
-    expect(decideTransition("rolled_back", "mark_applied").kind).toBe("invalid");
+    expect(decideTransition("rolled_back", "verify").kind).toBe("invalid");
   });
 
   it("treats a replayed click as a no-op instead of a second write", () => {
     expect(decideTransition("approved", "approve")).toEqual({ kind: "noop", to: "approved" });
-    expect(decideTransition("applied", "mark_applied")).toEqual({ kind: "noop", to: "applied" });
+    expect(decideTransition("verified", "verify")).toEqual({ kind: "noop", to: "verified" });
+  });
+
+  it("gives an operator no way to label an approved change as applied", () => {
+    // Applied is reached only through the rendered proof, in the database.
+    expect(canTransition("approved", "verify")).toBe(false);
+    expect(canTransition("approved", "roll_back")).toBe(false);
+    expect(decideTransition("approved", "reject").kind).toBe("invalid");
+    expect(decideTransition("approved", "approve")).toEqual({ kind: "noop", to: "approved" });
   });
 
   it("never lets approval imply applied, or applied imply verified", () => {

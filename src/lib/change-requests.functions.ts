@@ -41,7 +41,7 @@ export const getChangeRequest = createServerFn({ method: "GET" })
 async function runTransition(
   supabase: Parameters<typeof import("./change-requests.server").transitionChangeRequest>[0],
   userId: string,
-  action: "approve" | "reject" | "mark_applied" | "verify" | "roll_back",
+  action: "approve" | "reject" | "verify" | "roll_back",
   data: {
     id: string;
     notes?: string | null | undefined;
@@ -87,18 +87,6 @@ export const rejectChangeRequest = createServerFn({ method: "POST" })
   .inputValidator(parseChangeTransitionInput)
   .handler(async ({ data, context }) =>
     runTransition(context.supabase, context.userId, "reject", data),
-  );
-
-// Uncalled from the UI, unlike its four siblings, but keep it: it wraps the
-// `transition_change_request` RPC, which is granted to `authenticated` and
-// enforces the state machine in Postgres. The transition is reachable without
-// this wrapper -- rows already exist in applied and rolled_back -- so "nothing
-// calls it" is not evidence the path is dead.
-export const markChangeRequestApplied = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator(parseChangeTransitionInput)
-  .handler(async ({ data, context }) =>
-    runTransition(context.supabase, context.userId, "mark_applied", data),
   );
 
 export const verifyChangeRequest = createServerFn({ method: "POST" })
