@@ -90,6 +90,68 @@ export const runCompetitorKeywordGap = createServerFn({ method: "POST" })
   });
 
 /**
+ * Metered. One DataForSEO Backlinks request across every approved competitor,
+ * fired only by an explicit operator click with the estimate shown on the
+ * button (LINK-4). Stores the snapshot; files nothing and tracks nothing.
+ */
+export const runCompetitorLinkIntersect = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { assertOperator } = await import("./os-admin.server");
+    await assertOperator(context.supabase, context.userId);
+    const { requireTenantId } = await import("./tenant.server");
+    const tenantId = await requireTenantId(context.supabase);
+
+    const { getSelectedProperty } = await import("./search-console.server");
+    const property = await getSelectedProperty(context.supabase);
+    const ownDomain = (property ?? "")
+      .replace(/^sc-domain:/, "")
+      .replace(/^https?:\/\//, "")
+      .replace(/\/$/, "");
+    if (!ownDomain) throw new Error("No owned property is selected to compare against.");
+
+    const { data: tracked, error } = await context.supabase
+      .from("tracked_competitors")
+      .select("domain")
+      .eq("tenant_id", tenantId)
+      .eq("active", true)
+      .order("approved_at", { ascending: true });
+    if (error) throw new Error(error.message);
+    const competitors = (tracked ?? []).map((row) => row.domain);
+
+    const { collectCompetitorLinkIntersect } = await import("./dataforseo/backlinks.server");
+    const collected = await collectCompetitorLinkIntersect(
+      context.supabase,
+      tenantId,
+      ownDomain,
+      competitors,
+    );
+
+    const { logActivity } = await import("./os.server");
+    await logActivity(context.supabase, {
+      tenantId,
+      actorKind: "user",
+      actorId: context.userId,
+      verb: "backlinks.intersect.collected",
+      subjectKind: "capability",
+      summary: `Compared the sites linking to ${competitors.length} approved competitor(s) against the site: ${collected.rows} linking domain(s) stored${collected.created ? "" : " (today's read already existed; nothing was spent)"}.`,
+      payload: {
+        competitors,
+        rows: collected.rows,
+        created: collected.created,
+        costUsd: collected.costUsd,
+      },
+    });
+
+    return {
+      competitors: competitors.length,
+      rows: collected.rows,
+      created: collected.created,
+      costUsd: collected.costUsd,
+    };
+  });
+
+/**
  * Metered: two DataForSEO Labs tasks over the pending queue, up to the batch
  * cap, fired only by an explicit operator click. Writes scores onto the
  * candidates and changes no review state.

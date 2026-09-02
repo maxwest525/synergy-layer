@@ -34,6 +34,17 @@ Last updated: 2026-08-31, after wiring Google Ads campaign reporting
 describes 2026-08-21 and has NOT been rewritten; the current-state blocks
 immediately below supersede it.
 
+## 0aw. Who links to the rivals and not to you, on a click, 2026-09-02
+
+The competitor link intersect existed as defaults and nothing else. One
+Backlinks domain-intersection request across every approved competitor,
+with the owned site excluded, now runs on an operator click on the
+competitors page with the estimate shown; the snapshot is stored, read
+back by a pure parser, and the page lists the sites linking to all
+tracked competitors and not to you, saying when the read was made and
+when it filled its limit. It files nothing and tracks nothing (CODE-70,
+from LINK-4).
+
 ## 0av. The two declared agents that could not run are gone, 2026-09-02
 
 `growth.analyst` and `content.strategist` were registry declarations
