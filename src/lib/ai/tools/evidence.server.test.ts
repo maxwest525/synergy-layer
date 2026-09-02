@@ -33,6 +33,10 @@ vi.mock("@supabase/supabase-js", () => ({
           call.filters.push([column, value]);
           return builder;
         },
+        not(column: string, operator: string, value: unknown) {
+          call.filters.push([column, `${operator} ${String(value)}`]);
+          return builder;
+        },
         order: () => builder,
         limit: () => builder,
         maybeSingle: () => Promise.resolve({ data: rows()[0] ?? null, error: null }),
@@ -44,6 +48,10 @@ vi.mock("@supabase/supabase-js", () => ({
     },
   }),
 }));
+
+// The shared tenant resolver imports the service-role client; the evidence
+// tools never use it, so it is an inert stand-in here.
+vi.mock("@/integrations/supabase/client.server", () => ({ supabaseAdmin: {} }));
 
 import { buildEvidenceTools } from "./evidence.server";
 
@@ -79,6 +87,8 @@ beforeEach(() => {
   harness.calls.length = 0;
   harness.rowsByTable.clear();
   harness.rowsByTable.set("tenant_members", [{ tenant_id: "tenant-1" }]);
+  harness.rowsByTable.set("profiles", []);
+  harness.rowsByTable.set("tenants", [{ id: "tenant-1" }]);
 });
 
 afterEach(() => {
@@ -105,5 +115,21 @@ describe("execution receipts are read from columns the table actually has", () =
 
     const query = harness.calls.find((call) => call.table === "change_request_executions");
     expect(query?.filters).toContainEqual(["tenant_id", "tenant-1"]);
+  });
+});
+
+describe("the agent reads the workspace the operator selected", () => {
+  it("prefers the saved active tenant over the first membership row", async () => {
+    // An operator in two workspaces who switched in the shell used to get
+    // answers about whichever membership row sorted first (AGT-14).
+    harness.rowsByTable.set("profiles", [{ active_tenant_id: "tenant-2" }]);
+    harness.rowsByTable.set("tenants", [{ id: "tenant-2" }]);
+    harness.rowsByTable.set("change_request_executions", []);
+    const tools = await buildEvidenceTools({ userId: "user-1", token: "token-1" });
+
+    await tools.listExecutions.execute?.({}, toolCall);
+
+    const query = harness.calls.find((call) => call.table === "change_request_executions");
+    expect(query?.filters).toContainEqual(["tenant_id", "tenant-2"]);
   });
 });
