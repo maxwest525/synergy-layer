@@ -24,6 +24,7 @@ import {
   isSitemapIndex,
   pagesMissingFromSitemap,
   sitemapLocations,
+  type ProtocolFacts,
   type SiteFacts,
 } from "./site-checks";
 import { scrapePageWithVps, vpsScraperConfigured } from "./connectors/vps-scraper.server";
@@ -189,6 +190,78 @@ async function fetchText(url: string): Promise<{ status: number | null; body: st
   } catch {
     return { status: null, body: null };
   }
+}
+
+const PROTOCOL_READ_TIMEOUT_MS = 10_000;
+const MIXED_CONTENT_SAMPLE = 10;
+
+async function fetchWithoutFollowing(url: string): Promise<{
+  status: number | null;
+  location: string | null;
+  headers: Headers | null;
+  ttfbMs: number | null;
+  body: string | null;
+}> {
+  const started = performance.now();
+  try {
+    const response = await fetch(url, {
+      redirect: "manual",
+      signal: AbortSignal.timeout(PROTOCOL_READ_TIMEOUT_MS),
+      headers: { "user-agent": "AOOS site audit" },
+    });
+    const ttfbMs = Math.round(performance.now() - started);
+    const body = response.status >= 200 && response.status < 300 ? await response.text() : null;
+    return {
+      status: response.status,
+      location: response.headers.get("location"),
+      headers: response.headers,
+      ttfbMs,
+      body,
+    };
+  } catch {
+    return { status: null, location: null, headers: null, ttfbMs: null, body: null };
+  }
+}
+
+/** http:// resources the page loads through a src attribute; a namespace href is not a load. */
+export function mixedContentIn(html: string): string[] {
+  const found = new Set<string>();
+  for (const match of html.matchAll(/\bsrc\s*=\s*["'](http:\/\/[^"'\s>]+)/gi)) {
+    found.add(match[1]!);
+    if (found.size >= MIXED_CONTENT_SAMPLE) break;
+  }
+  return [...found];
+}
+
+/**
+ * The protocol layer under the crawl directives, read directly and without
+ * following redirects: what plain http answers, what the https homepage sends
+ * and how fast, what the other host spelling does, and whether the homepage
+ * loads anything over plain http (CODE-25). Every read is bounded; a failed
+ * read is null, never a guess.
+ */
+export async function readProtocolFacts(origin: string): Promise<ProtocolFacts> {
+  const host = new URL(origin).host;
+  const alternateHost = host.startsWith("www.") ? host.slice("www.".length) : `www.${host}`;
+  const [http, https, alternate] = await Promise.all([
+    fetchWithoutFollowing(`http://${host}/`),
+    fetchWithoutFollowing(`${origin}/`),
+    fetchWithoutFollowing(`https://${alternateHost}/`),
+  ]);
+  return {
+    httpStatus: http.status,
+    httpLocation: http.location,
+    httpsStatus: https.status,
+    ttfbMs: https.ttfbMs,
+    htmlBytes: https.body === null ? null : Buffer.byteLength(https.body, "utf8"),
+    strictTransportSecurity: https.headers?.get("strict-transport-security") ?? null,
+    contentSecurityPolicy: https.headers?.get("content-security-policy") ?? null,
+    xContentTypeOptions: https.headers?.get("x-content-type-options") ?? null,
+    alternateHost,
+    alternateStatus: alternate.status,
+    alternateLocation: alternate.location,
+    mixedContentUrls: https.body === null ? [] : mixedContentIn(https.body),
+  };
 }
 
 /**
@@ -481,7 +554,10 @@ export async function runPageAudit(
     throw new Error(`The selected property ${property} has no readable public address.`);
   }
 
-  const documents = await readSiteDocuments(origin);
+  const [documents, protocol] = await Promise.all([
+    readSiteDocuments(origin),
+    readProtocolFacts(origin),
+  ]);
   const reported = await reportedPageUrls(client, tenantId, property);
   const sitemapPages = documents.sitemapUrls.filter((url) => url.startsWith(origin));
 
@@ -572,6 +648,7 @@ export async function runPageAudit(
     // robots.txt and declared nowhere is a working configuration; one that is
     // disallowed *and* declared is the two files contradicting each other.
     declaredPages: [...new Set([...sitemapPages, ...reported])],
+    protocol,
   };
 
   const { error: siteError } = await client.from("site_audit_snapshots").insert({

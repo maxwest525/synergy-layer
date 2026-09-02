@@ -186,6 +186,12 @@ describe("drafting a site crawl fix straight from the card", () => {
       "sitemap_empty",
       "sitemap_coverage_gap",
       "pages_unreadable",
+      "http_not_redirected",
+      "hsts_missing",
+      "security_headers_missing",
+      "host_not_consolidated",
+      "mixed_content_present",
+      "homepage_slow_to_respond",
     ]) {
       expect(idsFor(siteFinding(check))).not.toContain("draft");
     }
