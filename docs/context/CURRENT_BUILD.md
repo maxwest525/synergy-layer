@@ -34,6 +34,15 @@ Last updated: 2026-08-31, after wiring Google Ads campaign reporting
 describes 2026-08-21 and has NOT been rewritten; the current-state blocks
 immediately below supersede it.
 
+## 0aj. One Command center, 2026-09-02
+
+`/command-center` kept the legacy overview, eight count tiles and spend,
+capability and run lists that showed a zero on a first run or a failed
+read, while `/` states an absence as an absence; the navigation linked
+only `/`. The old route now redirects to `/`, and the legacy page, its
+server function and its reads are gone. The `command_center_overview`
+database routine stays with no caller (CODE-58, from NAV-1 and STATE-1).
+
 ## 0ai. Scheduler firings are durable, 2026-09-02
 
 `cron.job_run_details` says "succeeded, 1 row" for every firing because
