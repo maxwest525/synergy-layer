@@ -268,12 +268,15 @@ export async function selectProperty(
   return match;
 }
 
-export async function getSelectedProperty(client: Client): Promise<string | null> {
-  const { data, error } = await client
-    .from("search_console_properties")
-    .select("site_url")
-    .eq("selected", true)
-    .maybeSingle();
+export async function getSelectedProperty(
+  client: Client,
+  tenantId: string | null = null,
+): Promise<string | null> {
+  // A session client is already scoped by RLS; the service-role client is
+  // not, so a run names the tenant it works for.
+  let query = client.from("search_console_properties").select("site_url").eq("selected", true);
+  if (tenantId) query = query.eq("tenant_id", tenantId);
+  const { data, error } = await query.maybeSingle();
   if (error) throw new SearchConsoleFailure("persistence", error.message);
   return data?.site_url ?? null;
 }
