@@ -34,6 +34,20 @@ Last updated: 2026-08-31, after wiring Google Ads campaign reporting
 describes 2026-08-21 and has NOT been rewritten; the current-state blocks
 immediately below supersede it.
 
+## 0p. A description edit refuses a page that sets its own, 2026-09-02
+
+CODE-30, the drafting half. The homepage change 78fc8c5e edited the sitewide
+default in `DefaultSeo.tsx` and never reached the live head because
+`src/pages/Index.tsx` passes its own description to `SeoHead`, and the
+prerender emits Helmet's resolved tags (not the static `index.html` head the
+earlier note suspected). `preparePageMetadataProposal` now reads the target
+page's own governed source at the same revision and refuses, naming the file
+and the sentence it sets, before any wording is drafted
+(`findPageOwnedDescription` in `page-metadata-proposals.ts`, four tests). The
+refusal is honest and also a gap: no lane can edit a page-level description
+yet, recorded as CODE-33. 78fc8c5e itself stays approved, committed and
+unprovable until the operator rejects or rolls it back.
+
 ## 0o. Approving a second change to a page now names the first, 2026-09-02
 
 CODE-31, the approval half. `transition_change_request` refuses `approve`
