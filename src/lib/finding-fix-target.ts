@@ -148,6 +148,8 @@ const NO_LANE_REASON: Readonly<Record<string, string>> = {
     "The sites linking to you changed. Those are other people's pages, and nothing here can edit them.",
   approved_keyword_multiple_pages:
     "More than one of your own pages targets this term. Fixing that means deciding which page should own it and rewording the rest -- a call this tool will not make for you.",
+  tracked_set_has_no_route_query:
+    "Searches that name a journey already reach the site and none of the approved keywords is one. Choosing which route queries to track is a decision about what to target, not an edit to a page; the searches are listed for you to pick from, and nothing is approved on your behalf.",
 
   // The site crawl. Errors, redirects and index blocks are answered in hosting,
   // routing and directives, not in a page's words. Where a governed draft does

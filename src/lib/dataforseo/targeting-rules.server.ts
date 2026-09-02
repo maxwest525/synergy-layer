@@ -4,11 +4,13 @@ import type { Database } from "@/integrations/supabase/types";
 import {
   detectKeywordCannibalization,
   detectKeywordsWithoutPage,
+  detectMissingRouteQueries,
   detectReferringDomainMovement,
   detectUnobservedKeywords,
   type ObservedSerp,
   type PageText,
   type ReferringDomainSnapshot,
+  type SearchQuery,
   type TargetingObservation,
 } from "../targeting-rules";
 import { checksum } from "./transport.server";
@@ -32,6 +34,7 @@ const SUGGESTED_ACTION_BY_RULE: Record<string, string> = {
   approved_keyword_unobserved: "observe_keyword",
   approved_keyword_no_page: "write_new_page",
   approved_keyword_multiple_pages: "review",
+  tracked_set_has_no_route_query: "review",
 };
 
 /** How far back stored SERP evidence counts as an observation of a keyword. */
@@ -59,6 +62,37 @@ async function readObservedSerps(client: Client, tenantId: string): Promise<Obse
     .gte("reporting_date", cutoff);
   if (error) throw new Error(error.message);
   return (data ?? []).map((row) => ({ keyword: row.target, reportingDate: row.reporting_date }));
+}
+
+/**
+ * The newest stored page+query read for the tenant, folded to one row per
+ * query. Search Console's own rows are page by query; the rule asks about
+ * the query.
+ */
+async function readSearchQueries(client: Client, tenantId: string): Promise<SearchQuery[]> {
+  const { data, error } = await client
+    .from("search_console_snapshots")
+    .select("payload")
+    .eq("tenant_id", tenantId)
+    .eq("kind", "page_query")
+    .order("collected_at", { ascending: false })
+    .limit(1);
+  if (error) throw new Error(error.message);
+  const rows = ((data ?? [])[0]?.payload as { rows?: unknown[] } | null)?.rows ?? [];
+  const byQuery = new Map<string, { impressions: number; clicks: number }>();
+  for (const raw of rows) {
+    if (!raw || typeof raw !== "object") continue;
+    const row = raw as { keys?: unknown; impressions?: unknown; clicks?: unknown };
+    const query = Array.isArray(row.keys) && typeof row.keys[1] === "string" ? row.keys[1] : null;
+    if (!query) continue;
+    const current = byQuery.get(query) ?? { impressions: 0, clicks: 0 };
+    byQuery.set(query, {
+      impressions:
+        current.impressions + (typeof row.impressions === "number" ? row.impressions : 0),
+      clicks: current.clicks + (typeof row.clicks === "number" ? row.clicks : 0),
+    });
+  }
+  return [...byQuery.entries()].map(([query, row]) => ({ query, ...row }));
 }
 
 async function readPageText(client: Client, tenantId: string): Promise<PageText[]> {
@@ -153,11 +187,12 @@ export async function runTargetingPass(
   client: Client,
   tenantId: string,
 ): Promise<{ observations: number; recommendations: number }> {
-  const [approved, observed, pages, [priorLinks, currentLinks]] = await Promise.all([
+  const [approved, observed, pages, [priorLinks, currentLinks], queries] = await Promise.all([
     readApprovedKeywords(client, tenantId),
     readObservedSerps(client, tenantId),
     readPageText(client, tenantId),
     readReferringDomainSnapshots(client, tenantId),
+    readSearchQueries(client, tenantId),
   ]);
 
   const observations = [
@@ -165,6 +200,7 @@ export async function runTargetingPass(
     ...detectKeywordsWithoutPage(approved, pages),
     ...detectKeywordCannibalization(approved, pages),
     ...detectReferringDomainMovement(priorLinks, currentLinks),
+    ...detectMissingRouteQueries(approved, queries),
   ];
 
   return {

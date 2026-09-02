@@ -20,7 +20,8 @@ export type TargetingRule =
   | "approved_keyword_no_page"
   | "approved_keyword_multiple_pages"
   | "question_asked_no_page"
-  | "referring_domain_movement";
+  | "referring_domain_movement"
+  | "tracked_set_has_no_route_query";
 
 export type TargetingObservation = {
   readonly rule: TargetingRule;
@@ -47,6 +48,71 @@ export type PageText = {
 
 function normalise(value: string): string {
   return value.trim().toLowerCase();
+}
+
+/** A query that names a journey: "movers boston to miami", "moving from texas to florida". */
+export function isRouteQuery(value: string): boolean {
+  return /\s(to|from)\s/i.test(value.trim());
+}
+
+export type SearchQuery = {
+  readonly query: string;
+  readonly impressions: number;
+  readonly clicks: number;
+};
+
+/**
+ * The approved set holds no route query while route searches already reach
+ * the site. The research log records the tracked set as forty synonyms of one
+ * head term, the queries listicle publishers are built to win, and none of
+ * the route queries the route-matrix operators compete on (COMP-1). This
+ * reads what Search Console already stored: it invents no keyword, it names
+ * the ones searchers used. It says nothing when no keyword has been approved
+ * (that is a different absence) and nothing when no route query has reached
+ * the site (there is no evidence to name).
+ */
+export function detectMissingRouteQueries(
+  approved: readonly ApprovedKeyword[],
+  queries: readonly SearchQuery[],
+): TargetingObservation[] {
+  if (approved.length === 0) return [];
+  if (approved.some((entry) => isRouteQuery(entry.keyword))) return [];
+  const routes = new Map<string, { impressions: number; clicks: number }>();
+  for (const row of queries) {
+    const query = normalise(row.query);
+    if (!query || !isRouteQuery(query)) continue;
+    const current = routes.get(query) ?? { impressions: 0, clicks: 0 };
+    routes.set(query, {
+      impressions: current.impressions + row.impressions,
+      clicks: current.clicks + row.clicks,
+    });
+  }
+  if (routes.size === 0) return [];
+  const ranked = [...routes.entries()].sort((a, b) => b[1].impressions - a[1].impressions);
+  const impressions = ranked.reduce((sum, [, row]) => sum + row.impressions, 0);
+  const clicks = ranked.reduce((sum, [, row]) => sum + row.clicks, 0);
+  const examples = ranked.slice(0, 3).map(([query]) => `"${query}"`);
+  return [
+    {
+      rule: "tracked_set_has_no_route_query",
+      target: "route queries",
+      title:
+        "None of your approved keywords is a route query, and route searches already reach the site",
+      description:
+        `${approved.length} approved keyword(s), none naming a journey. Search Console recorded ` +
+        `${ranked.length} route quer${ranked.length === 1 ? "y" : "ies"} reaching the site, ` +
+        `${impressions} impression(s) and ${clicks} click(s) across them, such as ${examples.join(", ")}. ` +
+        "Nothing here is approved on your behalf: these are the searches people used, for you to choose from.",
+      evidence: {
+        approvedCount: approved.length,
+        routeQueryCount: ranked.length,
+        impressions,
+        clicks,
+        examples: ranked.slice(0, 10).map(([query, row]) => ({ query, ...row })),
+      },
+      confidence: 1,
+    },
+  ];
 }
 
 /** Approved keywords no stored SERP has ever looked up. */
