@@ -22,6 +22,7 @@ export const getChangeRequest = createServerFn({ method: "GET" })
         versions: [],
         measurement: { cycle: null, windows: [], observations: [], revisions: [] },
         gradedOutcomes: [],
+        inFlight: [],
       };
     const tenantId = await resolveTenantId(db);
     if (!tenantId)
@@ -32,6 +33,7 @@ export const getChangeRequest = createServerFn({ method: "GET" })
         versions: [],
         measurement: { cycle: null, windows: [], observations: [], revisions: [] },
         gradedOutcomes: [],
+        inFlight: [],
       };
     return fetchChangeRequest(db, tenantId, data.id);
   });
@@ -40,7 +42,12 @@ async function runTransition(
   supabase: Parameters<typeof import("./change-requests.server").transitionChangeRequest>[0],
   userId: string,
   action: "approve" | "reject" | "mark_applied" | "verify" | "roll_back",
-  data: { id: string; notes?: string | null | undefined; revision?: string | null | undefined },
+  data: {
+    id: string;
+    notes?: string | null | undefined;
+    revision?: string | null | undefined;
+    acknowledgeInFlight?: boolean | undefined;
+  },
 ) {
   const { assertOperator } = await import("./os-admin.server");
   await assertOperator(supabase, userId);
@@ -51,6 +58,7 @@ async function runTransition(
     userId,
     notes: data.notes ?? null,
     revision: data.revision ?? null,
+    acknowledgeInFlight: data.acknowledgeInFlight === true,
   });
   const state = result.changeRequest.state;
   if (isChangeState(state) && state !== "proposed") {

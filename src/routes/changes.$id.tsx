@@ -30,6 +30,7 @@ import {
   rollBackChangeRequest,
   verifyChangeRequest,
 } from "@/lib/change-requests.functions";
+import { IN_FLIGHT_CONSEQUENCE } from "@/lib/change-request-conflicts";
 import { describeOutcome, humanState, isChangeState } from "@/lib/change-request-state";
 import { revertChangeRequest } from "@/lib/execution/execution.functions";
 import {
@@ -329,9 +330,16 @@ function ChangeRequestPage() {
   };
 
   const mutation = useMutation({
-    mutationFn: async (action: "approve" | "reject" | "verify" | "rollback") => {
+    mutationFn: async (
+      action: "approve" | "approve_despite_in_flight" | "reject" | "verify" | "rollback",
+    ) => {
       const payload = { id, notes: notes.trim() || null, revision: null };
       if (action === "approve") return approve({ data: payload });
+      // The database refuses an approval while another change to this page is
+      // in flight unless the operator acknowledges it. This is the only control
+      // that sends the acknowledgement, and it says what it costs on its face.
+      if (action === "approve_despite_in_flight")
+        return approve({ data: { ...payload, acknowledgeInFlight: true } });
       if (action === "reject") return reject({ data: payload });
       if (action === "verify") return verify({ data: payload });
       // The rolled_back state requires a recorded revert commit, so the commit
@@ -472,11 +480,43 @@ function ChangeRequestPage() {
             </li>
           ))}
         </ul>
+        {state === "proposed" && data.inFlight.length > 0 ? (
+          <div className="mt-4 rounded-xl border border-border/60 p-3">
+            <p className="text-sm font-semibold text-foreground">
+              Another change to this page is still in flight.
+            </p>
+            <ul className="mt-2 space-y-1">
+              {data.inFlight.map((sibling) => (
+                <li key={sibling.id} className="text-sm text-muted-foreground">
+                  <Link
+                    to="/changes/$id"
+                    params={{ id: sibling.id }}
+                    className="text-foreground underline-offset-4 hover:underline"
+                  >
+                    {sibling.title}
+                  </Link>{" "}
+                  is {sibling.reason}.
+                </li>
+              ))}
+            </ul>
+            <p className="mt-2 text-xs text-muted-foreground">{IN_FLIGHT_CONSEQUENCE}</p>
+          </div>
+        ) : null}
         {state === "proposed" ? (
           <div className="mt-4 flex flex-wrap gap-2">
-            <Button variant="outline" disabled={busy} onClick={() => mutation.mutate("approve")}>
-              Approve change
-            </Button>
+            {data.inFlight.length === 0 ? (
+              <Button variant="outline" disabled={busy} onClick={() => mutation.mutate("approve")}>
+                Approve change
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                disabled={busy}
+                onClick={() => mutation.mutate("approve_despite_in_flight")}
+              >
+                Approve anyway, measure both together
+              </Button>
+            )}
             <Button variant="ghost" disabled={busy} onClick={() => mutation.mutate("reject")}>
               Reject change
             </Button>

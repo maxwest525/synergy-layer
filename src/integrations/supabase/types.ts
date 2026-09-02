@@ -5561,6 +5561,7 @@ export type Database = {
       }
       transition_change_request: {
         Args: {
+          _acknowledge_in_flight?: boolean
           _action: string
           _id: string
           _notes?: string
