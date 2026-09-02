@@ -528,8 +528,12 @@ application has to do to parse the response."
 
 **LLM Responses**, one set per model family at `/v3/ai_optimization/{llm}/llm_responses/...`
 where `{llm}` is `chat_gpt`, `claude`, `gemini` or `perplexity`. Each has `models`
-(a free list of available models) and `live`. ChatGPT, Claude and Gemini also have
-`task_post` / `tasks_ready` / `task_get`; Perplexity is Live only.
+(a free list of available models) and `live`. The docs navigation shows
+`task_post` / `tasks_ready` / `task_get` under ChatGPT, Claude **and** Gemini, with
+Perplexity Live only. The help center article on LLM Responses pricing says instead
+that "our system supports the Standard (POST-GET) data retrieval method for ChatGPT
+and Claude LLMs", omitting Gemini. The two pages disagree and neither was tested;
+treat Gemini Standard support as unconfirmed.
 
 **LLM Scraper**, at `/v3/ai_optimization/{llm}/llm_scraper/...` for `chat_gpt` and
 `gemini` only: `locations`, `languages`, `task_post`, `tasks_ready`, `task_get`
@@ -625,6 +629,11 @@ Published prices as of 2026-09-02.
 | LLM Scraper | Standard queue, up to 45 minutes | $0.0012 per results page |
 | LLM Scraper | Priority queue, up to 5 minutes | $0.0024 per results page |
 | LLM Scraper | Live, up to 90 seconds | $0.004 per results page |
+
+The LLM Scraper turnaround figures are taken from the labelled price blocks. The
+same page's introductory paragraph gives different ones for the same two tiers
+("normal (up to 5 minutes) and high (up to 1 minute)"). The page contradicts
+itself; neither figure was tested.
 | AI Keyword Data search volume | Live only | $0.01 per task plus $0.0001 per item, worked example $110 per 1M keywords |
 
 **LLM Responses is the one with an open-ended cost.** The help center article is
@@ -774,7 +783,7 @@ on the site. It is a vendor convention, not an evidenced weighting.
 
 ---
 
-## 4. Help centre findings worth acting on
+## 4. Help center findings worth acting on
 
 ### 4.1 Rate and concurrency limits
 
@@ -841,7 +850,7 @@ API:
 ### 4.4 Caching, freshness and retention
 
 - There is **no provider-side response cache and no conditional-request mechanism**.
-  Nothing in the help centre offers an ETag, a `If-Modified-Since`, or a
+  Nothing in the help center offers an ETag, a `If-Modified-Since`, or a
   "return the previous result free" option. Caching is entirely the caller's job.
 - The Backlinks index is a live index: "the data is updated continuously and is
   accessible in real-time", with historical data only via the History endpoint and
@@ -1031,7 +1040,7 @@ If this is built, the shape is forced by the data, not by preference:
   and like `40203` it is a budget condition rather than a transient failure, so it
   belongs in the Inbox as `needs_attention` and must never be blind-retried.
 - **Use `tag` to carry the AOOS run identifier.** Already noted in `DIGEST.md` §7;
-  the help centre confirms it is the vendor's supported route to per-project usage
+  the help center confirms it is the vendor's supported route to per-project usage
   attribution.
 - **Prefer Standard plus callback over Live for anything scheduled.** Restated by the
   vendor as a direct recommendation, with the burst-avoidance guidance ("a steady
@@ -1084,7 +1093,7 @@ feeds.
    API attributions are DataForSEO's own labels and are known to contain at least one
    error (§2.3).
 8. **The Lite endpoint family was not compared field by field** against its standard
-   counterpart. The help centre says the underlying data is the same and the response
+   counterpart. The help center says the underlying data is the same and the response
    structure differs; the size and cost difference was not measured.
 9. **No claim here has been reconciled against Google's own documentation.** Where a
    rule derived from this digest would tell an operator how their site is doing, the
@@ -1100,7 +1109,7 @@ feeds.
 
 | Version | Date | Change | Sources |
 |---|---|---|---|
-| 1.0.0 | 2026-09-02 | Initial digest. Template Gallery inventory (64), full published method of the Keyword Cannibalization Detector and AI Content Plan Builder read from their skill archives, AI Optimization / LLM Mentions endpoint and pricing survey, help centre findings on limits and cost control, and the vendor's own build-and-budget blog article. | All sources in §1 |
+| 1.0.0 | 2026-09-02 | Initial digest. Template Gallery inventory (64), full published method of the Keyword Cannibalization Detector and AI Content Plan Builder read from their skill archives, AI Optimization / LLM Mentions endpoint and pricing survey, help center findings on limits and cost control, and the vendor's own build-and-budget blog article. | All sources in §1 |
 
 Correction protocol as in `DIGEST.md`: pricing, access and limit claims here are
 dated, and any claim that would gate AOOS behaviour must be re-verified against a
