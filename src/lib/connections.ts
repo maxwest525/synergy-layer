@@ -37,6 +37,8 @@
  *   of them may claim its findings alone.
  */
 
+import type { Database } from "@/integrations/supabase/types";
+
 /**
  * How to tell a stored success from a stored failure.
  *
@@ -45,6 +47,28 @@
 export type SuccessFilter =
   | { readonly column: string; readonly kind: "is-null" }
   | { readonly column: string; readonly kind: "equals"; readonly value: string };
+
+type TableName = keyof Database["public"]["Tables"];
+
+/**
+ * The column that dates a connection's newest row, per table, checked against
+ * the generated types so a renamed column fails to compile rather than
+ * reading as "never reached you". Every stored table names one; the registry
+ * test holds it to that (CODE-77).
+ */
+export const NEWEST_ROW_COLUMN = {
+  search_console_snapshots: "collected_at",
+  ga4_snapshots: "collected_at",
+  page_metadata_observations: "observed_at",
+  dataforseo_snapshots: "collected_at",
+  pagespeed_snapshots: "collected_at",
+  serpapi_requests: "created_at",
+  umami_snapshots: "collected_at",
+  openseo_tool_runs: "created_at",
+  google_ads_snapshots: "collected_at",
+} as const satisfies {
+  [T in TableName]?: keyof Database["public"]["Tables"][T]["Row"] & string;
+};
 
 /** How far a connection's evidence actually travels. */
 export type ConnectionStage = "not_configured" | "configured" | "collecting" | "reaching_you";
@@ -261,12 +285,19 @@ export type ConnectionFacts = {
    * down still reached them, which is the only question this page asks.
    */
   readonly findings: number | null;
+  /**
+   * When the newest successful row was stored. Null when the connection has
+   * no table, or the table holds no successful row yet.
+   */
+  readonly newestAt: string | null;
 };
 
 export type ConnectionRow = ConnectionOutput & {
   readonly stage: ConnectionStage;
   /** What is true of it right now, and what would move it on. */
   readonly reason: string;
+  /** When the newest successful row was stored; the date "reaching you" is as of. */
+  readonly newestAt: string | null;
 };
 
 export type Tile = {
@@ -453,6 +484,7 @@ export function buildConnections(facts: readonly ConnectionFacts[]): Connections
       storedRows: null,
       failedRows: null,
       findings: null,
+      newestAt: null,
     };
     const stage = stageOf(entry, output);
     // Every other connection whose table feeds one of the same modules. When
@@ -462,7 +494,12 @@ export function buildConnections(facts: readonly ConnectionFacts[]): Connections
         other.key !== output.key &&
         other.findingSources.some((source) => output.findingSources.includes(source)),
     ).map((other) => other.label);
-    return { ...output, stage, reason: reasonFor(stage, entry, output, sharesWith) };
+    return {
+      ...output,
+      stage,
+      reason: reasonFor(stage, entry, output, sharesWith),
+      newestAt: entry.newestAt,
+    };
   }).sort(
     (left, right) =>
       STAGE_ORDER[left.stage] - STAGE_ORDER[right.stage] || left.label.localeCompare(right.label),

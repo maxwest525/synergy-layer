@@ -25,6 +25,7 @@ function facts(key: string, overrides: Partial<ConnectionFacts> = {}): Connectio
     storedRows: output.table === null ? null : 0,
     failedRows: output.succeeded === null ? null : 0,
     findings: output.findingSources.length === 0 ? null : 0,
+    newestAt: null,
     ...overrides,
   };
 }
@@ -317,5 +318,20 @@ describe("what the registry records", () => {
       expect(output.promise).not.toContain("—");
       expect(output.promise).not.toMatch(/API|endpoint|payload/);
     }
+  });
+});
+
+describe("when a connection last reached you", () => {
+  it("carries the newest stored row's date onto the row", () => {
+    // "Reaching you" without a date read as current whether the newest row
+    // was an hour old or a month old (CODE-77).
+    const view = buildConnections([
+      facts("google_search_console", {
+        storedRows: 900,
+        findings: 14,
+        newestAt: "2026-09-01T16:05:12.000Z",
+      }),
+    ]);
+    expect(row(view, "google_search_console").newestAt).toBe("2026-09-01T16:05:12.000Z");
   });
 });

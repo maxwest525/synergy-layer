@@ -7,6 +7,7 @@ import {
   type ConnectionFacts,
   type ConnectionOutput,
   type SuccessFilter,
+  NEWEST_ROW_COLUMN,
 } from "./connections";
 
 /**
@@ -84,6 +85,46 @@ export const getConnectionFacts = createServerFn({ method: "POST" })
         : query.neq(filter.column, filter.value);
     }
 
+    /**
+     * The newest successful row's timestamp, through the same scope and
+     * success filter the counts use, so the date and the count describe the
+     * same rows.
+     */
+    async function newestAt(
+      table: string,
+      filter: SuccessFilter | null,
+      scope?: ConnectionOutput["scope"],
+    ): Promise<string | null> {
+      const column = NEWEST_ROW_COLUMN[table as keyof typeof NEWEST_ROW_COLUMN] as
+        string | undefined;
+      if (!column) {
+        throw new EssentialsReadError(`${table} newest row`, "no timestamp column is named");
+      }
+      let query = db
+        .from(table as "search_console_snapshots")
+        .select(column)
+        .eq("tenant_id", tenantId);
+      if (scope) {
+        query = query.like(scope.column, `${scope.prefix}%`);
+        if (scope.notPrefix !== undefined) {
+          query = query.not(scope.column, "like", `${scope.notPrefix}%`);
+        }
+      }
+      if (filter) {
+        query =
+          filter.kind === "is-null"
+            ? query.is(filter.column, null)
+            : query.eq(filter.column, filter.value);
+      }
+      const { data, error } = await query
+        .order(column, { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw new EssentialsReadError(`${table} newest row`, error.message);
+      const value = (data as Record<string, unknown> | null)?.[column];
+      return typeof value === "string" ? value : null;
+    }
+
     const withTable = CONNECTION_OUTPUTS.filter(
       (output): output is (typeof CONNECTION_OUTPUTS)[number] & { table: string } =>
         output.table !== null,
@@ -92,25 +133,34 @@ export const getConnectionFacts = createServerFn({ method: "POST" })
     const [tableCounts, findingCounts] = await Promise.all([
       Promise.all(
         withTable.map(
-          async (output): Promise<readonly [string, { stored: number; failed: number | null }]> => {
+          async (
+            output,
+          ): Promise<
+            readonly [string, { stored: number; failed: number | null; newestAt: string | null }]
+          > => {
             // A table with no failure marker stores only successes, so one count
             // answers both questions and the second read is not worth making.
             if (output.succeeded === null) {
-              const total = exactly(
-                `${output.table} rows`,
-                await scoped(output.table, output.scope),
-              );
-              return [output.key, { stored: total, failed: null }] as const;
+              const [total, newest] = await Promise.all([
+                scoped(output.table, output.scope),
+                newestAt(output.table, null, output.scope),
+              ]);
+              return [
+                output.key,
+                { stored: exactly(`${output.table} rows`, total), failed: null, newestAt: newest },
+              ] as const;
             }
-            const [stored, failed] = await Promise.all([
+            const [stored, failed, newest] = await Promise.all([
               narrowed(output.table, output.succeeded, true, output.scope),
               narrowed(output.table, output.succeeded, false, output.scope),
+              newestAt(output.table, output.succeeded, output.scope),
             ]);
             return [
               output.key,
               {
                 stored: exactly(`${output.table} successful rows`, stored),
                 failed: exactly(`${output.table} failed attempts`, failed),
+                newestAt: newest,
               },
             ] as const;
           },
@@ -150,6 +200,7 @@ export const getConnectionFacts = createServerFn({ method: "POST" })
         // different fact from a store that is empty.
         storedRows: counts?.stored ?? null,
         failedRows: counts?.failed ?? null,
+        newestAt: counts?.newestAt ?? null,
         findings:
           output.findingSources.length === 0
             ? null
