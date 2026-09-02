@@ -34,6 +34,16 @@ Last updated: 2026-08-31, after wiring Google Ads campaign reporting
 describes 2026-08-21 and has NOT been rewritten; the current-state blocks
 immediately below supersede it.
 
+## 0bj. Three chosen figures say they are chosen, 2026-09-02
+
+The card urgency ages (14 and 3 days), the PageSpeed measurement
+confidence (0.75) and the knowledge retrieval weights carried no stated
+basis. Each now carries the `Stated assumption:` comment AGENTS.md asks
+for, naming the choice and the stored data that would settle it; the
+figures are unchanged (CODE-83, from AGT-15). The website-side lead
+tracking fix (MEAS-12) is drafted but waits on push access to the
+website repository (OP-12).
+
 ## 0bi. Every colour on screen resolves to a token, 2026-09-02
 
 Eight screens used amber and emerald palette classes, so the "needs
