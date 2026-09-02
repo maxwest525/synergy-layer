@@ -34,6 +34,17 @@ Last updated: 2026-08-31, after wiring Google Ads campaign reporting
 describes 2026-08-21 and has NOT been rewritten; the current-state blocks
 immediately below supersede it.
 
+## 0au. The five public hooks are tested at the handler, 2026-09-02
+
+The scheduler tick, the nightly proposal job, the DataForSEO postback and
+the two OpenAI Ads bridges were covered at the helper level and not at
+the handler a caller reaches. Five tests now call each route's POST
+handler directly: the missing or unverified token, the schedule outside
+the allow-list, the hash-only token lookup, the body about another task,
+the unknown tenant and wrong secret answering alike, the unconfigured
+bridge, the empty-batch health checks, the exact work each hook hands on,
+and the bare failure a thrown handler returns (CODE-69, from CQ-5).
+
 ## 0at. Route searches the approved set does not name, 2026-09-02
 
 The tracked keywords are forty synonyms of one head term and no route
