@@ -74,51 +74,17 @@ describe("essentials status derivation", () => {
     expect(indexingStatus(2, true)).toBe("live");
   });
 
-  it("refuses an authority claim without an explicit stored sufficiency signal", () => {
-    const thin = backlinkAuthority({
-      snapshotCount: 6,
-      referringDomains: 1,
-      backlinks: 1,
-      storedSufficient: null,
-    });
+  it("says authority is not scored instead of implying a stored verdict", () => {
+    const thin = backlinkAuthority({ snapshotCount: 6, referringDomains: 1, backlinks: 1 });
     expect(thin.status).toBe("partial");
-    expect(thin.sufficient).toBe(false);
-    expect(thin.note).toContain("No stored evidence pass");
+    expect(thin.note).toContain("1 referring domain(s) and 1 link(s)");
+    // Nothing scores authority, and the note says so instead of implying a verdict.
+    expect(thin.note).toContain("Nothing in AOOS scores backlink authority");
+    expect(thin).not.toHaveProperty("sufficient");
 
-    expect(
-      backlinkAuthority({
-        snapshotCount: 0,
-        referringDomains: 0,
-        backlinks: 0,
-        storedSufficient: null,
-      }).status,
-    ).toBe("not_wired");
-
-    // Counts alone never promote a sample to sufficient.
-    expect(
-      backlinkAuthority({
-        snapshotCount: 4,
-        referringDomains: 24,
-        backlinks: 120,
-        storedSufficient: null,
-      }).sufficient,
-    ).toBe(false);
-    expect(
-      backlinkAuthority({
-        snapshotCount: 4,
-        referringDomains: 24,
-        backlinks: 120,
-        storedSufficient: false,
-      }).sufficient,
-    ).toBe(false);
-    expect(
-      backlinkAuthority({
-        snapshotCount: 4,
-        referringDomains: 24,
-        backlinks: 120,
-        storedSufficient: true,
-      }).sufficient,
-    ).toBe(true);
+    expect(backlinkAuthority({ snapshotCount: 0, referringDomains: 0, backlinks: 0 }).status).toBe(
+      "not_wired",
+    );
   });
 
   it("throws a source-specific error instead of zeroing a failed read", () => {

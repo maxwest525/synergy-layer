@@ -754,8 +754,7 @@ async function runDataForSeoNode(
           target,
           costUsd: evidence.costUsd,
           snapshots: evidence.normalized["snapshots"],
-          missingFactors: evidence.missingFactors,
-          healthSufficient: evidence.health.sufficient,
+          missingEvidence: evidence.missingEvidence,
         },
       };
     }
