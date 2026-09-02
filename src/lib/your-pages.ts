@@ -462,6 +462,7 @@ export function buildYourPages(facts: YourPagesFacts): YourPagesView {
       whoisCollection: true,
       technologyCollection: true,
       brandMentionCollection: true,
+      referringDomainCollection: true,
       reviewedCompetitorSet: true,
       umamiSecondWindow: true,
       // Stated gap: this page's duplicate-title/description findings need an

@@ -8,7 +8,7 @@ import type { Database } from "@/integrations/supabase/types";
  * for the two ownership rules, already restricted to known domains) and
  * persists results.
  *
- * Two of the four rules here file an operator DECISION, never a finding:
+ * Two of the five rules here file an operator DECISION, never a finding:
  * `same_registration_details_across_two_known_domains` and
  * `identical_technology_stack_across_two_known_domains` return a *candidate*
  * for the operator to confirm or reject (COMPETITIVE_MODEL.md §4, §7).
@@ -21,12 +21,16 @@ export type DiscoveryCheckRule =
   | "overlap_list_reached_the_row_limit"
   | "same_registration_details_across_two_known_domains"
   | "identical_technology_stack_across_two_known_domains"
-  | "rival_page_mentions_your_brand";
+  | "rival_page_mentions_your_brand"
+  | "brand_mentioned_without_a_link";
 
 type ImpactLevel = Database["public"]["Enums"]["impact_level"];
 
 export type DiscoveryFindingDraft = {
-  rule: "overlap_list_reached_the_row_limit" | "rival_page_mentions_your_brand";
+  rule:
+    | "overlap_list_reached_the_row_limit"
+    | "rival_page_mentions_your_brand"
+    | "brand_mentioned_without_a_link";
   target: string;
   title: string;
   description: string;
@@ -162,6 +166,97 @@ export function checkRivalPageMentions(input: RivalMentionsInput): DiscoveryFind
         // Named, never folded into a count of matches: a row with no URL is
         // unread, not absent.
         unparsedItemCount: input.unparsedCount,
+      },
+      businessImpact: "low",
+      confidence: 1,
+    });
+  }
+
+  return drafts;
+}
+
+// ---------------------------------------------------------------------------
+// brand_mentioned_without_a_link
+// ---------------------------------------------------------------------------
+
+export type UnlinkedMentionsInput = {
+  mentions: readonly RivalMentionRow[];
+  /** Hosts of the tenant's own website assets, normalised. A self-mention is not outreach. */
+  ownedHosts: ReadonlySet<string>;
+  /** Already normalised; these domains have their own rule (rival_page_mentions_your_brand). */
+  knownCompetitorDomains: ReadonlySet<string>;
+  /** Domains in the newest stored referring-domain read, normalised. */
+  referringDomains: ReadonlySet<string>;
+  /** Rank-ordered rows the referring-domain read returned, and the limit it was asked for. */
+  referringDomainsReturned: number;
+  referringDomainsLimit: number;
+  referringDomainsReportingDate: string;
+  /** True when the read filled its limit, so a domain absent from it may still link. */
+  referringDomainsPossiblyTruncated: boolean;
+  /** Rows the provider sent with no readable URL -- named, never dropped to zero. */
+  unparsedCount: number;
+  mentionsPossiblyTruncated: boolean;
+};
+
+/**
+ * One finding per domain that mentions the brand and is not in the stored
+ * referring-domain list: the set difference LINK-3 named. The claim is exactly
+ * what was compared, so when the referring-domain read was cut off at its
+ * limit the sentence says "not among the first N linking domains by rank"
+ * rather than "does not link". Owned hosts and known competitors are left
+ * out: the first is not outreach, the second has its own rule.
+ */
+export function checkUnlinkedBrandMentions(input: UnlinkedMentionsInput): DiscoveryFindingDraft[] {
+  const urlsByDomain = new Map<string, string[]>();
+  let domainlessCount = 0;
+
+  for (const mention of input.mentions) {
+    if (!mention.url) continue;
+    if (mention.domain === null) {
+      domainlessCount += 1;
+      continue;
+    }
+    const domain = normaliseHost(mention.domain);
+    if (!domain || input.ownedHosts.has(domain) || input.knownCompetitorDomains.has(domain)) {
+      continue;
+    }
+    if (input.referringDomains.has(domain)) continue;
+    const urls = urlsByDomain.get(domain) ?? [];
+    if (!urls.includes(mention.url)) urls.push(mention.url);
+    urlsByDomain.set(domain, urls);
+  }
+
+  const linkListClause = input.referringDomainsPossiblyTruncated
+    ? `is not among the first ${input.referringDomainsReturned} domains linking to you by rank, which is where the stored read stopped, so it may link from a lower-ranked page`
+    : `is not among the ${input.referringDomainsReturned} domains the stored read found linking to you`;
+  const mentionTruncationClause = input.mentionsPossiblyTruncated
+    ? " The mention reading stopped at the first page of results the search covered, so a domain missing here is not the same as none existing."
+    : "";
+
+  const drafts: DiscoveryFindingDraft[] = [];
+  for (const [domain, urls] of urlsByDomain) {
+    const pageClause = urls.length === 1 ? "one page" : `${urls.length} pages`;
+    drafts.push({
+      rule: "brand_mentioned_without_a_link",
+      target: domain,
+      title: "A site mentions your name without a link we can see",
+      description:
+        `${domain} mentions your name on ${pageClause} and ${linkListClause} ` +
+        `(referring domains read ${input.referringDomainsReportingDate}). ` +
+        `The match is on your brand word appearing in the page text; read the page before asking for a link.` +
+        mentionTruncationClause,
+      evidence: {
+        domain,
+        urls,
+        referringDomainsReturned: input.referringDomainsReturned,
+        referringDomainsLimit: input.referringDomainsLimit,
+        referringDomainsReportingDate: input.referringDomainsReportingDate,
+        referringDomainsPossiblyTruncated: input.referringDomainsPossiblyTruncated,
+        mentionsPossiblyTruncated: input.mentionsPossiblyTruncated,
+        // Named, never folded into a count of matches: a row with no URL or
+        // no domain is unread, not absent.
+        unparsedItemCount: input.unparsedCount,
+        domainlessMentionCount: domainlessCount,
       },
       businessImpact: "low",
       confidence: 1,

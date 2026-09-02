@@ -31,6 +31,7 @@ export type Prerequisite =
   | "whois_collection"
   | "technology_collection"
   | "brand_mention_collection"
+  | "referring_domain_collection"
   | "reviewed_competitor_set"
   | "umami_second_window"
   | "onpage_crawl";
@@ -55,6 +56,8 @@ export type PrerequisiteState = {
   readonly technologyCollection: boolean;
   /** A brand-mention read (Content Analysis) has been collected at least once. */
   readonly brandMentionCollection: boolean;
+  /** One stored referring-domain read exists, so there is a list of linking sites to check against. */
+  readonly referringDomainCollection: boolean;
   /** At least one competitor candidate has been reviewed as an actual competitor. */
   readonly reviewedCompetitorSet: boolean;
   /**
@@ -342,6 +345,13 @@ export const RULE_ASSIGNMENTS: readonly RuleAssignment[] = [
     why: "Whether a stored brand mention's domain matches an already-known competitor is a set match over two stored tables -- no traffic volume changes whether two strings are equal. It needs both a brand-mention read (workflow dfs-brand-mentions, operator-triggered) and at least one candidate reviewed as an actual competitor rather than a surface domain (directory, marketplace, review site), or an empty screen would blame volume for what is really two missing prerequisites.",
   },
   {
+    rule: "brand_mentioned_without_a_link",
+    bucket: "fact",
+    needsPerTarget: null,
+    alsoNeeds: ["brand_mention_collection", "referring_domain_collection"],
+    why: "Whether a stored brand mention's domain appears in the stored referring-domain list is a set difference over two tables this system already holds -- no traffic volume changes whether a string is in a set. It needs a brand-mention read (workflow dfs-brand-mentions, operator-triggered) and a referring-domain read (dfs-backlinks); without the link list, 'without a link' is not a claim it can make. When the referring-domain read filled its limit the finding says 'not among the first N linking domains by rank', which is exactly what was compared.",
+  },
+  {
     rule: "umami_zero_recorded",
     bucket: "fact",
     needsPerTarget: null,
@@ -449,6 +459,8 @@ const PREREQUISITE_COPY: Record<Prerequisite, string> = {
     "a stored technology stack for two or more of your tracked and candidate domains",
   brand_mention_collection:
     "a brand-mention read, so there is something to check for your name on other sites",
+  referring_domain_collection:
+    "a stored referring-domain read, so there is a list of sites linking to you to check a mention against",
   reviewed_competitor_set:
     "at least one competitor candidate reviewed, so there is a known set to match a mention against",
   umami_second_window: "a second Umami reading whose window does not overlap the first",
@@ -465,6 +477,7 @@ const PREREQUISITE_STATE_KEY: Record<Prerequisite, keyof PrerequisiteState> = {
   whois_collection: "whoisCollection",
   technology_collection: "technologyCollection",
   brand_mention_collection: "brandMentionCollection",
+  referring_domain_collection: "referringDomainCollection",
   reviewed_competitor_set: "reviewedCompetitorSet",
   umami_second_window: "umamiSecondWindow",
   onpage_crawl: "onpageCrawl",

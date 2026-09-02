@@ -47,7 +47,7 @@ const PAGESPEED_RULES_COVERED: Record<PageSpeedCheckRule, true> = {
  * Same compile-time exhaustiveness for the discovery family
  * (dataforseo/discovery-rule-checks.ts): the module exposes only the
  * `DiscoveryCheckRule` type, so a new rule id added there without a key here
- * fails the build rather than this test at runtime. Covers all four rules,
+ * fails the build rather than this test at runtime. Covers all five rules,
  * including the two that file an operator DECISION (a domain_ownership_candidates
  * row) rather than a recommendation -- they still need a bucket assignment so
  * an empty screen can name what they are waiting on.
@@ -57,6 +57,7 @@ const DISCOVERY_RULES_COVERED: Record<DiscoveryCheckRule, true> = {
   same_registration_details_across_two_known_domains: true,
   identical_technology_stack_across_two_known_domains: true,
   rival_page_mentions_your_brand: true,
+  brand_mentioned_without_a_link: true,
 };
 
 /**
@@ -188,6 +189,7 @@ describe("non-volume prerequisites", () => {
         whoisCollection: true,
         technologyCollection: true,
         brandMentionCollection: true,
+        referringDomainCollection: true,
         reviewedCompetitorSet: true,
         umamiSecondWindow: true,
         onpageCrawl: true,
@@ -206,6 +208,7 @@ describe("non-volume prerequisites", () => {
       whoisCollection: true,
       technologyCollection: true,
       brandMentionCollection: true,
+      referringDomainCollection: true,
       reviewedCompetitorSet: true,
       umamiSecondWindow: true,
       onpageCrawl: true,
@@ -229,6 +232,7 @@ describe("non-volume prerequisites", () => {
       whoisCollection: true,
       technologyCollection: true,
       brandMentionCollection: true,
+      referringDomainCollection: true,
       reviewedCompetitorSet: true,
       onpageCrawl: true,
     });
@@ -247,14 +251,16 @@ describe("non-volume prerequisites", () => {
       whoisCollection: false,
       technologyCollection: false,
       brandMentionCollection: false,
+      referringDomainCollection: false,
       reviewedCompetitorSet: false,
       umamiSecondWindow: true,
       onpageCrawl: true,
     });
-    expect(notes).toHaveLength(4);
+    expect(notes).toHaveLength(5);
     expect(notes.join(" ")).toContain("whois");
     expect(notes.join(" ")).toContain("technology stack");
     expect(notes.join(" ")).toContain("brand-mention");
+    expect(notes.join(" ")).toContain("referring-domain");
     expect(notes.join(" ")).toContain("reviewed");
   });
 });

@@ -478,6 +478,7 @@ export function buildSiteHealth(facts: SiteHealthFacts): SiteHealthView {
       whoisCollection: true,
       technologyCollection: true,
       brandMentionCollection: true,
+      referringDomainCollection: true,
       reviewedCompetitorSet: true,
       umamiSecondWindow: true,
       // Stated gap: this page's site-audit findings need an OnPage crawl,

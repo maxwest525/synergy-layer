@@ -11,6 +11,7 @@ import {
   checkIdenticalTechnologyStack,
   checkOverlapRowLimit,
   checkRivalPageMentions,
+  checkUnlinkedBrandMentions,
   checkSameRegistrationDetails,
   domainsMissingWhoisRecord,
   domainsWithNoTechnologyRecorded,
@@ -267,6 +268,86 @@ export async function runRivalPageMentionFindings(
 }
 
 // ---------------------------------------------------------------------------
+// brand_mentioned_without_a_link
+// ---------------------------------------------------------------------------
+
+/** Hosts of the tenant's own website assets, normalised the way the checks normalise. */
+async function readOwnedHosts(client: Client, tenantId: string): Promise<Set<string>> {
+  const { data, error } = await client
+    .from("assets")
+    .select("external_ref")
+    .eq("tenant_id", tenantId)
+    .eq("kind", "website");
+  if (error) throw new Error(error.message);
+  const hosts = new Set<string>();
+  for (const row of data ?? []) {
+    if (!row.external_ref) continue;
+    try {
+      hosts.add(normaliseDomain(new URL(row.external_ref).hostname));
+    } catch {
+      // A malformed stored asset is skipped rather than silently trusted.
+    }
+  }
+  return hosts;
+}
+
+export type UnlinkedMentionRunResult = {
+  findingsFiled: number;
+  ran: boolean;
+  /** Why the rule could not run, when it could not. */
+  waitingOn: "brand_mention_collection" | "referring_domain_collection" | null;
+};
+
+/**
+ * The set difference LINK-3 named: mention domains that are not in the newest
+ * stored referring-domain read. Both reads must exist; without the link list
+ * "without a link" is not a claim this system can make.
+ */
+export async function runUnlinkedBrandMentionFindings(
+  client: Client,
+  tenantId: string,
+): Promise<UnlinkedMentionRunResult> {
+  const mentionSnapshot = await newestSnapshot(client, tenantId, "content_analysis_mentions");
+  if (!mentionSnapshot)
+    return { findingsFiled: 0, ran: false, waitingOn: "brand_mention_collection" };
+  const referringSnapshot = await newestSnapshot(client, tenantId, "backlinks_referring_domains");
+  if (!referringSnapshot) {
+    return { findingsFiled: 0, ran: false, waitingOn: "referring_domain_collection" };
+  }
+
+  const rawItems = rowsOf(mentionSnapshot.payload);
+  const mentions = selectMentions(rawItems).map((mention) => ({
+    url: mention.url,
+    domain: mention.domain,
+    title: mention.title,
+    datePublished: mention.datePublished,
+  }));
+  const referringDomains = new Set<string>();
+  for (const row of rowsOf(referringSnapshot.payload)) {
+    const domain = normaliseDomain(String(row["domain"] ?? ""));
+    if (domain) referringDomains.add(domain);
+  }
+  const requestedLimit = Number(asRecord(referringSnapshot.request_params)?.["limit"] ?? 0);
+
+  const drafts = checkUnlinkedBrandMentions({
+    mentions,
+    ownedHosts: await readOwnedHosts(client, tenantId),
+    knownCompetitorDomains: await readKnownCompetitorDomains(client, tenantId),
+    referringDomains,
+    referringDomainsReturned: referringSnapshot.returned_row_count,
+    referringDomainsLimit: requestedLimit,
+    referringDomainsReportingDate: referringSnapshot.reporting_date,
+    referringDomainsPossiblyTruncated: referringSnapshot.possibly_truncated,
+    unparsedCount: countUnparsedMentionItems(rawItems),
+    mentionsPossiblyTruncated: mentionSnapshot.possibly_truncated,
+  });
+
+  let filed = 0;
+  for (const draft of drafts) filed += await fileFinding(client, tenantId, draft);
+  return { findingsFiled: filed, ran: true, waitingOn: null };
+}
+
+// ---------------------------------------------------------------------------
 // same_registration_details_across_two_known_domains (operator DECISION)
 // ---------------------------------------------------------------------------
 
@@ -430,13 +511,14 @@ export async function runIdenticalTechnologyStackCandidates(
 export type CompetitorDiscoveryResult = {
   overlap: Awaited<ReturnType<typeof runOverlapRowLimitFindings>>;
   mentions: Awaited<ReturnType<typeof runRivalPageMentionFindings>>;
+  unlinkedMentions: UnlinkedMentionRunResult;
   registrations: Awaited<ReturnType<typeof runSameRegistrationDetailsCandidates>>;
   technologies: Awaited<ReturnType<typeof runIdenticalTechnologyStackCandidates>>;
 };
 
 /**
  * Re-reads stored Labs, Content Analysis and Domain Analytics evidence and
- * files whatever the four rules find. Costs nothing: it calls no provider,
+ * files whatever the five rules find. Costs nothing: it calls no provider,
  * only Postgres.
  */
 export async function runCompetitorDiscoveryFindings(
@@ -445,6 +527,7 @@ export async function runCompetitorDiscoveryFindings(
 ): Promise<CompetitorDiscoveryResult> {
   const overlap = await runOverlapRowLimitFindings(client, tenantId);
   const mentions = await runRivalPageMentionFindings(client, tenantId);
+  const unlinkedMentions = await runUnlinkedBrandMentionFindings(client, tenantId);
   const registrations = await runSameRegistrationDetailsCandidates(client, tenantId);
   const technologies = await runIdenticalTechnologyStackCandidates(client, tenantId);
 
@@ -454,10 +537,11 @@ export async function runCompetitorDiscoveryFindings(
     subjectKind: "capability",
     summary:
       `Competitor discovery rules: ${overlap.findingsFiled} overlap caveat(s), ` +
-      `${mentions.findingsFiled} rival-mention finding(s), ${registrations.candidatesFiled} ` +
-      `registration-match candidate(s), ${technologies.candidatesFiled} technology-stack candidate(s).`,
-    payload: { overlap, mentions, registrations, technologies } as never,
+      `${mentions.findingsFiled} rival-mention finding(s), ${unlinkedMentions.findingsFiled} ` +
+      `unlinked-mention finding(s), ${registrations.candidatesFiled} registration-match ` +
+      `candidate(s), ${technologies.candidatesFiled} technology-stack candidate(s).`,
+    payload: { overlap, mentions, unlinkedMentions, registrations, technologies } as never,
   });
 
-  return { overlap, mentions, registrations, technologies };
+  return { overlap, mentions, unlinkedMentions, registrations, technologies };
 }

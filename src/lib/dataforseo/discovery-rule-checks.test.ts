@@ -5,6 +5,7 @@ import {
   checkOverlapRowLimit,
   checkRivalPageMentions,
   checkSameRegistrationDetails,
+  checkUnlinkedBrandMentions,
   domainsMissingWhoisRecord,
   domainsWithNoTechnologyRecorded,
 } from "./discovery-rule-checks";
@@ -219,5 +220,88 @@ describe("identical_technology_stack_across_two_known_domains", () => {
     expect(() => checkIdenticalTechnologyStack(rows)).not.toThrow();
     expect(checkIdenticalTechnologyStack(rows)).toEqual([]);
     expect(domainsWithNoTechnologyRecorded(rows)).toHaveLength(1);
+  });
+});
+
+describe("brand_mentioned_without_a_link", () => {
+  const base = {
+    ownedHosts: new Set(["trumoveinc.com"]),
+    knownCompetitorDomains: new Set(["rival.example"]),
+    referringDomains: new Set(["linker.example"]),
+    referringDomainsReturned: 3,
+    referringDomainsLimit: 200,
+    referringDomainsReportingDate: "2026-08-30",
+    referringDomainsPossiblyTruncated: false,
+    unparsedCount: 0,
+    mentionsPossiblyTruncated: false,
+  };
+  const mention = (url: string, domain: string | null) => ({
+    url,
+    domain,
+    title: null,
+    datePublished: null,
+  });
+
+  it("files one finding per mentioning domain that is not in the referring-domain list", () => {
+    const drafts = checkUnlinkedBrandMentions({
+      ...base,
+      mentions: [
+        mention("https://blog.example/a", "blog.example"),
+        mention("https://blog.example/b", "www.blog.example"),
+        mention("https://linker.example/post", "linker.example"),
+        mention("https://trumoveinc.com/about", "trumoveinc.com"),
+        mention("https://rival.example/compare", "rival.example"),
+      ],
+    });
+    expect(drafts.map((draft) => draft.target)).toEqual(["blog.example"]);
+    expect(drafts[0]!.rule).toBe("brand_mentioned_without_a_link");
+    expect(drafts[0]!.description).toContain("blog.example mentions your name on 2 pages");
+    expect(drafts[0]!.description).toContain(
+      "is not among the 3 domains the stored read found linking to you",
+    );
+    expect(drafts[0]!.description).toContain("referring domains read 2026-08-30");
+    expect(drafts[0]!.evidence["urls"]).toEqual([
+      "https://blog.example/a",
+      "https://blog.example/b",
+    ]);
+    expect(drafts[0]!.confidence).toBe(1);
+  });
+
+  it("says where the referring-domain read stopped when it filled its limit", () => {
+    const drafts = checkUnlinkedBrandMentions({
+      ...base,
+      referringDomainsReturned: 200,
+      referringDomainsPossiblyTruncated: true,
+      mentions: [mention("https://blog.example/a", "blog.example")],
+    });
+    expect(drafts[0]!.description).toContain(
+      "is not among the first 200 domains linking to you by rank, which is where the stored read stopped",
+    );
+    expect(drafts[0]!.evidence["referringDomainsPossiblyTruncated"]).toBe(true);
+  });
+
+  it("names a cut-off mention reading and counts domainless rows instead of dropping them silently", () => {
+    const drafts = checkUnlinkedBrandMentions({
+      ...base,
+      mentionsPossiblyTruncated: true,
+      unparsedCount: 2,
+      mentions: [mention("https://blog.example/a", "blog.example"), mention("https://x/y", null)],
+    });
+    expect(drafts).toHaveLength(1);
+    expect(drafts[0]!.description).toContain("The mention reading stopped at the first page");
+    expect(drafts[0]!.evidence["unparsedItemCount"]).toBe(2);
+    expect(drafts[0]!.evidence["domainlessMentionCount"]).toBe(1);
+  });
+
+  it("files nothing when every mentioning domain already links, is owned, or is a known competitor", () => {
+    const drafts = checkUnlinkedBrandMentions({
+      ...base,
+      mentions: [
+        mention("https://linker.example/post", "linker.example"),
+        mention("https://www.trumoveinc.com/", "www.trumoveinc.com"),
+        mention("https://rival.example/", "rival.example"),
+      ],
+    });
+    expect(drafts).toEqual([]);
   });
 });

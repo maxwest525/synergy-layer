@@ -368,6 +368,7 @@ function answerabilityFor(facts: GettingFoundFacts): Answerability | null {
     whoisCollection: true,
     technologyCollection: true,
     brandMentionCollection: true,
+    referringDomainCollection: true,
     reviewedCompetitorSet: true,
     umamiSecondWindow: true,
     // None of this page's rules are OnPage crawl rules (site-audit routes to

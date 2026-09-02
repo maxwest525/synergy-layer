@@ -34,6 +34,18 @@ Last updated: 2026-08-31, after wiring Google Ads campaign reporting
 describes 2026-08-21 and has NOT been rewritten; the current-state blocks
 immediately below supersede it.
 
+## 0ak. A mention without a link is now a finding, 2026-09-02
+
+Brand-mention snapshots and referring-domain snapshots were both stored
+and never compared. The fifth discovery rule,
+`brand_mentioned_without_a_link`, files one finding per domain that names
+the brand and is absent from the newest referring-domain read, leaving
+out owned hosts and known competitors. The claim is exactly what was
+compared: a referring-domain read that filled its limit yields "not among
+the first N linking domains by rank, which is where the stored read
+stopped". Without both reads the rule names what it is waiting on and
+files nothing (CODE-59, from LINK-3).
+
 ## 0aj. One Command center, 2026-09-02
 
 `/command-center` kept the legacy overview, eight count tiles and spend,
