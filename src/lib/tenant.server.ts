@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { getRequestHeader } from "@tanstack/start-server-core";
 
+import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import type { Database } from "@/integrations/supabase/types";
 import { supabasePublicUrl, supabasePublishableKey } from "@/integrations/supabase/public-config";
 
@@ -128,6 +129,16 @@ export async function resolveTenantId(
   if (explicit) {
     const { data } = await db.from("tenants").select("id").eq("id", explicit).maybeSingle();
     if (data?.id) return data.id;
+  }
+
+  // The service-role client sees every row, so the profile and membership
+  // fallbacks below would answer with whichever account's row comes first
+  // and pin it for the process lifetime. Without a session there is no
+  // "current operator": only an explicit id, or the sole tenant while the
+  // installation has exactly one, and nothing is cached (CODE-50).
+  if (db === supabaseAdmin) {
+    const { data: tenants } = await db.from("tenants").select("id").limit(2);
+    return tenants && tenants.length === 1 ? tenants[0]!.id : null;
   }
 
   const cached = resolvedCache.get(db) ?? readTenantCache(db);

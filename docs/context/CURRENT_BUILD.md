@@ -34,6 +34,22 @@ Last updated: 2026-08-31, after wiring Google Ads campaign reporting
 describes 2026-08-21 and has NOT been rewritten; the current-state blocks
 immediately below supersede it.
 
+## 0w. A scheduled run works for the tenant its schedule names, 2026-09-02
+
+The scheduler ran every workflow through the service-role client and let
+`requireTenantId` resolve the tenant from that client, which sees every
+profile: the answer was whichever account's active workspace sorted first,
+cached for the process lifetime. With one tenant that was invisible; with a
+second it would have written every scheduled observation to the wrong
+workspace (CODE-50, from AGT-1 and CQ-1). Now the service-role client
+resolves a tenant only from an explicit id or the sole tenant, and caches
+nothing; a workflow schedule names the tenant it runs for and is refused,
+with the reason on the activity feed, when it names none; the run carries
+its own `tenant_id` to every node instead of re-resolving it; and the
+selected Search Console property is read by tenant. The four `sch.*`
+template schedules with no tenant are all disabled, so nothing changes for
+the four jobs that run today.
+
 ## 0v. A callback is authenticated by something only the task knows, 2026-09-02
 
 Migration `20260902030000_postback_token_and_shared_rows.sql`, applied live

@@ -92,7 +92,20 @@ export async function tickScheduler(
             `Schedule "${schedule.key}" is set to run a workflow but no workflow is attached.`,
           );
         }
-        const run = await runWorkflow(client, schedule.target_id, `schedule:${schedule.key}`, null);
+        // The run works for the schedule's tenant, named here rather than
+        // resolved from the service-role client (CODE-50).
+        if (!schedule.tenant_id) {
+          throw new Error(
+            `Schedule "${schedule.key}" names no client workspace, so it cannot run.`,
+          );
+        }
+        const run = await runWorkflow(
+          client,
+          schedule.target_id,
+          `schedule:${schedule.key}`,
+          null,
+          schedule.tenant_id,
+        );
         state = run.state;
       } else {
         state = "succeeded";

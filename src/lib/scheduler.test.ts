@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Database } from "@/integrations/supabase/types";
 import { reconcileChangeMeasurements } from "./change-measurements.server";
+import { logActivity } from "./os.server";
 import { tickScheduler } from "./scheduler.server";
 import { runWorkflow } from "./workflow-runner.server";
 
@@ -31,7 +32,9 @@ function query(result: QueryResult) {
   return chain;
 }
 
-function schedulerClient() {
+function schedulerClient(options: { tenantId?: string | null } = {}) {
+  const tenantId =
+    options.tenantId === undefined ? "c94a41b3-08d0-4a6d-88f8-0dcb1eb4e2e6" : options.tenantId;
   const touchedTables: string[] = [];
   const schedules = [
     {
@@ -45,6 +48,7 @@ function schedulerClient() {
       last_run_at: "2026-08-10T16:00:00.000Z",
       last_state: "succeeded",
       failure_count: 0,
+      tenant_id: tenantId,
     },
     {
       id: "22222222-2222-4222-8222-222222222222",
@@ -57,6 +61,7 @@ function schedulerClient() {
       last_run_at: "2026-08-10T16:00:00.000Z",
       last_state: "succeeded",
       failure_count: 0,
+      tenant_id: tenantId,
     },
   ];
 
@@ -95,9 +100,30 @@ describe("tickScheduler automation scope", () => {
       "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
       "schedule:gsc-daily-observe",
       null,
+      "c94a41b3-08d0-4a6d-88f8-0dcb1eb4e2e6",
     );
     expect(touchedTables).not.toContain("dataforseo_requests");
     expect(reconcileChangeMeasurements).toHaveBeenCalledTimes(1);
     expect(reconcileChangeMeasurements).toHaveBeenCalledWith(client);
+  });
+
+  it("refuses a workflow schedule that names no client workspace instead of resolving one", async () => {
+    const { client } = schedulerClient({ tenantId: null });
+
+    const result = await tickScheduler(client, new Date("2026-08-11T23:00:00.000Z"), {
+      onlyKeys: ["gsc-daily-observe"],
+      collectSerpBacklog: false,
+      reconcileChangeMeasurements: false,
+    });
+
+    expect(result.ran).toEqual([{ schedule: "gsc-daily-observe", state: "failed" }]);
+    expect(runWorkflow).not.toHaveBeenCalled();
+    expect(logActivity).toHaveBeenCalledWith(
+      client,
+      expect.objectContaining({
+        verb: "schedule.error",
+        summary: expect.stringContaining("names no client workspace"),
+      }),
+    );
   });
 });

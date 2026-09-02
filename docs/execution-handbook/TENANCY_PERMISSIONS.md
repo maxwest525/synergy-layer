@@ -70,8 +70,11 @@ REFERENCES or TRIGGER, and the default privileges for new tables start
 closed. Approval locks every lane: the immutability guard fires on the state
 alone.
 
-Rows with no tenant are shared rows: readable by every member, written by
-admins alone (`20260902030000`). Audit rows the server files carry the
+The service-role client has no current operator: it resolves a tenant
+from an explicit id or the sole tenant, never from a profile or a
+membership, and a scheduled run carries the tenant its schedule names to
+every step. Rows with no tenant are shared rows: readable by every member,
+written by admins alone (`20260902030000`). Audit rows the server files carry the
 operator's active workspace; a row filed without one (an unprovisioned
 sign-in) reads for admins and its own actor. The DataForSEO postback is
 authenticated by a per-task token whose hash alone is stored.
