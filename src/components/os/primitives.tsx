@@ -3,6 +3,7 @@ import { ChevronLeft } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { taxonomyGroupForPath } from "@/lib/os-taxonomy";
+import { stateLabel } from "@/lib/state-labels";
 import { cn } from "@/lib/utils";
 
 /**
@@ -225,16 +226,18 @@ const toneStyles: Record<string, string> = {
 
 export type Tone = keyof typeof toneStyles;
 
+/**
+ * A stored state, in the operator's words. `stateLabel` holds an exhaustive
+ * map for every database enum and the text states the screens render; a
+ * caller's own phrase passes through with only its underscores gone (COPY-1).
+ * The old `capitalize` class capitalised every word of a sentence, so it is
+ * gone; the map carries its own case.
+ */
 export function StatePill({ label, tone = "neutral" }: { label: string; tone?: Tone }) {
   return (
-    <span
-      className={cn(
-        "inline-flex items-center gap-1.5 text-xs font-medium capitalize",
-        toneStyles[tone],
-      )}
-    >
+    <span className={cn("inline-flex items-center gap-1.5 text-xs font-medium", toneStyles[tone])}>
       <span aria-hidden className="size-1.5 rounded-full bg-current" />
-      {label.replace(/_/g, " ")}
+      {stateLabel(label)}
     </span>
   );
 }

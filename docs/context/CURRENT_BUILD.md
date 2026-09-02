@@ -34,6 +34,15 @@ Last updated: 2026-08-31, after wiring Google Ads campaign reporting
 describes 2026-08-21 and has NOT been rewritten; the current-state blocks
 immediately below supersede it.
 
+## 0ax. Stored states read as words, 2026-09-02
+
+Every state pill replaced underscores and capitalised every word, so
+`awaiting_approval` read "Awaiting Approval" and `unknown` read "Unknown"
+for a connection nobody had checked. A label map now covers every
+database enum, exhaustively and checked, plus the text states the
+screens render; the pill and the eight hand-replaced sites read it, and
+a caller's own phrase passes through unchanged (CODE-71, from COPY-1).
+
 ## 0aw. Who links to the rivals and not to you, on a click, 2026-09-02
 
 The competitor link intersect existed as defaults and nothing else. One

@@ -12,6 +12,7 @@ import {
   StatePill,
   toneForState,
 } from "@/components/os/primitives";
+import { stateLabel } from "@/lib/state-labels";
 import { SearchConsolePanel } from "@/components/os/search-console-panel";
 import { getAsset } from "@/lib/os.functions";
 import { OperatorRouteError } from "@/components/os/route-error";
@@ -58,7 +59,7 @@ function AssetDetailPage() {
     <div className="space-y-10">
       <BackLink to="/assets">All assets</BackLink>
       <PageHeader
-        eyebrow={asset.kind.replace(/_/g, " ")}
+        eyebrow={stateLabel(asset.kind)}
         title={asset.name}
         description={asset.description ?? "No description recorded for this asset yet."}
         actions={<StatePill label={asset.health} tone={toneForState(asset.health)} />}

@@ -11,6 +11,7 @@ import {
   formatWhen,
   toneForState,
 } from "@/components/os/primitives";
+import { stateLabel } from "@/lib/state-labels";
 import { Button } from "@/components/ui/button";
 import { syncRegistry } from "@/lib/os-admin.functions";
 import { getCapabilities } from "@/lib/os.functions";
@@ -94,7 +95,7 @@ function CapabilitiesPage() {
         kinds.map((kind) => (
           <section key={kind} className="space-y-4">
             <h2 className="text-sm font-semibold capitalize tracking-tight text-foreground">
-              {kind.replace(/_/g, " ")}
+              {stateLabel(kind)}
             </h2>
             <div className="grid gap-4 md:grid-cols-2">
               {data

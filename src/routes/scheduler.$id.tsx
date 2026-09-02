@@ -11,6 +11,7 @@ import {
   formatWhen,
   toneForState,
 } from "@/components/os/primitives";
+import { stateLabel } from "@/lib/state-labels";
 import { getSchedule } from "@/lib/os.functions";
 
 const scheduleQuery = (id: string) => ({
@@ -113,7 +114,7 @@ function ScheduleDetailPage() {
                         {dependency.schedules.name}
                       </Link>
                       <p className="text-xs text-muted-foreground">
-                        {dependency.condition.replace(/_/g, " ")}
+                        {stateLabel(dependency.condition)}
                       </p>
                     </div>
                     {dependency.schedules.last_state ? (

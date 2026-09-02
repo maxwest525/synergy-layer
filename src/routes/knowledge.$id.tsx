@@ -9,6 +9,7 @@ import {
   StatePill,
   formatWhen,
 } from "@/components/os/primitives";
+import { stateLabel } from "@/lib/state-labels";
 import { getKnowledgeCollection } from "@/lib/os.functions";
 import { OperatorRouteError } from "@/components/os/route-error";
 
@@ -56,7 +57,7 @@ function KnowledgeCollectionPage() {
     <div className="space-y-10">
       <BackLink to="/knowledge">All knowledge</BackLink>
       <PageHeader
-        eyebrow={collection.kind.replace(/_/g, " ")}
+        eyebrow={stateLabel(collection.kind)}
         title={collection.name}
         description={collection.description ?? "No description recorded for this collection."}
         actions={<StatePill label={`${data.entries.length} entries`} tone="primary" />}

@@ -9,6 +9,7 @@ import {
   formatWhen,
   toneForState,
 } from "@/components/os/primitives";
+import { stateLabel } from "@/lib/state-labels";
 import { getAssets } from "@/lib/os.functions";
 import { OperatorRouteError } from "@/components/os/route-error";
 
@@ -61,7 +62,7 @@ function AssetsPage() {
         groups.map((kind) => (
           <section key={kind} className="space-y-4">
             <h2 className="text-sm font-semibold capitalize tracking-tight text-foreground">
-              {kind.replace(/_/g, " ")}
+              {stateLabel(kind)}
             </h2>
             <div className="grid gap-4 md:grid-cols-2">
               {data

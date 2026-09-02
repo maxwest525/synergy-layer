@@ -670,7 +670,7 @@ function SearchWorkspacePage() {
                         <div className="flex shrink-0 items-center gap-2">
                           {finding.recommendationState ? (
                             <StatePill
-                              label={finding.recommendationState.replace(/_/g, " ")}
+                              label={finding.recommendationState}
                               tone={
                                 OPEN_FINDING_STATES.has(finding.recommendationState)
                                   ? "warning"
