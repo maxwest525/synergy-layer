@@ -94,6 +94,9 @@ function payloadRows(value: unknown): PageQueryRow[] {
  * `proposed` change requests, and never touches anything outside the database.
  * Approval and execution stay exactly where they were.
  */
+const PAUSE_SOURCE_MODULE = "propose-from-evidence";
+const PAUSE_SUBJECT_KIND = "proposal_job";
+
 export async function runProposalJobForTenant(
   admin: Client,
   tenantId: string,
@@ -218,6 +221,24 @@ export async function runProposalJobForTenant(
         last_created_count: 0,
         ...(pause ? { paused: true, paused_reason: failure, paused_at: now.toISOString() } : {}),
       });
+      // A job that pauses itself on a configuration failure used to say so
+      // only on its own row, which no screen reads (MON-9). Once, on the
+      // night it pauses; the probe nights that follow do not repeat it.
+      if (pause && !job.paused) {
+        const { fileInboxItem } = await import("../os.server");
+        await fileInboxItem(admin, {
+          lane: "needs_attention",
+          sourceModule: PAUSE_SOURCE_MODULE,
+          title: "The nightly proposal job paused itself",
+          summary: `${failure} The job spends one probe item a night until the blocker clears, and resumes on its own when a probe succeeds.`,
+          priority: 2,
+          subjectKind: PAUSE_SUBJECT_KIND,
+          subjectId: null,
+          actions: [{ kind: "open", label: "Open connections", href: "/connections" }],
+          metadata: { category: "failure", reason: failure },
+          tenantId,
+        });
+      }
       return {
         tenantId,
         state: pause ? "paused" : "failed",
@@ -237,6 +258,18 @@ export async function runProposalJobForTenant(
       paused_reason: null,
       paused_at: null,
     });
+    if (job.paused) {
+      // The pause item is done the night the job resumes.
+      const { error: resolveError } = await admin
+        .from("inbox_items")
+        .update({ lane: "completed", resolved_at: now.toISOString() })
+        .eq("tenant_id", tenantId)
+        .eq("source_module", PAUSE_SOURCE_MODULE)
+        .eq("subject_kind", PAUSE_SUBJECT_KIND)
+        .is("resolved_at", null);
+      if (resolveError)
+        throw new Error(`Could not resolve the pause item: ${resolveError.message}`);
+    }
 
     return {
       tenantId,

@@ -13,6 +13,7 @@ type QueryResult = { data: unknown; error: { message: string } | null };
 type FakeQuery = {
   select: () => FakeQuery;
   eq: () => FakeQuery;
+  is: () => FakeQuery;
   or: () => FakeQuery;
   order: () => FakeQuery;
   limit: () => FakeQuery;
@@ -31,6 +32,7 @@ function fakeQuery(result: QueryResult, capturePatch?: (patch: unknown) => void)
   const q: FakeQuery = {
     select: () => q,
     eq: () => q,
+    is: () => q,
     or: () => q,
     order: () => q,
     limit: () => q,
@@ -46,12 +48,21 @@ function fakeQuery(result: QueryResult, capturePatch?: (patch: unknown) => void)
   return q;
 }
 
+const inboxItems: Record<string, unknown>[] = [];
+vi.mock("../os.server", () => ({
+  fileInboxItem: vi.fn(async (_client: unknown, item: Record<string, unknown>) => {
+    inboxItems.push(item);
+  }),
+  logActivity: vi.fn(async () => undefined),
+}));
+
 const TENANT = "6a2f8f6e-0000-4000-8000-000000000001";
 const CANDIDATE_URL = "https://trumoveinc.com/movers";
 
-function createAdmin() {
-  const job = { id: "job-1", paused: false, run_count: 4 };
+function createAdmin(options: { paused?: boolean } = {}) {
+  const job = { id: "job-1", paused: options.paused ?? false, run_count: 4 };
   const jobUpdates: Record<string, unknown>[] = [];
+  const inboxUpdates: Record<string, unknown>[] = [];
   let automationCalls = 0;
   const admin = {
     from(table: string) {
@@ -85,12 +96,20 @@ function createAdmin() {
           return fakeQuery({ data: [{ external_ref: "https://trumoveinc.com/" }], error: null });
         case "change_requests":
           return fakeQuery({ data: [], error: null });
+        case "inbox_items":
+          return fakeQuery({ data: [], error: null }, (patch) =>
+            inboxUpdates.push(patch as Record<string, unknown>),
+          );
         default:
           throw new Error(`Unexpected table in test: ${table}`);
       }
     },
   };
-  return { admin: admin as unknown as Parameters<typeof runProposalJobForTenant>[0], jobUpdates };
+  return {
+    admin: admin as unknown as Parameters<typeof runProposalJobForTenant>[0],
+    jobUpdates,
+    inboxUpdates,
+  };
 }
 
 const prepared = {
@@ -112,6 +131,7 @@ const prepared = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  inboxItems.length = 0;
   vi.mocked(preparePageWordingProposal).mockResolvedValue(prepared as never);
 });
 
@@ -141,6 +161,44 @@ describe("the nightly propose-from-evidence job", () => {
       paused: true,
       paused_reason: "That tenant is not visible to this account.",
     });
+    // The pause reaches the Inbox the night it happens (MON-9).
+    expect(inboxItems).toHaveLength(1);
+    expect(inboxItems[0]).toMatchObject({
+      lane: "needs_attention",
+      sourceModule: "propose-from-evidence",
+      title: "The nightly proposal job paused itself",
+      subjectKind: "proposal_job",
+      tenantId: TENANT,
+    });
+    expect(inboxItems[0]!["summary"]).toContain("That tenant is not visible to this account.");
+  });
+
+  it("does not file a second Inbox item on the probe nights that follow a pause", async () => {
+    vi.mocked(serviceRpc).mockRejectedValue(
+      new Error("That tenant is not visible to this account."),
+    );
+    const { admin, jobUpdates, inboxUpdates } = createAdmin({ paused: true });
+    const outcome = await runProposalJobForTenant(admin, TENANT, new Date("2026-08-29T05:00:00Z"));
+    expect(outcome.state).toBe("paused");
+    expect(jobUpdates.at(-1)).toMatchObject({ paused: true });
+    expect(inboxItems).toHaveLength(0);
+    expect(inboxUpdates).toHaveLength(0);
+  });
+
+  it("resolves the pause item the night a probe succeeds", async () => {
+    vi.mocked(serviceRpc).mockResolvedValue({
+      changeRequest: { id: "cr-2" },
+      changed: true,
+      versionNumber: null,
+    });
+    const { admin, jobUpdates, inboxUpdates } = createAdmin({ paused: true });
+    const outcome = await runProposalJobForTenant(admin, TENANT, new Date("2026-08-30T05:00:00Z"));
+    expect(outcome.state).toBe("created");
+    expect(jobUpdates.at(-1)).toMatchObject({ last_state: "succeeded", paused: false });
+    expect(inboxUpdates).toEqual([
+      { lane: "completed", resolved_at: new Date("2026-08-30T05:00:00Z").toISOString() },
+    ]);
+    expect(inboxItems).toHaveLength(0);
   });
 
   it("pauses when the RPC refuses the actor's authority to generate proposals", async () => {

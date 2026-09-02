@@ -65,6 +65,58 @@ async function boundedFetch(
   };
 }
 
+const EXECUTION_SOURCE_MODULE = "execution";
+
+/**
+ * A failed or refused source attempt used to be stored and shown only on the
+ * change page's history; nothing filed it where the operator looks (MON-10).
+ * One open item per change; a later attempt that lands closes it.
+ */
+async function reflectAttemptInInbox(admin: Client, attempt: AttemptRecord): Promise<void> {
+  if (attempt.kind !== "source_commit" && attempt.kind !== "source_revert") return;
+  const verb = attempt.kind === "source_revert" ? "revert" : "commit";
+  if (attempt.status === "failed" || attempt.status === "refused") {
+    const { data: open, error: openError } = await admin
+      .from("inbox_items")
+      .select("id")
+      .eq("tenant_id", attempt.tenantId)
+      .eq("source_module", EXECUTION_SOURCE_MODULE)
+      .eq("subject_id", attempt.changeRequestId)
+      .is("resolved_at", null)
+      .limit(1);
+    if (openError) throw new Error(openError.message);
+    if ((open ?? []).length > 0) return;
+    const { fileInboxItem } = await import("../os.server");
+    await fileInboxItem(admin, {
+      lane: "needs_attention",
+      sourceModule: EXECUTION_SOURCE_MODULE,
+      title: `The governed ${verb} was ${attempt.status}`,
+      summary:
+        attempt.error ??
+        `The ${verb} did not land and recorded no reason; the change page holds the attempt.`,
+      priority: 2,
+      subjectKind: "change_request",
+      subjectId: attempt.changeRequestId,
+      actions: [
+        { kind: "review", label: "Open the change", href: `/changes/${attempt.changeRequestId}` },
+      ],
+      metadata: { category: "failure", kind: attempt.kind, status: attempt.status },
+      tenantId: attempt.tenantId,
+    });
+    return;
+  }
+  if (attempt.status === "committed" || attempt.status === "reverted") {
+    const { error } = await admin
+      .from("inbox_items")
+      .update({ lane: "completed", resolved_at: new Date().toISOString() })
+      .eq("tenant_id", attempt.tenantId)
+      .eq("source_module", EXECUTION_SOURCE_MODULE)
+      .eq("subject_id", attempt.changeRequestId)
+      .is("resolved_at", null);
+    if (error) throw new Error(error.message);
+  }
+}
+
 /**
  * Store backed by the service-role client. The rendered-proof transition is
  * service-only at the database level, so the authenticated actor id is carried
@@ -115,6 +167,7 @@ export function createExecutionStore(admin: Client, rls: Client, actorId: string
         detail: (attempt.detail ?? {}) as never,
       } as never);
       if (error) throw new Error(error.message);
+      await reflectAttemptInInbox(admin, attempt);
     },
 
     async saveCommit({ id, commitSha, commitUrl }) {
