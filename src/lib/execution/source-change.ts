@@ -160,6 +160,17 @@ export type RenderedPage = {
    * two things a rendered page could be asked about.
    */
   subheadings: string[];
+  /**
+   * The rendered page's visible text, tags stripped.
+   *
+   * Same reason as `subheadings`: a change is only approvable if it can be
+   * proven live, and a sentence in the sitewide footer is not a title, an H1
+   * or an H2. Nothing else can be asked whether that sentence is on the page
+   * (CODE-90). Absent on proofs recorded before this existed, which is why the
+   * field that reads it proves by containment and refuses an empty string
+   * rather than treating it as a match.
+   */
+  visibleText: string;
   renderedBy: string;
 };
 
@@ -320,12 +331,27 @@ export function verifyRenderedPage(page: RenderedPage, changes: FieldChange[]): 
 
   /** What a rendered page can be asked about, and the words to say it in. */
   const PROVABLE: Readonly<
-    Record<string, { label: string; find: (p: RenderedPage) => string | string[] | null }>
+    Record<
+      string,
+      {
+        label: string;
+        find: (p: RenderedPage) => string | string[] | null;
+        /** Match the approved value anywhere in what `find` returns. */
+        contains?: boolean;
+      }
+    >
   > = {
     seo_title: { label: "document title", find: (p) => p.title },
     page_heading: { label: "H1", find: (p) => p.heading },
     meta_description: { label: "meta description", find: (p) => p.metaDescription },
     subheading: { label: "subheading", find: (p) => p.subheadings },
+    // Proven by containment rather than equality: the approved value is a
+    // sentence within the page's text, not the whole of any one element.
+    broker_statement: {
+      label: "broker statement",
+      find: (p) => p.visibleText,
+      contains: true,
+    },
   };
 
   const proofs = changes.filter((c) => c.field in PROVABLE);
@@ -352,7 +378,9 @@ export function verifyRenderedPage(page: RenderedPage, changes: FieldChange[]): 
       continue;
     }
     if (!found) absent.push(spec.label);
-    else if (found !== wanted) wrong.push(spec.label);
+    else if (spec.contains) {
+      if (!normalize(found).includes(wanted)) wrong.push(spec.label);
+    } else if (found !== wanted) wrong.push(spec.label);
   }
 
   if (absent.length > 0) {

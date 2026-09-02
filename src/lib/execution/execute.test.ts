@@ -125,6 +125,7 @@ function makeRenderer(page: {
       heading: page.heading,
       metaDescription: page.metaDescription ?? null,
       subheadings: [],
+      visibleText: "",
       renderedBy: "TestRenderer",
     }),
   };
@@ -592,6 +593,7 @@ describe("verifyRenderedPage", () => {
       heading: "Employee Relocation Moving Services",
       metaDescription: null,
       subheadings: [],
+      visibleText: "",
       renderedBy: "TestRenderer",
     };
     expect(verifyRenderedPage(page, changes).ok).toBe(true);
@@ -606,6 +608,7 @@ describe("verifyRenderedPage", () => {
       metaDescription:
         "Employee relocation movers with dedicated coordinators and guaranteed dates.",
       subheadings: [],
+      visibleText: "",
       renderedBy: "TestRenderer",
     };
     const proof = verifyRenderedPage(page, metaChanges);
@@ -624,6 +627,7 @@ describe("verifyRenderedPage", () => {
         heading: "Corporate Relocation",
         metaDescription: null,
         subheadings: [],
+        visibleText: "",
         renderedBy: "TestRenderer",
       },
       metaChanges,
@@ -640,6 +644,7 @@ describe("verifyRenderedPage", () => {
         heading: null,
         metaDescription: null,
         subheadings: [],
+        visibleText: "",
         renderedBy: "TestRenderer",
       },
       changes,

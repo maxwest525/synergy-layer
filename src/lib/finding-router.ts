@@ -194,5 +194,10 @@ export function categoryForChangeRequest(
   originCategory: CategoryId | null,
 ): CategoryId {
   if (originCategory !== null) return originCategory;
-  return proposalType === "site.crawl_directives" ? "health" : "pages";
+  // Both site-level kinds. A footer sentence is on every page and belongs to no
+  // one of them, so it sits with the other whole-site findings rather than in
+  // Your pages (CODE-90).
+  return proposalType === "site.crawl_directives" || proposalType === "site.footer_wording"
+    ? "health"
+    : "pages";
 }
