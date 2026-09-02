@@ -195,6 +195,7 @@ describe("drafting a site crawl fix straight from the card", () => {
       "broker_numbers_missing",
       "broker_numbers_disagree",
       "broker_statement_missing",
+      "broker_numbers_off_homepage",
     ]) {
       expect(idsFor(siteFinding(check))).not.toContain("draft");
     }

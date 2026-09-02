@@ -34,6 +34,33 @@ Last updated: 2026-08-31, after wiring Google Ads campaign reporting
 describes 2026-08-21 and has NOT been rewritten; the current-state blocks
 immediately below supersede it.
 
+## 0bv. Reading the live site found a number the homepage does not carry, 2026-09-02
+
+The nightly watch and the registration check had both shipped without ever
+running against the real site, so they were verified directly: the sitemap
+and six live pages of `trumoveinc.com` were fetched and put through the pure
+parsers (no database, no writes). Every parser held on real HTML: titles,
+`robots`, canonicals and both registration numbers read correctly, the
+same-night comparison raised nothing, and a perturbed status and a perturbed
+`noindex` each raised exactly one finding.
+
+The run also found something the checks could not see. `/why-trumove`
+displays **USDOT 2841907 and MC 945120** beside the operator's own, in a
+carrier-vetting demo that reads "Northstar Van Lines ... queried 4s ago".
+CODE-86 reads the homepage only, because that is the surface 49 CFR
+371.107(b) names, so it was blind to this by construction. `/route-planning`
+carries no numbers and no broker status at all, and `/services` carries the
+word "tariff" the homepage lacks.
+
+CODE-88 closes the gap without inventing a verdict: `siteLicenceFacts` now
+returns `pagesWithOtherNumbers`, every read page carrying a registration
+number the homepage does not, and `broker_numbers_off_homepage` reports them
+as advice, naming each page and number. It asserts no breach. The number may
+belong to a carrier the operator names legitimately, which 49 CFR 371.107(e)
+governs by requiring a written agreement, or it may be a stale number of
+their own; only they know which, so the finding says exactly what was read
+and leaves the judgement where it belongs.
+
 ## 0bu. The live site is read every night, 2026-09-02
 
 Between an operator's audit clicks nothing read the site itself, and Search

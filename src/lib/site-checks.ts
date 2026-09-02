@@ -27,7 +27,8 @@ export type SiteCheckId =
   | "homepage_slow_to_respond"
   | "broker_numbers_missing"
   | "broker_numbers_disagree"
-  | "broker_statement_missing";
+  | "broker_statement_missing"
+  | "broker_numbers_off_homepage";
 
 /**
  * What the site answered at the protocol layer, read directly by the audit
@@ -411,6 +412,35 @@ function evaluateLicence(facts: SiteLicenceFacts): SiteFinding[] {
       severity: "warning",
       instruction: `State on the homepage that this is a household goods broker that will not transport the goods but will arrange a carrier whose charges follow its published tariff. ${PARAGRAPH_C}`,
       detail: `The visible text of ${url} lacks ${parts.join(" and ")}. The statement is read as three words, "not transport", "arrange" and "tariff", so wording that says the same thing differently reads as absent.`,
+      fixableByChangeKind: null,
+    });
+  }
+
+  // A page other than the homepage carrying a registration number the homepage
+  // does not (CODE-88, found by reading the live site). Reported as the fact it
+  // is and nothing more: the number may belong to a carrier shown in a demo,
+  // which paragraph (e) of the same section governs, or it may be a stale
+  // number of the operator's own. Which of those it is, only the operator
+  // knows, so no breach is asserted here.
+  const others = facts.pagesWithOtherNumbers ?? [];
+  if (others.length > 0) {
+    const named = others
+      .slice(0, 3)
+      .map((page) => {
+        const parts = [
+          ...(page.usdotNumbers.length > 0 ? [`USDOT ${page.usdotNumbers.join(", ")}`] : []),
+          ...(page.mcNumbers.length > 0 ? [`MC ${page.mcNumbers.join(", ")}`] : []),
+        ];
+        return `${page.url} shows ${parts.join(" and ")}`;
+      })
+      .join("; ");
+    findings.push({
+      check: "broker_numbers_off_homepage",
+      label: "Another page shows a registration number your homepage does not",
+      severity: "advice",
+      instruction:
+        "Check whether each of these belongs to you or to a carrier you are naming, and that it is current. Where it names a carrier, 49 CFR 371.107(e) allows only carriers you hold a written agreement with.",
+      detail: `${named}${others.length > 3 ? `, and ${others.length - 3} more page(s)` : ""}. Read directly from the pages, not inferred. Whether each is correct is yours to say; nothing here claims otherwise.`,
       fixableByChangeKind: null,
     });
   }

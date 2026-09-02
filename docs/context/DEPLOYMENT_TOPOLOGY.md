@@ -132,6 +132,16 @@ mirror's `2cc5efb`; the rollback is `git revert -m 1` of `9a315ec`, `2563ee4`,
 waits on the operator, and on a fresh merge if the mirror's `main` moves
 first.
 
+**Attempted and refused, 2026-09-02 10:0x UTC.** The push was tried from this
+session and refused by the sandbox's own permission classifier, as was
+attaching `trumove-resource-center` with push access. So step 2 is not a
+decision waiting on the operator's judgement, which is what the row above
+implies; it is a capability this session does not have. Two ways past it:
+grant this session a Bash permission rule for `git push` in that clone, or
+reproduce the merge on a machine that can push (clone the mirror, add
+`synergy-layer` as a remote, `git merge --no-ff synergy/main`, push; the
+merge was measured here as zero-conflict against `main` `6a536d4`).
+
 ## 6. The long-term shape, and the decision it needs
 
 Two facts decide it. Lovable holds the secrets, the custom domain, the Supabase project and the cron targets, and it works; moving production off it is a migration with seven moving parts and no evidence it is wanted beyond OP-8's one-line intention. And two repositories for one project is not a state anyone chose; it is what a re-link produced.

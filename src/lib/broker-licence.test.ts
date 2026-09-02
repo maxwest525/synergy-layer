@@ -92,3 +92,43 @@ describe("siteLicenceFacts", () => {
     expect(facts.homepage).toBeNull();
   });
 });
+
+describe("pages other than the homepage", () => {
+  const home = licenceFactsIn("<p>USDOT 4507647 MC 1784124</p>");
+  const carrierDemo = licenceFactsIn(
+    "<p>Northstar Van Lines USDOT 2841907 MC 945120 queried 4s ago</p><p>USDOT 4507647</p>",
+  );
+
+  it("lists only the numbers the homepage does not carry", () => {
+    // Read from the live site on 2026-09-02: /why-trumove shows a carrier's
+    // registration beside the operator's own (CODE-88).
+    const facts = siteLicenceFacts("https://example.com", [
+      { url: "https://example.com/", finalUrl: null, licence: home },
+      { url: "https://example.com/why", finalUrl: null, licence: carrierDemo },
+    ]);
+    expect(facts.pagesWithOtherNumbers).toEqual([
+      { url: "https://example.com/why", usdotNumbers: ["2841907"], mcNumbers: ["945120"] },
+    ]);
+  });
+
+  it("says nothing about a page repeating the homepage's own numbers", () => {
+    const facts = siteLicenceFacts("https://example.com", [
+      { url: "https://example.com/", finalUrl: null, licence: home },
+      { url: "https://example.com/services", finalUrl: null, licence: home },
+    ]);
+    expect(facts.pagesWithOtherNumbers).toEqual([]);
+  });
+
+  it("treats every number as other when no homepage was read", () => {
+    const facts = siteLicenceFacts("https://example.com", [
+      { url: "https://example.com/why", finalUrl: null, licence: carrierDemo },
+    ]);
+    expect(facts.pagesWithOtherNumbers).toEqual([
+      {
+        url: "https://example.com/why",
+        usdotNumbers: ["2841907", "4507647"],
+        mcNumbers: ["945120"],
+      },
+    ]);
+  });
+});
