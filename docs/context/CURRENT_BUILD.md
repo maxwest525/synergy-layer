@@ -34,6 +34,18 @@ Last updated: 2026-08-31, after wiring Google Ads campaign reporting
 describes 2026-08-21 and has NOT been rewritten; the current-state blocks
 immediately below supersede it.
 
+## 0ah. SERP tasks carry every surface on the page, 2026-09-02
+
+Every SERP task was posted and retrieved as `regular`, which returns
+organic and paid items only, so featured snippets, People also ask, AI
+overviews and local packs never reached the stored rows and the competitor
+second pass could not name them. Tasks are now posted and retrieved as
+`advanced`, on the scheduled path, the backlog sweep and the live
+inspection alike. Rank still reads organic items only; the other item
+types are the surfaces on that SERP, and the competitor profile's
+"surfaces involved" line fills from the next observation on. The provider
+bills per SERP, not per result type (CODE-57, from COMP-4).
+
 ## 0ag. Two failures now reach the Inbox, 2026-09-02
 
 The nightly proposal job pauses itself on a terminal configuration
