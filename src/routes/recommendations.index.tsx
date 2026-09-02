@@ -98,8 +98,10 @@ function RecommendationsPage() {
                       tone="primary"
                     />
                     <span className="text-xs text-muted-foreground">
-                      {recommendation.time_saved_minutes} min saved · filed{" "}
-                      {formatWhen(recommendation.created_at)}
+                      {recommendation.time_saved_minutes > 0
+                        ? `${recommendation.time_saved_minutes} min saved · `
+                        : ""}
+                      filed {formatWhen(recommendation.created_at)}
                     </span>
                   </div>
                 </GlassCard>

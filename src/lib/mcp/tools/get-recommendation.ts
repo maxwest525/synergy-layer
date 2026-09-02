@@ -16,7 +16,8 @@ const RECOMMENDATION_FIELDS = [
   "reasoning",
   "business_impact",
   "risk",
-  "time_saved_minutes",
+  // time_saved_minutes is not projected: every rule writes 0 and nothing
+  // estimates it, so the number would read as a measurement (AGT-4).
   "requires_approval",
   "issue_fingerprint",
   "approved_at",

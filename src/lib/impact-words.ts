@@ -18,3 +18,13 @@ export function isEstimated(level: string | null | undefined): boolean {
 export function describeImpact(level: string | null | undefined): string {
   return isEstimated(level) ? (level as string) : NOT_ESTIMATED;
 }
+
+/**
+ * Time saved on a recommendation. Every rule module writes `time_saved_minutes: 0`
+ * because nothing in AOOS estimates it; the only non-zero values are the ones
+ * typed into the 2026-08-04 seed rows. Zero is the untouched default, so it
+ * reads as the absence it is (AGT-4).
+ */
+export function describeTimeSaved(minutes: number | null | undefined): string {
+  return typeof minutes === "number" && minutes > 0 ? `${minutes} minutes` : NOT_ESTIMATED;
+}
