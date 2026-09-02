@@ -2467,6 +2467,7 @@ export type Database = {
       google_ads_snapshots: {
         Row: {
           advertising_channel_type: string | null
+          budget_micros: number | null
           campaign_id: string
           campaign_name: string
           campaign_status: string
@@ -2483,6 +2484,7 @@ export type Database = {
         }
         Insert: {
           advertising_channel_type?: string | null
+          budget_micros?: number | null
           campaign_id: string
           campaign_name: string
           campaign_status: string
@@ -2499,6 +2501,7 @@ export type Database = {
         }
         Update: {
           advertising_channel_type?: string | null
+          budget_micros?: number | null
           campaign_id?: string
           campaign_name?: string
           campaign_status?: string

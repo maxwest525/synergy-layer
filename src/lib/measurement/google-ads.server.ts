@@ -196,6 +196,7 @@ export async function runGoogleAdsReport(
           campaign_name: row.campaignName,
           campaign_status: row.campaignStatus,
           advertising_channel_type: row.advertisingChannelType,
+          budget_micros: row.budgetMicros,
           segment_date: row.segmentDate,
           impressions: row.impressions,
           clicks: row.clicks,
