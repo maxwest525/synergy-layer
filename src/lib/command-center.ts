@@ -92,6 +92,8 @@ export type CommandCenterFacts = {
     readonly lastCheckedAt: string | null;
     /** When the newest stored measurement run started; null when none is stored. */
     readonly latestRunAt: string | null;
+    /** Daily reads whose due time passed a full period ago with no run recorded. */
+    readonly overdueCadences: number;
   };
   readonly queueSources: readonly QueueSource[];
 };
@@ -427,6 +429,18 @@ function statusLineFor(health: CommandCenterFacts["health"]): StatusLine {
           : `${health.brokenConnections} connections need attention`,
       tone: "danger",
       asOf: health.lastCheckedAt,
+    };
+  }
+  // A stopped scheduler records no failure, so this is the one line that
+  // can say the evidence is going stale (MEAS-10).
+  if (health.overdueCadences > 0) {
+    return {
+      text:
+        health.overdueCadences === 1
+          ? "1 daily read is overdue"
+          : `${health.overdueCadences} daily reads are overdue`,
+      tone: "danger",
+      asOf: null,
     };
   }
   if (health.failingProviders > 0) {

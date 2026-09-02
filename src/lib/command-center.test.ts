@@ -22,6 +22,7 @@ const facts: CommandCenterFacts = {
     connectionsChecked: 1,
     lastCheckedAt: daysBefore(1),
     latestRunAt: daysBefore(2),
+    overdueCadences: 0,
   },
   queueSources: [],
 };
@@ -427,6 +428,7 @@ describe("top bar status", () => {
             connectionsChecked: 0,
             lastCheckedAt: null,
             latestRunAt: null,
+            overdueCadences: 0,
           },
         }),
       ).statusLine,
@@ -442,6 +444,7 @@ describe("top bar status", () => {
           connectionsChecked: 1,
           lastCheckedAt: daysBefore(1),
           latestRunAt: daysBefore(2),
+          overdueCadences: 0,
         },
       }),
     );
@@ -457,6 +460,7 @@ describe("top bar status", () => {
           connectionsChecked: 1,
           lastCheckedAt: daysBefore(1),
           latestRunAt: daysBefore(2),
+          overdueCadences: 0,
         },
       }),
     );
@@ -475,6 +479,7 @@ describe("top bar status", () => {
           connectionsChecked: 1,
           lastCheckedAt: daysBefore(1),
           latestRunAt: daysBefore(2),
+          overdueCadences: 0,
         },
       }),
     );
@@ -493,10 +498,20 @@ describe("top bar status", () => {
           connectionsChecked: 1,
           lastCheckedAt: daysBefore(1),
           latestRunAt: daysBefore(2),
+          overdueCadences: 0,
         },
       }),
     );
     expect(view.statusLine).toMatchObject({ text: "2 connections need attention", tone: "danger" });
+  });
+
+  it("names an overdue daily read ahead of a failing provider", () => {
+    // A stopped scheduler records no failure, so nothing else on the bar
+    // could say the evidence is going stale (MEAS-10).
+    const view = buildCommandCenter(
+      withFacts({ health: { ...facts.health, overdueCadences: 1, failingProviders: 2 } }),
+    );
+    expect(view.statusLine).toMatchObject({ text: "1 daily read is overdue", tone: "danger" });
   });
 
   it("dates the claim by the check it rests on", () => {
