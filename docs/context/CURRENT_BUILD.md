@@ -34,6 +34,13 @@ Last updated: 2026-08-31, after wiring Google Ads campaign reporting
 describes 2026-08-21 and has NOT been rewritten; the current-state blocks
 immediately below supersede it.
 
+## 0al. A schedule the tick cannot run fails, 2026-09-02
+
+The tick recorded any schedule whose target was not a workflow as
+succeeded without doing anything. It now throws, so the firing is written
+down as failed with the reason and the row's health turns failing. No
+live row has another target kind today (CODE-60, from MON-21).
+
 ## 0ak. A mention without a link is now a finding, 2026-09-02
 
 Brand-mention snapshots and referring-domain snapshots were both stored

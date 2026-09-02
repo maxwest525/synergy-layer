@@ -164,7 +164,13 @@ export async function tickScheduler(
         state = run.state;
         workflowRunId = run.runId;
       } else {
-        state = "succeeded";
+        // The only target kind the tick can run is a workflow. Anything else
+        // used to be recorded as succeeded without doing anything (MON-21),
+        // which is the "configured is not connected" failure this system
+        // exists to catch.
+        throw new Error(
+          `Schedule "${schedule.key}" targets "${schedule.target_kind}", which the scheduler cannot run; only a workflow can be scheduled.`,
+        );
       }
     } catch (error) {
       state = "failed";

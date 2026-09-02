@@ -56,6 +56,19 @@ function schedulerClient(options: { tenantId?: string | null } = {}) {
       tenant_id: tenantId,
     },
     {
+      id: "33333333-3333-4333-8333-333333333333",
+      key: "report-digest",
+      name: "Report digest",
+      cron: "0 16 * * *",
+      target_kind: "report",
+      target_id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      next_run_at: "2026-08-11T16:00:00.000Z",
+      last_run_at: null,
+      last_state: null,
+      failure_count: 0,
+      tenant_id: tenantId,
+    },
+    {
       id: "22222222-2222-4222-8222-222222222222",
       key: "paid-provider-workflow",
       name: "Paid provider workflow",
@@ -128,6 +141,27 @@ describe("tickScheduler automation scope", () => {
     expect(touchedTables).not.toContain("dataforseo_requests");
     expect(reconcileChangeMeasurements).toHaveBeenCalledTimes(1);
     expect(reconcileChangeMeasurements).toHaveBeenCalledWith(client);
+  });
+
+  it("fails a schedule whose target is not a workflow instead of recording a success it never earned", async () => {
+    const { client, firings } = schedulerClient();
+
+    const result = await tickScheduler(client, new Date("2026-08-11T23:00:00.000Z"), {
+      onlyKeys: ["report-digest"],
+      collectSerpBacklog: false,
+      reconcileChangeMeasurements: false,
+      firedBy: "pg_cron",
+    });
+
+    expect(result.ran).toEqual([{ schedule: "report-digest", state: "failed" }]);
+    expect(runWorkflow).not.toHaveBeenCalled();
+    expect(firings).toEqual([
+      expect.objectContaining({
+        schedule_key: "report-digest",
+        state: "failed",
+        error: expect.stringContaining('targets "report", which the scheduler cannot run'),
+      }),
+    ]);
   });
 
   it("refuses a workflow schedule that names no client workspace instead of resolving one", async () => {
