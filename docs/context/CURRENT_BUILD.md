@@ -34,6 +34,15 @@ Last updated: 2026-08-31, after wiring Google Ads campaign reporting
 describes 2026-08-21 and has NOT been rewritten; the current-state blocks
 immediately below supersede it.
 
+## 0bh. Connections say when the newest row arrived, 2026-09-02
+
+"Reaching you" carried no date, so an hour-old and a month-old connection
+read the same. Each stored table now names its timestamp column,
+checked against the generated types, the facts read the newest
+successful row through the same filters as the counts, and every row
+with a store says when that row arrived or that none has (CODE-77, the
+second half of STATE-4).
+
 ## 0bg. No em dashes reach the screen, 2026-09-02
 
 They had reached a dozen surfaces and stood in for an absent value on 25

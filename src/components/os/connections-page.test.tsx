@@ -44,6 +44,7 @@ function facts(key: string, overrides: Partial<ConnectionFacts> = {}): Connectio
     storedRows: output.table === null ? null : 0,
     failedRows: output.succeeded === null ? null : 0,
     findings: output.findingSources.length === 0 ? null : 0,
+    newestAt: null,
     ...overrides,
   };
 }
