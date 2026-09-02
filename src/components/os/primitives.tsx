@@ -27,7 +27,7 @@ export function BackLink({ to, children }: { to: string; children: ReactNode }) 
  * page > section > card > row. Values live here rather than being retyped
  * per route, which is what made the screens look staggered.
  */
-export const layout = {
+const layout = {
   page: "space-y-10",
   sectionGap: "space-y-4",
   cardGrid: "grid gap-4",
@@ -240,38 +240,6 @@ export function StatePill({ label, tone = "neutral" }: { label: string; tone?: T
       {stateLabel(label)}
     </span>
   );
-}
-
-export function toneForState(state: string | null | undefined): Tone {
-  switch (state) {
-    case "healthy":
-    case "succeeded":
-    case "active":
-    case "real":
-    case "approved":
-    case "verified":
-    case "applied":
-      return "positive";
-    case "degraded":
-    case "awaiting_approval":
-    case "pending":
-    case "under_review":
-    case "proposed":
-    case "paused":
-    case "simulated":
-      return "warning";
-    case "failing":
-    case "failed":
-    case "error":
-    case "rejected":
-    case "rolled_back":
-      return "danger";
-    case "running":
-    case "scheduled":
-      return "primary";
-    default:
-      return "neutral";
-  }
 }
 
 /**
@@ -494,18 +462,4 @@ export function DetailRow({ label, value }: { label: string; value: ReactNode })
       <dd className="text-right text-sm font-medium text-foreground">{value ?? "Not set"}</dd>
     </div>
   );
-}
-
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
-export function formatWhen(value: string | null | undefined): string {
-  if (!value) return "Never";
-  // Manual UTC formatting: Intl output differs between the server and browser ICU builds.
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Never";
-  const hours24 = date.getUTCHours();
-  const suffix = hours24 >= 12 ? "PM" : "AM";
-  const hours = hours24 % 12 === 0 ? 12 : hours24 % 12;
-  const minutes = String(date.getUTCMinutes()).padStart(2, "0");
-  return `${MONTHS[date.getUTCMonth()]} ${date.getUTCDate()}, ${String(hours).padStart(2, "0")}:${minutes} ${suffix}`;
 }

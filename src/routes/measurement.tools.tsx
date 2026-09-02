@@ -11,9 +11,9 @@ import {
   MetricTile,
   PageHeader,
   StatePill,
-  formatWhen,
-  toneForState,
 } from "@/components/os/primitives";
+import { formatWhen } from "@/lib/format-when";
+import { toneForState } from "@/lib/state-tone";
 import { OperatorRouteError } from "@/components/os/route-error";
 import { UmamiPanel } from "@/components/os/umami-panel";
 import { ObservationCadences } from "@/components/os/observation-cadences";

@@ -2,7 +2,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 
-import { DetailRow, EmptyState, GlassCard, MetricTile, StatePill, formatWhen } from "./primitives";
+import { DetailRow, EmptyState, GlassCard, MetricTile, StatePill } from "./primitives";
+import { formatWhen } from "@/lib/format-when";
 import { Button } from "@/components/ui/button";
 import { getUmamiState, refreshUmami, type UmamiSnapshotView } from "@/lib/umami.functions";
 

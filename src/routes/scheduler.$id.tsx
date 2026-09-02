@@ -2,15 +2,9 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 
 import { OperatorRouteError } from "@/components/os/route-error";
-import {
-  BackLink,
-  DetailRow,
-  GlassCard,
-  PageHeader,
-  StatePill,
-  formatWhen,
-  toneForState,
-} from "@/components/os/primitives";
+import { BackLink, DetailRow, GlassCard, PageHeader, StatePill } from "@/components/os/primitives";
+import { formatWhen } from "@/lib/format-when";
+import { toneForState } from "@/lib/state-tone";
 import { stateLabel } from "@/lib/state-labels";
 import { getSchedule } from "@/lib/os.functions";
 

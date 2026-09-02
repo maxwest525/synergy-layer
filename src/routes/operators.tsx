@@ -7,8 +7,8 @@ import {
   PageStack,
   StatePill,
   TableShell,
-  formatWhen,
 } from "@/components/os/primitives";
+import { formatWhen } from "@/lib/format-when";
 import { OperatorRouteError } from "@/components/os/route-error";
 import { listAuthorizedOperators } from "@/lib/operator-views.functions";
 

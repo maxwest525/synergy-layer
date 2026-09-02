@@ -7,9 +7,9 @@ import {
   PageStack,
   StatePill,
   TableShell,
-  formatWhen,
-  toneForState,
 } from "@/components/os/primitives";
+import { formatWhen } from "@/lib/format-when";
+import { toneForState } from "@/lib/state-tone";
 import { OperatorRouteError } from "@/components/os/route-error";
 import { listChangeRequests } from "@/lib/operator-views.functions";
 

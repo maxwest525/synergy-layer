@@ -9,8 +9,8 @@ import {
   PageStack,
   Section,
   TableShell,
-  formatWhen,
 } from "@/components/os/primitives";
+import { formatWhen } from "@/lib/format-when";
 import { OperatorRouteError } from "@/components/os/route-error";
 import { RoutePending } from "@/components/os/route-pending";
 import { getProviderSpend } from "@/lib/operator-views.functions";

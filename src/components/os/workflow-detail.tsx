@@ -1,13 +1,9 @@
 import { useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 
-import {
-  EmptyNote,
-  formatWhen,
-  GlassCard,
-  StatePill,
-  toneForState,
-} from "@/components/os/primitives";
+import { EmptyNote, GlassCard, StatePill } from "@/components/os/primitives";
+import { formatWhen } from "@/lib/format-when";
+import { toneForState } from "@/lib/state-tone";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -18,6 +14,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
+import { humanize, kindLabels } from "@/lib/workflow-words";
 
 export type GraphNode = {
   key: string;
@@ -58,12 +55,6 @@ export type Run = {
   mode?: string | null;
   workflow_steps: RunStep[];
 };
-
-const ACTIVE_RUN_STATES = new Set(["queued", "running", "awaiting_approval"]);
-
-export function findActiveRun(runs: Run[]): Run | null {
-  return runs.find((run) => ACTIVE_RUN_STATES.has(run.state)) ?? null;
-}
 
 /**
  * Manual-first run controls. A run sits still at a position; the operator
@@ -171,19 +162,6 @@ export type CapabilityMeta = {
   integration_state: string;
   health: string;
   last_run_at: string | null;
-};
-
-/** "collect_snapshots" / "dfs.labs" become readable step names. */
-export function humanize(value: string) {
-  const words = value.replaceAll(/[._-]+/g, " ").trim();
-  return words.charAt(0).toUpperCase() + words.slice(1);
-}
-
-export const kindLabels: Record<string, string> = {
-  capability: "Tool step",
-  agent: "Agent step",
-  approval: "Approval gate",
-  condition: "Condition",
 };
 
 function formatJson(value: unknown): string | null {

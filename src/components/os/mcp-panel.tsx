@@ -1,13 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 
-import {
-  EmptyNote,
-  GlassCard,
-  ListSkeleton,
-  StatePill,
-  formatWhen,
-  toneForState,
-} from "@/components/os/primitives";
+import { EmptyNote, GlassCard, ListSkeleton, StatePill } from "@/components/os/primitives";
+import { formatWhen } from "@/lib/format-when";
+import { toneForState } from "@/lib/state-tone";
 import { getMcpStatus } from "@/lib/mcp-status.functions";
 
 /** MCP health and active OAuth grants for the agent integrations capability. */

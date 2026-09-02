@@ -5,12 +5,12 @@ import {
   BackLink,
   DetailRow,
   EmptyNote,
-  formatWhen,
   GlassCard,
   PageHeader,
   StatePill,
-  toneForState,
 } from "@/components/os/primitives";
+import { formatWhen } from "@/lib/format-when";
+import { toneForState } from "@/lib/state-tone";
 import { getAgent } from "@/lib/os.functions";
 import { OperatorRouteError } from "@/components/os/route-error";
 

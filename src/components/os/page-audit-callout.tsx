@@ -4,7 +4,8 @@ import { useServerFn } from "@tanstack/react-start";
 import { ScanSearch } from "lucide-react";
 import { toast } from "sonner";
 
-import { GlassCard, formatWhen } from "@/components/os/primitives";
+import { GlassCard } from "@/components/os/primitives";
+import { formatWhen } from "@/lib/format-when";
 import { Button } from "@/components/ui/button";
 import { getPageAudit, runPageWordingAudit } from "@/lib/page-audit.functions";
 

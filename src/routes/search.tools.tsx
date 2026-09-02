@@ -12,8 +12,8 @@ import {
   MetricTile,
   PageHeader,
   StatePill,
-  formatWhen,
 } from "@/components/os/primitives";
+import { formatWhen } from "@/lib/format-when";
 import {
   AlertDialog,
   AlertDialogAction,

@@ -6,12 +6,12 @@ import { toast } from "sonner";
 
 import {
   EmptyState,
-  formatWhen,
   GlassCard,
   MetricTile,
   PageHeader,
   StatePill,
 } from "@/components/os/primitives";
+import { formatWhen } from "@/lib/format-when";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {

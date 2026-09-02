@@ -3,7 +3,7 @@ import { ChevronLeft, Menu, Search } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 
 import { categoryIcon } from "./category-icons";
-import { formatWhen } from "./primitives";
+import { formatWhen } from "@/lib/format-when";
 import { navDirectory } from "@/lib/nav-directory";
 import { useCommandCenter } from "./command-center-facts";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";

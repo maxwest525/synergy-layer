@@ -10,8 +10,8 @@ import {
   MetricTile,
   PageHeader,
   StatePill,
-  formatWhen,
 } from "@/components/os/primitives";
+import { formatWhen } from "@/lib/format-when";
 import { OpenAiAdsCapiSettings } from "@/components/os/openai-ads-capi-settings";
 import { OperatorRouteError } from "@/components/os/route-error";
 import {

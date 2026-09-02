@@ -34,6 +34,14 @@ Last updated: 2026-08-31, after wiring Google Ads campaign reporting
 describes 2026-08-21 and has NOT been rewritten; the current-state blocks
 immediately below supersede it.
 
+## 0bk. Lint is down to the six shadcn warnings, 2026-09-02
+
+`formatWhen`, `toneForState` and the workflow step words moved out of
+component files into `src/lib` with tests, the spacing scale stopped
+being exported, and the suggestions panel memoises its items on the
+query result. The six warnings left are shadcn's own variant-helper
+exports in `ui/*`, kept as that library ships them (CODE-84, from CQ-10).
+
 ## 0bj. Three chosen figures say they are chosen, 2026-09-02
 
 The card urgency ages (14 and 3 days), the PageSpeed measurement
