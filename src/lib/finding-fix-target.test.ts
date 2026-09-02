@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  GENERIC_NO_LANE_SENTENCE,
   deriveFixTarget,
   hasGovernedFixPath,
   proposalKindForRule,
   whyNoFixLane,
 } from "./finding-fix-target";
+import { RULE_ASSIGNMENTS } from "./rule-buckets";
 
 const row = (page: string, query: string, impressions: number) => ({
   keys: [page, query],
@@ -89,6 +91,23 @@ describe("proposalKindForRule", () => {
     expect(whyNoFixLane("position_loss")).toMatch(/would be a guess/i);
     // A rule with a lane has no such sentence, because it has a button.
     expect(whyNoFixLane("weak_ctr_page")).toBeNull();
+  });
+});
+
+describe("every registered rule either drafts a fix or says in its own words why not", () => {
+  it("never lets a registered rule fall through to the generic sentence", () => {
+    // The four rule sessions of 2026-08-31 registered fifteen rules whose
+    // findings all rendered the same generic line where an operator expected
+    // a control (BACKLOG.md CODE-1). This walks the registry so the next rule
+    // added without a reason fails here rather than on screen.
+    const unexplained = RULE_ASSIGNMENTS.map((assignment) => assignment.rule).filter(
+      (rule) => !hasGovernedFixPath(rule) && whyNoFixLane(rule) === GENERIC_NO_LANE_SENTENCE,
+    );
+    expect(unexplained).toEqual([]);
+  });
+
+  it("keeps the generic sentence only for rules the registry has never heard of", () => {
+    expect(whyNoFixLane("some_rule_nobody_wired")).toBe(GENERIC_NO_LANE_SENTENCE);
   });
 });
 

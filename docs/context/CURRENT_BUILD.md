@@ -34,6 +34,20 @@ Last updated: 2026-08-31, after wiring Google Ads campaign reporting
 describes 2026-08-21 and has NOT been rewritten; the current-state blocks
 immediately below supersede it.
 
+## 0q. Every registered rule now says why it has no draft, 2026-09-02
+
+CODE-1, re-measured. The 18 rules the backlog named already had a written
+reason by 2026-08-31; what actually fell through to the generic "no governed
+fix for this finding yet" sentence were the 15 rules the four rule sessions
+registered that day (crawl errors, redirect chains, non-indexable pages, the
+two duplicate-across-pages rules, the three backlink rules, the three Umami
+rules, the two discovery findings and the two ownership candidates). Each now
+carries its own sentence in `finding-fix-target.ts`, grounded in what the
+rule measures and pointing at the real lever (hosting and routing, the
+tracking tag, a provider read on a click, a judgement the operator owns), and
+`finding-fix-target.test.ts` walks `RULE_ASSIGNMENTS` so a rule registered
+without a reason fails the build instead of rendering the generic line.
+
 ## 0p. A description edit refuses a page that sets its own, 2026-09-02
 
 CODE-30, the drafting half. The homepage change 78fc8c5e edited the sitewide

@@ -148,7 +148,58 @@ const NO_LANE_REASON: Readonly<Record<string, string>> = {
     "The sites linking to you changed. Those are other people's pages, and nothing here can edit them.",
   approved_keyword_multiple_pages:
     "More than one of your own pages targets this term. Fixing that means deciding which page should own it and rewording the rest -- a call this tool will not make for you.",
+
+  // The site crawl. Errors, redirects and index blocks are answered in hosting,
+  // routing and directives, not in a page's words. Where a governed draft does
+  // exist (robots.txt on Site health) the sentence points at it.
+  crawl_pages_error_status:
+    "Some addresses the site check followed answered with an error instead of a page. That is fixed on the server or in the site's routing, by restoring the page or redirecting the address, not by editing words on a page that is not answering.",
+  redirect_chain_present:
+    "Some addresses redirect before a page answers. Redirects live in the site's hosting and routing configuration, which no governed lane edits yet; the fix is to link straight to the final address and remove the extra hop.",
+  non_indexable_pages_found:
+    "Some pages are set up so Google will not list them. Where that comes from robots.txt, Site health offers a governed draft of the directive. Where it comes from a noindex tag or a canonical pointing elsewhere, it is a decision about which pages should be listed, and changing the words would not change it.",
+  duplicate_titles_across_pages:
+    "Several pages share the same title. Fixing that means deciding which page keeps it and giving the others their own, and that choice is yours. Once you pick a page, its own findings offer the wording draft.",
+  duplicate_descriptions_across_pages:
+    "Several pages share the same description, usually because they all fall back to the sitewide default. A page that should say something of its own needs its own edit, and which pages deserve one is your call.",
+
+  // Links from other sites. The link is theirs; the address is yours.
+  inbound_link_to_error_page:
+    "Other sites link to a page that answers with an error. The link is theirs; what you control is the address, so the fix is to restore the page or redirect that address to the right one, which lives in hosting and routing rather than in page wording.",
+  linked_page_never_audited:
+    "Other sites link to a page the audit has never read. Nothing is known to be wrong with it yet. Run the page audit on it first, and its own findings will say what, if anything, to change.",
+  link_profile_coverage_partial:
+    "The link check only read your top linking sites, so this is a limit of the reading, not a problem with a page. A fuller read is a provider request, made on a click with its cost shown.",
+
+  // Self-hosted analytics. Every one of these is about the tag or the source,
+  // never about the words on a page.
+  umami_zero_recorded:
+    "Your analytics instance recorded nothing for the site. That is almost always the tag missing or blocked, not the content. Check the tracking script on the site before changing anything else.",
+  umami_site_traffic_shift:
+    "Visits to the site moved between two windows. The reading names the size of the change, not its cause, and visits arrive from every channel, so there is nothing specific enough to draft.",
+  umami_referrer_source_stopped:
+    "Visits from one source stopped arriving. That source is another site or platform. Check whether it still links or lists you, which is outreach rather than a page edit.",
+
+  // Competitor discovery. Facts about other people's sites and about the
+  // reading itself. Nothing here is a change to your pages.
+  overlap_list_reached_the_row_limit:
+    "The competitor overlap lookup came back full, so the list is cut off rather than complete. A fuller read is a provider request, made on a click with its cost shown. Nothing on your pages needs changing for it.",
+  rival_page_mentions_your_brand:
+    "A site that ranks alongside you mentions your name. That page is theirs. What you can do is read what it says and decide whether to respond, ask for a link, or correct a claim, none of which this tool drafts.",
+  same_registration_details_across_two_known_domains:
+    "Two domains you track share registration details, which may mean one owner behind both. It is filed as a candidate for review. Confirming it is a judgement about competitors, and it changes nothing on your site.",
+  identical_technology_stack_across_two_known_domains:
+    "Two domains you track run the same technology, which may mean one owner behind both. It is filed as a candidate for review. Confirming it is a judgement about competitors, and it changes nothing on your site.",
 };
+
+/**
+ * The fallback for a rule nobody has written a reason for. A registered rule
+ * must never reach it: finding-fix-target.test.ts walks RULE_ASSIGNMENTS and
+ * fails the build if one does, because a generic sentence where an operator
+ * expected a control is the dead-card pattern this file exists to stop.
+ */
+export const GENERIC_NO_LANE_SENTENCE =
+  "There is no governed fix for this finding yet, so it is reported for you to act on directly.";
 
 /**
  * Whether a rule finding has a governed lane that can draft its fix.
@@ -167,10 +218,7 @@ export function hasGovernedFixPath(rule: string): boolean {
  */
 export function whyNoFixLane(rule: string): string | null {
   if (rule in FIX_LANES) return null;
-  return (
-    NO_LANE_REASON[rule] ??
-    "There is no governed fix for this finding yet, so it is reported for you to act on directly."
-  );
+  return NO_LANE_REASON[rule] ?? GENERIC_NO_LANE_SENTENCE;
 }
 
 /**
