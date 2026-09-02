@@ -21,6 +21,15 @@ import type { CategoryId } from "./categories";
 export const WEEKLY_VISIBLE_CAP = 7;
 
 const DAY_MS = 86_400_000;
+/**
+ * Stated assumption: nothing in the research grounds these two ages. The
+ * queue reads red after a fortnight and yellow after three days because an
+ * open suggestion nobody has looked at in two weeks is the one most likely to
+ * have been forgotten, not because either number was measured. What would
+ * settle it: the median time from filing to decision across
+ * `change_requests` and `recommendations`, once enough decided rows exist to
+ * read one (AGT-15).
+ */
 const FIX_NOW_AFTER_DAYS = 14;
 const WORTH_DOING_AFTER_DAYS = 3;
 const WEEK_DAYS = 7;
