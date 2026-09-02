@@ -28,6 +28,7 @@ import {
 } from "./site-checks";
 import { scrapePageWithVps, vpsScraperConfigured } from "./connectors/vps-scraper.server";
 import { firecrawlEndpoint, type FirecrawlEndpoint } from "./firecrawl-endpoint";
+import { assertSelfHostedFirecrawlUsable } from "./firecrawl-endpoint.server";
 import { isRobotsPathAllowed } from "./robots-rules";
 
 /**
@@ -465,6 +466,14 @@ export async function runPageAudit(
     throw new Error(
       "Pages cannot be read: configure VPS_SCRAPER_BASE_URL and VPS_SCRAPER_API_KEY for Crawl4AI, or SELFHOSTED_FIRECRAWL_BASE_URL and SELFHOSTED_FIRECRAWL_API_KEY for the self-hosted Firecrawl fallback.",
     );
+  }
+  // The chooser trusts a present key; the stored probe is what validated it.
+  // When the self-hosted Firecrawl would render every page and its last check
+  // failed, refuse now rather than send it a hundred requests it rejects
+  // (CODE-17). With Crawl4AI in front it is a per-page fallback, and a failed
+  // page records its own error.
+  if (firecrawl?.selfHosted && !selfHosted) {
+    await assertSelfHostedFirecrawlUsable(client, tenantId);
   }
 
   const origin = originForProperty(property);

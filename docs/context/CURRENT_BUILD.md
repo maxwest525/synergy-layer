@@ -34,6 +34,15 @@ Last updated: 2026-08-31, after wiring Google Ads campaign reporting
 describes 2026-08-21 and has NOT been rewritten; the current-state blocks
 immediately below supersede it.
 
+## 0bn. The page audit refuses a Firecrawl box that failed its check, 2026-09-02
+
+The endpoint chooser trusts a present self-hosted key; only the
+connection probe knows whether the box accepts it. The page audit now
+reads that probe before rendering and refuses by name when the last
+check failed, with the outcome and both ways out, instead of sending a
+hundred requests to a 401. A probe that has never run does not block
+(CODE-17, disarmed where it bites; the chooser is unchanged).
+
 ## 0bm. A host that cannot operate says so, 2026-09-02
 
 On a host without the service-role credential every operator action
