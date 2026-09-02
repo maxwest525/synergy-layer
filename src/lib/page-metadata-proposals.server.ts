@@ -9,6 +9,7 @@ import {
   GOVERNED_REPO,
 } from "./execution/allowlist";
 import { createGithubApi } from "./execution/execute.server";
+import { resolvePageSource } from "./execution/page-source-map";
 import { readLivePageWording } from "./live-page-evidence.server";
 import { applyExactReplacements } from "./execution/source-change";
 import { generatePageMetadataWording } from "./gemini.server";
@@ -16,6 +17,7 @@ import { retrieveKnowledgeGuidance } from "./knowledge-retrieval.server";
 import {
   buildPageMetadataChanges,
   buildPageMetadataPrompt,
+  findPageOwnedDescription,
   selectUniqueLiteralSource,
 } from "./page-metadata-proposals";
 import {
@@ -254,6 +256,27 @@ export async function preparePageMetadataProposal(
       content: (await github.readFile(GOVERNED_REPO, path, head)).content,
     })),
   );
+
+  // Targeting proof (CODE-30). The two files this lane may edit carry the
+  // shared head component and the sitewide default. A page whose own source
+  // sets a description overrides both, so an edit bound here could be
+  // approved, committed and deployed and never reach the page's head. Read
+  // the page's own source at the same revision and refuse before drafting.
+  const pageSource = resolvePageSource(targetUrl);
+  if (pageSource.ok && pageSource.source.changeKind === "page.wording") {
+    const ownSource = await github.readFile(GOVERNED_REPO, pageSource.source.filePath, head);
+    const owned = findPageOwnedDescription(ownSource.content);
+    if (owned !== null) {
+      throw new Error(
+        `This page sets its own description in ${pageSource.source.filePath}, so the sitewide default and the shared head component never reach it and an edit there could not be proven on this page. The metadata lane cannot edit that file yet (BACKLOG.md CODE-33); ${
+          owned === "dynamic"
+            ? "its description is built from an expression the drafter cannot read."
+            : `its current description is "${owned}".`
+        }`,
+      );
+    }
+  }
+
   const source = selectUniqueLiteralSource(sources, liveMetaDescription);
   const sitewideDefault = source.path === SITEWIDE_DEFAULT_FILE;
 

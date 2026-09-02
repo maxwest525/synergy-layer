@@ -4,6 +4,7 @@ import { DESCRIPTION_MAX, DESCRIPTION_MIN } from "./page-checks";
 import {
   buildPageMetadataChanges,
   buildPageMetadataPrompt,
+  findPageOwnedDescription,
   selectUniqueLiteralSource,
   validatePageMetadataWording,
 } from "./page-metadata-proposals";
@@ -131,6 +132,35 @@ describe("page metadata changes", () => {
     expect(() => buildPageMetadataChanges(validWording.metaDescription, validWording)).toThrow(
       /must change/i,
     );
+  });
+});
+
+describe("a page that sets its own description is recognised before the sitewide default is edited", () => {
+  it("reads the literal a page passes to SeoHead", () => {
+    const source = `
+      <SeoHead
+        title="TruMove | AI-Powered Moving Made Simple"
+        description="TruMove connects you with vetted, top-rated carriers."
+        path="/"
+      />`;
+    expect(findPageOwnedDescription(source)).toBe(
+      "TruMove connects you with vetted, top-rated carriers.",
+    );
+  });
+
+  it("reads a description set directly inside a Helmet block", () => {
+    const source = `<Helmet><meta name="description" content="A page-level sentence." /></Helmet>`;
+    expect(findPageOwnedDescription(source)).toBe("A page-level sentence.");
+  });
+
+  it("reports a description built from an expression as dynamic rather than guessing it", () => {
+    const source = `<SeoHead title={title} description={post.summary} path={path} />`;
+    expect(findPageOwnedDescription(source)).toBe("dynamic");
+  });
+
+  it("returns null for a page that leaves the description to the sitewide default", () => {
+    const source = `<SeoHead title="Careers" path="/careers" /> <p>description of the role</p>`;
+    expect(findPageOwnedDescription(source)).toBeNull();
   });
 });
 

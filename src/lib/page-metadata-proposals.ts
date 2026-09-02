@@ -141,6 +141,41 @@ export function buildPageMetadataChanges(
 }
 
 /**
+ * Whether a page's own source sets its own description, and what it sets.
+ *
+ * The site's head is layered: `DefaultSeo` renders a sitewide description, and
+ * a page that renders `<SeoHead description="...">` (or its own `<meta
+ * name="description">` inside a Helmet block) overrides it. The prerender
+ * emits Helmet's resolved tags, so the page-level value is what the public
+ * page serves. A change bound to the sitewide default can therefore never be
+ * proven on a page that sets its own description: change 78fc8c5e edited
+ * `DefaultSeo.tsx` while `src/pages/Index.tsx` carried the homepage's own
+ * sentence, and the live head never moved (BACKLOG.md CODE-30).
+ *
+ * Returns the literal when the page sets one as a string, the string
+ * "dynamic" when it sets one from an expression the reader cannot evaluate,
+ * and null when the page leaves the description to the sitewide default.
+ */
+export function findPageOwnedDescription(pageSource: string): string | null {
+  const seoHead = /<SeoHead\b[^>]*?\bdescription\s*=\s*(?:"([^"]*)"|'([^']*)'|\{)/s.exec(
+    pageSource,
+  );
+  if (seoHead) {
+    const literal = seoHead[1] ?? seoHead[2];
+    return literal === undefined ? "dynamic" : literal;
+  }
+  const helmetMeta =
+    /<meta\b[^>]*\bname\s*=\s*["']description["'][^>]*\bcontent\s*=\s*(?:"([^"]*)"|'([^']*)'|\{)/s.exec(
+      pageSource,
+    );
+  if (helmetMeta) {
+    const literal = helmetMeta[1] ?? helmetMeta[2];
+    return literal === undefined ? "dynamic" : literal;
+  }
+  return null;
+}
+
+/**
  * The live value must occur exactly once across every allowlisted file
  * together, or an exact replacement could edit the wrong file or the wrong
  * occurrence. Counting per file is not enough: a literal that appears twice in
