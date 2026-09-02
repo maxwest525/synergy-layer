@@ -120,15 +120,17 @@ Ownership does not change: Lovable keeps production, GitHub keeps the code. The 
 | 7    | Decide Vercel's role (§6).                                                                                                                                                                                                                                                                                                                                      | `unpause_project` if paused.                                                             | Operator decision.                                 |
 
 **Step 2 status, 2026-09-02:** prepared and validated, not pushed. The
-`reconcile-main` branch in this session's clone ends at `0e13e02`, which merges
-`synergy-layer` `main` `2abde69` (PR #163) on top of the 2026-09-01
-reconciliation `52aae9e`; the three named files needed no further resolution,
-the merged tree differs from `2abde69` only by Lovable's six-line "Git remote"
-note in `CURRENT_BUILD.md`, and `tsc --noEmit`, lint, the tests and the build
-pass on it. The push is `git push origin reconcile-main:main`, non-force, 159
-commits ahead of the mirror's `2cc5efb`; the rollback is `git revert -m 1` of
-`0e13e02`, `5fc232c` and `52aae9e` in that order, pushed the same way. It waits
-on the operator, and on a fresh merge if the mirror's `main` moves first.
+`reconcile-main` branch in this session's clone ends at `9a315ec`, which merges
+`synergy-layer` `main` `695cb84` (PR #167) on top of the 2026-09-01
+reconciliation `52aae9e` through the day's earlier refreshes; the three named
+files needed no further resolution, the merged tree differs from `695cb84`
+only by Lovable's six-line "Git remote" note in `CURRENT_BUILD.md`, and
+`tsc --noEmit`, lint, the tests and the build pass on it. The push is
+`git push origin reconcile-main:main`, non-force, 168 commits ahead of the
+mirror's `2cc5efb`; the rollback is `git revert -m 1` of `9a315ec`, `2563ee4`,
+`0e13e02`, `5fc232c` and `52aae9e` in that order, pushed the same way. It
+waits on the operator, and on a fresh merge if the mirror's `main` moves
+first.
 
 ## 6. The long-term shape, and the decision it needs
 

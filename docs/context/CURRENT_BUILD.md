@@ -803,23 +803,24 @@ the TanStack prebundle hang (mirror commit `77e2578`, 2026-08-30) is ported into
 `google_ads_snapshots` is kept verbatim beside this repository's idempotent
 `20260831210000`, because the live migration ledger names the former.
 
-**Step 2 of the plan is prepared, not pushed (2026-09-02).** The mirror's
-`reconcile-main` branch, which exists only in this session's clone of
-`trumove-resource-center`, now ends at merge commit `0e13e02`: this
-repository's `main` at `2abde69` (PR #163) merged on top of the 2026-09-01
-reconciliation `52aae9e` (PR #104), through `5fc232c` (`520e741`, PR #162)
-earlier the same day. That is 127 commits, PR #105 through PR #163, with zero
-conflicts, because the three files the first reconciliation resolved have not
-diverged since. The merged tree differs from `2abde69` by six lines, Lovable's
-"Git remote (2026-08-30)" note at the foot of this file, and `tsc --noEmit`,
-lint, the test suite and the production build all pass on it. The mirror's
-`main` is still `2cc5efb`, Lovable's last commit, so 159 commits wait behind
-one non-force push, `git push origin reconcile-main:main` from that clone,
-whose rollback is `git revert -m 1` of the three merge commits, newest first.
-The push and the publish after it stay with the operator (OP-10); if the
-mirror's `main` moves before then, merge it into `reconcile-main` again first.
-Until that push, everything merged here since 2026-08-30, today's PR #105
-through PR #163 included, is live nowhere.
+**Step 2 of the plan is prepared, not pushed (2026-09-02, refreshed after
+each merge).** The mirror's `reconcile-main` branch, which exists only in
+this session's clone of `trumove-resource-center`, now ends at merge commit
+`9a315ec`: this repository's `main` at `695cb84` (PR #167) merged on top of
+the 2026-09-01 reconciliation `52aae9e` (PR #104) through the day's earlier
+refreshes (`5fc232c`, `0e13e02`, `2563ee4`). That is 134 commits, PR #105
+through PR #167, with zero conflicts, because the three files the first
+reconciliation resolved have not diverged since. The merged tree differs
+from `695cb84` by six lines, Lovable's "Git remote (2026-08-30)" note at the
+foot of this file, and `tsc --noEmit`, lint, the test suite and the
+production build all pass on it. The mirror's `main` is still `2cc5efb`,
+Lovable's last commit, so 168 commits wait behind one non-force push,
+`git push origin reconcile-main:main` from that clone, whose rollback is
+`git revert -m 1` of the five merge commits, newest first. The push and the
+publish after it stay with the operator (OP-10); if the mirror's `main`
+moves before then, merge it into `reconcile-main` again first. Until that
+push, everything merged here since 2026-08-30, today's PR #105 through
+PR #167 included, is live nowhere.
 
 ## 0m. The self-contradiction pass, and every page gets a way back, 2026-09-01
 
