@@ -34,6 +34,16 @@ Last updated: 2026-08-31, after wiring Google Ads campaign reporting
 describes 2026-08-21 and has NOT been rewritten; the current-state blocks
 immediately below supersede it.
 
+## 0bd. The waiting-on banner counts the page's own rules, 2026-09-02
+
+Three pages each built the thirteen-key prerequisite state by hand and
+had drifted, and the banner counted every rule in the registry, so Your
+pages could say seventeen checks were waiting on a second collection when
+none of its rules needed one. One builder holds the not-read-here default,
+each page passes what it reads plus its category, and the count is scoped
+to rules that land on that page; every rule with a prerequisite now names
+its category by rule, pinned by test (CODE-78, from CQ-8).
+
 ## 0bc. The Command center says when each number was true, 2026-09-02
 
 The category pages dated their own windows; the Command center, which

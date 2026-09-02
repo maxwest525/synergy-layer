@@ -1,4 +1,6 @@
+import type { CategoryId } from "./categories";
 import { MIN_BASELINE } from "./confidence";
+import { categoryForRule } from "./finding-router";
 import { RULE_CHECK_THRESHOLDS } from "./search-console-rule-checks";
 import { SEARCH_CONSOLE_THRESHOLDS, SEO_VALIDATION_THRESHOLDS } from "./rule-thresholds";
 
@@ -62,13 +64,9 @@ export type PrerequisiteState = {
   readonly reviewedCompetitorSet: boolean;
   /**
    * Two stored umami_snapshots rows for the same website whose windows do not
-   * overlap (pairNonOverlappingWindows in umami-rule-checks.ts). Optional
-   * because the three fact-gathering call sites (your-pages.ts, getting-found.ts,
-   * site-health.ts) do not read Umami and are outside this change's file list;
-   * an absent field reads as unmet, which is the safe default until one of
-   * them is wired to pass it.
+   * overlap (pairNonOverlappingWindows in umami-rule-checks.ts).
    */
-  readonly umamiSecondWindow?: boolean;
+  readonly umamiSecondWindow: boolean;
   /**
    * At least one OnPage crawl has been collected (a stored
    * `dataforseo_snapshots` row for one of the OnPage detail kinds). None of
@@ -491,15 +489,61 @@ const PREREQUISITE_STATE_KEY: Record<Prerequisite, keyof PrerequisiteState> = {
 };
 
 /** The unmet prerequisites across the given rules, worst-blocking first, as sentences. */
+const EVERY_PREREQUISITE_MET: PrerequisiteState = {
+  secondCollection: true,
+  pageAudit: true,
+  analytics: true,
+  urlInspection: true,
+  approvedKeywords: true,
+  backlinkCollection: true,
+  whoisCollection: true,
+  technologyCollection: true,
+  brandMentionCollection: true,
+  referringDomainCollection: true,
+  reviewedCompetitorSet: true,
+  umamiSecondWindow: true,
+  onpageCrawl: true,
+};
+
+/**
+ * A page's prerequisite state from what it actually read.
+ *
+ * A key the page has no read for is treated as met, so the banner stays
+ * silent rather than wrong. With `unmetPrerequisites` scoped to the page's
+ * own category, such a key is consulted only when one of the page's rules
+ * needs it, and each page states that gap beside its call (today: the OnPage
+ * crawl on Your pages and Site health, the URL inspection on Getting found).
+ * The default used to be copied into three literals of thirteen keys each,
+ * and they had already drifted (CQ-8).
+ */
+export function prerequisiteState(read: Partial<PrerequisiteState>): PrerequisiteState {
+  return { ...EVERY_PREREQUISITE_MET, ...read };
+}
+
+/**
+ * Plain-words notes on what the page is waiting for, one per unmet
+ * prerequisite, each counting the rules it holds back.
+ *
+ * `category` scopes the count to the rules that land on that page; without
+ * it the count spans the whole registry, which on Your pages once read "17
+ * checks are waiting on a second collection" for seventeen rules that were
+ * not on that page at all. A rule with a prerequisite must therefore name its
+ * category by rule (`categoryForRule`); the test pins that.
+ */
 export function unmetPrerequisites(
   state: PrerequisiteState,
+  category?: CategoryId,
   assignments: readonly RuleAssignment[] = RULE_ASSIGNMENTS,
 ): readonly string[] {
+  const scoped =
+    category === undefined
+      ? assignments
+      : assignments.filter((assignment) => categoryForRule(assignment.rule) === category);
   return (Object.keys(PREREQUISITE_COPY) as Prerequisite[])
     .map((prerequisite) => ({
       prerequisite,
       met: state[PREREQUISITE_STATE_KEY[prerequisite]],
-      count: assignments.filter((assignment) => assignment.alsoNeeds.includes(prerequisite)).length,
+      count: scoped.filter((assignment) => assignment.alsoNeeds.includes(prerequisite)).length,
     }))
     .filter(({ met, count }) => !met && count > 0)
     .sort((a, b) => b.count - a.count)

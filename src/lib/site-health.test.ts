@@ -576,7 +576,10 @@ describe("naming what the checks have never run", () => {
     const view = buildSiteHealth(withFacts({ siteObservedAt: null }));
     expect(view.neverRunNotice).toContain("never run");
     expect(view.neverRunNotice).toMatch(/robots\.txt/i);
-    expect(view.waitingOn.join(" ")).toContain("page audit");
+    // The never-run notice carries this; no rule that lands on this page
+    // waits on the page audit, so the banner does not count other pages'
+    // rules any more (CQ-8).
+    expect(view.waitingOn).toEqual([]);
   });
 
   it("says nothing once the checks have run", () => {
