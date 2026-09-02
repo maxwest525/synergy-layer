@@ -102,11 +102,30 @@ export const SITE_CHECK_FIX: Record<SiteCheckId, AuditFixTarget | null> = {
   host_not_consolidated: null,
   mixed_content_present: null,
   homepage_slow_to_respond: null,
-  // The broker's registration wording lives on the website, which AOOS does
-  // not edit (CODE-86).
+  // Each of these four says why in its own words. The blanket reason they
+  // carried until CODE-89 -- "the wording lives on the website, which AOOS does
+  // not edit" -- was false twice over: AOOS does edit the website, that is what
+  // the executor is for, and the four do not share one reason.
+  //
+  // Adding a number the homepage does not carry is an insertion, and the
+  // executor's only mechanic is exact replacement (`github_exact_replacement`):
+  // there is no `before` text to match. Same limit as `h2_missing`.
   broker_numbers_missing: null,
+  // Two different numbers appear across the site. Which one is the broker's
+  // real registration is a fact about their FMCSA record, not about the source
+  // file, so AOOS would be guessing which to delete.
   broker_numbers_disagree: null,
+  // The nearest of the four to fixable, and still null. The statement is one
+  // sentence that already exists, so amending it IS an exact replacement --
+  // but it does not live on the homepage. It is rendered sitewide from
+  // `src/components/trumove/Footer.tsx` (read from the client repository at
+  // d983fb0 on 2026-09-02), and no governed change kind owns that file, so
+  // `checkSourceTarget` would refuse the commit after the operator approved it.
+  // What closes this is a footer wording kind, not a wider page lane: see
+  // BACKLOG.md CODE-90.
   broker_statement_missing: null,
+  // Advice only, and the judgment is the operator's: a second number on an
+  // inner page may be a stale copy or may be a second authority they hold.
   broker_numbers_off_homepage: null,
 };
 
