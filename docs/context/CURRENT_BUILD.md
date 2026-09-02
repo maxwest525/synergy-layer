@@ -34,6 +34,15 @@ Last updated: 2026-08-31, after wiring Google Ads campaign reporting
 describes 2026-08-21 and has NOT been rewritten; the current-state blocks
 immediately below supersede it.
 
+## 0bp. A meta description draft can be redrafted, 2026-09-02
+
+The wording lane could regenerate a draft in place; the description
+lane could only be rejected and drafted again. `revise_page_metadata_proposal`
+(live and ledgered) is the same immutable-revision write for that lane,
+`regeneratePageMetadataProposal` redrafts under the draft's own evidence
+mode, and the suggestion card and the change page offer the verb for
+both lanes (CODE-4).
+
 ## 0bo. Every "waiting" says what it counts, 2026-09-02
 
 Four surfaces used one word for four counts. Each now names its own: the

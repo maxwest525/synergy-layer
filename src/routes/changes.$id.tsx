@@ -33,6 +33,7 @@ import {
 import { IN_FLIGHT_CONSEQUENCE } from "@/lib/change-request-conflicts";
 import { describeOutcome, humanState, isChangeState } from "@/lib/change-request-state";
 import { revertChangeRequest } from "@/lib/execution/execution.functions";
+import { regeneratePageMetadataProposal } from "@/lib/page-metadata-proposals.functions";
 import {
   editPageWordingProposal,
   regeneratePageWordingProposal,
@@ -89,6 +90,56 @@ type ProposalVersion = {
 
 function asArray<T>(value: unknown): T[] {
   return Array.isArray(value) ? (value as T[]) : [];
+}
+
+/**
+ * The description lane's revision control. There is no hand edit for a meta
+ * description yet, so the one verb is a redraft, held to the same evidence
+ * mode the draft was filed under (CODE-4).
+ */
+function MetadataRedraftPanel({
+  id,
+  revisionCount,
+  onChanged,
+}: {
+  id: string;
+  revisionCount: number;
+  onChanged: () => void;
+}) {
+  const regenerate = useServerFn(regeneratePageMetadataProposal);
+  const revision = useMutation({
+    mutationFn: () => regenerate({ data: { id } }),
+    onSuccess: (result) => {
+      toast.success(
+        result.versionNumber
+          ? `Saved immutable revision ${result.versionNumber}.`
+          : "Proposal updated.",
+      );
+      onChanged();
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+  return (
+    <GlassCard className="p-5">
+      <h2 className="text-sm font-semibold text-foreground">Draft description and revisions</h2>
+      <p className="mt-2 text-sm text-muted-foreground">
+        Redrafting calls Gemini once with the same evidence this draft was held to and saves a new
+        immutable revision. {revisionCount} revision(s) so far. There is no hand edit for a
+        description yet.
+      </p>
+      <div className="mt-3">
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={revision.isPending}
+          onClick={() => revision.mutate()}
+        >
+          {revision.isPending ? "Redrafting..." : "Redraft the description"}
+        </Button>
+      </div>
+    </GlassCard>
+  );
 }
 
 function ProposalRevisionPanel({
@@ -539,6 +590,15 @@ function ChangeRequestPage() {
           rationale={change.rationale}
           versions={data.versions}
           editable={state === "proposed"}
+          onChanged={invalidate}
+        />
+      ) : null}
+
+      {change.proposal_type === "page_metadata" && state === "proposed" ? (
+        <MetadataRedraftPanel
+          key={`${id}:${change.revision_count}`}
+          id={id}
+          revisionCount={change.revision_count}
           onChanged={invalidate}
         />
       ) : null}
