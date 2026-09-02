@@ -34,6 +34,15 @@ Last updated: 2026-08-31, after wiring Google Ads campaign reporting
 describes 2026-08-21 and has NOT been rewritten; the current-state blocks
 immediately below supersede it.
 
+## 0bm. A host that cannot operate says so, 2026-09-02
+
+On a host without the service-role credential every operator action
+failed with a generic 500 and nothing said why. The shell now asks the
+host whether `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are present
+(names only) and renders one banner naming the absence and where
+production runs (CODE-46, code half; the Vercel decision stays with the
+operator).
+
 ## 0bl. Agent rows are read-only to operators and the runner refuses agent nodes honestly, 2026-09-02
 
 The executor behind `assertRunnableGraph` used to mark an agent row as
