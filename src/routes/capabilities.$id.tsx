@@ -5,12 +5,12 @@ import {
   BackLink,
   DetailRow,
   EmptyNote,
-  formatWhen,
   GlassCard,
   PageHeader,
   StatePill,
-  toneForState,
 } from "@/components/os/primitives";
+import { formatWhen } from "@/lib/format-when";
+import { toneForState } from "@/lib/state-tone";
 import { stateLabel } from "@/lib/state-labels";
 import { DataForSeoPanel } from "@/components/os/dataforseo-panel";
 import { McpPanel } from "@/components/os/mcp-panel";

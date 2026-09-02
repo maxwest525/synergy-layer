@@ -12,8 +12,8 @@ import {
   PageHeader,
   PageStack,
   StatePill,
-  formatWhen,
 } from "@/components/os/primitives";
+import { formatWhen } from "@/lib/format-when";
 import { OperatorRouteError } from "@/components/os/route-error";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";

@@ -5,7 +5,9 @@ import { Check, GitPullRequestArrow, Loader2, TriangleAlert } from "lucide-react
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
-import { EmptyNote, StatePill, formatWhen, toneForState } from "./primitives";
+import { EmptyNote, StatePill } from "./primitives";
+import { formatWhen } from "@/lib/format-when";
+import { toneForState } from "@/lib/state-tone";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -177,7 +179,8 @@ export function SuggestionsPanel({ collapsed = false }: { collapsed?: boolean })
     refetchOnWindowFocus: true,
   });
 
-  const items = query.data?.items ?? [];
+  // A fresh array on every render made the memo below recompute every time.
+  const items = useMemo(() => query.data?.items ?? [], [query.data]);
   const waiting = (query.data?.counts.propose ?? 0) + (query.data?.counts.execute ?? 0);
 
   const decidable = useMemo(() => items.filter(isDecidable), [items]);

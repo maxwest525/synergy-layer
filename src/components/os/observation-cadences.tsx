@@ -3,7 +3,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 
-import { GlassCard, StatePill, formatWhen } from "@/components/os/primitives";
+import { GlassCard, StatePill } from "@/components/os/primitives";
+import { formatWhen } from "@/lib/format-when";
 import { Button } from "@/components/ui/button";
 import { getObservationCadences, setObservationCadence } from "@/lib/observation-cadence.functions";
 import {

@@ -1,15 +1,9 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 
-import {
-  EmptyState,
-  GlassCard,
-  PageHeader,
-  Section,
-  StatePill,
-  formatWhen,
-  toneForState,
-} from "@/components/os/primitives";
+import { EmptyState, GlassCard, PageHeader, Section, StatePill } from "@/components/os/primitives";
+import { formatWhen } from "@/lib/format-when";
+import { toneForState } from "@/lib/state-tone";
 import { getWorkflows } from "@/lib/os.functions";
 import { OperatorRouteError } from "@/components/os/route-error";
 

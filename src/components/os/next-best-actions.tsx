@@ -4,7 +4,8 @@ import { useMemo } from "react";
 
 import { LoopStrip } from "@/components/os/loop-strip";
 import { NextActionLane } from "@/components/os/next-action-lane";
-import { GlassCard, formatWhen } from "@/components/os/primitives";
+import { GlassCard } from "@/components/os/primitives";
+import { formatWhen } from "@/lib/format-when";
 import { WhatsMissing } from "@/components/os/whats-missing";
 import { Button } from "@/components/ui/button";
 import { buildLoopStates } from "@/lib/loop-state";

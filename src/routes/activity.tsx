@@ -10,9 +10,9 @@ import {
   StatePill,
   Timeline,
   TimelineItem,
-  formatWhen,
-  toneForState,
 } from "@/components/os/primitives";
+import { formatWhen } from "@/lib/format-when";
+import { toneForState } from "@/lib/state-tone";
 import { OperatorRouteError } from "@/components/os/route-error";
 import { Button } from "@/components/ui/button";
 import type { ActivityEvent, ActivityStage } from "@/lib/activity.functions";

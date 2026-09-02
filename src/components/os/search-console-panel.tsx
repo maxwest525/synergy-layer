@@ -8,9 +8,9 @@ import {
   GlassCard,
   ListSkeleton,
   StatePill,
-  formatWhen,
-  toneForState,
 } from "@/components/os/primitives";
+import { formatWhen } from "@/lib/format-when";
+import { toneForState } from "@/lib/state-tone";
 import { Button } from "@/components/ui/button";
 import {
   getSearchConsoleState,

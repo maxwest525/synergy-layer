@@ -5,13 +5,8 @@ import { ExternalLink, Pin, PinOff, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
-import {
-  EmptyState,
-  GlassCard,
-  PageHeader,
-  PageStack,
-  formatWhen,
-} from "@/components/os/primitives";
+import { EmptyState, GlassCard, PageHeader, PageStack } from "@/components/os/primitives";
+import { formatWhen } from "@/lib/format-when";
 import { OperatorRouteError } from "@/components/os/route-error";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

@@ -7,12 +7,12 @@ import { toast } from "sonner";
 import { OperatorRouteError } from "@/components/os/route-error";
 import {
   EmptyState,
-  formatWhen,
   GlassCard,
   MetricTile,
   PageHeader,
   StatePill,
 } from "@/components/os/primitives";
+import { formatWhen } from "@/lib/format-when";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AvailabilityBadge } from "@/components/os/availability-badge";

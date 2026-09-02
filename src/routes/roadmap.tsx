@@ -12,9 +12,9 @@ import {
   PageHeader,
   PageStack,
   StatePill,
-  formatWhen,
   type Tone,
 } from "@/components/os/primitives";
+import { formatWhen } from "@/lib/format-when";
 import { OperatorRouteError } from "@/components/os/route-error";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

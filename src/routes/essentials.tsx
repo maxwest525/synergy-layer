@@ -4,7 +4,8 @@ import { useServerFn } from "@tanstack/react-start";
 import { useState, type ReactNode } from "react";
 import { toast } from "sonner";
 
-import { GlassCard, PageHeader, StatePill, formatWhen } from "@/components/os/primitives";
+import { GlassCard, PageHeader, StatePill } from "@/components/os/primitives";
+import { formatWhen } from "@/lib/format-when";
 import { NextBestActions } from "@/components/os/next-best-actions";
 import { OperatorRouteError } from "@/components/os/route-error";
 import {

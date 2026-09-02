@@ -6,12 +6,12 @@ import {
   BackLink,
   DetailRow,
   EmptyNote,
-  formatWhen,
   GlassCard,
   PageHeader,
   StatePill,
-  toneForState,
 } from "@/components/os/primitives";
+import { formatWhen } from "@/lib/format-when";
+import { toneForState } from "@/lib/state-tone";
 import { stateLabel } from "@/lib/state-labels";
 import { SearchConsolePanel } from "@/components/os/search-console-panel";
 import { getAsset } from "@/lib/os.functions";

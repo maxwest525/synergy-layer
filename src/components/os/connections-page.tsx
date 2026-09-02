@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { Plug, TriangleAlert } from "lucide-react";
 
 import { useOperatorSession } from "@/hooks/use-operator-session";
-import { formatWhen } from "@/components/os/primitives";
+import { formatWhen } from "@/lib/format-when";
 import { buildConnections, type ConnectionRow, type ConnectionStage } from "@/lib/connections";
 import { getConnectionFacts } from "@/lib/connections.functions";
 import { cn } from "@/lib/utils";
