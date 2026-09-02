@@ -34,6 +34,15 @@ Last updated: 2026-08-31, after wiring Google Ads campaign reporting
 describes 2026-08-21 and has NOT been rewritten; the current-state blocks
 immediately below supersede it.
 
+## 0ap. Authority rules read only what exists, 2026-09-02
+
+Ten authority rules were declared; the evaluator supplies observed ranks
+from stored Search Console rows and nothing else, so eight could never
+fire. They are gone with their inputs and tests. The two that read what
+exists stay: a single observed rank is not ranking capacity, and a
+top-ten rank with no satisfaction measure names the missing measurement
+(CODE-64, from CONTENT-4).
+
 ## 0ao. Backlink authority is not scored, and the card says so, 2026-09-02
 
 A seven-factor "health score" sat on the backlink evidence pass with

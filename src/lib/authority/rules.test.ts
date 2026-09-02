@@ -24,77 +24,6 @@ describe("Authority Science rules", () => {
     expect(JSON.stringify(finding)).not.toContain("high authority");
   });
 
-  it("gates irrelevant targets instead of recommending authority work", () => {
-    const finding = evaluateAuthorityRules(base({ relevanceScore: 0.31 })).find(
-      (item) => item.ruleKey === "authority.relevance_floor",
-    )!;
-
-    expect(finding.severity).toBe("high");
-    expect(finding.permittedActions.map((action) => action.actionKey)).toEqual([
-      "improve_query_fit",
-      "do_not_compete",
-    ]);
-  });
-
-  it("prices rented authority and requires measured transfer", () => {
-    const findings = evaluateAuthorityRules(
-      base({ publishingSurface: "reddit", sourcePlatformEffect: 0.4 }),
-    );
-
-    expect(findings.map((item) => item.ruleKey)).toContain("authority.rented_vs_owned");
-    expect(findings.map((item) => item.ruleKey)).toContain("authority.transfer_readiness");
-    expect(
-      findings.find((item) => item.ruleKey === "authority.transfer_readiness")?.missingEvidence,
-    ).toContain("controlled owned-site outcome after platform publication");
-  });
-
-  it("enforces information-gain rejection and improvement bands", () => {
-    const rejected = evaluateAuthorityRules(
-      base({ novelClaimShare: 0.1, evidenceIntegrity: 0.8, userRelevance: 0.9 }),
-    ).find((item) => item.ruleKey === "authority.information_gain")!;
-    const improve = evaluateAuthorityRules(
-      base({ novelClaimShare: 0.3, evidenceIntegrity: 0.8, userRelevance: 0.8 }),
-    ).find((item) => item.ruleKey === "authority.information_gain")!;
-
-    expect(rejected.observed["informationGain"]).toBeCloseTo(0.072);
-    expect(rejected.permittedActions[0]?.actionKey).toBe("reject_or_consolidate");
-    expect(improve.permittedActions[0]?.actionKey).toBe("increase_information_gain");
-  });
-
-  it("triggers freshness review after a fact-class half-life", () => {
-    const finding = evaluateAuthorityRules(
-      base({
-        contentAgeDays: 45,
-        factHalfLifeDays: 30,
-        expectedStalenessLoss: 500,
-        refreshCost: 100,
-        changeRisk: 50,
-      }),
-    ).find((item) => item.ruleKey === "authority.freshness_decay")!;
-
-    expect(finding.permittedActions[0]?.actionKey).toBe("reverify_and_refresh");
-  });
-
-  it("detects insufficient entity corroboration", () => {
-    const finding = evaluateAuthorityRules(
-      base({ entityCorroborationScore: 0.35, entityCorroborationThreshold: 0.7 }),
-    ).find((item) => item.ruleKey === "authority.entity_corroboration")!;
-
-    expect(finding.severity).toBe("high");
-    expect(finding.permittedActions[0]?.actionKey).toBe("corroborate_entity_claims");
-  });
-
-  it("prioritizes orphaned internal-link targets", () => {
-    const finding = evaluateAuthorityRules(
-      base({ internalLinkCount: 0, internalLinkPriority: 0.82 }),
-    ).find((item) => item.ruleKey === "authority.internal_link_priority")!;
-
-    expect(finding.permittedActions[0]).toMatchObject({
-      actionKey: "add_relevant_internal_links",
-      requiresExactChange: true,
-    });
-  });
-
   it("separates ranking from satisfaction evidence", () => {
     const finding = evaluateAuthorityRules(base({ observedRanks: [4, 5, 3] })).find(
       (item) => item.ruleKey === "authority.satisfaction_gap",
@@ -103,15 +32,15 @@ describe("Authority Science rules", () => {
     expect(finding.missingEvidence).toContain("task success or comprehension measurement");
   });
 
-  it("raises drift alerts from PSI or sustained citation churn", () => {
-    const psi = evaluateAuthorityRules(base({ rankingPsi: 0.24 })).find(
-      (item) => item.ruleKey === "authority.drift",
+  it("declares only the rules the supplied evidence can reach", () => {
+    // The evaluator supplies observed ranks and nothing else (CONTENT-4).
+    const keys = new Set(
+      evaluateAuthorityRules(base({ observedRanks: [1, 2, 3, 4, 5, 6] })).map(
+        (item) => item.ruleKey,
+      ),
     );
-    const churn = evaluateAuthorityRules(
-      base({ citationJaccard: 0.42, citationChurnWindows: 2 }),
-    ).find((item) => item.ruleKey === "authority.drift");
-
-    expect(psi?.severity).toBe("high");
-    expect(churn?.severity).toBe("high");
+    for (const key of keys) {
+      expect(["authority.rank_is_not_capacity", "authority.satisfaction_gap"]).toContain(key);
+    }
   });
 });
