@@ -145,7 +145,7 @@ const NO_LANE_REASON: Readonly<Record<string, string>> = {
   approved_keyword_unobserved:
     "No search result has ever been collected for this term, so nothing is known to be wrong with any page. The term needs looking up, not fixing.",
   approved_keyword_no_page:
-    "No page is mapped to this term. It needs a page, which is a decision about what to publish rather than an edit to something that exists.",
+    "No page is mapped to this term. Where a page already says most of it, the finding names that page and the words it is short of, and rewording it is that page's own wording draft rather than this one. Where no page shares a word, it needs a page, which is a decision about what to publish rather than an edit to something that exists.",
   referring_domain_movement:
     "The sites linking to you changed. Those are other people's pages, and nothing here can edit them.",
   approved_keyword_multiple_pages:

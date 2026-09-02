@@ -14,21 +14,53 @@ nothing at all.
 
 ---
 
-## 1. The four documents are two proposals
+## 1. Four documents, four models, none of which read the code
 
-They read as four options and they are not. Two share a source conversation and
-a SHA-256; the other two are a research report and the implementation prompt
-that report ends by sketching.
+These are four separate documents, produced by four different LLMs, each asked
+about the same problem. They are not one proposal split into parts. An earlier
+draft of this file paired them by shared source hashes; that is provenance, not
+intent, and the operator has corrected it.
 
-| Proposal                              | Documents                                                               | Lines     | What it is                                                                                            |
-| ------------------------------------- | ----------------------------------------------------------------------- | --------- | ----------------------------------------------------------------------------------------------------- |
-| **A — Keyword Authority Engine**      | A1 cleaned handoff; A2 Python reference (same source, SHA `FE1229…`)    | **962**   | An explicitly **in-place keyword delta** into a system it refuses to rebuild.                         |
-| **B — Decision Intelligence Runtime** | B1 deep research report; B2 master prompt (expands B1's closing prompt) | **5,570** | A **platform-wide reasoning runtime**: 13 phases, 32 deliverables, 13 domain contracts (§21.1–21.13). |
+| #   | Document                                            | Lines | What it argues                                                                   |
+| --- | --------------------------------------------------- | ----- | -------------------------------------------------------------------------------- |
+| 1   | Keyword Authority Engine, cleaned handoff           | 560   | An **in-place keyword delta**. Explicitly refuses to rebuild the host system.    |
+| 2   | Keyword Engine Python reference                     | 402   | Six Python design patterns, offered as reference only.                           |
+| 3   | Decision Intelligence Runtime, deep research report | 1,983 | Why a marketing platform should be a deterministic decision runtime.             |
+| 4   | Decision Intelligence Runtime, master prompt        | 3,587 | A build order for that runtime: 13 phases, 32 deliverables, 13 domain contracts. |
 
-The question is not "which of four" but **A or B, and what gets harvested from
-the loser.**
+Documents 1 and 2 cite the same source conversation and SHA-256, and document 4
+expands a prompt that document 3 ends by sketching, so there is real kinship in
+the material. But they were commissioned and written separately, and they should
+be judged separately.
 
----
+**The single most useful fact about all four: none of them opened this
+repository.** Every one reasons from a description of the problem. That explains
+their individual tells:
+
+- Document 2 is **Python**, and this repository is TypeScript. A model reached
+  for its own default stack without checking.
+- Document 4 specifies 13 domain contracts across paid social, local SEO,
+  backlinks and CRO, for a platform with one property and one operator, and
+  assigns twelve simultaneous senior roles to one implementer. A model
+  maximising scope.
+- Document 1 spends its entire first section correcting a _different_ model's
+  drift toward rebuilding the second brain, which is the one thing here that
+  could only have come from watching a model go wrong.
+
+It also explains what they share. Where four independent models converge, that
+is real signal about **doctrine** — and they do converge, on determinism,
+provenance, abstention and separating attribution from causality. Where all four
+are silent together, that is an artefact of none having read the code. **All four
+are silent on §2.1 through §2.4 below**, which are the things actually stopping
+keywords from working here.
+
+One more piece of history worth recording, from the operator: the model behind
+the second-brain proposal judged roughly **95% of the existing pgvector system
+already right** for it. That matches what is in the repository —
+`knowledge_sources`, `knowledge_source_versions` (with `content_sha256` and
+`parser_version`), `knowledge_chunks`, embeddings and RLS are all live and
+sound. The second brain did not need rebuilding. What it needs is the keyword
+domain sitting on top of it, which is document 1's §7.
 
 ## 2. What is actually broken
 
@@ -158,11 +190,11 @@ The keyword hole is one instance of this project's characteristic failure:
   executes its stage order.**
 - `closestPageFor` is the same failure one level down: written, tested, uncalled.
 
-That reframes Proposal B, and §3 turns on it.
+That reframes documents 3 and 4, and §3 turns on it.
 
 ---
 
-## 3. What Proposal B genuinely adds
+## 3. What documents 3 and 4 genuinely add
 
 My first draft said B was "mostly a restatement of doctrine this repo already
 has". That is wrong, and the way it is wrong is the finding: **the repo has the
@@ -171,12 +203,12 @@ we know. It asks us to execute what we only wrote.
 
 Six things, by value-per-hour here:
 
-- **The measurement-integrity gate** (B1's precedence list; B2 §7, §21.1). AOOS
+- **The measurement-integrity gate** (Document 3's precedence list; document 4 §7, §21.1). AOOS
   raises findings from stored snapshots with no check that the collection is
   current. One gate that refuses to raise or draft from a source past its
   freshness limit closes it. Cheap, genuinely absent.
 
-- **The data-void escalation ladder** (B1 "'Void' or sparse-data logic"; B2
+- **The data-void escalation ladder** (Document 3's sparse-data logic; document 4
   §15.2, §21.6). **The most relevant idea in B for this property.** B forbids
   `search volume = 0 → opportunity = 0` and enumerates what to inspect instead:
   first-party GSC impressions, customer questions, sales-call language, support
@@ -185,12 +217,12 @@ Six things, by value-per-hour here:
   "mostly anonymized away" at this volume — and then stops. B says what comes
   next.
 
-- **Decision replayability** (B1; B2 §4.3). `recommendations` stores no snapshot
+- **Decision replayability** (documents 3 and 4 §4.3). `recommendations` stores no snapshot
   reference, no rule version, no code revision; `targeting-rules.server.ts:166`
   writes `reasoning` as a literal sentence. **A finding cannot be
   reconstructed.** A snapshot id and a rule version is one migration.
 
-- **Epistemic class on the stored value.** B1's ten classes type how a value was
+- **Epistemic class on the stored value.** Document 3's ten classes type how a value was
   _produced_; `EVIDENCE_POLICY`'s five label how strongly a claim is _asserted_.
   Different axes, and neither exists in code. This is the discipline whose
   absence produced CODE-51 (one hand-set impact level copied into 111 findings
@@ -199,12 +231,12 @@ Six things, by value-per-hour here:
 
 - **Exclusions and contraindications.** `rule-buckets.ts` gives every rule its
   _prerequisites_ — what must hold before it may speak. Nothing gives a rule its
-  _disprovers_. B2 §9–§10 call these `exclusionConditions` and
+  _disprovers_. Document 4 §9–§10 call these `exclusionConditions` and
   `contraindications`; `SITE_PAGE_KEYWORD_MAP` calls the page-level version
   `exclusions`. **B and this project's own unfilled schema arrive at the same
   concept independently.**
 
-- **B2 §21.3 and §21.6.** §21.3 (low CTR must not automatically become a rewrite;
+- **Document 4 §21.3 and §21.6.** §21.3 (low CTR must not automatically become a rewrite;
   check intent mismatch and cannibalisation first) is a procedure for
   `weak_ctr_page`, which today maps unconditionally to the `page_metadata` lane
   (`finding-fix-target.ts:49`) the moment it fires. §21.6 (**"a keyword gap does
@@ -213,14 +245,14 @@ Six things, by value-per-hour here:
   `declining_position` already sit in `NO_LANE_REASON` saying the cause is not
   in the evidence, so §21.4 documents a refusal the repo already makes.
 
-**Where B supports the recommendation rather than opposing it:** B1 explicitly
+**Where document 3 supports the recommendation rather than opposing it:** it explicitly
 says "Not every tenant needs a solver on day one. A deterministic prioritized
 queue is sufficient initially." That is exactly where §8 step 6 lands. My first
 draft listed the solver as a B excess; it is B's own advice against itself.
 
 ---
 
-## 4. What B restates, and where the parallel is looser than it looks
+## 4. What documents 3 and 4 restate, and where the parallel is looser than it looks
 
 Three of the four equivalences I first claimed do not survive.
 
@@ -237,16 +269,16 @@ What B asks for that this build has genuinely declined stands: multi-tenant
 isolation testing (one tenant), off-policy evaluation with logged propensities
 (nothing explores), a learning promotion pipeline (nothing learns), and 13 domain
 contracts spanning paid social, local SEO, backlinks and CRO — channels AOOS does
-not touch. On scale, the checkable statement is not B1's "three to five senior
-engineers" planning estimate but **B2's opening, which assigns twelve
+not touch. On scale, the checkable statement is not document 3's "three to five
+senior engineers" planning estimate but **document 4's opening, which assigns twelve
 simultaneous senior architect and lead roles to one implementer.** This is one
 operator and an agent.
 
 ---
 
-## 5. Proposal A is the spine, with two excisions named
+## 5. Document 1 is the spine, with two excisions named
 
-- **It is a delta, not a rebuild.** A1's stated exclusions are "rebuilding or
+- **It is a delta, not a rebuild.** Its stated exclusions are "rebuilding or
   replacing the existing second brain"; §13 instructs "map every requested record
   and operation to the project's existing … contracts. Reuse an existing contract
   when it fits." That is AGENTS.md's surgical-diff rule.
@@ -261,14 +293,14 @@ operator and an agent.
   the intended primary topic/intent for a URL, supporting queries, status, and
   reviewer." **Four attributes against `SITE_PAGE_KEYWORD_MAP`'s thirteen** —
   exclusions, funnel role and CTA, cannibalisation boundary, brand/claim
-  dependencies, checksum and evidence window are all absent from A1. **The
-  handbook is the richer spec and must not be displaced by A1's.** The
+  dependencies, checksum and evidence window are all absent from it. **The
+  handbook is the richer spec and must not be displaced by the document's.** The
   convergence still matters: two independent attempts reaching for the same
   missing record is the strongest evidence here that it is the right build.
 
 ### Excision 1: the score, in both places it appears
 
-A1 §8 Step 3 proposes `business relevance + supported demand + attainable uplift
+Its §8 Step 3 proposes `business relevance + supported demand + attainable uplift
 
 - conversion evidence + confidence − effort − risk − cost`. AOOS can source
 **two** of the eight terms. A weighted composite over six null inputs is
@@ -281,7 +313,7 @@ projected provider cost, confidence, and lifecycle state". Adopting §7.2 while
 refusing only Step 3 imports the same shape through the data contract instead of
 the algorithm. **Both must be refused by name.**
 
-**And the excision incurs a debt.** A1's economics depend on Step 3 gating Step 4
+**And the excision incurs a debt.** Document 1's economics depend on Step 3 gating Step 4
 ("Enrich only the shortlist … stop at the request/spend ceiling"). Today
 `enrichPendingCandidates` sends the whole pending queue up to
 `ENRICHMENT_BATCH_CAP = 1000`. Whatever replaces the score must still answer
@@ -294,19 +326,19 @@ for stability, over stored timestamps and stored state, with its one chosen
 number carrying a written `Stated assumption` after CODE-83. A keyword ordering
 built the same way is legal today.
 
-### Excision 2: A2 is a checklist, and it fails twice
+### Excision 2: Document 2 is a checklist, and it fails twice
 
-Five of A2's six patterns exist here in TypeScript, and its own header says "FOR
+Five of Document 2's six patterns exist here in TypeScript, and its own header says "FOR
 REFERENCE ONLY — NOT PRODUCTION-READY, NOT DROP-IN CODE". Two lines fail today,
 which is what makes it useful rather than vacuous:
 
 - **The injected HTTP client** exists in the execution loop but not where the
   pattern belongs: `dataforseo/transport.server.ts`, `serpapi/transport.server.ts`
   and `umami/client.server.ts` all call global `fetch`.
-- **Normalization versioning** (A2 §2). The repo stores `content_sha256` on
+- **Normalization versioning** (Document 2 §2). The repo stores `content_sha256` on
   several tables and **no `normalization_version` anywhere** except the knowledge
   runtime's `parser_version`. Without it, changing how content is normalised
-  silently invalidates every stored digest. That is one column, and it is A2's
+  silently invalidates every stored digest. That is one column, and it is document 2's
   second durable contribution after "never invented zeroes" (= README rule 1).
   (Its retry limit of three against the repo's `TRANSIENT_ATTEMPTS = 4` is a
   difference, not a defect.)
@@ -315,25 +347,26 @@ which is what makes it useful rather than vacuous:
 
 ## 6. The verdict
 
-**Fix the two bugs first. Then build A, minus its score in both places. Harvest
-six ideas from B. Take no code from A2.**
+**Fix the bugs first. Then build document 1, minus its score in both places.
+Harvest six ideas from document 3. Take two sections from document 4. Take no
+code from document 2.**
 
-| Document | Verdict                                           | Why                                                                                                                                                        |
-| -------- | ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **A1**   | **Spine, minus §8.3 + §7.2's Opportunity record** | Right scope, right stack, second witness for the page map. Its score would be the third null-input scaffold; its removal owes a spend control.             |
-| **A2**   | **Checklist, not code**                           | Five of six patterns already here; two fail today; `normalization_version` is worth a column.                                                              |
-| **B1**   | **Harvest six ideas**                             | Freshness gate, data-void ladder, replayability, epistemic class, contraindications, causal separation. And it argues _against_ the solver, in our favour. |
-| **B2**   | **Harvest §21.3 and §21.6**                       | The best decision logic in the set. §21.4 documents a refusal we already make. Its 13 phases and 13 domain contracts are an order of magnitude too large.  |
+| Document               | Verdict                                           | Why                                                                                                                                                        |
+| ---------------------- | ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **1. Handoff**         | **Spine, minus §8.3 + §7.2's Opportunity record** | Right scope, right stack, second witness for the page map. Its score would be the third null-input scaffold; its removal owes a spend control.             |
+| **2. Python ref**      | **Checklist, not code**                           | Five of six patterns already here; two fail today; `normalization_version` is worth a column.                                                              |
+| **3. Research report** | **Harvest six ideas**                             | Freshness gate, data-void ladder, replayability, epistemic class, contraindications, causal separation. And it argues _against_ the solver, in our favour. |
+| **4. Master prompt**   | **Harvest §21.3 and §21.6**                       | The best decision logic in the set. §21.4 documents a refusal we already make. Its 13 phases and 13 domain contracts are an order of magnitude too large.  |
 
-A wins **not** because B is wrong. B1 is the better-written document, and the
+A wins **not** because B is wrong. Document 3 is the better-written document, and the
 adversarial pass showed I had undersold it: its doctrine is not redundant here,
 because this project wrote that doctrine down and never enforced it. A wins
 because **the hole is keyword-shaped**, A is the only one of the two scoped to
 it, and B's best ideas harvest cleanly without its program.
 
-Neither proposal, however, diagnoses §2.1 through §2.4. **The four cheapest and
-most valuable fixes on this page come from reading the code, not from either
-document.**
+**No document diagnoses §2.1 through §2.4**, because none of the four models read
+the repository. The cheapest and most valuable fixes on this page come from
+reading the code.
 
 ---
 
@@ -403,10 +436,10 @@ and none of them needs either proposal.
 6. **Replace the score with a sort, on the `suggestion-queue` pattern**
    (§5): a lexicographic sort over non-null stored facts, every tie-break named
    on screen, no coefficients. It must also answer which candidates are worth
-   paying to enrich, or A1's spend control has been deleted rather than replaced.
+   paying to enrich, or document 1's spend control has been deleted rather than replaced.
 
 7. **Rank against review capacity, not estimated impact.** There is one operator.
-   A1 routes six classes of judgement to human review and B2 proposes twelve
+   Document 1 routes six classes of judgement to human review and document 4 proposes twelve
    subagents; for one person **review capacity is the binding constraint on
    everything downstream of the map**. Neither proposal notices this.
 
@@ -437,14 +470,14 @@ consumers read keyword strings. It is a migration, not a step.
   it**, and a wrong mapping would silently mis-route every rule that reads it.
   The handbook already reserves `owner/status/last review` for freshness; a
   review cadence and a falsification path have to be chosen. Both proposals
-  assume an outcome record (A1 §7.2 "Experiment/outcome"; B2 §20) and this
+  assume an outcome record (document 1 §7.2 "Experiment/outcome"; document 4 §20) and this
   assessment had dropped it.
 - **Create a page, or draft a brief you publish?** The executor writes to
   `brittmove-829a7519` (`allowlist.ts:17`), the website's own repository, which
   is correct for page changes. But rendered proof binds to the governed file
   allowlist, so a hand-published page is provable by nothing; and AOOS's own
   features do not reach production until the reconciliation push and a Lovable
-  publish (`DEPLOYMENT_TOPOLOGY.md` §5, CURRENT_BUILD §0n). A1 §8 Step 8 assumes
+  publish (`DEPLOYMENT_TOPOLOGY.md` §5, CURRENT_BUILD §0n). Document 1 §8 Step 8 assumes
   a CMS and knows none of this. **The brief may be the right primary answer
   rather than the fallback**, and neither proposal costs the difference.
 
@@ -466,18 +499,18 @@ independent operator trace).
 | Four governed change kinds                                   | Seven. All share one write path.                                                                                                            |
 | "there is no insertion or creation kind"                     | True of the declared kinds, **false of the mechanism**: `applyExactReplacements` inserts via an anchor. A lane is cheap.                    |
 | The detector just lacks an owner field                       | It concatenates all pages into one string, so it **cannot** name an owner — and `closestPageFor` already solves it and is **never called**. |
-| A1 §7.2 "is almost exactly" the page map                     | Ten records; one is the page map, 4 fields against the handbook's 13. The handbook is richer and must not be displaced.                     |
-| Excise A1 §8 Step 3                                          | **Also §7.2's Opportunity record**, or the same shape enters through the data contract.                                                     |
-| Excising the score is free                                   | It removes A1's only spend control. The replacement owes an answer on what to pay to enrich.                                                |
+| Its §7.2 "is almost exactly" the page map                    | Ten records; one is the page map, 4 fields against the handbook's 13. The handbook is richer and must not be displaced.                     |
+| Excise Its §8 Step 3                                         | **Also §7.2's Opportunity record**, or the same shape enters through the data contract.                                                     |
+| Excising the score is free                                   | It removes document 1's only spend control. The replacement owes an answer on what to pay to enrich.                                        |
 | Prioritisation is off the table                              | Over-broad. `suggestion-queue.ts` already sorts defensibly. The line is composite-over-nulls vs sort-over-facts.                            |
 | `RuleBucket` "already is an epistemic class"                 | It classes volume sufficiency. `Prerequisite` is the analogue, and it gates rule firing, not abstention.                                    |
 | `EVIDENCE_POLICY` labels "already are" B's epistemic classes | Different axis, and **zero occurrences in `src/`**. B's ask is real.                                                                        |
 | The matrix "already is" B's hard precedence                  | Different axis; only 2 of B's 7 overlap.                                                                                                    |
 | B is "mostly a restatement of doctrine this repo has"        | **The repo has it in prose and does not enforce it.** B's harvest grew from 3 ideas to 6.                                                   |
-| B assumes a solver                                           | B1 says the opposite: "a deterministic prioritized queue is sufficient initially". It argues our case.                                      |
-| B2 assumes 3–5 engineers; 11 contracts; 12 phases            | The estimate and solver are B1's. B2 has 13 contracts, 13 phases, and assigns **twelve senior roles to one implementer**.                   |
-| B2 §21.4 lands on a rule we have                             | Both rules already sit in `NO_LANE_REASON`. It documents a refusal we already make.                                                         |
-| "all six A2 patterns already exist here"                     | Two fail today (global `fetch` in three transports; `normalization_version` absent everywhere).                                             |
+| Document 3 assumes a solver                                  | It says the opposite: "a deterministic prioritized queue is sufficient initially". It argues our case.                                      |
+| Document 4 assumes 3–5 engineers; 11 contracts; 12 phases    | The estimate and solver are document 3's. Document 4 has 13 contracts, 13 phases, and assigns **twelve senior roles to one implementer**.   |
+| Document 4 §21.4 lands on a rule we have                     | Both rules already sit in `NO_LANE_REASON`. It documents a refusal we already make.                                                         |
+| "all six document 2 patterns already exist here"             | Two fail today (global `fetch` in three transports; `normalization_version` absent everywhere).                                             |
 | First build creates a page registry                          | Two of thirteen fields plus the exclusions rationale already exist in `allowlist.ts`. It is a join.                                         |
 | Grouping at the door is step 2 of five                       | It is a **schema fork**: the primary key changes and six live consumers read keyword strings. Deferred.                                     |
 | (unraised)                                                   | Two forks: derived vs declared ownership, and table vs handbook canonical. Plus: never merge provider intent with declared intent.          |

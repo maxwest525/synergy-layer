@@ -38,7 +38,7 @@ export type TargetingObservation = {
   readonly confidence: number;
 };
 
-import { groupByPhrase, pageCoversPhrase } from "./keyword-phrases";
+import { closestPageFor, groupByPhrase, pageCoversPhrase } from "./keyword-phrases";
 
 export type ApprovedKeyword = { readonly keyword: string };
 export type ObservedSerp = { readonly keyword: string; readonly reportingDate: string };
@@ -159,25 +159,54 @@ export function detectKeywordsWithoutPage(
   if (pages.length === 0) return [];
 
   const pageText = pages.map((page) => `${page.title ?? ""} ${page.h1 ?? ""}`).join(" ");
+  const perPage = pages.map((page) => ({
+    url: page.url,
+    text: `${page.title ?? ""} ${page.h1 ?? ""}`,
+  }));
 
   return groupByPhrase(approved, (entry) => entry.keyword)
     .filter((group) => !pageCoversPhrase(pageText, group.canonical))
-    .map((group) => ({
-      rule: "approved_keyword_no_page" as const,
-      target: group.canonical,
-      title: `No page here is about "${group.canonical}"`,
-      description:
+    .map((group) => {
+      const closest = closestPageFor(group.canonical, perPage);
+      const opening =
         `You approved ${describeSpellings(group.variants)}, and none of the ${pages.length} ` +
-        "pages read so far carry those words in a title or main heading. One page that is " +
-        "about it answers every one of those searches; there is no need for one page each.",
-      evidence: {
-        keyword: group.canonical,
-        variants: group.variants,
-        approvedSpellings: group.variants.length,
-        pagesRead: pages.length,
-      },
-      confidence: 1,
-    }));
+        "pages read so far carry those words in a title or main heading.";
+      return {
+        rule: "approved_keyword_no_page" as const,
+        target: group.canonical,
+        title: `No page here is about "${group.canonical}"`,
+        description: closest
+          ? `${opening} The nearest is ${closest.url}, which already says ` +
+            `${listWords(closest.shared)} and is short of ${listWords(closest.missing)}. ` +
+            "Rewording that page or writing a new one is your call; the overlap is here so " +
+            "the choice is made with it rather than instead of it."
+          : `${opening} No page read so far shares a single word of it, so there is nothing ` +
+            "here to reword. One page that is about it answers every one of those searches; " +
+            "there is no need for one page each.",
+        evidence: {
+          keyword: group.canonical,
+          variants: group.variants,
+          approvedSpellings: group.variants.length,
+          pagesRead: pages.length,
+          ...(closest
+            ? {
+                nearestPage: closest.url,
+                nearestPageHas: closest.shared,
+                nearestPageMissing: closest.missing,
+              }
+            : {}),
+        },
+        confidence: 1,
+      };
+    });
+}
+
+/** A list of words as operator prose: `"long"`, `"long" and "distance"`, `"a", "b" and "c"`. */
+function listWords(items: readonly string[]): string {
+  const quoted = items.map((word) => `"${word}"`);
+  if (quoted.length === 0) return "nothing";
+  if (quoted.length === 1) return quoted[0]!;
+  return `${quoted.slice(0, -1).join(", ")} and ${quoted[quoted.length - 1]!}`;
 }
 
 /** "X" on its own, or "X and N other ways of spelling it". */
