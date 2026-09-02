@@ -30,7 +30,8 @@ export const Route = createFileRoute("/api/public/hooks/openai-ads-events")({
           return json({ ok: false, error: "Bridge not configured" }, 503);
         }
         const presented = request.headers.get("x-aoos-bridge-secret");
-        if (presented !== secret) {
+        const { verifySharedSecret } = await import("@/lib/shared-secret.server");
+        if (!verifySharedSecret(presented, secret)) {
           return json({ ok: false, error: "Unauthorized" }, 401);
         }
 

@@ -17,6 +17,10 @@ export const getPageAudit = createServerFn({ method: "POST" })
 export const runPageWordingAudit = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<PageAuditView> => {
+    // Renders up to a hundred pages, through a metered fallback when the
+    // self-hosted renderer is down: an operator's click, never a member's.
+    const { assertOperator } = await import("./os-admin.server");
+    await assertOperator(context.supabase, context.userId);
     const { requireTenantId } = await import("./tenant.server");
     const { runPageAudit } = await import("./page-audit.server");
     const tenantId = await requireTenantId(context.supabase);

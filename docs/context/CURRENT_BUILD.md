@@ -34,6 +34,29 @@ Last updated: 2026-08-31, after wiring Google Ads campaign reporting
 describes 2026-08-21 and has NOT been rewritten; the current-state blocks
 immediately below supersede it.
 
+## 0t. Security review, first hardening pass, 2026-09-02
+
+A ten-lens gap analysis ran on 2026-09-02 (security and tenancy, database
+drift, measurement, technical SEO, agent runtime, navigation, code quality,
+documentation, growth capabilities, monitoring); its digest is filed at
+`docs/handoffs/2026-09-02-gap-analysis-digest.md`, pre-refutation, and every
+finding not closed in this pass has a backlog ID. Closed here, all
+application-level and covered by tests: the two streaming model routes and
+the next-actions re-ranking now require the operator role rather than any
+valid session (sign-up is open on the auth project); the page audit requires
+the operator role; the five public hooks compare their secret in constant
+time; the three hook failure bodies no longer echo the error, so a public
+caller cannot learn which environment variable a host lacks; and the
+execution readiness read discloses credential presence only after
+authentication. `TENANCY_PERMISSIONS.md` carries the same record.
+
+Not closed here, recorded as CODE-34 through CODE-48 and OP-11: the
+database-side hardening (migration ledger, the immutability trigger that
+guards only the old lane name, the revise function that refuses the lane it
+serves, membership-only write paths, provisioning without membership, the
+anon role's default privileges), the postback authenticated by a public key,
+and the operator decisions (close sign-up, the Vercel origin).
+
 ## 0s. A page's own description is now a governed edit, 2026-09-02
 
 CODE-33, opened and closed the same day. The `page.metadata` change kind now

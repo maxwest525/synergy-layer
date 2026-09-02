@@ -214,21 +214,15 @@ export const getExecutionState = createServerFn({ method: "GET" })
   .handler(async ({ data }): Promise<ExecutionStateView> => {
     const { createRequestClient } = await import("../tenant.server");
     const { fetchExecutionAttempts, createRenderedVerifier } = await import("./execute.server");
-    const executorCredentialPresent = Boolean(process.env["GITHUB_EXECUTOR_TOKEN"]);
-    // Ask the verifier's own chooser (Crawl4AI first, Firecrawl fallback), so
-    // this view can never disagree with what a render would actually use.
-    // Reading only the Firecrawl chooser here reported the renderer absent
-    // while Crawl4AI was healthy and doing every audit render.
-    const verifier = createRenderedVerifier();
-    const rendererCredentialPresent = verifier !== null;
-    const rendererName = verifier?.name ?? null;
 
+    // Which credentials this host holds is read only after the caller is
+    // authenticated; an anonymous call learns nothing about the environment.
     const empty: ExecutionStateView = {
       isOperator: false,
       operatorCheckFailed: false,
-      executorCredentialPresent,
-      rendererCredentialPresent,
-      rendererName,
+      executorCredentialPresent: false,
+      rendererCredentialPresent: false,
+      rendererName: null,
       repo: null,
       branch: null,
       filePath: null,
@@ -244,6 +238,15 @@ export const getExecutionState = createServerFn({ method: "GET" })
     };
     const { db, authenticated } = createRequestClient();
     if (!authenticated) return empty;
+
+    const executorCredentialPresent = Boolean(process.env["GITHUB_EXECUTOR_TOKEN"]);
+    // Ask the verifier's own chooser (Crawl4AI first, Firecrawl fallback), so
+    // this view can never disagree with what a render would actually use.
+    // Reading only the Firecrawl chooser here reported the renderer absent
+    // while Crawl4AI was healthy and doing every audit render.
+    const verifier = createRenderedVerifier();
+    const rendererCredentialPresent = verifier !== null;
+    const rendererName = verifier?.name ?? null;
 
     const { data: operator, error: operatorError } = await db.rpc("is_operator");
 
