@@ -341,3 +341,14 @@ describe("redirects and canonical chains", () => {
     expect(checks).toContain("meta_refresh");
   });
 });
+
+describe("the broker registration read", () => {
+  it("is stored beside the other page facts", () => {
+    const facts = extractPageFacts(
+      "<html><body><p><span>USDOT</span> 4507647 <span>MC</span> 1784124</p></body></html>",
+      "words",
+      "https://a.test/",
+    );
+    expect(facts.licence).toMatchObject({ usdotNumbers: ["4507647"], mcNumbers: ["1784124"] });
+  });
+});
