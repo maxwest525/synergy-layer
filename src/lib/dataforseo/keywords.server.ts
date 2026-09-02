@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database } from "@/integrations/supabase/types";
 import { fileInboxItem } from "../os.server";
+import { rankByVolume } from "./keyword-ranking";
 import { labsCall } from "./labs.server";
 
 type Client = SupabaseClient<Database>;
@@ -19,8 +20,6 @@ export const KEYWORD_CONFIG = {
   maxSeeds: 3,
   /** Provider-side row cap per call. */
   suggestionLimit: 100,
-  /** Candidates below this monthly volume are not worth an operator's time. */
-  minSearchVolume: 10,
   /** Hard cap on how many candidates one pass may file for review. */
   maxCandidatesPerRun: 40,
 };
@@ -193,6 +192,12 @@ export async function suggestKeywords(
   proposed: number;
   filed: number;
   alreadyKnown: number;
+  /** Candidates the per-run cap left for a later run. */
+  beyondCap: number;
+  /** Candidates the provider returned with no volume figure; filed, never read as zero. */
+  withoutVolume: number;
+  /** Suggestions dropped as irrelevant to the seeds, the one filter this pass keeps. */
+  discardedIrrelevant: number;
   seeds: string[];
   costUsd: number;
 }> {
@@ -302,14 +307,14 @@ export async function suggestKeywords(
     }
   }
 
-  const ranked = [...candidates.values()]
-    .filter((entry) => (entry.searchVolume ?? 0) >= KEYWORD_CONFIG.minSearchVolume)
-    .sort((a, b) => (b.searchVolume ?? 0) - (a.searchVolume ?? 0))
-    .slice(0, KEYWORD_CONFIG.maxCandidatesPerRun);
+  // Nothing is filtered on volume: the operator sees the figure on the
+  // candidate and decides (CONTENT-1). The cap is one run's filing.
+  const ranking = rankByVolume([...candidates.values()], KEYWORD_CONFIG.maxCandidatesPerRun);
+  const ranked = ranking.filed;
 
   if (ranked.length === 0) {
     throw new Error(
-      "DataForSEO returned no keyword suggestions above the volume floor for this domain. Approve at least one seed keyword manually before SERP observation can run: AOOS will not invent one.",
+      "DataForSEO returned no relevant keyword suggestions for this domain. Approve at least one seed keyword manually before SERP observation can run: AOOS will not invent one.",
     );
   }
 
@@ -386,7 +391,16 @@ export async function suggestKeywords(
     }
   }
 
-  return { proposed: ranked.length, filed, alreadyKnown, seeds, costUsd };
+  return {
+    proposed: ranked.length,
+    filed,
+    alreadyKnown,
+    beyondCap: ranking.beyondCap,
+    withoutVolume: ranking.withoutVolume,
+    discardedIrrelevant,
+    seeds,
+    costUsd,
+  };
 }
 
 /** Promotes reviewed candidates into the approved set that SERP observes. */
