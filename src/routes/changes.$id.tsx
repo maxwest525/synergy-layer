@@ -392,7 +392,14 @@ function ChangeRequestPage() {
     .flatMap((outcome) =>
       outcome.verdict === null
         ? []
-        : [{ windowDays: outcome.windowDays, verdict: outcome.verdict, reason: outcome.reason }],
+        : [
+            {
+              windowDays: outcome.windowDays,
+              verdict: outcome.verdict,
+              reason: outcome.reason,
+              confidence: outcome.confidence,
+            },
+          ],
     )
     .sort((a, b) => a.windowDays - b.windowDays);
   const fields = asArray<FieldChange>(change.changes);

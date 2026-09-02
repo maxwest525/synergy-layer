@@ -20,6 +20,7 @@ function graded(overrides: Partial<GradedOutcome>): GradedOutcome {
     wordingTreatment: true,
     verdict: "success",
     reason: "Clicks rose 60% against a flat site.",
+    confidence: null,
     ...overrides,
   };
 }

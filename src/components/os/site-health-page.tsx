@@ -5,6 +5,7 @@ import { Gauge, Info, TriangleAlert } from "lucide-react";
 import { useSiteHealth } from "./site-health-facts";
 import { EmptyState } from "./primitives";
 import { SuggestionCard } from "./suggestion-card";
+import { confidenceWords } from "@/lib/verdict-confidence-words";
 import { VERDICT_LABEL, VERDICT_TONE } from "./verdict-copy";
 import type { GradedOutcome, StatusTone, TabId, Tile } from "@/lib/site-health";
 import type { SiteFinding } from "@/lib/site-checks";
@@ -73,6 +74,9 @@ function OutcomeCard({ outcome }: { outcome: GradedOutcome }) {
         </span>
       </div>
       <p className="text-xs leading-snug text-muted-foreground">{outcome.reason}</p>
+      {confidenceWords(outcome.confidence) ? (
+        <p className="text-xs leading-snug text-subtle">{confidenceWords(outcome.confidence)}</p>
+      ) : null}
       {outcome.verdict === "success" ? (
         // The one card on this tab that is finished rather than waiting, and it
         // says so: approved, proven live, measured, and this check passed.

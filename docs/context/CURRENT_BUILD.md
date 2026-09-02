@@ -34,6 +34,17 @@ Last updated: 2026-08-31, after wiring Google Ads campaign reporting
 describes 2026-08-21 and has NOT been rewritten; the current-state blocks
 immediately below supersede it.
 
+## 0ae. A verdict shows the confidence it rests on, 2026-09-02
+
+The verdict module already computed a confidence for every count-based
+grading and used it only to force a low-confidence reading to neutral, so
+a success resting on a 0.4 rendered exactly like one resting on a 0.9.
+The assessment now carries the confidence on the success, failure and
+low-confidence-neutral branches; the graded reading carries it through;
+and the change page and the site health outcomes tab print "Confidence N%
+(band)" under the reason, and nothing where no comparison was made
+(CODE-55, from MEAS-7).
+
 ## 0ad. A blocked SEO run says why, 2026-09-02
 
 All six stored SEO runs were `preflight_blocked` with no reason on the

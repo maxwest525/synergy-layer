@@ -1,11 +1,14 @@
 import type { OutcomeVerdict } from "@/lib/outcome-verdict";
 import { cn } from "@/lib/utils";
+import { confidenceWords } from "@/lib/verdict-confidence-words";
 import { VERDICT_LABEL, VERDICT_TONE } from "./verdict-copy";
 
 export type VerdictReading = {
   windowDays: number;
   verdict: OutcomeVerdict;
   reason: string;
+  /** Present on count-based verdicts; a 0.4 and a 0.9 must not read the same. */
+  confidence?: { value: number; band: string } | null;
 };
 
 /**
@@ -45,6 +48,9 @@ export function OutcomeVerdictContext({ verdicts }: { verdicts: readonly Verdict
               {reading.windowDays} day reading
             </span>
             <span className="block text-muted-foreground">{reading.reason}</span>
+            {confidenceWords(reading.confidence) ? (
+              <span className="block text-subtle">{confidenceWords(reading.confidence)}</span>
+            ) : null}
           </li>
         ))}
       </ul>
