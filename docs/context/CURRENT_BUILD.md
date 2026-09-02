@@ -34,6 +34,18 @@ Last updated: 2026-08-31, after wiring Google Ads campaign reporting
 describes 2026-08-21 and has NOT been rewritten; the current-state blocks
 immediately below supersede it.
 
+## 0ai. Scheduler firings are durable, 2026-09-02
+
+`cron.job_run_details` says "succeeded, 1 row" for every firing because
+the job only queues an HTTP request, and the HTTP outcome is kept for
+hours; the schedule row keeps only its last state, so the days the tick
+answered 500 left no trace. `schedule_runs` now keeps one row per firing:
+who fired it, state, duration, error and the workflow run it started,
+written by the tick for every claimed or blocked schedule and by the hook
+when the tick throws before claiming anything. The schedule page lists
+them. The two schedule rows that disagreed with their cron entries by
+five minutes now say the minute that actually fires (CODE-48, from MON-3).
+
 ## 0ah. SERP tasks carry every surface on the page, 2026-09-02
 
 Every SERP task was posted and retrieved as `regular`, which returns

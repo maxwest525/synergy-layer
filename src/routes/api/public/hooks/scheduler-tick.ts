@@ -21,7 +21,7 @@ export const Route = createFileRoute("/api/public/hooks/scheduler-tick")({
         }
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-        const { tickScheduler } = await import("@/lib/scheduler.server");
+        const { recordScheduleFiring, tickScheduler } = await import("@/lib/scheduler.server");
 
         const { data: authorized, error: authorizationError } = await supabaseAdmin.rpc(
           "verify_scheduler_hook_token",
@@ -48,17 +48,43 @@ export const Route = createFileRoute("/api/public/hooks/scheduler-tick")({
           });
         }
 
+        const firedAt = new Date();
         try {
-          const result = await tickScheduler(supabaseAdmin, new Date(), {
+          const result = await tickScheduler(supabaseAdmin, firedAt, {
             onlyKeys: [scheduleKey],
             collectSerpBacklog: false,
             reconcileChangeMeasurements: true,
+            firedBy: "pg_cron",
           });
           return Response.json({ ok: true, ...result });
         } catch (error) {
-          // The reason stays in the server log; the schedule row records its
-          // own last_state. A public caller learns only that the tick failed.
-          console.error("[scheduler-tick]", (error as Error).message);
+          // The reason stays in the server log and on the firing's own row;
+          // a public caller learns only that the tick failed. A tick that
+          // throws before claiming anything leaves no schedule row update, so
+          // the firing is written here against the schedule pg_cron named
+          // (CODE-48).
+          const message = (error as Error).message;
+          console.error("[scheduler-tick]", message);
+          const { data: schedule } = await supabaseAdmin
+            .from("schedules")
+            .select("id, tenant_id")
+            .eq("key", scheduleKey)
+            .maybeSingle();
+          if (schedule) {
+            await recordScheduleFiring(supabaseAdmin, {
+              tenantId: schedule.tenant_id,
+              scheduleId: schedule.id,
+              scheduleKey,
+              firedBy: "pg_cron",
+              state: "failed",
+              firedAt,
+              durationMs: Date.now() - firedAt.getTime(),
+              result: {},
+              error: message,
+            }).catch((recordError: Error) => {
+              console.error("[scheduler-tick] firing not written down", recordError.message);
+            });
+          }
           return new Response(JSON.stringify({ ok: false }), {
             status: 500,
             headers: { "Content-Type": "application/json" },

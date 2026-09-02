@@ -113,6 +113,7 @@ export const runSchedulerTick = createServerFn({ method: "POST" })
     return tickScheduler(context.supabase, new Date(), {
       onlyKeys: ["gsc-daily-observe"],
       collectSerpBacklog: false,
+      firedBy: "operator",
     });
   });
 
