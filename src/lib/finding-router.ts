@@ -56,6 +56,7 @@ const CATEGORY_BY_RULE: Record<string, CategoryId> = {
   // module (dataforseo) otherwise implies.
   approved_keyword_unobserved: "search",
   approved_keyword_no_page: "search",
+  tracked_set_has_no_route_query: "search",
   // Off-site domains are a competitive question, not a page one.
   referring_domain_movement: "competition",
 

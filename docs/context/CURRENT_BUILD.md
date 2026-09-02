@@ -34,6 +34,16 @@ Last updated: 2026-08-31, after wiring Google Ads campaign reporting
 describes 2026-08-21 and has NOT been rewritten; the current-state blocks
 immediately below supersede it.
 
+## 0at. Route searches the approved set does not name, 2026-09-02
+
+The tracked keywords are forty synonyms of one head term and no route
+query, while the route-matrix operators compete on route queries. The
+targeting pass now files one finding when no approved keyword names a
+journey and Search Console has already recorded route searches reaching
+the site, listing those searches with their impressions and clicks for
+the operator to choose from. It invents no keyword and approves nothing
+(CODE-68, from COMP-1).
+
 ## 0as. A schedule is claimed before it runs, 2026-09-02
 
 Two ticks that both read a schedule as due both ran it. The tick now

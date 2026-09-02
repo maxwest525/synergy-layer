@@ -36,6 +36,7 @@ export const ALL_SEARCH_RULES = [
   "approved_keyword_no_page",
   "approved_keyword_multiple_pages",
   "referring_domain_movement",
+  "tracked_set_has_no_route_query",
 ] as const;
 
 export type SearchRule = (typeof ALL_SEARCH_RULES)[number];
@@ -330,6 +331,29 @@ function referringDomainMovement(evidence: Evidence, on: string): FindingCopy {
   };
 }
 
+function routeQueriesUnnamed(evidence: Evidence, on: string): FindingCopy {
+  const routeQueryCount = num(evidence["routeQueryCount"]);
+  const impressions = num(evidence["impressions"]);
+  const clicks = num(evidence["clicks"]);
+  const examples = Array.isArray(evidence["examples"])
+    ? (evidence["examples"] as { query?: unknown }[])
+        .map((entry) => (typeof entry.query === "string" ? `"${entry.query}"` : null))
+        .filter((entry): entry is string => entry !== null)
+        .slice(0, 3)
+    : [];
+  return {
+    claim: "Searches naming a journey reach the site, and none of your approved keywords is one",
+    evidence:
+      routeQueryCount === null
+        ? null
+        : `${routeQueryCount} route search${routeQueryCount === 1 ? "" : "es"} recorded as of ${on}` +
+          (impressions === null ? "" : ` · ${impressions} impressions`) +
+          (clicks === null ? "" : ` · ${clicks} clicks`) +
+          (examples.length > 0 ? ` · e.g. ${examples.join(", ")}` : ""),
+    currentWording: null,
+  };
+}
+
 const WRITERS: Record<SearchRule, (evidence: Evidence, on: string) => FindingCopy> = {
   striking_distance_query: strikingDistance,
   position_loss: positionLoss,
@@ -345,6 +369,7 @@ const WRITERS: Record<SearchRule, (evidence: Evidence, on: string) => FindingCop
   approved_keyword_no_page: keywordWithoutPage,
   approved_keyword_multiple_pages: keywordMultiplePages,
   referring_domain_movement: referringDomainMovement,
+  tracked_set_has_no_route_query: routeQueriesUnnamed,
 };
 
 export function isSearchRule(value: string): value is SearchRule {

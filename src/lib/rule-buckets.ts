@@ -284,6 +284,13 @@ export const RULE_ASSIGNMENTS: readonly RuleAssignment[] = [
     why: "An event that fired reliably and then stopped entirely is a wiring question (a tag or trigger broke), not a statistics question. No threshold makes 'did it stop' more honest than checking whether it fired. detectDisappearedEvents (ga4-rule-checks.ts:158-182) reads `priorByEvent` to know what used to fire, so it cannot say anything before a second GA4 collection, and needs analytics connected to have events at all.",
   },
   {
+    rule: "tracked_set_has_no_route_query",
+    bucket: "fact",
+    needsPerTarget: null,
+    alsoNeeds: ["approved_keywords"],
+    why: "Whether any approved keyword names a journey, and whether any stored Search Console query does, are two pattern matches over rows this system already holds; no traffic volume changes a yes/no over strings. It needs at least one approved keyword (with none, the gap is that nothing is targeted, which approved_keyword rules already say) and a stored page+query read; with no route query in that read there is no evidence to name and it says nothing. It invents no keyword: it lists the searches people used (COMP-1).",
+  },
+  {
     rule: "approved_keyword_unobserved",
     bucket: "fact",
     needsPerTarget: null,
