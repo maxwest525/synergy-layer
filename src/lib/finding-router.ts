@@ -70,6 +70,10 @@ const CATEGORY_BY_RULE: Record<string, CategoryId> = {
   crawl_hit_its_page_cap: "health",
   crawl_result_truncated: "health",
   crawl_started_never_collected: "health",
+  // The nightly live-site read (CODE-87): what the site answered overnight.
+  page_stopped_answering: "health",
+  page_went_noindex: "health",
+  page_canonical_changed: "health",
   // Duplicate title and description are about the pages themselves, not the
   // crawl's health, so they route with the rest of the page findings.
   duplicate_titles_across_pages: "pages",
@@ -115,6 +119,7 @@ const CATEGORY_BY_MODULE: Record<string, CategoryId> = {
   "ads.advertiser_resolution": "competition",
   "page-audit": "pages",
   "site-audit": "health",
+  "site-watch": "health",
   workflows: "connections",
   openseo: "pages",
 };

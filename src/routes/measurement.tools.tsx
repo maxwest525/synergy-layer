@@ -17,6 +17,7 @@ import { toneForState } from "@/lib/state-tone";
 import { OperatorRouteError } from "@/components/os/route-error";
 import { UmamiPanel } from "@/components/os/umami-panel";
 import { ObservationCadences } from "@/components/os/observation-cadences";
+import { SiteWatchPanel } from "@/components/os/site-watch-panel";
 
 import { describeMissingSnapshot } from "@/lib/measurement/pagespeed";
 import { Button } from "@/components/ui/button";
@@ -322,6 +323,8 @@ function MeasurementPage() {
       />
 
       <ObservationCadences />
+
+      <SiteWatchPanel />
 
       <UmamiPanel />
 

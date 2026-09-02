@@ -37,6 +37,23 @@ export const definition: ModuleDefinition = {
       ],
       config: { mutating: false, rulesEvaluated: 5, costUsd: 0, evidenceLabel: "observed" },
     },
+    {
+      key: "site.watch",
+      name: "Live-site watch",
+      kind: "internal_module",
+      category: "Technical",
+      description:
+        "Fetches every sitemap address of the selected property directly, once a night, and stores what the server answered: status, final address, robots directives, canonical and title. Compares each address with its most recent earlier read and files what changed under Site health: a page that stopped answering, went noindex, or changed its canonical (CODE-87). Free: it reads the tenant's own site, calls no provider, and never changes a page.",
+      integrationState: "real",
+      operations: [
+        {
+          name: "site.read",
+          description:
+            "Read every sitemap address once, store one row per address and UTC date, and compare with the night before.",
+        },
+      ],
+      config: { mutating: false, rulesEvaluated: 3, costUsd: 0, evidenceLabel: "observed" },
+    },
   ],
   workflows: [
     {
@@ -47,6 +64,17 @@ export const definition: ModuleDefinition = {
       triggerKind: "manual",
       graph: {
         nodes: [{ key: "evaluate", kind: "capability", ref: "site-audit.rules" }],
+        edges: [],
+      },
+    },
+    {
+      key: "site-nightly-watch",
+      name: "Live-site nightly watch",
+      description:
+        "Reads every sitemap address of the selected property directly and compares it with the night before. Free and read-only; the schedule row of the same key drives it (observation-cadence.ts).",
+      triggerKind: "schedule",
+      graph: {
+        nodes: [{ key: "read", kind: "capability", ref: "site.watch" }],
         edges: [],
       },
     },

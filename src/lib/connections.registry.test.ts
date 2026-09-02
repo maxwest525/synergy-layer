@@ -2,7 +2,7 @@ import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
-import { CONNECTION_OUTPUTS, FINDING_SOURCES, NEWEST_ROW_COLUMN } from "./connections";
+import { CONNECTION_OUTPUTS, EVERY_FINDING_SOURCE, NEWEST_ROW_COLUMN } from "./connections";
 import { CONNECTOR_CATALOG } from "./connectors/catalog";
 
 /**
@@ -48,7 +48,7 @@ describe("the registry matches the codebase it describes", () => {
     const writers = writersInCodebase();
     // Sorted for a readable diff: this assertion failing tells you which module
     // appeared, and `connections.ts` needs a connection pointed at it.
-    expect([...writers.keys()].sort()).toEqual([...FINDING_SOURCES].sort());
+    expect([...writers.keys()].sort()).toEqual([...EVERY_FINDING_SOURCE].sort());
   });
 
   it("claims a finding source only for a module that reads the connection's table", () => {

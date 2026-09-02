@@ -36,7 +36,8 @@ export type Prerequisite =
   | "referring_domain_collection"
   | "reviewed_competitor_set"
   | "umami_second_window"
-  | "onpage_crawl";
+  | "onpage_crawl"
+  | "site_watch_second_night";
 
 /** What has actually happened for this tenant, read from facts each page already holds. */
 export type PrerequisiteState = {
@@ -85,6 +86,8 @@ export type PrerequisiteState = {
    * Wiring a real read is follow-up work.
    */
   readonly onpageCrawl: boolean;
+  /** Two nights of live-site reads exist, so there is a night before to compare with. */
+  readonly siteWatchSecondNight: boolean;
 };
 
 export type RuleAssignment = {
@@ -384,6 +387,31 @@ export const RULE_ASSIGNMENTS: readonly RuleAssignment[] = [
     alsoNeeds: ["umami_second_window"],
     why: "A referrer going quiet is behaviour, not wiring, unlike event_disappeared, so it is scored with confidenceInCountChange(before, 0) rather than a hand-picked constant; MIN_BASELINE (confidence.ts) is the volume this would need per source. Pooling referrers cannot recover a single source any more than pooling pages recovers a censored query, hence beyond_current_volume rather than pooled. Same umami_second_window prerequisite as umami_site_traffic_shift, and for the same reason: this also diffs two stored windows, and naming it `second_collection` or `analytics` (both wired to other providers' facts — see umami_site_traffic_shift's why) would misname the real blocker the same way.",
   },
+  // The nightly live-site read (CODE-87): two direct reads of the same address
+  // by the same reader, one night apart. Each is a fact about what the server
+  // answered, with no threshold: a status that crossed RFC 9110's 4xx/5xx
+  // boundary, a noindex that appeared, a canonical that changed.
+  {
+    rule: "page_stopped_answering",
+    bucket: "fact",
+    needsPerTarget: null,
+    alsoNeeds: ["site_watch_second_night"],
+    why: "A page that answered 2xx one night and 4xx or 5xx the next, read directly by AOOS both times. The 4xx-except-429 case rests on Google's HTTP status codes doc: \"All 4xx errors, except 429, are treated the same: Google crawlers inform the next processing system that the content doesn't exist.\" 429 and 5xx are documented there as a crawl slowdown, so they are graded lower. An unanswered read (timeout, refused connection) is never compared, so a flaky night cannot file this.",
+  },
+  {
+    rule: "page_went_noindex",
+    bucket: "fact",
+    needsPerTarget: null,
+    alsoNeeds: ["site_watch_second_night"],
+    why: 'A robots meta tag or X-Robots-Tag header that said noindex one night and not the night before, read directly. Binary, per the robots meta tag doc: "Do not show this page, media, or resource in search results."',
+  },
+  {
+    rule: "page_canonical_changed",
+    bucket: "fact",
+    needsPerTarget: null,
+    alsoNeeds: ["site_watch_second_night"],
+    why: "The canonical link of a page differs from the night before, both nights having one. No sentence is quoted and no threshold exists: the change is the fact, and whether it was intended is the operator's to say.",
+  },
   {
     rule: "non_indexable_pages_found",
     bucket: "fact",
@@ -477,6 +505,8 @@ const PREREQUISITE_COPY: Record<Prerequisite, string> = {
     "at least one competitor candidate reviewed, so there is a known set to match a mention against",
   umami_second_window: "a second Umami reading whose window does not overlap the first",
   onpage_crawl: "a site crawl to have been collected, so there is a reading to check",
+  site_watch_second_night:
+    "two nights of live-site reads, so there is a night before to compare against",
 };
 
 const PREREQUISITE_STATE_KEY: Record<Prerequisite, keyof PrerequisiteState> = {
@@ -493,6 +523,7 @@ const PREREQUISITE_STATE_KEY: Record<Prerequisite, keyof PrerequisiteState> = {
   reviewed_competitor_set: "reviewedCompetitorSet",
   umami_second_window: "umamiSecondWindow",
   onpage_crawl: "onpageCrawl",
+  site_watch_second_night: "siteWatchSecondNight",
 };
 
 /** The unmet prerequisites across the given rules, worst-blocking first, as sentences. */
@@ -510,6 +541,7 @@ const EVERY_PREREQUISITE_MET: PrerequisiteState = {
   reviewedCompetitorSet: true,
   umamiSecondWindow: true,
   onpageCrawl: true,
+  siteWatchSecondNight: true,
 };
 
 /**

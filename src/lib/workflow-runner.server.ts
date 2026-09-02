@@ -434,7 +434,8 @@ async function executeNode(
       (await runAdsTransparencyNode(client, node.ref ?? "", runId, tenantId)) ??
       (await runDataForSeoNode(client, node.ref ?? "", runId, tenantId)) ??
       (await runSiteAuditNode(client, node.ref ?? "", tenantId)) ??
-      (await runBacklinkFindingsNode(client, node.ref ?? "", tenantId));
+      (await runBacklinkFindingsNode(client, node.ref ?? "", tenantId)) ??
+      (await runSiteWatchNode(client, node.ref ?? "", tenantId));
     // A key no runner recognises must refuse, not succeed. The old fall-through
     // stamped last_run_at and "healthy" for any unrecognised capability, which
     // is how a declared-but-unwired step passed as a working one.
@@ -950,6 +951,35 @@ async function runSerpCompetitorNode(
  * snapshots and files evidence-backed findings from them. Costs nothing and
  * calls no provider, the same shape as `serp.targeting` above.
  */
+/**
+ * The nightly live-site read (CODE-87). Free: it fetches the tenant's own
+ * pages directly. The selected Search Console property names the origin, as
+ * the Search Console nodes do; without one there is no site to read.
+ */
+async function runSiteWatchNode(
+  client: Client,
+  ref: string,
+  tenantId: string,
+): Promise<NodeOutcome | null> {
+  if (ref !== "site.watch") return null;
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { getSelectedProperty } = await import("./search-console.server");
+  const { readLiveSite } = await import("./site-watch.server");
+  const property = await getSelectedProperty(client, tenantId);
+  if (!property) {
+    return {
+      ok: false,
+      error: "No Search Console property is selected, so there is no site to read.",
+    };
+  }
+  try {
+    const result = await readLiveSite(supabaseAdmin, { tenantId, property, actorId: null });
+    return { ok: true, output: { ...result } };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : String(error) };
+  }
+}
+
 async function runSiteAuditNode(
   client: Client,
   ref: string,
