@@ -1074,7 +1074,7 @@ function SearchWorkspacePage() {
                           <span
                             className={
                               submission.status === "submitted"
-                                ? "text-emerald-600"
+                                ? "text-success"
                                 : "text-destructive"
                             }
                           >

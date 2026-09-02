@@ -117,7 +117,7 @@ function ToolCard({
         {classification.requiresConfirmation ? (
           confirming ? (
             <>
-              <p className="w-full text-xs text-amber-300">
+              <p className="w-full text-xs text-warning">
                 This {classification.mode.replaceAll("_", " ")} can use credits or change OpenSEO
                 state. Confirm to run it once.
               </p>
