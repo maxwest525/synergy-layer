@@ -427,5 +427,10 @@ export const checkChangeRequestPublished = createServerFn({ method: "POST" })
         result.proof.finalUrl,
       );
     }
+    // A proof is one of the two moments the group of changes waiting on the
+    // site publish can change, so the group's one Inbox item is refreshed here
+    // rather than a day later.
+    const { reconcilePublishWaitRollup } = await import("../publish-wait-rollup.server");
+    await reconcilePublishWaitRollup(supabaseAdmin, tenantId);
     return result;
   });

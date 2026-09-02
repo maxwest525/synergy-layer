@@ -34,6 +34,19 @@ Last updated: 2026-08-31, after wiring Google Ads campaign reporting
 describes 2026-08-21 and has NOT been rewritten; the current-state blocks
 immediately below supersede it.
 
+## 0r. Changes waiting on one publish are one Inbox item, 2026-09-02
+
+CODE-31, the rollup half. Four approved changes sat committed and unproven
+while the operator learned they all waited on the same publish by asking.
+`publish-wait-rollup.ts` (pure, tested) selects approved changes that carry a
+commit and no published proof and, from two upward, words one item naming the
+count, the shared blocker and how long the oldest has waited.
+`reconcilePublishWaitRollup` keeps exactly one open needs-attention item per
+tenant for the group: it is filed when the group first reaches two, rewritten
+in place when the group changes, completed when it shrinks below two, and a
+hand-cleared item is not reopened for the same group. It runs after the daily
+Search Console observation and after every "Check the live page" click.
+
 ## 0q. Every registered rule now says why it has no draft, 2026-09-02
 
 CODE-1, re-measured. The 18 rules the backlog named already had a written
