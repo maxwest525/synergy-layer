@@ -7,6 +7,7 @@ import {
   pagesMissingFromSitemap,
   robotsBlocksEverything,
   sitemapLocations,
+  type ProtocolFacts,
   type SiteFacts,
 } from "./site-checks";
 
@@ -179,5 +180,97 @@ describe("evaluateSite", () => {
     const findings = evaluateSite({ ...base, unreadablePages: ["https://example.com/x"] });
     const unreadable = findings.find((finding) => finding.check === "pages_unreadable");
     expect(unreadable?.fixableByChangeKind).toBeNull();
+  });
+});
+
+describe("the protocol layer under the crawl directives", () => {
+  const clean: ProtocolFacts = {
+    httpStatus: 301,
+    httpLocation: "https://example.com/",
+    httpsStatus: 200,
+    ttfbMs: 240,
+    htmlBytes: 51_000,
+    strictTransportSecurity: "max-age=31536000",
+    contentSecurityPolicy: "default-src 'self'",
+    xContentTypeOptions: "nosniff",
+    alternateHost: "www.example.com",
+    alternateStatus: 301,
+    alternateLocation: "https://example.com/",
+    mixedContentUrls: [],
+  };
+
+  it("says nothing about a snapshot stored before the protocol read existed", () => {
+    expect(evaluateSite(base)).toEqual([]);
+  });
+
+  it("finds nothing on a site that redirects, sends its headers, and answers fast", () => {
+    expect(evaluateSite({ ...base, protocol: clean })).toEqual([]);
+  });
+
+  it("reports plain HTTP that serves instead of redirecting", () => {
+    const findings = evaluateSite({
+      ...base,
+      protocol: { ...clean, httpStatus: 200, httpLocation: null },
+    });
+    expect(findings.map((f) => f.check)).toEqual(["http_not_redirected"]);
+    expect(findings[0]?.detail).toContain("served instead of redirecting");
+    expect(findings[0]?.fixableByChangeKind).toBeNull();
+  });
+
+  it("says nothing about plain HTTP that could not be fetched at all", () => {
+    expect(
+      evaluateSite({ ...base, protocol: { ...clean, httpStatus: null, httpLocation: null } }),
+    ).toEqual([]);
+  });
+
+  it("reports a missing HSTS header and missing hardening headers at their own weights", () => {
+    const findings = evaluateSite({
+      ...base,
+      protocol: {
+        ...clean,
+        strictTransportSecurity: null,
+        contentSecurityPolicy: null,
+        xContentTypeOptions: "nosniff",
+      },
+    });
+    const hsts = findings.find((f) => f.check === "hsts_missing");
+    const headers = findings.find((f) => f.check === "security_headers_missing");
+    expect(hsts?.severity).toBe("warning");
+    expect(headers?.severity).toBe("advice");
+    expect(headers?.instruction).toContain("Content-Security-Policy");
+    expect(headers?.instruction).not.toContain("X-Content-Type-Options");
+    expect(headers?.instruction).toContain("not a ranking signal");
+  });
+
+  it("reports the other host spelling when it serves its own page or redirects elsewhere", () => {
+    const serves = evaluateSite({
+      ...base,
+      protocol: { ...clean, alternateStatus: 200, alternateLocation: null },
+    });
+    expect(serves.map((f) => f.check)).toEqual(["host_not_consolidated"]);
+    const elsewhere = evaluateSite({
+      ...base,
+      protocol: { ...clean, alternateStatus: 302, alternateLocation: "https://other.example/" },
+    });
+    expect(elsewhere.map((f) => f.check)).toEqual(["host_not_consolidated"]);
+  });
+
+  it("reports mixed content by count with an example", () => {
+    const findings = evaluateSite({
+      ...base,
+      protocol: {
+        ...clean,
+        mixedContentUrls: ["http://cdn.example/a.js", "http://x.example/b.png"],
+      },
+    });
+    expect(findings[0]?.check).toBe("mixed_content_present");
+    expect(findings[0]?.detail).toContain("2 http:// resource(s)");
+  });
+
+  it("reports a slow first byte as one sample against web.dev's figure", () => {
+    const findings = evaluateSite({ ...base, protocol: { ...clean, ttfbMs: 1900 } });
+    expect(findings[0]?.check).toBe("homepage_slow_to_respond");
+    expect(findings[0]?.detail).toContain("1900 ms");
+    expect(findings[0]?.detail).toContain("One sample, not a field measurement");
   });
 });

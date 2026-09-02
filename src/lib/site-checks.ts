@@ -17,7 +17,38 @@ export type SiteCheckId =
   | "sitemap_empty"
   | "sitemap_not_declared"
   | "sitemap_coverage_gap"
-  | "pages_unreadable";
+  | "pages_unreadable"
+  | "http_not_redirected"
+  | "hsts_missing"
+  | "security_headers_missing"
+  | "host_not_consolidated"
+  | "mixed_content_present"
+  | "homepage_slow_to_respond";
+
+/**
+ * What the site answered at the protocol layer, read directly by the audit
+ * without following redirects, so the answer is the server's own and not the
+ * one a browser would have been steered to (CODE-25).
+ */
+export type ProtocolFacts = {
+  /** What plain http:// at the origin answered. */
+  httpStatus: number | null;
+  httpLocation: string | null;
+  /** The https homepage. */
+  httpsStatus: number | null;
+  /** Milliseconds until the response headers arrived: one server-side sample. */
+  ttfbMs: number | null;
+  htmlBytes: number | null;
+  strictTransportSecurity: string | null;
+  contentSecurityPolicy: string | null;
+  xContentTypeOptions: string | null;
+  /** The other spelling of the host (www or apex) and what it answered. */
+  alternateHost: string;
+  alternateStatus: number | null;
+  alternateLocation: string | null;
+  /** http:// resources the homepage HTML loads through a src attribute. */
+  mixedContentUrls: string[];
+};
 
 /** What the crawl directives of the whole site actually said when read. */
 export type SiteFacts = {
@@ -52,6 +83,8 @@ export type SiteFacts = {
    * though blocked by robots.txt".
    */
   declaredPages?: string[];
+  /** Absent on snapshots stored before the protocol read existed. */
+  protocol?: ProtocolFacts;
 };
 
 export type SiteFinding = {
@@ -158,7 +191,9 @@ function sample(urls: string[], count = 3): string {
 
 /** Every real site wide defect the read facts prove, worst first. */
 export function evaluateSite(facts: SiteFacts): SiteFinding[] {
-  const findings: SiteFinding[] = [];
+  const findings: SiteFinding[] = facts.protocol
+    ? evaluateProtocol(facts.origin, facts.protocol)
+    : [];
 
   // robots.txt intro doc: "A robots.txt file tells search engine crawlers
   // which URLs the crawler can access on your site."
@@ -298,6 +333,145 @@ export function evaluateSite(facts: SiteFacts): SiteFinding[] {
 
   const order: Record<Severity, number> = { critical: 0, warning: 1, advice: 2 };
   return findings.sort((a, b) => order[a.severity] - order[b.severity]);
+}
+
+/**
+ * web.dev, "Time to First Byte (TTFB)": "a good TTFB is 0.8 seconds or less".
+ * One server-side sample, so a slow reading is reported as a single read,
+ * never as a field measurement.
+ */
+export const TTFB_GOOD_MS = 800;
+
+function hostOf(url: string): string | null {
+  try {
+    return new URL(url).host.toLowerCase();
+  } catch {
+    return null;
+  }
+}
+
+function redirectsToHttps(facts: ProtocolFacts): boolean {
+  return (
+    facts.httpStatus !== null &&
+    facts.httpStatus >= 300 &&
+    facts.httpStatus < 400 &&
+    typeof facts.httpLocation === "string" &&
+    facts.httpLocation.toLowerCase().startsWith("https://")
+  );
+}
+
+/**
+ * The protocol layer under the crawl directives: HTTPS enforcement, HSTS, the
+ * browser-hardening headers, one host spelling, mixed content, and the time
+ * to first byte. Each finding cites the sentence it rests on; every one is a
+ * server change, so none carries a governed fix.
+ */
+function evaluateProtocol(origin: string, facts: ProtocolFacts): SiteFinding[] {
+  const findings: SiteFinding[] = [];
+  const canonicalHost = hostOf(origin);
+
+  // Google, "Secure your site with HTTPS": "Redirect your users and search
+  // engines to the HTTPS page or resource with server-side 301 HTTP redirects."
+  // https://developers.google.com/search/docs/crawling-indexing/site-security/https
+  if (facts.httpStatus !== null && !redirectsToHttps(facts)) {
+    findings.push({
+      check: "http_not_redirected",
+      label: "Plain HTTP is not redirected to HTTPS",
+      severity: "warning",
+      instruction:
+        "Redirect every http:// address to its https:// address with a 301 at the server.",
+      detail:
+        facts.httpStatus >= 300 && facts.httpStatus < 400
+          ? `http://${canonicalHost ?? origin}/ answered HTTP ${facts.httpStatus} to ${facts.httpLocation ?? "no Location"}, not to https://.`
+          : `http://${canonicalHost ?? origin}/ answered HTTP ${facts.httpStatus} and served instead of redirecting.`,
+      fixableByChangeKind: null,
+    });
+  }
+
+  if (facts.httpsStatus !== null) {
+    // Same document: "Consider using HSTS. HSTS tells the browser to request
+    // HTTPS pages automatically, even if the user enters http in the browser
+    // location bar."
+    if (facts.strictTransportSecurity === null) {
+      findings.push({
+        check: "hsts_missing",
+        label: "No HSTS header",
+        severity: "warning",
+        instruction:
+          "Send a Strict-Transport-Security header so browsers ask for HTTPS on their own.",
+        detail: `${origin}/ answered HTTP ${facts.httpsStatus} with no Strict-Transport-Security header.`,
+        fixableByChangeKind: null,
+      });
+    }
+
+    // Not a search signal. Lighthouse's best-practices audits check both;
+    // reported as advice so the operator can decide, never as a ranking claim.
+    const missing = [
+      ...(facts.contentSecurityPolicy === null ? ["Content-Security-Policy"] : []),
+      ...(facts.xContentTypeOptions === null ? ["X-Content-Type-Options"] : []),
+    ];
+    if (missing.length > 0) {
+      findings.push({
+        check: "security_headers_missing",
+        label: "Browser hardening headers are missing",
+        severity: "advice",
+        instruction: `Send ${missing.join(" and ")} from the server. This is browser hardening, not a ranking signal.`,
+        detail: `${origin}/ answered without ${missing.join(" or ")}.`,
+        fixableByChangeKind: null,
+      });
+    }
+
+    // web.dev, "Time to First Byte (TTFB)": "a good TTFB is 0.8 seconds or less".
+    if (facts.ttfbMs !== null && facts.ttfbMs > TTFB_GOOD_MS) {
+      findings.push({
+        check: "homepage_slow_to_respond",
+        label: "The homepage was slow to start responding",
+        severity: "warning",
+        instruction:
+          "Find out why the server takes this long to send its first byte; caching or the host itself are the usual causes.",
+        detail: `${origin}/ took ${facts.ttfbMs} ms to first byte on one server-side read; web.dev calls 800 ms or less good. One sample, not a field measurement.`,
+        fixableByChangeKind: null,
+      });
+    }
+  }
+
+  // Google, "Consolidate duplicate URLs": pick one canonical URL and "use 301
+  // redirects" from the other spellings to it.
+  // https://developers.google.com/search/docs/crawling-indexing/consolidate-duplicate-urls
+  if (facts.alternateStatus !== null && canonicalHost) {
+    const redirectedHome =
+      facts.alternateStatus >= 300 &&
+      facts.alternateStatus < 400 &&
+      hostOf(facts.alternateLocation ?? "") === canonicalHost;
+    if (!redirectedHome) {
+      findings.push({
+        check: "host_not_consolidated",
+        label: "Two spellings of the host both answer",
+        severity: "warning",
+        instruction: `Redirect https://${facts.alternateHost}/ to https://${canonicalHost}/ with a 301 so Google sees one site.`,
+        detail:
+          facts.alternateStatus >= 300 && facts.alternateStatus < 400
+            ? `https://${facts.alternateHost}/ answered HTTP ${facts.alternateStatus} to ${facts.alternateLocation ?? "no Location"}, not to ${canonicalHost}.`
+            : `https://${facts.alternateHost}/ answered HTTP ${facts.alternateStatus} and served its own page.`,
+        fixableByChangeKind: null,
+      });
+    }
+  }
+
+  // Google, "Secure your site with HTTPS": "Avoid mixed content".
+  if (facts.mixedContentUrls.length > 0) {
+    findings.push({
+      check: "mixed_content_present",
+      label: "The homepage loads resources over plain HTTP",
+      severity: "warning",
+      instruction:
+        "Load every script, image and frame over https:// so browsers do not block or warn.",
+      detail: `${facts.mixedContentUrls.length} http:// resource(s) on ${origin}/, for example ${sample(facts.mixedContentUrls)}.`,
+      fixableByChangeKind: null,
+    });
+  }
+
+  return findings;
 }
 
 export function buildSiteHeadline(findings: SiteFinding[], readPages: number): string {

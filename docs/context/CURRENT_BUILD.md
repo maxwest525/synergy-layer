@@ -34,6 +34,16 @@ Last updated: 2026-08-31, after wiring Google Ads campaign reporting
 describes 2026-08-21 and has NOT been rewritten; the current-state blocks
 immediately below supersede it.
 
+## 0br. The site audit reads the protocol layer, 2026-09-02
+
+Under robots.txt and the sitemap, the audit now reads what plain http
+answers, what the https homepage sends and how fast, what the other host
+spelling does, and whether the homepage loads anything over plain http,
+without following redirects. Six checks each cite their sentence
+(Google's HTTPS and duplicate-URL guidance, web.dev's 800 ms first byte);
+all are server changes with no governed fix, and the hardening headers
+are named as browser hardening, not a ranking signal (CODE-25).
+
 ## 0bq. Registration records are read on a click and ownership is decided by hand, 2026-09-02
 
 The whois producer had no trigger and the ownership candidates it would
