@@ -9,6 +9,7 @@ import {
   formatWhen,
   toneForState,
 } from "@/components/os/primitives";
+import { isEstimated } from "@/lib/impact-words";
 import { getRecommendations } from "@/lib/os.functions";
 import { OperatorRouteError } from "@/components/os/route-error";
 
@@ -77,8 +78,12 @@ function RecommendationsPage() {
                     />
                   </div>
                   <div className="mt-3 flex flex-wrap items-center gap-2">
-                    <StatePill label={`traffic: ${recommendation.traffic_impact}`} />
-                    <StatePill label={`revenue: ${recommendation.revenue_impact}`} />
+                    {isEstimated(recommendation.traffic_impact) ? (
+                      <StatePill label={`traffic: ${recommendation.traffic_impact}`} />
+                    ) : null}
+                    {isEstimated(recommendation.revenue_impact) ? (
+                      <StatePill label={`revenue: ${recommendation.revenue_impact}`} />
+                    ) : null}
                     <StatePill label={`business: ${recommendation.business_impact}`} />
                     <StatePill
                       label={`risk: ${recommendation.risk}`}

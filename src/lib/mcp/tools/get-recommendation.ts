@@ -15,8 +15,6 @@ const RECOMMENDATION_FIELDS = [
   "confidence",
   "reasoning",
   "business_impact",
-  "revenue_impact",
-  "traffic_impact",
   "risk",
   "time_saved_minutes",
   "requires_approval",

@@ -121,8 +121,6 @@ export async function evaluateGa4Snapshots(
             description: observation.description,
             source_module: "ga4",
             business_impact: observation.businessImpact,
-            revenue_impact: observation.businessImpact,
-            traffic_impact: observation.businessImpact,
             time_saved_minutes: 0,
             risk: "none",
             confidence: observation.confidence,
