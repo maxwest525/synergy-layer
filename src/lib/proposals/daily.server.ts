@@ -1,6 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database } from "@/integrations/supabase/types";
+import { ptDate } from "../change-measurement";
+import { pagesWithAnOpenChange } from "../change-request-conflicts";
+import { readMeasurementWindowRefs } from "../change-request-conflicts.server";
 import { selectProposalCandidates, type PageQueryRow } from "./candidates";
 
 type Client = SupabaseClient<Database>;
@@ -140,18 +143,29 @@ export async function runProposalJobForTenant(
         .order("period_start_pt", { ascending: false })
         .limit(30),
       ownedHosts(admin, tenantId),
-      admin.from("change_requests").select("target_url").eq("tenant_id", tenantId),
+      // Only a change still open can keep a page off the list: proposed,
+      // approved, or live inside its measurement window. A rejected or
+      // rolled-back one used to silence the page for good (CODE-73).
+      admin
+        .from("change_requests")
+        .select("id, title, state, target_url, approved_at, applied_at")
+        .eq("tenant_id", tenantId)
+        .in("state", ["proposed", "approved", "applied"]),
     ]);
     if (snapshots.error) throw new Error(snapshots.error.message);
     if (existing.error) throw new Error(existing.error.message);
 
+    const changes = existing.data ?? [];
+    const windows = await readMeasurementWindowRefs(
+      admin,
+      tenantId,
+      changes.filter((change) => change.state === "applied").map((change) => change.id),
+    );
     const rows = (snapshots.data ?? []).flatMap((row) => payloadRows(row.payload));
     const candidates = selectProposalCandidates({
       rows,
       ownedHosts: hosts,
-      excludeUrls: (existing.data ?? [])
-        .map((row) => row.target_url)
-        .filter((url): url is string => Boolean(url)),
+      excludeUrls: pagesWithAnOpenChange({ changes, windows, todayPt: ptDate(now) }),
       limit,
     });
 
@@ -167,7 +181,8 @@ export async function runProposalJobForTenant(
         created: 0,
         considered: rows.length,
         proposals: [],
-        message: "Stored evidence held no page that is not already carrying a proposal.",
+        message:
+          "Stored evidence held no page without a change still waiting on a decision, going live, or being measured.",
       };
     }
 

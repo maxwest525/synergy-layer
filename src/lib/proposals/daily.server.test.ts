@@ -13,6 +13,7 @@ type QueryResult = { data: unknown; error: { message: string } | null };
 type FakeQuery = {
   select: () => FakeQuery;
   eq: () => FakeQuery;
+  in: () => FakeQuery;
   is: () => FakeQuery;
   or: () => FakeQuery;
   order: () => FakeQuery;
@@ -32,6 +33,7 @@ function fakeQuery(result: QueryResult, capturePatch?: (patch: unknown) => void)
   const q: FakeQuery = {
     select: () => q,
     eq: () => q,
+    in: () => q,
     is: () => q,
     or: () => q,
     order: () => q,
@@ -59,7 +61,21 @@ vi.mock("../os.server", () => ({
 const TENANT = "6a2f8f6e-0000-4000-8000-000000000001";
 const CANDIDATE_URL = "https://trumoveinc.com/movers";
 
-function createAdmin(options: { paused?: boolean } = {}) {
+type StoredChange = {
+  id: string;
+  state: string;
+  target_url: string;
+  /** Pacific date after which the change's last measurement window is readable. */
+  readableAfter?: string;
+};
+
+function createAdmin(options: { paused?: boolean; changes?: StoredChange[] } = {}) {
+  // The job asks for open states only; a rejected or rolled-back row never
+  // reaches it, exactly as the database would answer.
+  const changes = (options.changes ?? []).filter((change) =>
+    ["proposed", "approved", "applied"].includes(change.state),
+  );
+  const measured = changes.filter((change) => change.readableAfter);
   const job = { id: "job-1", paused: options.paused ?? false, run_count: 4 };
   const jobUpdates: Record<string, unknown>[] = [];
   const inboxUpdates: Record<string, unknown>[] = [];
@@ -95,7 +111,33 @@ function createAdmin(options: { paused?: boolean } = {}) {
         case "assets":
           return fakeQuery({ data: [{ external_ref: "https://trumoveinc.com/" }], error: null });
         case "change_requests":
-          return fakeQuery({ data: [], error: null });
+          return fakeQuery({
+            data: changes.map((change) => ({
+              id: change.id,
+              title: `Change ${change.id}`,
+              state: change.state,
+              target_url: change.target_url,
+              approved_at: null,
+              applied_at: null,
+            })),
+            error: null,
+          });
+        case "change_measurement_cycles":
+          return fakeQuery({
+            data: measured.map((change) => ({
+              id: `cycle-${change.id}`,
+              change_request_id: change.id,
+            })),
+            error: null,
+          });
+        case "change_measurement_windows":
+          return fakeQuery({
+            data: measured.map((change) => ({
+              cycle_id: `cycle-${change.id}`,
+              available_after_pt: change.readableAfter,
+            })),
+            error: null,
+          });
         case "inbox_items":
           return fakeQuery({ data: [], error: null }, (patch) =>
             inboxUpdates.push(patch as Record<string, unknown>),
@@ -226,6 +268,47 @@ describe("the nightly propose-from-evidence job", () => {
     expect(outcome.state).toBe("failed");
     expect(release).toMatchObject({ last_state: "failed" });
     expect(release).not.toHaveProperty("paused");
+  });
+
+  it("proposes a page again once its earlier change was rejected", async () => {
+    vi.mocked(serviceRpc).mockResolvedValue({
+      changeRequest: { id: "cr-3" },
+      changed: true,
+      versionNumber: null,
+    });
+    const { admin } = createAdmin({
+      changes: [{ id: "old", state: "rejected", target_url: CANDIDATE_URL }],
+    });
+    const outcome = await runProposalJobForTenant(admin, TENANT, new Date("2026-08-28T05:00:00Z"));
+    expect(outcome.state).toBe("created");
+    expect(outcome.proposals).toEqual([{ url: CANDIDATE_URL, changeRequestId: "cr-3" }]);
+  });
+
+  it("leaves a page alone while a live change on it is still being measured", async () => {
+    const { admin } = createAdmin({
+      changes: [
+        { id: "live", state: "applied", target_url: CANDIDATE_URL, readableAfter: "2026-09-12" },
+      ],
+    });
+    const outcome = await runProposalJobForTenant(admin, TENANT, new Date("2026-08-28T05:00:00Z"));
+    expect(outcome.state).toBe("no_change");
+    expect(outcome.message).toContain("being measured");
+    expect(serviceRpc).not.toHaveBeenCalled();
+  });
+
+  it("proposes a page again once every measurement window on its live change is readable", async () => {
+    vi.mocked(serviceRpc).mockResolvedValue({
+      changeRequest: { id: "cr-4" },
+      changed: true,
+      versionNumber: null,
+    });
+    const { admin } = createAdmin({
+      changes: [
+        { id: "done", state: "applied", target_url: CANDIDATE_URL, readableAfter: "2026-08-20" },
+      ],
+    });
+    const outcome = await runProposalJobForTenant(admin, TENANT, new Date("2026-08-28T05:00:00Z"));
+    expect(outcome.state).toBe("created");
   });
 
   it("files the proposal as the system actor and records the run as succeeded", async () => {

@@ -48,7 +48,8 @@ export type InFlightSibling = {
 };
 
 export function findInFlightSiblings(input: {
-  candidateId: string;
+  /** The change being decided, left out of the answer; absent when nothing is being decided. */
+  candidateId?: string;
   targetUrl: string;
   siblings: SiblingChange[];
   windows: MeasurementWindowRef[];
@@ -94,6 +95,36 @@ export function findInFlightSiblings(input: {
   }
 
   return found.sort((a, b) => (b.since ?? "").localeCompare(a.since ?? ""));
+}
+
+/**
+ * Pages the nightly proposal job must leave alone: one where a change is
+ * waiting on a decision (proposed), or where one is in flight by the rule
+ * above. Rejected, rolled back, verified and fully measured changes leave the
+ * page open to a new proposal. The job used to exclude any page that had ever
+ * carried a change, so one rejection silenced a page for good (CODE-73).
+ */
+export function pagesWithAnOpenChange(input: {
+  changes: SiblingChange[];
+  windows: MeasurementWindowRef[];
+  /** Today's Pacific calendar date, YYYY-MM-DD. */
+  todayPt: string;
+}): string[] {
+  const open = new Set<string>();
+  for (const change of input.changes) {
+    if (change.state === "proposed") open.add(change.target_url);
+  }
+  for (const targetUrl of new Set(input.changes.map((change) => change.target_url))) {
+    if (open.has(targetUrl)) continue;
+    const inFlight = findInFlightSiblings({
+      targetUrl,
+      siblings: input.changes,
+      windows: input.windows,
+      todayPt: input.todayPt,
+    });
+    if (inFlight.length > 0) open.add(targetUrl);
+  }
+  return [...open];
 }
 
 /** The sentence the approval control carries when a sibling is in flight. */

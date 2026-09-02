@@ -8,11 +8,8 @@ import {
   type PostChangeRow,
 } from "./change-request-evidence";
 import { type ChangeAction } from "./change-request-state";
-import {
-  findInFlightSiblings,
-  type InFlightSibling,
-  type MeasurementWindowRef,
-} from "./change-request-conflicts";
+import { findInFlightSiblings, type InFlightSibling } from "./change-request-conflicts";
+import { readMeasurementWindowRefs } from "./change-request-conflicts.server";
 import { ptDate } from "./change-measurement";
 import { fetchChangeMeasurementHistory } from "./change-measurements.server";
 import { fetchCrawlDirectiveOutcome } from "./crawl-directive-outcome.server";
@@ -143,31 +140,7 @@ async function fetchInFlightSiblings(
     .in("state", ["approved", "applied"]);
   if (siblingError) throw new Error(siblingError.message);
   const applied = (siblings ?? []).filter((row) => row.state === "applied").map((row) => row.id);
-  let windows: MeasurementWindowRef[] = [];
-  if (applied.length > 0) {
-    const { data: cycles, error: cycleError } = await client
-      .from("change_measurement_cycles")
-      .select("id, change_request_id")
-      .eq("tenant_id", tenantId)
-      .in("change_request_id", applied);
-    if (cycleError) throw new Error(cycleError.message);
-    const cycleIds = (cycles ?? []).map((cycle) => cycle.id);
-    if (cycleIds.length > 0) {
-      const { data: rows, error: windowError } = await client
-        .from("change_measurement_windows")
-        .select("cycle_id, available_after_pt")
-        .eq("tenant_id", tenantId)
-        .in("cycle_id", cycleIds);
-      if (windowError) throw new Error(windowError.message);
-      const changeByCycle = new Map((cycles ?? []).map((c) => [c.id, c.change_request_id]));
-      windows = (rows ?? []).flatMap((row) => {
-        const changeRequestId = changeByCycle.get(row.cycle_id);
-        return changeRequestId
-          ? [{ change_request_id: changeRequestId, available_after_pt: row.available_after_pt }]
-          : [];
-      });
-    }
-  }
+  const windows = await readMeasurementWindowRefs(client, tenantId, applied);
   return findInFlightSiblings({
     candidateId,
     targetUrl,
