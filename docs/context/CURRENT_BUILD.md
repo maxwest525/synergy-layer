@@ -34,6 +34,14 @@ Last updated: 2026-08-31, after wiring Google Ads campaign reporting
 describes 2026-08-21 and has NOT been rewritten; the current-state blocks
 immediately below supersede it.
 
+## 0ay. "0 min saved" reads as the absence it is, 2026-09-02
+
+Every rule writes `time_saved_minutes: 0` because nothing estimates it,
+and the screens rendered the zero as a measurement. It now reads "Not
+estimated" on the detail page, is omitted from the list line, and is no
+longer projected by the MCP read; a typed seed figure still shows as
+minutes (CODE-72, from AGT-4).
+
 ## 0ax. Stored states read as words, 2026-09-02
 
 Every state pill replaced underscores and capitalised every word, so

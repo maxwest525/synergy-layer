@@ -13,7 +13,7 @@ import {
   toneForState,
 } from "@/components/os/primitives";
 import { Button } from "@/components/ui/button";
-import { describeImpact } from "@/lib/impact-words";
+import { describeImpact, describeTimeSaved } from "@/lib/impact-words";
 import { decideRecommendation } from "@/lib/os-admin.functions";
 import { getRecommendation } from "@/lib/os.functions";
 import { describeSuggestedAction, isObservationOnly } from "@/lib/recommendation-action";
@@ -213,7 +213,7 @@ function RecommendationDetailPage() {
               />
               <DetailRow
                 label="Time saved"
-                value={`${recommendation.time_saved_minutes} minutes`}
+                value={describeTimeSaved(recommendation.time_saved_minutes)}
               />
               <DetailRow
                 label="Approval"
