@@ -44,13 +44,13 @@ export const Route = createFileRoute("/changes/$id")({
   errorComponent: OperatorRouteError,
   head: () => ({
     meta: [
-      { title: "Proposed page change — Marky" },
+      { title: "Proposed page change · Marky" },
       {
         name: "description",
         content:
           "Review one exact proposed page change, the dated evidence behind it, and its execution and verification status.",
       },
-      { property: "og:title", content: "Proposed page change — Marky" },
+      { property: "og:title", content: "Proposed page change · Marky" },
       {
         property: "og:description",
         content:
@@ -591,7 +591,7 @@ function ChangeRequestPage() {
                             key={`${row.query}-${row.date}-${rowIndex}`}
                             className="text-sm text-muted-foreground"
                           >
-                            <span className="text-foreground">{row.query}</span> — position{" "}
+                            <span className="text-foreground">{row.query}</span>, position{" "}
                             {row.position} on {row.date}, {row.impressions} impressions,{" "}
                             {row.clicks} clicks
                           </li>
@@ -614,7 +614,7 @@ function ChangeRequestPage() {
                             key={`${row.domain}-${row.url}-${rowIndex}`}
                             className="text-sm text-muted-foreground"
                           >
-                            <span className="text-foreground">{row.title}</span> — {row.domain},
+                            <span className="text-foreground">{row.title}</span>, {row.domain},
                             position {row.position} for {row.query}
                           </li>
                         ))}
@@ -632,7 +632,7 @@ function ChangeRequestPage() {
                       {group.query ?? group.source ?? "Evidence"}
                     </span>
                     {group.date
-                      ? ` — average position ${group.average_position ?? group.position ?? "unknown"} on ${group.date}, ${group.impressions ?? 0} impressions`
+                      ? `, average position ${group.average_position ?? group.position ?? "unknown"} on ${group.date}, ${group.impressions ?? 0} impressions`
                       : null}
                   </p>
                 );
@@ -699,7 +699,7 @@ function ChangeRequestPage() {
                 key={`${row.query}-${row.date}-${index}`}
                 className="text-sm text-muted-foreground"
               >
-                <span className="text-foreground">{row.query}</span> — position {row.position} on{" "}
+                <span className="text-foreground">{row.query}</span>, position {row.position} on{" "}
                 {row.date}, {row.impressions} impressions
               </li>
             ))}

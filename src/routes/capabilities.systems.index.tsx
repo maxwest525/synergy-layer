@@ -27,13 +27,13 @@ export const Route = createFileRoute("/capabilities/systems/")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Systems & operations — Marky" },
+      { title: "Systems & operations · Marky" },
       {
         name: "description",
         content:
           "The real installed tool estate: canonical systems, their operations, and whether each one is actually callable from AOOS.",
       },
-      { property: "og:title", content: "Systems & operations — Marky" },
+      { property: "og:title", content: "Systems & operations · Marky" },
       {
         property: "og:description",
         content:

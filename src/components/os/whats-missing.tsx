@@ -44,7 +44,7 @@ export function WhatsMissing({ missing, loops }: { missing: MissingReason[]; loo
                     {group.label}
                   </h3>
                   {loop?.stalledStageKey ? (
-                    <span className="text-xs text-amber-400">
+                    <span className="text-xs text-warning">
                       loop stalls at{" "}
                       {loop.stages.find((stage) => stage.key === loop.stalledStageKey)?.label}
                     </span>

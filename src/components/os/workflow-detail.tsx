@@ -120,7 +120,7 @@ export function RunControlCard({
               : "Every step in this run has been completed."}
           </p>
           {nextNode?.kind === "approval" ? (
-            <p className="text-xs text-amber-300/90">
+            <p className="text-xs text-warning">
               This is a decision point. Advancing it records your approval and continues the same
               run.
             </p>
@@ -609,7 +609,9 @@ export function RunHistoryTimeline({
                                 </span>
                                 <span className="flex shrink-0 items-center gap-2">
                                   <span className="text-xs text-muted-foreground">
-                                    {step.duration_ms !== null ? `${step.duration_ms} ms` : "—"}
+                                    {step.duration_ms !== null
+                                      ? `${step.duration_ms} ms`
+                                      : "not recorded"}
                                   </span>
                                   <StatePill label={step.state} tone={toneForState(step.state)} />
                                 </span>

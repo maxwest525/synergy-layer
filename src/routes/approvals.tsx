@@ -33,13 +33,13 @@ export const Route = createFileRoute("/approvals")({
   },
   head: () => ({
     meta: [
-      { title: "Approvals queue — Marky" },
+      { title: "Approvals queue · Marky" },
       {
         name: "description",
         content:
           "Every suggestion waiting on your yes or no, with the evidence behind it. Approve or reject with a note in one place.",
       },
-      { property: "og:title", content: "Approvals queue — Marky" },
+      { property: "og:title", content: "Approvals queue · Marky" },
       {
         property: "og:description",
         content: "Review pending suggestions and approve or reject them with notes.",

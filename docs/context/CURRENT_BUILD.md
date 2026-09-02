@@ -34,6 +34,70 @@ Last updated: 2026-08-31, after wiring Google Ads campaign reporting
 describes 2026-08-21 and has NOT been rewritten; the current-state blocks
 immediately below supersede it.
 
+## 0bj. Three chosen figures say they are chosen, 2026-09-02
+
+The card urgency ages (14 and 3 days), the PageSpeed measurement
+confidence (0.75) and the knowledge retrieval weights carried no stated
+basis. Each now carries the `Stated assumption:` comment AGENTS.md asks
+for, naming the choice and the stored data that would settle it; the
+figures are unchanged (CODE-83, from AGT-15). The website-side lead
+tracking fix (MEAS-12) is drafted but waits on push access to the
+website repository (OP-12).
+
+## 0bi. Every colour on screen resolves to a token, 2026-09-02
+
+Eight screens used amber and emerald palette classes, so the "needs
+attention" yellow was three hues, and one card shadow wrapped an oklch
+token in hsl() and never rendered. All resolve to the warning and
+success tokens now, the shadow reads the border token directly, and a
+test walks every screen file for a raw palette class or an hsl-wrapped
+token (CODE-82, from DS-2).
+
+## 0bh. Connections say when the newest row arrived, 2026-09-02
+
+"Reaching you" carried no date, so an hour-old and a month-old connection
+read the same. Each stored table now names its timestamp column,
+checked against the generated types, the facts read the newest
+successful row through the same filters as the counts, and every row
+with a store says when that row arrived or that none has (CODE-77, the
+second half of STATE-4).
+
+## 0bg. No em dashes reach the screen, 2026-09-02
+
+They had reached a dozen surfaces and stood in for an absent value on 25
+metric cells, and 44 tab titles used one while five used a middle dot.
+Every sentence now separates its clauses with a comma, colon or full
+stop; an absent value reads "not reported", "not observed" or "not
+recorded"; every tab title ends " · Marky"; and a test walks every screen
+file and the copy modules and fails on the first one back (CODE-81, from
+COPY-2).
+
+## 0bf. A stopped daily read reaches the Command center, 2026-09-02
+
+The cadence card already derived "overdue" from the schedule row, but
+nothing else read it: the next actions needed a recorded failed run and
+the status line could not see it. One shared read (`readObservationCadences`)
+now feeds the card, a next action naming the stopped read with its due
+time, and a status line that says "N daily reads are overdue" ahead of a
+failing provider (CODE-80, from MEAS-10).
+
+## 0be. Agent chat reads the workspace the operator selected, 2026-09-02
+
+The evidence tools behind Ask resolved the tenant from the operator's
+first membership row; every other server read uses the saved active
+tenant first. They now share `resolveTenantId`, so the agent answers
+about the workspace named in the shell's switcher (CODE-79, from AGT-14).
+
+## 0bd. The waiting-on banner counts the page's own rules, 2026-09-02
+
+Three pages each built the thirteen-key prerequisite state by hand and
+had drifted, and the banner counted every rule in the registry, so Your
+pages could say seventeen checks were waiting on a second collection when
+none of its rules needed one. One builder holds the not-read-here default,
+each page passes what it reads plus its category, and the count is scoped
+to rules that land on that page; every rule with a prerequisite now names
+its category by rule, pinned by test (CODE-78, from CQ-8).
+
 ## 0bc. The Command center says when each number was true, 2026-09-02
 
 The category pages dated their own windows; the Command center, which

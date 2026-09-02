@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { RULE_ASSIGNMENTS, unmetPrerequisites, type RuleBucket } from "./rule-buckets";
+import { categoryForRule } from "./finding-router";
+import {
+  RULE_ASSIGNMENTS,
+  prerequisiteState,
+  unmetPrerequisites,
+  type RuleBucket,
+} from "./rule-buckets";
 import { SEARCH_CONSOLE_THRESHOLDS, SEO_RULES } from "./rule-thresholds";
 import { ALL_SEARCH_RULES } from "./finding-copy";
 import type { Ga4CheckRule } from "./ga4-rule-checks";
@@ -234,10 +240,41 @@ describe("non-volume prerequisites", () => {
       brandMentionCollection: true,
       referringDomainCollection: true,
       reviewedCompetitorSet: true,
+      umamiSecondWindow: true,
       onpageCrawl: true,
     });
     const held = RULE_ASSIGNMENTS.filter((a) => a.alsoNeeds.includes("second_collection")).length;
     expect(notes[0]).toContain(String(held));
+  });
+
+  it("counts only the page's own rules when the page names its category", () => {
+    // Your pages once read "17 checks are waiting on a second collection" for
+    // seventeen rules that were not on that page at all (CQ-8).
+    expect(unmetPrerequisites(prerequisiteState({ secondCollection: false }), "pages")).toEqual([]);
+    const search = unmetPrerequisites(prerequisiteState({ secondCollection: false }), "search");
+    const held = RULE_ASSIGNMENTS.filter(
+      (a) => a.alsoNeeds.includes("second_collection") && categoryForRule(a.rule) === "search",
+    ).length;
+    expect(held).toBeGreaterThan(0);
+    expect(search).toHaveLength(1);
+    expect(search[0]).toContain(`${held} checks are waiting on a second collection`);
+  });
+
+  it("names a category by rule for every rule that carries a prerequisite", () => {
+    // The scoped count cannot guess from a module it does not know, so a
+    // rule with a prerequisite and no rule-level category would silently
+    // drop out of every page's banner.
+    for (const assignment of RULE_ASSIGNMENTS) {
+      if (assignment.alsoNeeds.length === 0) continue;
+      expect(categoryForRule(assignment.rule), `${assignment.rule} has no category`).not.toBeNull();
+    }
+  });
+
+  it("treats a key the page did not read as met, and a read key as read", () => {
+    const state = prerequisiteState({ pageAudit: false });
+    expect(state.pageAudit).toBe(false);
+    expect(state.secondCollection).toBe(true);
+    expect(state.umamiSecondWindow).toBe(true);
   });
 
   it("names the discovery family's own prerequisites when they are unmet", () => {

@@ -63,6 +63,11 @@ export type PageSpeedReading = {
  * A direct measurement is either taken or not, so confidence does not vary
  * with volume the way a count-based rule's does. It is held below 1 because
  * a single lab run varies between runs, and because lab is not field.
+ *
+ * Stated assumption: 0.75 is a chosen figure, not a measured one. What would
+ * settle it: the run-to-run spread of the stored Lighthouse scores for one
+ * page, once several snapshots of the same page exist to read it from
+ * (AGT-15).
  */
 const MEASUREMENT_CONFIDENCE = 0.75;
 

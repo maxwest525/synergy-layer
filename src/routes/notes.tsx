@@ -24,13 +24,13 @@ export const Route = createFileRoute("/notes")({
   errorComponent: OperatorRouteError,
   head: () => ({
     meta: [
-      { title: "Notes pad — Marky" },
+      { title: "Notes pad · Marky" },
       {
         name: "description",
         content:
           "Private scratch space for the operator: jot a thought, pin what matters, and attach the page on the site it belongs to.",
       },
-      { property: "og:title", content: "Notes pad — Marky" },
+      { property: "og:title", content: "Notes pad · Marky" },
       {
         property: "og:description",
         content: "Private operator notes, pinned and linked to the pages they concern.",

@@ -21,7 +21,7 @@ export const Route = createFileRoute("/openseo")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "OpenSEO — Marky" },
+      { title: "OpenSEO · Marky" },
       {
         name: "description",
         content:

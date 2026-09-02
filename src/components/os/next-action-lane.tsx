@@ -42,7 +42,7 @@ export function NextActionLane({
               <p className="mt-1.5 max-w-[70ch] text-sm text-muted-foreground">{action.reason}</p>
               <p className="mt-1 text-xs text-muted-foreground">Evidence: {action.evidence}</p>
               {action.blockedBy ? (
-                <p className="mt-1 text-xs text-amber-400">Blocked by: {action.blockedBy}</p>
+                <p className="mt-1 text-xs text-warning">Blocked by: {action.blockedBy}</p>
               ) : null}
               <div className="mt-3">
                 <Link to={action.to} className={ACTION_CLASS}>

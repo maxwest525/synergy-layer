@@ -22,13 +22,13 @@ export const Route = createFileRoute("/operators")({
   errorComponent: OperatorRouteError,
   head: () => ({
     meta: [
-      { title: "Authorized operators — Marky" },
+      { title: "Authorized operators · Marky" },
       {
         name: "description",
         content:
           "Everyone authorized on the active workspace, the role each one holds, and when their access was granted.",
       },
-      { property: "og:title", content: "Authorized operators — Marky" },
+      { property: "og:title", content: "Authorized operators · Marky" },
       {
         property: "og:description",
         content: "Who can approve and execute work in this workspace.",

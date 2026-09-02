@@ -26,7 +26,7 @@ describe("Action Center change request lifecycle", () => {
 
   it("keeps a legacy completed approval visible until execution is finished", () => {
     expect(actionCenterLane("completed", change)).toBe("in_progress");
-    expect(actionCenterStage(change)).toBe("Approved — ready to execute");
+    expect(actionCenterStage(change)).toBe("Approved, ready to execute");
   });
 
   it("keeps an unresolved approved proposal visible as an executable action", () => {
@@ -47,7 +47,7 @@ describe("Action Center change request lifecycle", () => {
 
   it("distinguishes a committed approval from one that still needs execution", () => {
     expect(actionCenterStage({ ...change, source_commit_sha: "abc123" })).toBe(
-      "Source committed — publish and check next",
+      "Source committed, publish and check next",
     );
   });
 

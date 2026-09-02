@@ -68,7 +68,7 @@ export function composeOutcomeMemorySource(
     const lines = group.map(
       (outcome) => `- ${outcome.windowDays}-day window: ${outcome.verdict}. ${outcome.reason}`,
     );
-    const where = head.targetUrl === null ? "" : ` — ${head.targetUrl}`;
+    const where = head.targetUrl === null ? "" : `: ${head.targetUrl}`;
     return `## ${head.title}${where}\n\n${lines.join("\n")}`;
   });
 
@@ -76,7 +76,7 @@ export function composeOutcomeMemorySource(
     "# Outcome history",
     "",
     "What this system changed on this site, and what the stored measurements " +
-      "concluded. Guidance for drafting, in the devils_advocate role — the " +
+      "concluded. Guidance for drafting, in the devils_advocate role: the " +
       "evidence for any new claim remains the live page and the stored " +
       "provider rows, never this summary.",
     "",

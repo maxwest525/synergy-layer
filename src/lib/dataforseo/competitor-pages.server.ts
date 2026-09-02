@@ -374,7 +374,7 @@ export async function inspectShortlistPages(
       const { error: insertError } = await client.from("knowledge_entries").insert({
         tenant_id: tenantId,
         collection_id: collection.id,
-        title: `Competitor page observation — ${profile.domain} (${target.keyword})`,
+        title: `Competitor page observation: ${profile.domain} (${target.keyword})`,
         body,
         source_ref: sourceRef,
         tags: ["competitor-evidence", "observation", profile.domain],
@@ -422,13 +422,13 @@ export async function inspectShortlistPages(
       const { error: insertError } = await client.from("knowledge_entries").insert({
         tenant_id: tenantId,
         collection_id: collection.id,
-        title: `Repeated tactics across shortlisted winners — ${today}`,
+        title: `Repeated tactics across shortlisted winners, ${today}`,
         body: [
           `Observed across ${observations.length} shortlisted competitor pages that rank for operator-approved keywords.`,
           "",
           ...tactics.map(
             (entry) =>
-              `- ${entry.tactic} — ${entry.domains.length} of ${observations.length} winners (${entry.domains.join(", ")})`,
+              `- ${entry.tactic}: ${entry.domains.length} of ${observations.length} winners (${entry.domains.join(", ")})`,
           ),
           "",
           "Repetition across winners is a pattern, not a cause. Nothing here claims these tactics produce the ranking.",

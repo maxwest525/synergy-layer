@@ -53,15 +53,15 @@ export function PageAuditCallout() {
 
   if (neverRan) {
     return (
-      <GlassCard className="flex flex-wrap items-center justify-between gap-3 border-amber-500/40 p-4">
+      <GlassCard className="flex flex-wrap items-center justify-between gap-3 border-warning/40 p-4">
         <div className="min-w-0">
           <p className="text-sm font-semibold text-foreground">
             The page audit has never run for this site
           </p>
           <p className="mt-1 text-sm text-muted-foreground">
-            Until it reads your pages once, every page-level check — titles, descriptions,
-            structured data, indexing directives — has nothing to look at. One run reads up to 100
-            pages through Firecrawl.
+            Until it reads your pages once, every page-level check (titles, descriptions, structured
+            data, indexing directives) has nothing to look at. One run reads up to 100 pages through
+            Firecrawl.
           </p>
         </div>
         {runButton}

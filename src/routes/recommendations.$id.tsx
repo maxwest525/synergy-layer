@@ -36,8 +36,8 @@ export const Route = createFileRoute("/recommendations/$id")({
   },
   head: ({ loaderData }) => {
     const title = loaderData?.recommendation
-      ? `${loaderData.recommendation.title} — Recommendations — Marky`
-      : "Recommendation — Marky";
+      ? `${loaderData.recommendation.title} · Recommendations · Marky`
+      : "Recommendation · Marky";
     const description =
       loaderData?.recommendation?.description ??
       "Recommendation detail, impact scoring, and reasoning.";

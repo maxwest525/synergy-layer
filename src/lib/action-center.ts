@@ -86,12 +86,11 @@ export function actionCenterLane(
 
 export function actionCenterStage(change: ActionCenterChange): string {
   if (change.state === "proposed") return "Approval requested";
-  if (change.state === "approved" && !change.source_commit_sha)
-    return "Approved — ready to execute";
-  if (change.state === "approved") return "Source committed — publish and check next";
+  if (change.state === "approved" && !change.source_commit_sha) return "Approved, ready to execute";
+  if (change.state === "approved") return "Source committed, publish and check next";
   if (change.state === "applied" && change.published_proof_at)
-    return "Proven live — tracking outcome";
-  if (change.state === "applied") return "Applied — tracking outcome";
+    return "Proven live, tracking outcome";
+  if (change.state === "applied") return "Applied, tracking outcome";
   if (change.state === "verified") return "Outcome verified";
   if (change.state === "rejected") return "Ignored";
   if (change.state === "rolled_back") return "Rolled back";
