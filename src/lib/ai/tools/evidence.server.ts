@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import type { Database } from "@/integrations/supabase/types";
 import { supabasePublicUrl, supabasePublishableKey } from "@/integrations/supabase/public-config";
+import { resolveTenantId } from "@/lib/tenant.server";
 
 type Db = ReturnType<typeof createClient<Database>>;
 
@@ -22,16 +23,6 @@ function operatorClient(token: string): Db {
   });
 }
 
-async function resolveTenant(db: Db, userId: string): Promise<string | null> {
-  const { data } = await db
-    .from("tenant_members")
-    .select("tenant_id")
-    .eq("user_id", userId)
-    .limit(1)
-    .maybeSingle();
-  return data?.tenant_id ?? null;
-}
-
 type Ctx = { db: Db; tenantId: string | null };
 
 const NO_TENANT = { error: "No workspace is resolvable for this operator." } as const;
@@ -42,7 +33,12 @@ const NO_TENANT = { error: "No workspace is resolvable for this operator." } as 
  */
 export async function buildEvidenceTools(identity: { userId: string; token: string }) {
   const db = operatorClient(identity.token);
-  const tenantId = await resolveTenant(db, identity.userId);
+  // The workspace the operator selected in the shell, by the same rule every
+  // other server read uses: the saved active tenant, then their first
+  // membership, then the sole tenant. This used to take the first membership
+  // row outright, so an operator in two workspaces who had switched got
+  // answers about whichever row sorted first (AGT-14).
+  const tenantId = await resolveTenantId(db);
   const ctx: Ctx = { db, tenantId };
 
   return {

@@ -34,6 +34,13 @@ Last updated: 2026-08-31, after wiring Google Ads campaign reporting
 describes 2026-08-21 and has NOT been rewritten; the current-state blocks
 immediately below supersede it.
 
+## 0be. Agent chat reads the workspace the operator selected, 2026-09-02
+
+The evidence tools behind Ask resolved the tenant from the operator's
+first membership row; every other server read uses the saved active
+tenant first. They now share `resolveTenantId`, so the agent answers
+about the workspace named in the shell's switcher (CODE-79, from AGT-14).
+
 ## 0bd. The waiting-on banner counts the page's own rules, 2026-09-02
 
 Three pages each built the thirteen-key prerequisite state by hand and
