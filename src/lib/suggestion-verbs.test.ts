@@ -48,6 +48,15 @@ describe("which verbs a card may offer", () => {
     ).toContain("regenerate");
     expect(
       idsFor({ id: "c2", kind: "change", proposalType: "page_metadata", storedState: "proposed" }),
+    ).toContain("regenerate");
+    // The crawl-directives lane has no redraft function, so no verb (CODE-4).
+    expect(
+      idsFor({
+        id: "c3",
+        kind: "change",
+        proposalType: "site.crawl_directives",
+        storedState: "proposed",
+      }),
     ).not.toContain("regenerate");
   });
 

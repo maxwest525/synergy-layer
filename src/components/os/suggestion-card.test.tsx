@@ -88,7 +88,14 @@ describe("a verb that is not legal is absent, never disabled", () => {
   });
 
   it("renders no redraft control where no redraft path exists", () => {
-    show({ id: "c1", kind: "change", proposalType: "page_metadata", storedState: "proposed" });
+    // The crawl-directives lane has no redraft function; the two wording
+    // lanes do since CODE-4.
+    show({
+      id: "c1",
+      kind: "change",
+      proposalType: "site.crawl_directives",
+      storedState: "proposed",
+    });
     expect(screen.queryByRole("button", { name: /Write it again/ })).not.toBeInTheDocument();
   });
 

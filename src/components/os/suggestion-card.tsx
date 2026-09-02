@@ -14,6 +14,7 @@ import { proposeFixFromFinding } from "@/lib/search-findings.functions";
 import { ignoreAuditFinding, restoreAuditFinding } from "@/lib/suggestion-suppressions.functions";
 import type { QueueItem, UrgencyTone } from "@/lib/suggestion-queue";
 import { verbsFor, type SuggestionVerb } from "@/lib/suggestion-verbs";
+import { regeneratePageMetadataProposal } from "@/lib/page-metadata-proposals.functions";
 import { regeneratePageWordingProposal } from "@/lib/page-wording-proposals.functions";
 import { cn } from "@/lib/utils";
 
@@ -51,6 +52,7 @@ export function SuggestionCard({ item }: { item: QueueItem }) {
   const setQueueState = useServerFn(setRecommendationQueueState);
   const rejectChange = useServerFn(rejectChangeRequest);
   const redraft = useServerFn(regeneratePageWordingProposal);
+  const redraftMetadata = useServerFn(regeneratePageMetadataProposal);
   const ignoreAudit = useServerFn(ignoreAuditFinding);
   const restoreAudit = useServerFn(restoreAuditFinding);
   const draftFix = useServerFn(proposeFixFromFinding);
@@ -95,7 +97,13 @@ export function SuggestionCard({ item }: { item: QueueItem }) {
           ? ignoreAudit({ data: { fingerprint } })
           : restoreAudit({ data: { fingerprint } });
       }
-      if (verb.id === "regenerate") return redraft({ data: { id: item.id } });
+      if (verb.id === "regenerate") {
+        // Each lane redrafts through its own function; both land as an
+        // immutable revision on the same draft.
+        return item.proposalType === "page_metadata"
+          ? redraftMetadata({ data: { id: item.id } })
+          : redraft({ data: { id: item.id } });
+      }
       if (item.kind === "change") return rejectChange({ data: { id: item.id, notes: null } });
       return setQueueState({ data: { id: item.id, verb: verb.id } });
     },
