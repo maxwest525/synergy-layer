@@ -34,6 +34,15 @@ Last updated: 2026-08-31, after wiring Google Ads campaign reporting
 describes 2026-08-21 and has NOT been rewritten; the current-state blocks
 immediately below supersede it.
 
+## 0bs. A silent GA4 event is named the next morning, 2026-09-02
+
+The daily GA4 read now also reads yesterday alone and stores the
+per-event totals beside the 28-day window. `event_silent_yesterday` names
+an event that fired on each of the previous seven days and recorded
+nothing yesterday, `page_view` included, with the seven counts in
+evidence; until seven daily reads exist the run says why it did not run
+(CODE-85, from MEAS-9).
+
 ## 0br. The site audit reads the protocol layer, 2026-09-02
 
 Under robots.txt and the sitemap, the audit now reads what plain http

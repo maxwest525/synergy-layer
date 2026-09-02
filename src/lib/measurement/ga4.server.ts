@@ -293,6 +293,18 @@ export async function fetchGa4Inventory(
   };
 }
 
+/** Event totals by name, for the one-day read stored beside the window. */
+export function eventTotals(rows: readonly { eventName: string; eventCount: number }[]) {
+  const byEvent = new Map<string, number>();
+  for (const row of rows) {
+    if (!row.eventName) continue;
+    byEvent.set(row.eventName, (byEvent.get(row.eventName) ?? 0) + row.eventCount);
+  }
+  return [...byEvent.entries()]
+    .map(([eventName, eventCount]) => ({ eventName, eventCount }))
+    .sort((a, b) => b.eventCount - a.eventCount);
+}
+
 export async function runGa4Inventory(
   admin: AdminClient,
   input: {
@@ -336,7 +348,25 @@ export async function runGa4Inventory(
   try {
     const result = await fetchGa4Inventory(input.property, window);
     authenticationSucceeded = true;
+    // Yesterday alone, so a tag that broke is seen within a day rather than
+    // after 28 silent ones (MEAS-9). The 28-day read is what this run exists
+    // for; a failed daily read is recorded on the snapshot and never fails it.
+    const dailyDate = window.endDate;
+    let dailyEvents: { eventName: string; eventCount: number }[] | null = null;
+    let dailyError: string | null = null;
+    try {
+      const daily = await fetchGa4Inventory(input.property, {
+        startDate: dailyDate,
+        endDate: dailyDate,
+      });
+      dailyEvents = eventTotals(daily.inventory.rows);
+    } catch (error) {
+      dailyError = error instanceof Error ? error.message : String(error);
+    }
     const metrics = {
+      dailyDate,
+      dailyEvents,
+      dailyError,
       rowCount: result.inventory.rowCount,
       pageCount: result.inventory.pageCount,
       eventNameCount: result.inventory.eventNameCount,

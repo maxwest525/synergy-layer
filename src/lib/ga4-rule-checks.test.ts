@@ -3,7 +3,9 @@ import { describe, expect, it } from "vitest";
 import {
   detectDisappearedEvents,
   detectPageTrafficShift,
+  detectSilentEvents,
   detectZeroEngagementPages,
+  type DailyEventCounts,
 } from "./ga4-rule-checks";
 
 const row = (pagePath: string, eventName: string, sessions: number, eventCount = sessions) => ({
@@ -131,5 +133,44 @@ describe("detectZeroEngagementPages", () => {
     const rows = Array.from({ length: 30 }, (_, i) => row(`/page-${i}`, "page_view", 100));
     const drafts = detectZeroEngagementPages(rows);
     expect(drafts).toHaveLength(10);
+  });
+});
+
+describe("detectSilentEvents", () => {
+  const day = (date: string, counts: Record<string, number>): DailyEventCounts => ({
+    date,
+    events: Object.entries(counts).map(([eventName, eventCount]) => ({ eventName, eventCount })),
+  });
+  const prior = Array.from({ length: 7 }, (_, i) =>
+    day(`2026-08-${24 + i}`, { page_view: 300 + i, generate_lead: 1 + (i % 2), scroll: 40 }),
+  );
+
+  it("names an event that fired on each of the previous seven days and not yesterday", () => {
+    const drafts = detectSilentEvents(day("2026-08-31", { page_view: 280, scroll: 35 }), prior);
+    expect(drafts).toHaveLength(1);
+    expect(drafts[0]?.rule).toBe("event_silent_yesterday");
+    expect(drafts[0]?.target).toBe("generate_lead");
+    expect(drafts[0]?.description).toContain("2026-08-31");
+    expect(drafts[0]?.evidence["priorDays"]).toHaveLength(7);
+  });
+
+  it("counts the automatic page_view: silent there is the tag itself gone", () => {
+    const drafts = detectSilentEvents(day("2026-08-31", {}), prior);
+    expect(drafts.map((d) => d.target).sort()).toEqual(["generate_lead", "page_view", "scroll"]);
+  });
+
+  it("says nothing before seven earlier days are stored, or when the event fired at all", () => {
+    expect(detectSilentEvents(day("2026-08-31", {}), prior.slice(0, 6))).toHaveLength(0);
+    expect(
+      detectSilentEvents(day("2026-08-31", { page_view: 1, generate_lead: 1, scroll: 1 }), prior),
+    ).toHaveLength(0);
+  });
+
+  it("ignores an event that missed any of the previous seven days", () => {
+    const sporadic = prior.map((d, i) =>
+      i === 3 ? day(d.date, { page_view: 300, scroll: 40 }) : d,
+    );
+    const drafts = detectSilentEvents(day("2026-08-31", { page_view: 280, scroll: 35 }), sporadic);
+    expect(drafts).toHaveLength(0);
   });
 });

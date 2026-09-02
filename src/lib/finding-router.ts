@@ -88,6 +88,7 @@ const CATEGORY_BY_RULE: Record<string, CategoryId> = {
   page_traffic_gain: "visitors",
   zero_engagement_page: "visitors",
   event_disappeared: "visitors",
+  event_silent_yesterday: "visitors",
 
   // Umami. cap.umami is real and snapshots exist, but the visitors category
   // had no Umami rule to fill it.

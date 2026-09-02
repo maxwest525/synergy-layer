@@ -282,6 +282,13 @@ export const RULE_ASSIGNMENTS: readonly RuleAssignment[] = [
     why: "An event that fired reliably and then stopped entirely is a wiring question (a tag or trigger broke), not a statistics question. No threshold makes 'did it stop' more honest than checking whether it fired. detectDisappearedEvents (ga4-rule-checks.ts:158-182) reads `priorByEvent` to know what used to fire, so it cannot say anything before a second GA4 collection, and needs analytics connected to have events at all.",
   },
   {
+    rule: "event_silent_yesterday",
+    bucket: "fact",
+    needsPerTarget: null,
+    alsoNeeds: ["analytics"],
+    why: "Whether an event that fired on each of the previous seven days recorded nothing yesterday is a row lookup over the one-day totals stored beside each GA4 window, not a statistics question; no volume floor is invented because 'each day' is the whole test. detectSilentEvents (ga4-rule-checks.ts) needs analytics connected to have events at all, and seven stored daily reads before it can say anything.",
+  },
+  {
     rule: "tracked_set_has_no_route_query",
     bucket: "fact",
     needsPerTarget: null,
