@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { findInFlightSiblings, type SiblingChange } from "./change-request-conflicts";
+import {
+  findInFlightSiblings,
+  pagesWithAnOpenChange,
+  type SiblingChange,
+} from "./change-request-conflicts";
 
 const page = "https://trumoveinc.com/services/corporate-relocation";
 
@@ -113,5 +117,60 @@ describe("a second change to a page is named while the first is still in flight"
       todayPt: "2026-09-02",
     });
     expect(result.map((s) => s.id)).toEqual(["newer", "older"]);
+  });
+});
+
+describe("the nightly job leaves a page alone only while a change on it is open", () => {
+  const research = "https://trumoveinc.com/research";
+  const blog = "https://trumoveinc.com/blog/true-cost-of-a-move";
+
+  it("names pages with a proposed, approved, or still-measured change", () => {
+    const result = pagesWithAnOpenChange({
+      changes: [
+        sibling({ id: "queued", state: "proposed" }),
+        sibling({
+          id: "waiting",
+          state: "approved",
+          approved_at: "2026-08-30T00:00:00Z",
+          target_url: research,
+        }),
+        sibling({
+          id: "live",
+          state: "applied",
+          applied_at: "2026-08-14T09:00:00Z",
+          target_url: blog,
+        }),
+      ],
+      windows: [{ change_request_id: "live", available_after_pt: "2026-09-12" }],
+      todayPt: "2026-09-02",
+    });
+    expect(result.sort()).toEqual([page, blog, research].sort());
+  });
+
+  it("frees a page once its change is rejected, rolled back, verified, or fully measured", () => {
+    const result = pagesWithAnOpenChange({
+      changes: [
+        sibling({ id: "gone", state: "rejected" }),
+        sibling({ id: "undone", state: "rolled_back", applied_at: "2026-08-11T00:00:00Z" }),
+        sibling({
+          id: "measured",
+          state: "verified",
+          applied_at: "2026-07-01T00:00:00Z",
+          target_url: research,
+        }),
+        sibling({
+          id: "done",
+          state: "applied",
+          applied_at: "2026-06-01T09:00:00Z",
+          target_url: blog,
+        }),
+      ],
+      windows: [
+        { change_request_id: "undone", available_after_pt: "2026-12-01" },
+        { change_request_id: "done", available_after_pt: "2026-09-01" },
+      ],
+      todayPt: "2026-09-02",
+    });
+    expect(result).toEqual([]);
   });
 });

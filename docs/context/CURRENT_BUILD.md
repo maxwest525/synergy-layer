@@ -34,6 +34,15 @@ Last updated: 2026-08-31, after wiring Google Ads campaign reporting
 describes 2026-08-21 and has NOT been rewritten; the current-state blocks
 immediately below supersede it.
 
+## 0az. The nightly proposal job frees a page once its change is decided, 2026-09-02
+
+`propose-from-evidence` used to exclude any page that had ever carried a
+change request, whatever its state, so one rejection silenced a page for
+good. It now skips a page only while a change on it is proposed, approved,
+or live inside its measurement window, by the same in-flight rule the
+approval control uses; rejected, rolled-back, verified and fully measured
+changes leave the page open again (CODE-73, from AGT-9).
+
 ## 0ay. "0 min saved" reads as the absence it is, 2026-09-02
 
 Every rule writes `time_saved_minutes: 0` because nothing estimates it,
