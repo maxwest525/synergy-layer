@@ -32,6 +32,7 @@ export const getCommandCenterFacts = createServerFn({ method: "POST" })
     const { readPageAudit } = await import("./page-audit.server");
     const { describeGa4Connection, readGa4EnvPresence, ga4PropertyForSearchConsoleProperty } =
       await import("./measurement/ga4");
+    const { readObservationCadences } = await import("./observation-cadence.server");
 
     const tenantId = await requireTenantId(context.supabase);
     const db = context.supabase;
@@ -197,6 +198,9 @@ export const getCommandCenterFacts = createServerFn({ method: "POST" })
     const failingProviders = [...latestRunByProvider.values()].filter(
       (status) => status === "failed",
     ).length;
+    const overdueCadences = (await readObservationCadences(db, tenantId)).filter(
+      (cadence) => cadence.overdue,
+    ).length;
 
     // --- The queue ----------------------------------------------------------
 
@@ -334,6 +338,7 @@ export const getCommandCenterFacts = createServerFn({ method: "POST" })
         connectionsChecked,
         lastCheckedAt,
         latestRunAt,
+        overdueCadences,
       },
       queueSources: [...changeSources, ...recommendationSources, ...auditSources, ...siteSources],
     };

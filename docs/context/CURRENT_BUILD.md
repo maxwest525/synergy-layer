@@ -34,6 +34,15 @@ Last updated: 2026-08-31, after wiring Google Ads campaign reporting
 describes 2026-08-21 and has NOT been rewritten; the current-state blocks
 immediately below supersede it.
 
+## 0bf. A stopped daily read reaches the Command center, 2026-09-02
+
+The cadence card already derived "overdue" from the schedule row, but
+nothing else read it: the next actions needed a recorded failed run and
+the status line could not see it. One shared read (`readObservationCadences`)
+now feeds the card, a next action naming the stopped read with its due
+time, and a status line that says "N daily reads are overdue" ahead of a
+failing provider (CODE-80, from MEAS-10).
+
 ## 0be. Agent chat reads the workspace the operator selected, 2026-09-02
 
 The evidence tools behind Ask resolved the tenant from the operator's

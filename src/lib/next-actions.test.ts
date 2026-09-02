@@ -26,6 +26,7 @@ const empty: NextActionFacts = {
   systems: { total: 0, proven: 0, configuredOnly: 0, broken: 0 },
   coverage: { total: 0, unowned: 0, overdue: 0, nextDue: null },
   measurement: { failedRuns: 0, latestProvider: null, latestError: null },
+  cadences: { overdue: [] },
 };
 
 describe("next actions", () => {
@@ -43,6 +44,28 @@ describe("next actions", () => {
     const unowned = actions.findIndex((action) => action.id === "coverage-unowned");
     expect(overdue).toBeGreaterThanOrEqual(0);
     expect(overdue).toBeLessThan(unowned);
+  });
+
+  it("names a daily read whose due time passed with nothing recorded", () => {
+    // A stopped scheduler writes no failed run, so this is the only signal
+    // the Command center gets that the evidence is going stale (MEAS-10).
+    const actions = buildNextActions({
+      ...empty,
+      cadences: {
+        overdue: [
+          {
+            key: "gsc",
+            label: "Search Console",
+            dueAt: "2026-09-01T16:05:00.000Z",
+            lastRunAt: "2026-08-30T16:05:12.000Z",
+          },
+        ],
+      },
+    });
+    const action = actions.find((entry) => entry.id === "cadence-overdue-gsc");
+    expect(action?.group).toBe("system_health");
+    expect(action?.reason).toContain("2026-09-01T16:05:00.000Z");
+    expect(action?.to).toBe("/measurement/tools");
   });
 
   it("surfaces a failed measurement run as a retry instruction", () => {

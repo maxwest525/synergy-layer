@@ -57,6 +57,7 @@ describe("navigation contract", () => {
         connectionsChecked: 1,
         lastCheckedAt: "2026-08-19T12:00:00.000Z",
         latestRunAt: null,
+        overdueCadences: 0,
       },
       queueSources: [
         {

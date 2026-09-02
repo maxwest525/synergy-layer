@@ -14,6 +14,7 @@ export const getNextActionFacts = createServerFn({ method: "GET" })
   .handler(async ({ context }): Promise<NextActionFacts> => {
     const { requireTenantId } = await import("./tenant.server");
     const { assertRead } = await import("./essentials");
+    const { readObservationCadences } = await import("./observation-cadence.server");
     const tenantId = await requireTenantId(context.supabase);
     const db = context.supabase;
 
@@ -209,6 +210,8 @@ export const getNextActionFacts = createServerFn({ method: "GET" })
     }
     const measurementRows = measurementFailures.data ?? [];
 
+    const cadenceStatuses = await readObservationCadences(db, tenantId);
+
     return {
       property: selected
         ? { siteUrl: selected.site_url, lastObservedAt: selected.last_observed_at }
@@ -272,6 +275,20 @@ export const getNextActionFacts = createServerFn({ method: "GET" })
         failedRuns: measurementRows.length,
         latestProvider: measurementRows[0]?.provider ?? null,
         latestError: measurementRows[0]?.error ?? null,
+      },
+      cadences: {
+        overdue: cadenceStatuses.flatMap((cadence) =>
+          cadence.overdue && cadence.nextRunAt !== null
+            ? [
+                {
+                  key: cadence.key,
+                  label: cadence.label,
+                  dueAt: cadence.nextRunAt,
+                  lastRunAt: cadence.lastRunAt,
+                },
+              ]
+            : [],
+        ),
       },
     };
   });

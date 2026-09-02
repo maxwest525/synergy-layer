@@ -102,6 +102,11 @@ export type CadenceStatus = CadenceFacts & {
   eligible: boolean;
   /** Eligible and switched on. */
   active: boolean;
+  /**
+   * The due time passed a whole further period ago with no run recorded and
+   * no error to point at: the only trace a silently stopped scheduler leaves.
+   */
+  overdue: boolean;
   tone: "success" | "warning" | "danger" | "neutral";
   stateLabel: string;
   /** Fact plus imperative, always with one next step. */
@@ -178,6 +183,7 @@ export function deriveCadenceStatus(
     proveHref: source.proveHref,
     eligible,
     active,
+    overdue,
     tone,
     stateLabel,
     instruction,
