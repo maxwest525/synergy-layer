@@ -34,6 +34,13 @@ Last updated: 2026-08-31, after wiring Google Ads campaign reporting
 describes 2026-08-21 and has NOT been rewritten; the current-state blocks
 immediately below supersede it.
 
+## 0as. A schedule is claimed before it runs, 2026-09-02
+
+Two ticks that both read a schedule as due both ran it. The tick now
+claims the row with a conditional update on the very `next_run_at` it
+read, so whichever tick moves the row first owns the run and the other
+runs nothing and says so (CODE-67, from CQ-2).
+
 ## 0ar. A connection's health says when it was checked, 2026-09-02
 
 Connector health is probed on a click, and the ledger card showed the

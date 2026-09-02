@@ -10,6 +10,8 @@ type Client = SupabaseClient<Database>;
 export type TickResult = {
   claimed: number;
   blocked: number;
+  /** Due schedules another tick claimed first; not run here, not a failure. */
+  lostToAnotherTick: number;
   ran: { schedule: string; state: string }[];
 };
 
@@ -87,7 +89,7 @@ export async function tickScheduler(
   const allSchedules = schedules ?? [];
   const selectedSchedules = allSchedules.filter((schedule) => allowedKeys.has(schedule.key));
   const byId = new Map(allSchedules.map((schedule) => [schedule.id, schedule]));
-  const result: TickResult = { claimed: 0, blocked: 0, ran: [] };
+  const result: TickResult = { claimed: 0, blocked: 0, lostToAnotherTick: 0, ran: [] };
 
   for (const schedule of selectedSchedules) {
     const due = schedule.next_run_at === null || new Date(schedule.next_run_at) <= now;
@@ -130,6 +132,29 @@ export async function tickScheduler(
           actions: [{ kind: "open" }],
         });
       }
+      continue;
+    }
+
+    // Claim before running. Two ticks that both read the row as due used to
+    // both run it (CQ-2): the claim is a conditional update on the very
+    // next_run_at this tick read, so whichever tick moves it first owns the
+    // run and the other sees no row and moves on.
+    const nextAfterClaim = nextRunAt(schedule.cron, now);
+    const claim = client
+      .from("schedules")
+      .update({
+        last_run_at: now.toISOString(),
+        next_run_at: nextAfterClaim ? nextAfterClaim.toISOString() : null,
+      })
+      .eq("id", schedule.id);
+    const { data: claimedRows, error: claimError } = await (
+      schedule.next_run_at === null
+        ? claim.is("next_run_at", null)
+        : claim.eq("next_run_at", schedule.next_run_at)
+    ).select("id");
+    if (claimError) throw new Error(claimError.message);
+    if ((claimedRows ?? []).length === 0) {
+      result.lostToAnotherTick += 1;
       continue;
     }
 
