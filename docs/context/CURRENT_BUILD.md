@@ -34,6 +34,15 @@ Last updated: 2026-08-31, after wiring Google Ads campaign reporting
 describes 2026-08-21 and has NOT been rewritten; the current-state blocks
 immediately below supersede it.
 
+## 0aq. Google Ads spend is shown against its budget, 2026-09-02
+
+The campaign-day report stored spend and conversions and nothing about
+the ceiling the spend runs against. The query now selects the campaign
+budget, the row keeps it (null when the API reports none, never 0) and
+the measurement page shows "budget $X a day" beside each day's spend.
+Nothing here changes a budget; the ceiling is set in Google Ads
+(CODE-65, from PAID-1).
+
 ## 0ap. Authority rules read only what exists, 2026-09-02
 
 Ten authority rules were declared; the evaluator supplies observed ranks

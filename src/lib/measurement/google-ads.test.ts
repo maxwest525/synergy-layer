@@ -104,6 +104,7 @@ describe("buildGoogleAdsCampaignQuery", () => {
     expect(query).toContain("FROM campaign");
     expect(query).toContain("segments.date");
     expect(query).toContain("metrics.cost_micros");
+    expect(query).toContain("campaign_budget.amount_micros");
     expect(query).toContain("DURING LAST_30_DAYS");
   });
 });
@@ -119,6 +120,7 @@ describe("normalizeGoogleAdsReport", () => {
             status: "ENABLED",
             advertisingChannelType: "SEARCH",
           },
+          campaignBudget: { amountMicros: "5000000" },
           segments: { date: "2026-08-30" },
           metrics: {
             impressions: "1000",
@@ -160,6 +162,9 @@ describe("normalizeGoogleAdsReport", () => {
     expect(report.totalConversions).toBe(8);
     expect(report.rows[2]?.advertisingChannelType).toBeNull();
     expect(report.rows[2]?.conversions).toBe(0);
+    // The budget is the campaign's own ceiling; absent is null, never 0 (PAID-1).
+    expect(report.rows[0]?.budgetMicros).toBe(5_000_000);
+    expect(report.rows[2]?.budgetMicros).toBeNull();
   });
 
   it("skips a malformed row rather than throwing", () => {

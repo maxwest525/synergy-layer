@@ -707,6 +707,9 @@ function MeasurementPage() {
                     <span className="text-xs text-muted-foreground">
                       {row.impressions} impression(s) · {row.clicks} click(s) ·{" "}
                       {usd(row.costMicros)} · {row.conversions} conversion(s)
+                      {row.budgetMicros !== null
+                        ? ` · budget ${usd(row.budgetMicros)} a day`
+                        : " · no budget reported"}
                     </span>
                   </li>
                 ))}

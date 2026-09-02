@@ -80,6 +80,8 @@ export type GoogleAdsSnapshotRowView = {
   campaignName: string;
   campaignStatus: string;
   advertisingChannelType: string | null;
+  /** Daily budget in micros as the API reported it, or null when it sent none. */
+  budgetMicros: number | null;
   segmentDate: string;
   impressions: number;
   clicks: number;
@@ -172,7 +174,7 @@ export const getMeasurementState = createServerFn({ method: "POST" })
         context.supabase
           .from("google_ads_snapshots")
           .select(
-            "campaign_id, campaign_name, campaign_status, advertising_channel_type, segment_date, impressions, clicks, cost_micros, conversions, conversions_value, collected_at",
+            "campaign_id, campaign_name, campaign_status, advertising_channel_type, budget_micros, segment_date, impressions, clicks, cost_micros, conversions, conversions_value, collected_at",
           )
           .eq("tenant_id", tenantId)
           .order("segment_date", { ascending: false })
@@ -349,6 +351,7 @@ export const getMeasurementState = createServerFn({ method: "POST" })
           campaignName: row.campaign_name,
           campaignStatus: row.campaign_status,
           advertisingChannelType: row.advertising_channel_type,
+          budgetMicros: row.budget_micros === null ? null : Number(row.budget_micros),
           segmentDate: row.segment_date,
           impressions: Number(row.impressions),
           clicks: Number(row.clicks),
