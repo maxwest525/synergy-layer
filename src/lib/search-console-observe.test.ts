@@ -6,6 +6,7 @@ import { reconcileAppliedChangeEvidence } from "./change-requests.server";
 import { reconcileChangeMeasurements } from "./change-measurements.server";
 import { logActivity } from "./os.server";
 import { reconcileOutcomeAlerts } from "./outcome-alerts.server";
+import { reconcilePublishWaitRollup } from "./publish-wait-rollup.server";
 import { observeSearchConsole } from "./search-console-observe.server";
 import { collectDaily, getSelectedProperty } from "./search-console.server";
 
@@ -40,6 +41,14 @@ vi.mock("./change-requests.server", () => ({
 
 vi.mock("./outcome-alerts.server", () => ({
   reconcileOutcomeAlerts: vi.fn(async () => ({ failed: 0, filed: 0 })),
+}));
+vi.mock("./publish-wait-rollup.server", () => ({
+  reconcilePublishWaitRollup: vi.fn(async () => ({
+    waiting: 0,
+    filed: false,
+    updated: false,
+    completed: false,
+  })),
 }));
 
 vi.mock("./os.server", () => ({
@@ -80,6 +89,9 @@ describe("Search Console observation tracking", () => {
     expect(reconcileChangeMeasurements).toHaveBeenCalledWith(client);
     // After the day's windows are captured, failure verdicts reach the Inbox.
     expect(reconcileOutcomeAlerts).toHaveBeenCalledWith(client, "sc-domain:trumoveinc.com");
+    // The group of changes waiting on the site publish is refreshed in the same
+    // pass, after the verdict alerts, so the Inbox reads the day's true state.
+    expect(reconcilePublishWaitRollup).toHaveBeenCalledWith(client);
     expect(
       updates.some(
         (entry) =>

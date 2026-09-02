@@ -5,6 +5,7 @@ import { fileInboxItem, logActivity } from "./os.server";
 import { reconcileAppliedChangeEvidence } from "./change-requests.server";
 import { reconcileChangeMeasurements } from "./change-measurements.server";
 import { reconcileOutcomeAlerts } from "./outcome-alerts.server";
+import { reconcilePublishWaitRollup } from "./publish-wait-rollup.server";
 import { evaluateSnapshots, type RuleRunResult } from "./search-console-rules.server";
 import { SearchConsoleFailure, collectDaily, getSelectedProperty } from "./search-console.server";
 
@@ -94,6 +95,10 @@ export async function observeSearchConsole(client: Client): Promise<ObserveResul
     // moment a stored verdict can newly resolve. Failure verdicts become Inbox
     // items here; nothing else consumes them automatically.
     const verdictAlerts = await reconcileOutcomeAlerts(client, property);
+    // Approved changes committed and not yet proven live share one blocker,
+    // the site publish. One Inbox item per group, kept current here daily and
+    // after every live page check.
+    const publishWait = await reconcilePublishWaitRollup(client);
     await logActivity(client, {
       verb: "capability.observation_completed",
       subjectKind: "capability",
@@ -106,6 +111,7 @@ export async function observeSearchConsole(client: Client): Promise<ObserveResul
         outcomeEvidenceReady: outcomes.newlyReady,
         outcomeEvidenceWaiting: outcomes.waiting,
         outcomeFailuresFiled: verdictAlerts.filed,
+        changesWaitingOnPublish: publishWait.waiting,
       },
     });
     await setHealth(client, "healthy");
