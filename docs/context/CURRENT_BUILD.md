@@ -45,6 +45,16 @@ failed or refused source attempt files one open item per change, naming
 the reason, and a later attempt that lands closes it (CODE-56, from MON-9
 and MON-10).
 
+## 0af. The coverage page says evaluation is not built, 2026-09-02
+
+Fifty-four concerns, fifty-four templates, zero evaluations ever: two
+readers and no writer. The coverage card said "no evaluation has been
+stored yet", which implied an evaluator waiting to run. It now says that
+nothing in AOOS grades a concern, that the page tracks who owns each and
+when it is due, and that it makes no claim about whether one is working.
+The next-actions read of the empty table is gone; the coverage read and
+the model stay for the day an evaluator exists (CODE-43, from DB-9).
+
 ## 0ae. A verdict shows the confidence it rests on, 2026-09-02
 
 The verdict module already computed a confidence for every count-based

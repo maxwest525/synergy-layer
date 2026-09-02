@@ -37,7 +37,6 @@ export const getNextActionFacts = createServerFn({ method: "GET" })
       recommendations,
       systems,
       concerns,
-      concernEvaluations,
       measurementFailures,
       connections,
     ] = await Promise.all([
@@ -131,12 +130,6 @@ export const getNextActionFacts = createServerFn({ method: "GET" })
         .eq("tenant_id", tenantId)
         .is("retired_at", null),
       db
-        .from("essential_concern_evaluations")
-        .select("concern_id, status, evaluated_at")
-        .eq("tenant_id", tenantId)
-        .order("evaluated_at", { ascending: false })
-        .limit(500),
-      db
         .from("measurement_runs")
         .select("provider, status, error, started_at")
         .eq("tenant_id", tenantId)
@@ -165,7 +158,6 @@ export const getNextActionFacts = createServerFn({ method: "GET" })
     assertRead("Recommendations", recommendations);
     assertRead("Tool systems catalog", systems);
     assertRead("Coverage concerns", concerns);
-    assertRead("Coverage evaluations", concernEvaluations);
     assertRead("Measurement runs", measurementFailures);
     assertRead("Connections", connections);
 
@@ -201,11 +193,8 @@ export const getNextActionFacts = createServerFn({ method: "GET" })
     // A failing probe, not a verification_state nothing ever sets to "failed".
     const broken = (connections.data ?? []).filter((row) => row.health === "failing").length;
 
-    const latestConcernStatus = new Map<string, string>();
-    for (const row of concernEvaluations.data ?? []) {
-      if (!latestConcernStatus.has(row.concern_id))
-        latestConcernStatus.set(row.concern_id, row.status);
-    }
+    // No rule writes a concern evaluation yet (CODE-43), so every concern
+    // with a date counts toward overdue; nothing is skipped as "working".
     const todayIso = new Date().toISOString().slice(0, 10);
     const concernRows = concerns.data ?? [];
     let unowned = 0;
@@ -214,7 +203,6 @@ export const getNextActionFacts = createServerFn({ method: "GET" })
     for (const row of concernRows) {
       if (!row.owner_name || !row.target_date) unowned += 1;
       if (!row.target_date) continue;
-      if (latestConcernStatus.get(row.id) === "working") continue;
       if (row.target_date < todayIso) overdue += 1;
       if (!nextDue || row.target_date < nextDue.targetDate)
         nextDue = { task: row.task, targetDate: row.target_date };

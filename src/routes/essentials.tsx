@@ -303,8 +303,9 @@ function CoverageSection({
                       </>
                     ) : (
                       <p className="mt-2 text-sm text-foreground/80">
-                        No evaluation has been stored for this concern yet, so AOOS makes no claim
-                        about it either way.
+                        Not evaluated. Nothing in AOOS grades a concern yet: no rule writes an
+                        evaluation, so this page tracks who owns it and when it is due, and makes no
+                        claim about whether it is working.
                       </p>
                     )}
                     <ConcernOwnership concern={concern} />
