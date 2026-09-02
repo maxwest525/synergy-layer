@@ -15,8 +15,14 @@ const facts: CommandCenterFacts = {
   search: { status: "insufficient", availableDays: 12, requiredDays: 56, latestDate: null },
   ga4: { connectionStatement: "GA4 is connected.", windowDays: 28, snapshots: [] },
   changes: { fixesLive: 0, pagesImproved: 0 },
-  audit: { hasRun: false, pagesNeedingFixes: 0 },
-  health: { brokenConnections: 0, failingProviders: 0, connectionsChecked: 1 },
+  audit: { lastObservedAt: null, pagesNeedingFixes: 0 },
+  health: {
+    brokenConnections: 0,
+    failingProviders: 0,
+    connectionsChecked: 1,
+    lastCheckedAt: daysBefore(1),
+    latestRunAt: daysBefore(2),
+  },
   queueSources: [],
 };
 
@@ -265,7 +271,9 @@ describe("Pages needing fixes tile", () => {
 
   it("counts the pages the stored audit actually flagged", () => {
     const entry = tile(
-      buildCommandCenter(withFacts({ audit: { hasRun: true, pagesNeedingFixes: 4 } })),
+      buildCommandCenter(
+        withFacts({ audit: { lastObservedAt: daysBefore(3), pagesNeedingFixes: 4 } }),
+      ),
       "Pages needing fixes",
     );
     expect(entry.value).toBe(4);
@@ -403,7 +411,7 @@ describe("top cards", () => {
 
 describe("top bar status", () => {
   it("says all systems are normal only when the stored health rows agree", () => {
-    expect(buildCommandCenter(facts).statusLine).toEqual({
+    expect(buildCommandCenter(facts).statusLine).toMatchObject({
       text: "All systems normal",
       tone: "positive",
     });
@@ -412,23 +420,47 @@ describe("top bar status", () => {
   it("says nothing has checked the plumbing rather than claiming it is fine", () => {
     expect(
       buildCommandCenter(
-        withFacts({ health: { brokenConnections: 0, failingProviders: 0, connectionsChecked: 0 } }),
+        withFacts({
+          health: {
+            brokenConnections: 0,
+            failingProviders: 0,
+            connectionsChecked: 0,
+            lastCheckedAt: null,
+            latestRunAt: null,
+          },
+        }),
       ).statusLine,
-    ).toEqual({ text: "Connections have never been checked", tone: "warning" });
+    ).toEqual({ text: "Connections have never been checked", tone: "warning", asOf: null });
   });
 
   it("names a broken connection rather than staying green", () => {
     const view = buildCommandCenter(
-      withFacts({ health: { brokenConnections: 1, failingProviders: 0, connectionsChecked: 1 } }),
+      withFacts({
+        health: {
+          brokenConnections: 1,
+          failingProviders: 0,
+          connectionsChecked: 1,
+          lastCheckedAt: daysBefore(1),
+          latestRunAt: daysBefore(2),
+        },
+      }),
     );
-    expect(view.statusLine).toEqual({ text: "1 connection needs attention", tone: "danger" });
+    expect(view.statusLine).toMatchObject({ text: "1 connection needs attention", tone: "danger" });
   });
 
   it("names the providers that are failing now, not every failure ever stored", () => {
     const view = buildCommandCenter(
-      withFacts({ health: { brokenConnections: 0, failingProviders: 3, connectionsChecked: 1 } }),
+      withFacts({
+        health: {
+          brokenConnections: 0,
+          failingProviders: 3,
+          connectionsChecked: 1,
+          lastCheckedAt: daysBefore(1),
+          latestRunAt: daysBefore(2),
+        },
+      }),
     );
-    expect(view.statusLine).toEqual({
+    expect(view.statusLine).toMatchObject({
       text: "3 measurement providers are failing",
       tone: "warning",
     });
@@ -436,9 +468,17 @@ describe("top bar status", () => {
 
   it("says provider in the singular when only one is failing", () => {
     const view = buildCommandCenter(
-      withFacts({ health: { brokenConnections: 0, failingProviders: 1, connectionsChecked: 1 } }),
+      withFacts({
+        health: {
+          brokenConnections: 0,
+          failingProviders: 1,
+          connectionsChecked: 1,
+          lastCheckedAt: daysBefore(1),
+          latestRunAt: daysBefore(2),
+        },
+      }),
     );
-    expect(view.statusLine).toEqual({
+    expect(view.statusLine).toMatchObject({
       text: "1 measurement provider is failing",
       tone: "warning",
     });
@@ -446,9 +486,28 @@ describe("top bar status", () => {
 
   it("leads with the broken connection when both are wrong", () => {
     const view = buildCommandCenter(
-      withFacts({ health: { brokenConnections: 2, failingProviders: 5, connectionsChecked: 1 } }),
+      withFacts({
+        health: {
+          brokenConnections: 2,
+          failingProviders: 5,
+          connectionsChecked: 1,
+          lastCheckedAt: daysBefore(1),
+          latestRunAt: daysBefore(2),
+        },
+      }),
     );
-    expect(view.statusLine).toEqual({ text: "2 connections need attention", tone: "danger" });
+    expect(view.statusLine).toMatchObject({ text: "2 connections need attention", tone: "danger" });
+  });
+
+  it("dates the claim by the check it rests on", () => {
+    // Green rests on the probes and the runs together, so the older one dates it.
+    expect(buildCommandCenter(facts).statusLine.asOf).toBe(daysBefore(2));
+    const health = { ...facts.health, brokenConnections: 1 };
+    expect(buildCommandCenter(withFacts({ health })).statusLine.asOf).toBe(daysBefore(1));
+    const failing = { ...facts.health, failingProviders: 1 };
+    expect(buildCommandCenter(withFacts({ health: failing })).statusLine.asOf).toBe(daysBefore(2));
+    const unchecked = { ...facts.health, connectionsChecked: 0, lastCheckedAt: null };
+    expect(buildCommandCenter(withFacts({ health: unchecked })).statusLine.asOf).toBeNull();
   });
 
   it("does not turn red just because the queue is busy", () => {
@@ -483,14 +542,16 @@ describe("suggested next rows", () => {
   });
 
   it("stops offering the first audit once the audit has run", () => {
-    const view = buildCommandCenter(withFacts({ audit: { hasRun: true, pagesNeedingFixes: 4 } }));
+    const view = buildCommandCenter(
+      withFacts({ audit: { lastObservedAt: daysBefore(3), pagesNeedingFixes: 4 } }),
+    );
     expect(view.suggestedNext.some((entry) => entry.id === "run-page-audit")).toBe(false);
   });
 
   it("points at a category that has work waiting", () => {
     const view = buildCommandCenter(
       withFacts({
-        audit: { hasRun: true, pagesNeedingFixes: 0 },
+        audit: { lastObservedAt: daysBefore(3), pagesNeedingFixes: 0 },
         queueSources: [
           queueSource({ id: "s1", categoryId: "search" }),
           queueSource({ id: "s2", categoryId: "search" }),
@@ -511,5 +572,34 @@ describe("suggested next rows", () => {
     for (const row of view.suggestedNext) {
       if (row.metered) expect(row.actionLabel).toMatch(/reads|costs|·/);
     }
+  });
+});
+
+describe("the as-of line", () => {
+  it("dates every number the page draws on, and says which are missing", () => {
+    // A two-minute cache and a reading from days ago used to look the same:
+    // nothing on the page said when anything was read (STATE-4).
+    expect(buildCommandCenter(facts).asOfLine).toBe(
+      "No search window stored · no visits window stored · pages never read · connections checked 2026-08-19",
+    );
+    const dated = buildCommandCenter(
+      withFacts({
+        search: {
+          status: "insufficient",
+          availableDays: 12,
+          requiredDays: 56,
+          latestDate: "2026-08-18",
+        },
+        ga4: {
+          connectionStatement: "GA4 is connected.",
+          windowDays: 28,
+          snapshots: [{ startDate: "2026-07-22", endDate: "2026-08-18", sessions: 40 }],
+        },
+        audit: { lastObservedAt: daysBefore(3), pagesNeedingFixes: 0 },
+      }),
+    );
+    expect(dated.asOfLine).toBe(
+      "Search numbers to 2026-08-18 · visits to 2026-08-18 · pages read 2026-08-17 · connections checked 2026-08-19",
+    );
   });
 });

@@ -3,6 +3,7 @@ import { ChevronLeft, Menu, Search } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 
 import { categoryIcon } from "./category-icons";
+import { formatWhen } from "./primitives";
 import { navDirectory } from "@/lib/nav-directory";
 import { useCommandCenter } from "./command-center-facts";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -291,6 +292,10 @@ function TopBar({ pathname }: { pathname: string }) {
             className={cn("h-[7px] w-[7px] rounded-full", STATUS_DOT[view.statusLine.tone])}
           />
           {view.statusLine.text}
+          {view.statusLine.asOf ? (
+            // The claim is only as current as the check behind it.
+            <span className="text-subtle">as of {formatWhen(view.statusLine.asOf)}</span>
+          ) : null}
         </span>
       ) : null}
     </header>

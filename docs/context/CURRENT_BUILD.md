@@ -34,6 +34,17 @@ Last updated: 2026-08-31, after wiring Google Ads campaign reporting
 describes 2026-08-21 and has NOT been rewritten; the current-state blocks
 immediately below supersede it.
 
+## 0bc. The Command center says when each number was true, 2026-09-02
+
+The category pages dated their own windows; the Command center, which
+draws on all of them, dated nothing, and "All systems normal" carried no
+time. One line under the heading now dates the search window, the visits
+window, the newest page observation and the newest connection probe, or
+names the one that is missing, and the status line says the stored moment
+its claim rests on: the newest probe for a broken connection, the newest
+run for a failing provider, the older of the two for green (CODE-76, from
+STATE-4). The Connections rows still carry no date (CODE-77).
+
 ## 0bb. PageSpeed no longer offers a cadence nothing can tick, 2026-09-02
 
 The cadence card offered "Turn on the daily cadence" for PageSpeed and
