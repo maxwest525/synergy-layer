@@ -56,6 +56,17 @@ vi.mock("./os.server", () => ({
   logActivity: vi.fn(async () => undefined),
 }));
 
+const ledgerCloses: Array<{ status: string; error: string | null | undefined }> = [];
+vi.mock("./measurement/run-ledger.server", () => ({
+  openMeasurementRun: vi.fn(async () => ({
+    id: "run-1",
+    close: vi.fn(async (status: string, error?: string | null) => {
+      ledgerCloses.push({ status, error });
+    }),
+  })),
+}));
+vi.mock("@/integrations/supabase/client.server", () => ({ supabaseAdmin: {} }));
+
 function observationClient() {
   const updates: Array<{ table: string; values: Record<string, unknown> }> = [];
   const client = {
@@ -76,14 +87,15 @@ function observationClient() {
 describe("Search Console observation tracking", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    ledgerCloses.length = 0;
   });
 
   it("timestamps the selected property and records a completed observation even when the latest day already existed", async () => {
     const { client, updates } = observationClient();
-    const result = await observeSearchConsole(client);
+    const result = await observeSearchConsole(client, "tenant-1");
 
     expect(result.ok).toBe(true);
-    expect(getSelectedProperty).toHaveBeenCalledWith(client);
+    expect(getSelectedProperty).toHaveBeenCalledWith(client, "tenant-1");
     expect(collectDaily).toHaveBeenCalledWith(client, "sc-domain:trumoveinc.com");
     expect(reconcileAppliedChangeEvidence).toHaveBeenCalledWith(client);
     expect(reconcileChangeMeasurements).toHaveBeenCalledWith(client);

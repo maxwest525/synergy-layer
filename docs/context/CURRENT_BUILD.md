@@ -34,6 +34,19 @@ Last updated: 2026-08-31, after wiring Google Ads campaign reporting
 describes 2026-08-21 and has NOT been rewritten; the current-state blocks
 immediately below supersede it.
 
+## 0ac. Search Console attempts are ledgered like every other provider's, 2026-09-02
+
+A failed Search Console observation reached `capabilities.health` and an
+Inbox item, and nowhere the operator looks first: the cadence card reads
+`measurement_runs`, and the Command center counts a provider as failing
+from its newest run, and Search Console never wrote one (the CHECK on
+`provider` did not admit it). Migration `20260902070000`, applied live and
+ledgered, admits `gsc`; `run-ledger.server.ts` opens a row with service
+credentials before Google is touched and closes it with the outcome, in
+the manual observation and in the scheduled collection node alike, and
+closing the row can never mask the failure it records (CODE-54, from
+MON-5).
+
 ## 0ab. Two monitoring controls that could only read well, 2026-09-02
 
 The cadence card had no word for a scheduler that silently stopped: a row
