@@ -34,6 +34,15 @@ Last updated: 2026-08-31, after wiring Google Ads campaign reporting
 describes 2026-08-21 and has NOT been rewritten; the current-state blocks
 immediately below supersede it.
 
+## 0bb. PageSpeed no longer offers a cadence nothing can tick, 2026-09-02
+
+The cadence card offered "Turn on the daily cadence" for PageSpeed and
+threw when pressed: no workflow, no cron job, and a hook allowlist that
+refused the key. PageSpeed is off the observation-source list; the
+section says it is read only on an operator's own check, and a test
+proves every listed source has a declared workflow behind its schedule
+key (CODE-75, from MEAS-18).
+
 ## 0ba. The breadcrumb names the page you are on, 2026-09-02
 
 The trail stopped at the category on every nested view and read labels

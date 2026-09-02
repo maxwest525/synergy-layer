@@ -8,7 +8,7 @@
 
 import { nextRunAt } from "./cron";
 
-export type CadenceSourceKey = "gsc" | "ga4" | "umami" | "pagespeed";
+export type CadenceSourceKey = "gsc" | "ga4" | "umami";
 
 export type CadenceSource = {
   key: CadenceSourceKey;
@@ -55,16 +55,18 @@ export const OBSERVATION_SOURCES: readonly CadenceSource[] = [
     storeLabel: "Umami snapshots",
     proveHref: "/measurement/tools",
   },
-  {
-    key: "pagespeed",
-    label: "PageSpeed",
-    scheduleKey: "pagespeed-daily-observe",
-    defaultCron: "15 17 * * *",
-    provider: "pagespeed",
-    storeLabel: "PageSpeed snapshots",
-    proveHref: "/measurement/tools",
-  },
 ] as const;
+
+/**
+ * PageSpeed has no cadence. Nothing declares a `pagespeed-daily-observe`
+ * workflow, no pg_cron job targets one, and the scheduler hook's allowlist
+ * refuses the key, so the card that offered "Turn on the daily cadence" could
+ * only throw when pressed (MEAS-18). The list says so instead of offering a
+ * switch that cannot work; `observation-cadence.test.ts` proves every listed
+ * source has a declared workflow behind it.
+ */
+export const PAGESPEED_HAS_NO_CADENCE =
+  "PageSpeed is not listed: nothing in AOOS can schedule it. It is read only when you run a check yourself on the Site health page, and each reading is stored there.";
 
 export function cadenceSource(key: CadenceSourceKey): CadenceSource {
   const source = OBSERVATION_SOURCES.find((entry) => entry.key === key);
