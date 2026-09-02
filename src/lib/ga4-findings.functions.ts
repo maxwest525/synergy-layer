@@ -13,9 +13,18 @@ export type Ga4FindingEntry = {
   recommendationState: string | null;
 };
 
+export type Ga4RuleRunView = {
+  ranAt: string | null;
+  reportingDate: string | null;
+  rulesEvaluated: string[];
+  unmet: string[];
+};
+
 export type Ga4FindingsSummary = {
   findings: Ga4FindingEntry[];
   countsByRule: Record<string, number>;
+  /** The most recent stored `ga4.rules` step for this tenant, or null when none has run. */
+  latestRun: Ga4RuleRunView | null;
 };
 
 /**
@@ -62,5 +71,24 @@ export const getGa4Findings = createServerFn({ method: "GET" })
       countsByRule[finding.rule] = (countsByRule[finding.rule] ?? 0) + 1;
     }
 
-    return { findings, countsByRule };
+    // The rule step writes which rules ran and which could not into its
+    // output; that is the only place "0 observations" is explained.
+    const { data: step, error: stepError } = await client
+      .from("workflow_steps")
+      .select("started_at, output")
+      .eq("tenant_id", tenantId)
+      .eq("ref", "ga4.rules")
+      .eq("state", "succeeded")
+      .order("started_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (stepError) {
+      throw new Error(`The last GA4 rule run could not be read: ${stepError.message}`);
+    }
+    const { latestGa4RuleRun } = await import("./ga4-run-words");
+    const latestRun = step
+      ? latestGa4RuleRun({ startedAt: step.started_at, output: step.output, tenantId })
+      : null;
+
+    return { findings, countsByRule, latestRun };
   });
