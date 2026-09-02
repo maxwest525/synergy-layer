@@ -34,6 +34,14 @@ Last updated: 2026-08-31, after wiring Google Ads campaign reporting
 describes 2026-08-21 and has NOT been rewritten; the current-state blocks
 immediately below supersede it.
 
+## 0bq. Registration records are read on a click and ownership is decided by hand, 2026-09-02
+
+The whois producer had no trigger and the ownership candidates it would
+file had no page. Your competition now carries one metered click, "Read
+registration records", with its cost stated, and a "Who owns which
+domain" card that lists every candidate the two discovery rules file,
+says which detail matched, and records the operator's decision (CODE-27).
+
 ## 0bp. A meta description draft can be redrafted, 2026-09-02
 
 The wording lane could regenerate a draft in place; the description

@@ -109,7 +109,10 @@ async function newestSnapshot(
  * (directory, marketplace, review site). A rejected candidate is a filed
  * operator decision that the domain is not one to watch, so it is excluded.
  */
-async function readKnownCompetitorDomains(client: Client, tenantId: string): Promise<Set<string>> {
+export async function readKnownCompetitorDomains(
+  client: Client,
+  tenantId: string,
+): Promise<Set<string>> {
   const [trackedResult, candidateResult] = await Promise.all([
     client
       .from("tracked_competitors")
@@ -359,10 +362,11 @@ export async function runUnlinkedBrandMentionFindings(
  * one call reads every known domain's registration record rather than
  * scanning the whole index.
  *
- * Exported and tested, but not wired to a workflow node or an operator
- * control yet -- see docs/context/BACKLOG.md and COMPETITIVE_MODEL.md for the
- * open gap. AGENTS.md requires metered calls on an operator click only, so
- * this must not be called from a schedule.
+ * Wired to one operator click on Your competition ("Read registration
+ * records", `runWhoisForKnownDomains`), which files the ownership candidates
+ * the rule below produces for the operator to confirm or reject (CODE-27).
+ * AGENTS.md requires metered calls on an operator click only, so this must
+ * not be called from a schedule.
  */
 export async function collectWhoisOverviewForKnownDomains(
   client: Client,
