@@ -232,7 +232,9 @@ Ideas that read, observe or alert and never write to the website, so none needs
 a new change kind, executor path or approval state. The reasoning, the cost of
 each and the doctrine check are in
 [`docs/superpowers/research/2026-09-02-products-outside-the-loop.md`](../superpowers/research/2026-09-02-products-outside-the-loop.md);
-this table is the open list. "Verified" here means the provider path or code
+this table is the open list. IDEA-12 and IDEA-13 are rules derived from
+what TruMove is (a licensed broker), not platform products; the research
+document tells the two kinds apart. "Verified" here means the provider path or code
 the idea leans on was checked in this repository on 2026-09-02, not that the
 idea is built.
 

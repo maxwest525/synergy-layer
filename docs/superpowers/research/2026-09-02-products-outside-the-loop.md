@@ -31,6 +31,21 @@ Five to start with, in order. Three cost nothing to run.
 | 4     | IDEA-1 Route demand map              | Metered, on a click. The route matrix is the fight; nothing today says which routes have demand. Feeds the OP-7 decision instead of waiting on it.    |
 | 5     | IDEA-3 AI answer visibility          | Metered, on a click, with tools already paid for. The GEO track from the original brief, built as three reads and no score.                           |
 
+## Two kinds of thing in this list
+
+Operator note, 2026-09-02: IDEA-12 and IDEA-13 are not products. They are
+rules the platform derives from what TruMove is, a licensed household-goods
+broker, and they would mean nothing on a tenant that is not one. The rest are
+platform features that work for any site once a tenant is connected. Kept in
+one list because both live outside the loop; told apart here so a session
+does not build a TruMove rule as if it were a feature, or the other way round.
+
+| Kind                                   | Ideas                                                                            | What it means for the build                                                                                                                                                                                                                      |
+| -------------------------------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Platform product**                   | IDEA-2 to IDEA-11, IDEA-14, IDEA-16 to IDEA-23                                   | A feature of Marky. Reads a provider or the stored rows for any tenant. Registered as a capability, rendered inside a category, tenant-scoped like everything else.                                                                              |
+| **Platform product, TruMove instance** | IDEA-1 (route demand map), IDEA-15 (route-matrix mapper)                         | The feature is general: a keyword grid from a template, and a map of a rival's templated page set. The state-to-state route is TruMove's instance of the template, seeded by the operator, never hard-coded.                                     |
+| **Rule derived from what TruMove is**  | IDEA-12 (licence numbers on every page), IDEA-13 (authority and insurance watch) | A check that exists because the tenant is an FMCSA-licensed broker. Registered as a rule in `rule-buckets.ts` with a prerequisite that the tenant has declared a licence number; silent, and absent from the screen, on any tenant that has not. |
+
 ## Getting found on Google
 
 | ID     | Idea                 | Reads                                                                                                                                                                                                                                                                                                                    | Cost                                                                                    | The operator gets                                                                                                                                                                                        | Doctrine                                                                                                                                           |
