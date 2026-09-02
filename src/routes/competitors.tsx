@@ -29,11 +29,23 @@ import {
 import {
   decideCompetitorCandidates,
   listCompetitorShortlist,
+  reviewOwnershipCandidate,
   updateCompanyClassification,
 } from "@/lib/competitors.functions";
+import { DOMAIN_ANALYTICS_CONFIG } from "@/lib/dataforseo/domain-analytics.server";
+import {
+  OWNERSHIP_REVIEW_STATE_LABELS,
+  OWNERSHIP_RULE_LABELS,
+  describeMatchedFields,
+  type OwnershipReviewDecision,
+} from "@/lib/dataforseo/ownership-review";
 import { estimatedGapCostUsd } from "@/lib/dataforseo/keyword-gap.server";
 import { estimatedIntersectCostUsd } from "@/lib/dataforseo/link-intersect";
-import { runCompetitorKeywordGap, runCompetitorLinkIntersect } from "@/lib/dataforseo.functions";
+import {
+  runCompetitorKeywordGap,
+  runCompetitorLinkIntersect,
+  runWhoisForKnownDomains,
+} from "@/lib/dataforseo.functions";
 import { OperatorRouteError } from "@/components/os/route-error";
 
 const shortlistQuery = {
@@ -80,6 +92,8 @@ function CompetitorReviewPage() {
   const classify = useServerFn(updateCompanyClassification);
   const runGap = useServerFn(runCompetitorKeywordGap);
   const runIntersect = useServerFn(runCompetitorLinkIntersect);
+  const runWhois = useServerFn(runWhoisForKnownDomains);
+  const reviewOwnership = useServerFn(reviewOwnershipCandidate);
   const trackedCount = data.tracked.filter((row) => row.active).length;
   const [selected, setSelected] = useState<string[]>([]);
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -138,6 +152,33 @@ function CompetitorReviewPage() {
         result.created
           ? `${result.rows} site(s) link to every one of ${result.competitors} tracked competitor(s) and not to you.`
           : "Today's comparison already existed; nothing was spent.",
+      );
+      void queryClient.invalidateQueries({ queryKey: ["competitor-shortlist"] });
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+  const whoisMutation = useMutation({
+    mutationFn: () => runWhois(),
+    onSuccess: (result) => {
+      toast.success(
+        result.created
+          ? `${result.rows} registration record(s) read across ${result.domains} known domain(s); ${result.candidatesFiled} ownership candidate(s) filed for your decision.`
+          : "Today's registration read already existed; nothing was spent.",
+      );
+      void queryClient.invalidateQueries({ queryKey: ["competitor-shortlist"] });
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+  const ownershipMutation = useMutation({
+    mutationFn: (input: { id: string; decision: OwnershipReviewDecision }) =>
+      reviewOwnership({ data: input }),
+    onSuccess: (result) => {
+      toast.success(
+        result.reviewState === "confirmed"
+          ? "Recorded as one owner. Nothing else changes on its own."
+          : "Recorded as separate owners.",
       );
       void queryClient.invalidateQueries({ queryKey: ["competitor-shortlist"] });
     },
@@ -211,6 +252,22 @@ function CompetitorReviewPage() {
                 approved competitor. It stores which sites link to all of them and not to you; it
                 files nothing and tracks nothing.
               </p>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={whoisMutation.isPending}
+                onClick={() => whoisMutation.mutate()}
+                aria-describedby="whois-cost"
+              >
+                {whoisMutation.isPending ? "Reading…" : "Read registration records"}
+              </Button>
+              <p id="whois-cost" className="text-xs text-muted-foreground">
+                Costs about ${DOMAIN_ANALYTICS_CONFIG.estimatedUsdPerRequest.toFixed(2)}, one paid
+                look-up across every tracked and reviewed competitor domain. Two domains sharing a
+                registration detail are filed below as a question for you; nothing is asserted on
+                its own.
+              </p>
             </div>
           ) : undefined
         }
@@ -222,6 +279,76 @@ function CompetitorReviewPage() {
         <MetricTile label="Other observed domains" value={String(data.observed.length)} />
         <MetricTile label="Currently tracked" value={String(data.tracked.length)} />
       </div>
+
+      {data.whoisRead || data.ownershipCandidates.length > 0 ? (
+        <GlassCard className="p-5">
+          <h2 className="text-sm font-semibold text-foreground">Who owns which domain</h2>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {data.whoisRead
+              ? `Registration records read ${formatWhen(data.whoisRead.collectedAt)}: ${data.whoisRead.records} record(s) across ${data.whoisRead.domains.length} known domain(s).`
+              : "No registration record has been read yet."}{" "}
+            A match below is a question, not a finding: only your decision records an owner.
+          </p>
+          {data.ownershipCandidates.length === 0 ? (
+            <p className="mt-3 text-sm text-muted-foreground">
+              No two known domains share a stored registration detail or technology stack.
+            </p>
+          ) : (
+            <ul className="mt-3 space-y-3">
+              {data.ownershipCandidates.map((candidate) => (
+                <li
+                  key={candidate.id}
+                  className="flex flex-col gap-1.5 border-b border-border/50 pb-3 text-sm last:border-b-0"
+                >
+                  <span className="flex flex-wrap items-baseline justify-between gap-2">
+                    <span className="text-foreground">
+                      {candidate.domainA} and {candidate.domainB}
+                    </span>
+                    <StatePill
+                      label={
+                        OWNERSHIP_REVIEW_STATE_LABELS[candidate.reviewState] ??
+                        candidate.reviewState
+                      }
+                      tone={candidate.reviewState === "pending" ? "warning" : "neutral"}
+                    />
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    {OWNERSHIP_RULE_LABELS[candidate.rule] ?? candidate.rule}:{" "}
+                    {describeMatchedFields(candidate.matchedFields)}. Filed{" "}
+                    {formatWhen(candidate.createdAt)}.
+                  </span>
+                  {candidate.reviewState === "pending" ? (
+                    <span className="flex gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={ownershipMutation.isPending}
+                        onClick={() =>
+                          ownershipMutation.mutate({ id: candidate.id, decision: "confirmed" })
+                        }
+                      >
+                        Same owner
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={ownershipMutation.isPending}
+                        onClick={() =>
+                          ownershipMutation.mutate({ id: candidate.id, decision: "rejected" })
+                        }
+                      >
+                        Separate owners
+                      </Button>
+                    </span>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          )}
+        </GlassCard>
+      ) : null}
 
       {data.linkIntersect ? (
         <GlassCard className="p-5">

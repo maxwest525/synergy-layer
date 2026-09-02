@@ -167,3 +167,64 @@ export const runKeywordEnrichment = createServerFn({ method: "POST" })
     const { enrichPendingCandidates } = await import("./dataforseo/keyword-enrichment.server");
     return enrichPendingCandidates(context.supabase, tenantId);
   });
+
+/**
+ * One paid whois read across every tracked and reviewed competitor domain,
+ * then the registration-details rule over what came back. The producer had
+ * no trigger since 08-31: the rule read an empty table forever (CODE-27).
+ * Metered, so it runs from this click only, never a schedule; a second click
+ * on the same day reuses the stored read and spends nothing.
+ */
+export const runWhoisForKnownDomains = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { assertOperator } = await import("./os-admin.server");
+    await assertOperator(context.supabase, context.userId);
+    const { requireTenantId } = await import("./tenant.server");
+    const tenantId = await requireTenantId(context.supabase);
+
+    const {
+      collectWhoisOverviewForKnownDomains,
+      readKnownCompetitorDomains,
+      runSameRegistrationDetailsCandidates,
+    } = await import("./dataforseo/discovery-findings.server");
+    const domains = [...(await readKnownCompetitorDomains(context.supabase, tenantId))];
+    if (domains.length < 2) {
+      throw new Error(
+        "Fewer than two tracked or reviewed competitor domains are known, so there is no pair to compare a registration record between.",
+      );
+    }
+    const collected = await collectWhoisOverviewForKnownDomains(
+      context.supabase,
+      tenantId,
+      domains,
+    );
+    const registrations = await runSameRegistrationDetailsCandidates(context.supabase, tenantId);
+
+    const { logActivity } = await import("./os.server");
+    await logActivity(context.supabase, {
+      tenantId,
+      actorKind: "user",
+      actorId: context.userId,
+      verb: "domain_analytics.whois.collected",
+      subjectKind: "capability",
+      summary: `Read the registration records of ${domains.length} known competitor domain(s): ${collected.rows} record(s) stored${collected.created ? "" : " (today's read already existed; nothing was spent)"}, ${registrations.candidatesFiled} ownership candidate(s) filed for review.`,
+      payload: {
+        domains,
+        rows: collected.rows,
+        created: collected.created,
+        costUsd: collected.costUsd,
+        candidatesFiled: registrations.candidatesFiled,
+        missingRecordFor: registrations.missingRecordFor,
+      },
+    });
+
+    return {
+      domains: domains.length,
+      rows: collected.rows,
+      created: collected.created,
+      costUsd: collected.costUsd,
+      candidatesFiled: registrations.candidatesFiled,
+      missingRecordFor: registrations.missingRecordFor,
+    };
+  });
