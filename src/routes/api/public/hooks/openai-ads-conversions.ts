@@ -32,7 +32,8 @@ export const Route = createFileRoute("/api/public/hooks/openai-ads-conversions")
           process.env["OPENAI_ADS_CAPI_BRIDGE_SECRET"]?.trim() ??
           process.env["OPENAI_ADS_BRIDGE_SECRET"]?.trim();
         if (!secret) return json({ ok: false, error: "Bridge not configured" }, 503);
-        if (request.headers.get("x-aoos-bridge-secret") !== secret) {
+        const { verifySharedSecret } = await import("@/lib/shared-secret.server");
+        if (!verifySharedSecret(request.headers.get("x-aoos-bridge-secret"), secret)) {
           return json({ ok: false, error: "Unauthorized" }, 401);
         }
 

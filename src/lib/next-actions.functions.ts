@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { NextActionFacts } from "./next-actions";
+import { parsePrioritizeActionsInput } from "./server-input";
 
 /**
  * One tenant-scoped read of the facts the next-action rules are allowed to
@@ -289,8 +290,12 @@ export const getNextActionFacts = createServerFn({ method: "GET" })
  */
 export const prioritizeNextActions = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: { actions: import("./next-actions").NextAction[] }) => data)
-  .handler(async ({ data }) => {
+  .inputValidator(parsePrioritizeActionsInput)
+  .handler(async ({ data, context }) => {
+    // A model call is a metered action: operator role only, never any
+    // signed-in account (SEC-2 in the 2026-09-02 security review).
+    const { assertOperator } = await import("./os-admin.server");
+    await assertOperator(context.supabase, context.userId);
     const { prioritizeActions } = await import("./next-actions.server");
     return prioritizeActions(data.actions);
   });

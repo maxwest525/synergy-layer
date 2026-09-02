@@ -36,7 +36,10 @@ export const Route = createFileRoute("/api/public/hooks/propose-from-evidence")(
           const result = await runProposalJob(supabaseAdmin);
           return Response.json({ ok: true, ...result });
         } catch (error) {
-          return new Response(JSON.stringify({ ok: false, error: (error as Error).message }), {
+          // The reason stays in the server log; the job records its own state
+          // in automation_jobs. A public caller learns only that it failed.
+          console.error("[propose-from-evidence]", (error as Error).message);
+          return new Response(JSON.stringify({ ok: false }), {
             status: 500,
             headers: { "Content-Type": "application/json" },
           });

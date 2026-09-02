@@ -56,7 +56,10 @@ export const Route = createFileRoute("/api/public/hooks/scheduler-tick")({
           });
           return Response.json({ ok: true, ...result });
         } catch (error) {
-          return new Response(JSON.stringify({ ok: false, error: (error as Error).message }), {
+          // The reason stays in the server log; the schedule row records its
+          // own last_state. A public caller learns only that the tick failed.
+          console.error("[scheduler-tick]", (error as Error).message);
+          return new Response(JSON.stringify({ ok: false }), {
             status: 500,
             headers: { "Content-Type": "application/json" },
           });
