@@ -102,6 +102,11 @@ export const SITE_CHECK_FIX: Record<SiteCheckId, AuditFixTarget | null> = {
   host_not_consolidated: null,
   mixed_content_present: null,
   homepage_slow_to_respond: null,
+  // The broker's registration wording lives on the website, which AOOS does
+  // not edit (CODE-86).
+  broker_numbers_missing: null,
+  broker_numbers_disagree: null,
+  broker_statement_missing: null,
 };
 
 export function fixTargetForPageCheck(check: string): AuditFixTarget | null {

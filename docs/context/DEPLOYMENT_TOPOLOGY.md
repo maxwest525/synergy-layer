@@ -119,6 +119,17 @@ Ownership does not change: Lovable keeps production, GitHub keeps the code. The 
 | 6    | Decide the single repository (§6). Until then, every merge to `synergy-layer` `main` is followed by step 2.                                                                                                                                                                                                                                                     |                                                                                          | Operator decision.                                 |
 | 7    | Decide Vercel's role (§6).                                                                                                                                                                                                                                                                                                                                      | `unpause_project` if paused.                                                             | Operator decision.                                 |
 
+**Step 2 status, 2026-09-02:** prepared and validated, not pushed. The
+`reconcile-main` branch in this session's clone ends at `0e13e02`, which merges
+`synergy-layer` `main` `2abde69` (PR #163) on top of the 2026-09-01
+reconciliation `52aae9e`; the three named files needed no further resolution,
+the merged tree differs from `2abde69` only by Lovable's six-line "Git remote"
+note in `CURRENT_BUILD.md`, and `tsc --noEmit`, lint, the tests and the build
+pass on it. The push is `git push origin reconcile-main:main`, non-force, 159
+commits ahead of the mirror's `2cc5efb`; the rollback is `git revert -m 1` of
+`0e13e02`, `5fc232c` and `52aae9e` in that order, pushed the same way. It waits
+on the operator, and on a fresh merge if the mirror's `main` moves first.
+
 ## 6. The long-term shape, and the decision it needs
 
 Two facts decide it. Lovable holds the secrets, the custom domain, the Supabase project and the cron targets, and it works; moving production off it is a migration with seven moving parts and no evidence it is wanted beyond OP-8's one-line intention. And two repositories for one project is not a state anyone chose; it is what a re-link produced.

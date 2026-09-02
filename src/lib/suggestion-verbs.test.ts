@@ -192,6 +192,9 @@ describe("drafting a site crawl fix straight from the card", () => {
       "host_not_consolidated",
       "mixed_content_present",
       "homepage_slow_to_respond",
+      "broker_numbers_missing",
+      "broker_numbers_disagree",
+      "broker_statement_missing",
     ]) {
       expect(idsFor(siteFinding(check))).not.toContain("draft");
     }

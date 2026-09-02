@@ -34,6 +34,39 @@ Last updated: 2026-08-31, after wiring Google Ads campaign reporting
 describes 2026-08-21 and has NOT been rewritten; the current-state blocks
 immediately below supersede it.
 
+## 0bt. The homepage is read for the broker's federal registration, 2026-09-02
+
+49 CFR § 371.107 tells a household goods broker what its homepage and website
+must show: paragraph (b), the USDOT and MC numbers "in your advertisements and
+Internet Web homepage(s)"; paragraph (c), "your status as a household goods
+broker" and the statement that you will not transport the goods but will
+arrange a carrier "whose charges will be determined by its published tariff".
+The audit rendered the homepage on every run and asked neither question
+(IDEA-12, now CODE-86).
+
+`src/lib/broker-licence.ts` reads a rendered page's visible text, tags
+stripped, for the numbers written next to a USDOT or MC label, the words
+"household goods broker", and the three parts of the statement ("not
+transport", "arrange", "tariff"). Every audited page stores the result under
+`details.licence`; the site snapshot stores the homepage's under
+`facts.licence` beside a count of read pages that show both numbers; and
+`evaluateSite` raises `broker_numbers_missing`, `broker_numbers_disagree`
+(two numbers under one label) and `broker_statement_missing`, each quoting
+the paragraph it rests on. A homepage the audit did not read raises nothing.
+Paragraph (a), the street address, is not read, because no detector tells a
+postal address from other words without guessing. None of the three carries
+a governed fix: the words live on the website, which AOOS does not edit.
+
+Read on the live homepage on 2026-09-02, raw HTML: USDOT 4507647 and MC
+1784124 present, with the label and the number in separate elements (which
+is why the text is read after tags are stripped); "Household Goods Broker",
+"not transport" and "arrange" present; "tariff" absent. The next audit click
+will therefore raise `broker_statement_missing` naming that word. The
+website source also carries a second USDOT number, 2841907, in a
+demonstration widget (`TheTruMoveWay.tsx`); wherever that renders, the page's
+stored `licence` facts will show two numbers. Not live until the mirror push
+(§0n).
+
 ## 0bs. A silent GA4 event is named the next morning, 2026-09-02
 
 The daily GA4 read now also reads yesterday alone and stores the
@@ -729,6 +762,24 @@ the TanStack prebundle hang (mirror commit `77e2578`, 2026-08-30) is ported into
 `vite.config.ts`, and Lovable's `20260831113553` migration file for
 `google_ads_snapshots` is kept verbatim beside this repository's idempotent
 `20260831210000`, because the live migration ledger names the former.
+
+**Step 2 of the plan is prepared, not pushed (2026-09-02).** The mirror's
+`reconcile-main` branch, which exists only in this session's clone of
+`trumove-resource-center`, now ends at merge commit `0e13e02`: this
+repository's `main` at `2abde69` (PR #163) merged on top of the 2026-09-01
+reconciliation `52aae9e` (PR #104), through `5fc232c` (`520e741`, PR #162)
+earlier the same day. That is 127 commits, PR #105 through PR #163, with zero
+conflicts, because the three files the first reconciliation resolved have not
+diverged since. The merged tree differs from `2abde69` by six lines, Lovable's
+"Git remote (2026-08-30)" note at the foot of this file, and `tsc --noEmit`,
+lint, the test suite and the production build all pass on it. The mirror's
+`main` is still `2cc5efb`, Lovable's last commit, so 159 commits wait behind
+one non-force push, `git push origin reconcile-main:main` from that clone,
+whose rollback is `git revert -m 1` of the three merge commits, newest first.
+The push and the publish after it stay with the operator (OP-10); if the
+mirror's `main` moves before then, merge it into `reconcile-main` again first.
+Until that push, everything merged here since 2026-08-30, today's PR #105
+through PR #163 included, is live nowhere.
 
 ## 0m. The self-contradiction pass, and every page gets a way back, 2026-09-01
 

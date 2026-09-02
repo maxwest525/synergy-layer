@@ -1,3 +1,4 @@
+import { siteLicenceFacts, type ReadPage } from "./broker-licence";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database } from "@/integrations/supabase/types";
@@ -573,6 +574,7 @@ export async function runPageAudit(
   const observedAt = new Date().toISOString();
   const rows: Database["public"]["Tables"]["page_metadata_observations"]["Insert"][] = [];
   const unreadablePages: string[] = [];
+  const readPages: ReadPage[] = [];
   for (const url of urls) {
     // Firecrawl is metered. A page robots.txt disallows is one Google will
     // never read, so paying to render it buys nothing. It is still recorded,
@@ -595,6 +597,8 @@ export async function runPageAudit(
     try {
       const rendered = await renderPage(url, firecrawl, selfHosted);
       const facts = extractPageFacts(rendered.html, rendered.markdown, rendered.finalUrl);
+      if (facts.licence)
+        readPages.push({ url, finalUrl: rendered.finalUrl, licence: facts.licence });
       rows.push({
         tenant_id: tenantId,
         property,
@@ -649,6 +653,7 @@ export async function runPageAudit(
     // disallowed *and* declared is the two files contradicting each other.
     declaredPages: [...new Set([...sitemapPages, ...reported])],
     protocol,
+    licence: siteLicenceFacts(origin, readPages),
   };
 
   const { error: siteError } = await client.from("site_audit_snapshots").insert({
