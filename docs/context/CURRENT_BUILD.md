@@ -34,6 +34,17 @@ Last updated: 2026-08-31, after wiring Google Ads campaign reporting
 describes 2026-08-21 and has NOT been rewritten; the current-state blocks
 immediately below supersede it.
 
+## 0ag. Two failures now reach the Inbox, 2026-09-02
+
+The nightly proposal job pauses itself on a terminal configuration
+failure and used to record that only on its own row, which no screen
+reads; a failed or refused governed commit or revert was stored and shown
+only in the change page's history. The job now files one needs-attention
+item the night it pauses and resolves it the night a probe succeeds; a
+failed or refused source attempt files one open item per change, naming
+the reason, and a later attempt that lands closes it (CODE-56, from MON-9
+and MON-10).
+
 ## 0ae. A verdict shows the confidence it rests on, 2026-09-02
 
 The verdict module already computed a confidence for every count-based
