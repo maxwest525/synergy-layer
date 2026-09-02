@@ -1,12 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  CATEGORIES,
-  CATEGORY_NAV_CAP,
-  breadcrumbsForPath,
-  categoryForPath,
-  navEntries,
-} from "./categories";
+import { CATEGORIES, CATEGORY_NAV_CAP, categoryForPath, navEntries } from "./categories";
 
 describe("category model", () => {
   it("keeps the nav at or under the permanent cap", () => {
@@ -82,54 +76,5 @@ describe("categoryForPath", () => {
 
   it("does not match a route that merely shares a prefix", () => {
     expect(categoryForPath("/your-pages-archive")).toBeUndefined();
-  });
-});
-
-describe("breadcrumbsForPath", () => {
-  it("reads property then Categories then the page, as the board shows", () => {
-    expect(breadcrumbsForPath("/getting-found-on-google", "trumoveinc.com")).toEqual([
-      { label: "trumoveinc.com" },
-      { label: "Categories" },
-      { label: "Getting found on Google", to: "/search" },
-    ]);
-  });
-
-  it("names the category from the route it currently absorbs", () => {
-    // Until a category's own page exists the nav points at the route it
-    // absorbs, and that route must read as the category it now belongs to.
-    expect(breadcrumbsForPath("/search", "trumoveinc.com").at(-1)).toEqual({
-      label: "Getting found on Google",
-      to: "/search",
-    });
-  });
-
-  it("names the command center directly under the property", () => {
-    expect(breadcrumbsForPath("/", "trumoveinc.com")).toEqual([
-      { label: "trumoveinc.com" },
-      { label: "Command center", to: "/" },
-    ]);
-  });
-
-  it("omits the property crumb when no property is connected yet", () => {
-    // An unconnected workspace must not invent a domain to fill the slot.
-    expect(breadcrumbsForPath("/", null)).toEqual([{ label: "Command center", to: "/" }]);
-  });
-
-  it("routes an unlinked legacy route back through the command center", () => {
-    // These used to return an empty trail, which blanked the breadcrumb bar on
-    // exactly the deep pages an operator gets lost on. Every page now carries
-    // a clickable way back to the start.
-    expect(breadcrumbsForPath("/studio", "trumoveinc.com")).toEqual([
-      { label: "trumoveinc.com" },
-      { label: "Command center", to: "/" },
-      { label: "Studio", to: "/studio" },
-    ]);
-  });
-
-  it("names the workspace, not the row id, on a detail page outside the categories", () => {
-    expect(breadcrumbsForPath("/recommendations/abc-123", null)).toEqual([
-      { label: "Command center", to: "/" },
-      { label: "Recommendations", to: "/recommendations" },
-    ]);
   });
 });

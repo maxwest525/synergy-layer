@@ -130,6 +130,11 @@ const ENTRIES: readonly NavEntry[] = [
   { to: "/spend", label: "Data costs", hint: "What data sources cost", group: "system_health" },
 ];
 
+/** The sidebar's own label for a route, so a breadcrumb never derives one from the URL. */
+export function navLabelFor(to: string): string | undefined {
+  return ENTRIES.find((entry) => entry.to === to)?.label;
+}
+
 /** Every route the sidebar links to, including the category targets. */
 export const ALL_NAV_ROUTES: readonly string[] = [
   "/",
