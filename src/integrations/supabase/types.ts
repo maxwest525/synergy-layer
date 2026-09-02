@@ -3840,6 +3840,66 @@ export type Database = {
           },
         ]
       }
+      schedule_runs: {
+        Row: {
+          created_at: string
+          duration_ms: number | null
+          error: string | null
+          finished_at: string
+          fired_at: string
+          fired_by: string
+          id: string
+          result: Json
+          schedule_id: string
+          schedule_key: string
+          state: string
+          tenant_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          duration_ms?: number | null
+          error?: string | null
+          finished_at?: string
+          fired_at: string
+          fired_by: string
+          id?: string
+          result?: Json
+          schedule_id: string
+          schedule_key: string
+          state: string
+          tenant_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          duration_ms?: number | null
+          error?: string | null
+          finished_at?: string
+          fired_at?: string
+          fired_by?: string
+          id?: string
+          result?: Json
+          schedule_id?: string
+          schedule_key?: string
+          state?: string
+          tenant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "schedule_runs_schedule_id_fkey"
+            columns: ["schedule_id"]
+            isOneToOne: false
+            referencedRelation: "schedules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "schedule_runs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       schedules: {
         Row: {
           created_at: string

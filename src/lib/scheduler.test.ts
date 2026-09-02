@@ -22,11 +22,15 @@ vi.mock("./os.server", () => ({
 
 type QueryResult = { data: unknown; error: null };
 
-function query(result: QueryResult) {
+function query(result: QueryResult, onInsert?: (row: unknown) => void) {
   const chain: Record<string, unknown> = {};
   for (const method of ["select", "eq", "or", "order", "limit", "update"]) {
     chain[method] = vi.fn(() => chain);
   }
+  chain["insert"] = vi.fn((row: unknown) => {
+    onInsert?.(row);
+    return chain;
+  });
   chain["then"] = (resolve: (value: QueryResult) => unknown) =>
     Promise.resolve(result).then(resolve);
   return chain;
@@ -36,6 +40,7 @@ function schedulerClient(options: { tenantId?: string | null } = {}) {
   const tenantId =
     options.tenantId === undefined ? "c94a41b3-08d0-4a6d-88f8-0dcb1eb4e2e6" : options.tenantId;
   const touchedTables: string[] = [];
+  const firings: Record<string, unknown>[] = [];
   const schedules = [
     {
       id: "11111111-1111-4111-8111-111111111111",
@@ -71,11 +76,15 @@ function schedulerClient(options: { tenantId?: string | null } = {}) {
       if (table === "schedules") return query({ data: schedules, error: null });
       if (table === "schedule_dependencies") return query({ data: [], error: null });
       if (table === "dataforseo_requests") return query({ data: [], error: null });
+      if (table === "schedule_runs")
+        return query({ data: null, error: null }, (row) =>
+          firings.push(row as Record<string, unknown>),
+        );
       return query({ data: [], error: null });
     },
   } as unknown as SupabaseClient<Database>;
 
-  return { client, touchedTables };
+  return { client, touchedTables, firings };
 }
 
 describe("tickScheduler automation scope", () => {
@@ -85,15 +94,29 @@ describe("tickScheduler automation scope", () => {
   });
 
   it("runs the allowed GSC schedule and reconciles due change windows without collecting the paid SERP backlog", async () => {
-    const { client, touchedTables } = schedulerClient();
+    const { client, touchedTables, firings } = schedulerClient();
 
     const result = await tickScheduler(client, new Date("2026-08-11T23:00:00.000Z"), {
       onlyKeys: ["gsc-daily-observe"],
       collectSerpBacklog: false,
       reconcileChangeMeasurements: true,
+      firedBy: "operator",
     });
 
     expect(result.ran).toEqual([{ schedule: "gsc-daily-observe", state: "succeeded" }]);
+    // The firing is written down, not only the row's last state (CODE-48).
+    expect(firings).toEqual([
+      expect.objectContaining({
+        tenant_id: "c94a41b3-08d0-4a6d-88f8-0dcb1eb4e2e6",
+        schedule_id: "11111111-1111-4111-8111-111111111111",
+        schedule_key: "gsc-daily-observe",
+        fired_by: "operator",
+        state: "succeeded",
+        fired_at: "2026-08-11T23:00:00.000Z",
+        result: { workflowRunId: "run-id", state: "succeeded" },
+        error: null,
+      }),
+    ]);
     expect(runWorkflow).toHaveBeenCalledTimes(1);
     expect(runWorkflow).toHaveBeenCalledWith(
       client,
@@ -108,15 +131,24 @@ describe("tickScheduler automation scope", () => {
   });
 
   it("refuses a workflow schedule that names no client workspace instead of resolving one", async () => {
-    const { client } = schedulerClient({ tenantId: null });
+    const { client, firings } = schedulerClient({ tenantId: null });
 
     const result = await tickScheduler(client, new Date("2026-08-11T23:00:00.000Z"), {
       onlyKeys: ["gsc-daily-observe"],
       collectSerpBacklog: false,
       reconcileChangeMeasurements: false,
+      firedBy: "pg_cron",
     });
 
     expect(result.ran).toEqual([{ schedule: "gsc-daily-observe", state: "failed" }]);
+    expect(firings).toEqual([
+      expect.objectContaining({
+        schedule_key: "gsc-daily-observe",
+        fired_by: "pg_cron",
+        state: "failed",
+        error: expect.stringContaining("names no client workspace"),
+      }),
+    ]);
     expect(runWorkflow).not.toHaveBeenCalled();
     expect(logActivity).toHaveBeenCalledWith(
       client,

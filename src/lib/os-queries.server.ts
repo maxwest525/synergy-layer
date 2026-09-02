@@ -294,8 +294,16 @@ export async function fetchSchedules() {
 
 export async function fetchSchedule(id: string) {
   const { db, ready } = await scope();
-  if (!ready) return { schedule: null, dependencies: [] };
+  if (!ready) return { schedule: null, dependencies: [], runs: [] };
   const schedule = unwrap(await db.from("schedules").select("*").eq("id", id).maybeSingle());
+  const runs = rows(
+    await db
+      .from("schedule_runs")
+      .select("id, fired_by, state, fired_at, finished_at, duration_ms, error")
+      .eq("schedule_id", id)
+      .order("fired_at", { ascending: false })
+      .limit(30),
+  );
   const dependencies = rows(
     await db
       .from("schedule_dependencies")
@@ -304,7 +312,7 @@ export async function fetchSchedule(id: string) {
       )
       .eq("schedule_id", id),
   );
-  return { schedule, dependencies };
+  return { schedule, dependencies, runs };
 }
 
 export type CapabilitySummary = {
