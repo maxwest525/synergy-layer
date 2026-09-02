@@ -335,7 +335,7 @@ function CompetitorRow({
               <p className="text-sm font-medium text-foreground">{row.domain}</p>
               <div className="flex flex-wrap items-center gap-2">
                 <StatePill
-                  label={row.domainClass === "competitor" ? "Business competitor" : "Surface"}
+                  label={row.domainClass === "competitor" ? "Ranks alongside you" : "Web platform"}
                   tone="primary"
                 />
                 <StatePill label={`Company: ${COMPANY_CLASSIFICATION_LABELS[classification]}`} />
