@@ -21,7 +21,9 @@ shown as an estimate, never as a count.
 
 ## Read this first
 
-Five to start with, in order. Three cost nothing to run.
+Five to start with, in order. Three cost nothing to run. The operator's own
+idea, the AEO loop and the resource center below, sits above all five in
+priority and needs a spec first; IDEA-3 in the fifth row is its first read.
 
 | Order | Idea                                 | Why first                                                                                                                                             |
 | ----- | ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -94,6 +96,59 @@ does not build a TruMove rule as if it were a feature, or the other way round.
 | IDEA-22 | Live-site watch       | Each sitemap URL fetched nightly through the self-hosted renderer: status, `noindex`, robots, canonical, compared with the night before (MON-17 publish parity).        | Free. | "A page went noindex last night" the morning after, through IDEA-21, instead of at the next audit. | Free reads may run on a schedule; the schedule is declared in the registry with a workflow behind it (CODE-75).          |
 | IDEA-23 | Content brief builder | Already declared, `integrationState: "pending"` (CONTENT-3). Outside the page loop but inside the agent runtime, which cannot run a node today (CODE-14, OP-3).         |       | Listed so it is not proposed again. Nothing to do until the runtime exists.                        |                                                                                                                          |
 
+## The operator's idea: a continuous AEO loop feeding the resource center
+
+Restated by the operator on 2026-09-02, after the list above. It absorbs
+IDEA-3, which was the first read of it and nothing more. This is the one the
+operator wants expanded and built, so it gets more room than the rest, and it
+is the one that needs a spec and provider digests before code.
+
+**What exists.** The public site carries an "ask about us on Claude" control
+that opens a Claude session with a prepared prompt and shows the visitor what
+the model answers. The site also carries a resource center at `/research`:
+four posts today, served from a content table, prerendered as an empty hub
+(SEO-1, website repository). Both are the seed of what follows.
+
+**What the operator described.** Four parts, which are four products, and one
+of them lives inside the loop.
+
+| ID      | Part                                 | What it does                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | Cost                                                                                                                                                                                              | Doctrine                                                                                                                                                                                                                                                                                                                                           |
+| ------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| IDEA-24 | Ask every model                      | A fixed question set (the tracked queries, the route queries from IDEA-1, the brand questions, and the exact prompt the site's "ask about us" control sends) put to each model through the gateway that already exists (`src/lib/ai/gateway.server.ts`, LiteLLM in front of OpenRouter, ledgered in `ai_gateway_budgets`) and to Perplexity. Each answer is stored whole with the model, the date and the question. A pure reader then records: is the brand named, what is said about it, which sources the model cites instead, which questions in the set it answers with a rival, and which claims about the brand are wrong or stale. | Model spend through the gateway, under the ledger. Cadence declared as a workflow; the operator sets it and the estimate is shown. The OpenRouter key is a placement step recorded under CODE-26. | Every row is one model, one question, one day. No "AI visibility score". A model's answer is evidence about the model, never a fact about the business; a wrong claim is filed as "the model says X, the record says Y" with the record's source.                                                                                                  |
+| IDEA-25 | Harvest the questions people ask     | Three feeds of real questions. (a) The related questions from IDEA-2. (b) The forum and discussion results Google shows for the tracked queries (the "discussions and forums" block in an `advanced` SERP read, and the query with "reddit" appended, which is how people search it). (c) The threads themselves, read through Reddit's API after a digest of its terms, for questions about long-distance moves, brokers, quotes and the brand. Each question is stored with its source URL and date, and matched against the owned pages and the resource center; an unanswered question is filed as a content gap.                      | SERP reads metered on a click or a declared cadence. Reddit read after a digest; its commercial API terms decide whether the feed is free.                                                        | AOOS never posts to Reddit or any forum. Answering on a thread as a person is the operator's own call (OP-16) and stays outside the system. A question is filed with its URL so the draft can quote it honestly.                                                                                                                                   |
+| IDEA-26 | The resource center on a schedule    | Government data pulled on a declared cadence into stored rows, and posts drafted from those rows for the gaps IDEA-24 and IDEA-25 filed. Each figure in a draft carries its source, series and retrieval date, because it is a stored row from a named API. The draft is a change request on the resource center, approved in a daily or weekly batch, published through the website repository, and measured by re-asking the models (IDEA-24) and by Search Console on the new URL.                                                                                                                                                      | Data reads are free and may run on a schedule (declared workflow, as CODE-75 requires). Drafting is model spend under the ledger. Publishing costs nothing.                                       | **Publishing is inside the loop.** Nothing deploys automatically (README rule 3), so the schedule produces drafts, and the operator's batch approval publishes them. A post with no new figure from a primary source is not drafted; the cadence is capped by the operator, so this never becomes scaled content abuse (small-site research §4.7). |
+| IDEA-27 | The "ask about us" control, measured | The control already on the site becomes an instrumented event (one of the unimplemented mandate events, MEAS-11), so AOOS sees how many visitors ask and which page they asked from. The prompt it sends is the same one IDEA-24 asks each model, so what a visitor sees is what the loop measures. A second control can offer other assistants once IDEA-24 shows which ones name the brand.                                                                                                                                                                                                                                              | Free. The event goes on the website through its repository.                                                                                                                                       | A count of stored events, or a named absence.                                                                                                                                                                                                                                                                                                      |
+
+**How the four run as one loop.** Ask (IDEA-24) and harvest (IDEA-25) file
+gaps. Data (IDEA-26) turns a gap into a draft with citations. The operator
+approves a batch. The site publishes. Ask runs again and the stored answers
+show whether the brand is now named, cited, and described correctly. Every
+stage writes rows the next one reads, which is the standing check the backlog
+ends with: a collector with its consumer in the same change.
+
+**The data the resource center is built from.** Primary sources that publish
+figures a route page can carry and a lead vendor's template cannot. Each one
+needs a digest under `docs/integrations/<provider>/DIGEST.md` before code; the
+list is what to digest, not a claim about any endpoint's exact shape.
+
+| Source                                               | Gives a post                                                                                                                  | Feeds                                                              |
+| ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| Census Bureau, state-to-state migration flows (ACS)  | How many people moved from one state to another, by year. The one figure every route page should open with.                   | Route pages, "moving from X to Y" posts                            |
+| IRS Statistics of Income migration data              | Household and income flows between states and counties, annual files.                                                         | Route pages, corridor posts                                        |
+| FMCSA licensing and registration records             | Whether a mover or broker holds active authority, its bond and insurance, and the complaint counts FMCSA publishes.           | "How to check a mover" posts, the broker's own trust page, IDEA-13 |
+| Bureau of Economic Analysis, regional price parities | Cost-of-living difference between the two ends of a route.                                                                    | Route pages                                                        |
+| HUD fair market rents                                | Rent at the destination, by metro.                                                                                            | Destination posts                                                  |
+| Energy Information Administration, weekly diesel     | Fuel price by region, the input behind a long-distance quote's fuel line.                                                     | "Why quotes change" posts, seasonal posts                          |
+| Bureau of Labor Statistics CPI                       | Price index for household moving and storage over time; the series id is pinned from BLS's own list, never typed from memory. | Cost posts                                                         |
+| OpenFEMA disaster declarations                       | Active declarations at either end of a route.                                                                                 | Timing and route-planning posts                                    |
+
+**Before code.** A spec under `docs/superpowers/specs/` naming the question
+set, the reader's output shape, the gap record, the draft template and the
+approval batch; then one digest per source above and one for Reddit's API;
+then the gateway key placement. The website side (the event in IDEA-27, the
+empty `/research` hub in SEO-1, the publish path in OP-8) is the same blocker
+every website change has and is not this idea's to solve.
+
 ## Declined on purpose
 
 Not listed above because doctrine already answers them.
@@ -120,4 +175,6 @@ Each has a row in backlog section A.
 2. **OP-13** Call tracking (IDEA-10): a vendor and a monthly fee, yes or no.
 3. **OP-14** Which paid platforms actually carry spend (IDEA-20, restating PAID-2).
 4. **OP-15** Which origin states seed the route demand map (IDEA-1), if OP-7 stays open.
-5. Bing Webmaster PR #91 (IDEA-5): rebase and split, or close. Already owed under the website repository rows.
+5. **OP-16** Answering on Reddit or forum threads as a person (IDEA-25): the operator's own call, never the system's.
+6. **OP-17** The resource center cadence and the approval batch (IDEA-26): how many drafts a week, and whether approval is daily or weekly.
+7. Bing Webmaster PR #91 (IDEA-5): rebase and split, or close. Already owed under the website repository rows.
