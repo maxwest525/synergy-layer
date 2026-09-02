@@ -142,6 +142,20 @@ list is what to digest, not a claim about any endpoint's exact shape.
 | Bureau of Labor Statistics CPI                       | Price index for household moving and storage over time; the series id is pinned from BLS's own list, never typed from memory. | Cost posts                                                         |
 | OpenFEMA disaster declarations                       | Active declarations at either end of a route.                                                                                 | Timing and route-planning posts                                    |
 
+**Cadence, a stated assumption.** The operator deferred this on 2026-09-02,
+so the loop starts on the numbers below and the first measurement window
+decides whether they move. None is a threshold from a source; each is a
+starting point with the reason written down.
+
+| Stage                           | Cadence                                                                         | Why                                                                                                                                                                                                                                                      |
+| ------------------------------- | ------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Government data pulls (IDEA-26) | Each source's own release cadence: weekly diesel, monthly CPI, annual migration | Free, and a pull between releases stores the same row twice.                                                                                                                                                                                             |
+| Ask every model (IDEA-24)       | Weekly, one run over the whole question set                                     | Model answers move slowly; a daily run is spend without new information. Weekly rows are enough to see a change after a publish.                                                                                                                         |
+| Harvest questions (IDEA-25)     | Weekly                                                                          | Threads accumulate over days; a weekly read files the week's questions at once.                                                                                                                                                                          |
+| Drafting (IDEA-26)              | At most three drafts a week, and none without a filed gap and a new figure      | The site has 33 pages and four posts. Three a week doubles the resource center in a quarter, which is fast for a site this size and still leaves every post its own stored gap and citation. Below that pace the loop cannot show an effect in a window. |
+| Approval batch                  | Weekly, one sitting                                                             | Three drafts read in one sitting is a task; a daily batch is a nag.                                                                                                                                                                                      |
+| First measurement window        | Twelve weeks before the cadence moves                                           | Published time-to-rank research puts new pages at months, not weeks (small-site research §5.1). Changing cadence inside that window measures nothing.                                                                                                    |
+
 **Before code.** A spec under `docs/superpowers/specs/` naming the question
 set, the reader's output shape, the gap record, the draft template and the
 approval batch; then one digest per source above and one for Reddit's API;
@@ -175,5 +189,4 @@ Each has a row in backlog section A.
 2. **OP-13** Call tracking (IDEA-10): a vendor and a monthly fee, yes or no.
 3. **OP-14** Which paid platforms actually carry spend (IDEA-20, restating PAID-2).
 4. **OP-15** Which origin states seed the route demand map (IDEA-1), if OP-7 stays open.
-5. **OP-16** The resource center cadence and the approval batch (IDEA-26): how many drafts a week, and whether approval is daily or weekly.
-6. Bing Webmaster PR #91 (IDEA-5): rebase and split, or close. Already owed under the website repository rows.
+5. Bing Webmaster PR #91 (IDEA-5): rebase and split, or close. Already owed under the website repository rows.
