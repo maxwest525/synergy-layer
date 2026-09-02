@@ -34,6 +34,16 @@ Last updated: 2026-08-31, after wiring Google Ads campaign reporting
 describes 2026-08-21 and has NOT been rewritten; the current-state blocks
 immediately below supersede it.
 
+## 0bg. No em dashes reach the screen, 2026-09-02
+
+They had reached a dozen surfaces and stood in for an absent value on 25
+metric cells, and 44 tab titles used one while five used a middle dot.
+Every sentence now separates its clauses with a comma, colon or full
+stop; an absent value reads "not reported", "not observed" or "not
+recorded"; every tab title ends " · Marky"; and a test walks every screen
+file and the copy modules and fails on the first one back (CODE-81, from
+COPY-2).
+
 ## 0bf. A stopped daily read reaches the Command center, 2026-09-02
 
 The cadence card already derived "overdue" from the schedule row, but

@@ -32,12 +32,12 @@ export const Route = createFileRoute("/.lovable/oauth/consent")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Authorize access — Marky" },
+      { title: "Authorize access · Marky" },
       {
         name: "description",
         content: "Approve or deny an agent client requesting access to your AOOS account.",
       },
-      { property: "og:title", content: "Authorize access — Marky" },
+      { property: "og:title", content: "Authorize access · Marky" },
       {
         property: "og:description",
         content: "Approve or deny an agent client requesting access to AOOS.",

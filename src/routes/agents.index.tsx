@@ -26,13 +26,13 @@ export const Route = createFileRoute("/agents/")({
   },
   head: () => ({
     meta: [
-      { title: "Agent Registry — Marky" },
+      { title: "Agent Registry · Marky" },
       {
         name: "description",
         content:
           "Every agent with its purpose, model, memory scope, granted capabilities, current objective, and last result.",
       },
-      { property: "og:title", content: "Agent Registry — Marky" },
+      { property: "og:title", content: "Agent Registry · Marky" },
       {
         property: "og:description",
         content: "Who does the work inside the marketing operating system.",

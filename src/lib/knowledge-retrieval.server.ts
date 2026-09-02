@@ -115,7 +115,7 @@ export async function retrieveKnowledgeGuidance(
           (chunk) => ({
             id: chunk.id,
             collectionKey: "kb.playbooks",
-            title: `${chunk.sourceTitle} — ${chunk.title}`,
+            title: `${chunk.sourceTitle}: ${chunk.title}`,
             body: chunk.body,
             sourceRef: `${chunk.sourceRef}#${chunk.contentSha256.slice(0, 12)}`,
             tags: [chunk.sourceKey, ...chunk.headingPath],

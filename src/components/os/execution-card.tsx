@@ -394,7 +394,7 @@ export function ExecutionCard(props: Props) {
             <li key={attempt.id} className="text-xs text-muted-foreground">
               {attempt.createdAt.slice(0, 16).replace("T", " ")} · {attempt.kind.replace("_", " ")}{" "}
               · <span className="text-foreground">{attempt.status}</span>
-              {attempt.error ? ` — ${attempt.error}` : ""}
+              {attempt.error ? `: ${attempt.error}` : ""}
             </li>
           ))}
         </ul>

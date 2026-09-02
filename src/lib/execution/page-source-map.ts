@@ -118,7 +118,7 @@ export function resolvePageSource(rawUrl: string): PageSourceResolution {
     ok: false,
     reason:
       `No governed lane renders ${parsed.pathname}. Wording there lives in a page component, ` +
-      `which no change kind owns yet, so this cannot be drafted — it is a manual edit until a ` +
+      `which no change kind owns yet, so this cannot be drafted. It is a manual edit until a ` +
       `lane covers it.`,
   };
 }

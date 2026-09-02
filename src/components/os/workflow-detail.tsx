@@ -609,7 +609,9 @@ export function RunHistoryTimeline({
                                 </span>
                                 <span className="flex shrink-0 items-center gap-2">
                                   <span className="text-xs text-muted-foreground">
-                                    {step.duration_ms !== null ? `${step.duration_ms} ms` : "—"}
+                                    {step.duration_ms !== null
+                                      ? `${step.duration_ms} ms`
+                                      : "not recorded"}
                                   </span>
                                   <StatePill label={step.state} tone={toneForState(step.state)} />
                                 </span>

@@ -26,13 +26,13 @@ export const Route = createFileRoute("/spend")({
   pendingComponent: RoutePending,
   head: () => ({
     meta: [
-      { title: "Data costs — Marky" },
+      { title: "Data costs · Marky" },
       {
         name: "description",
         content:
           "Recorded provider requests, failures, and charges for every paid data source the OS calls, with the current monthly ceiling.",
       },
-      { property: "og:title", content: "Data costs — Marky" },
+      { property: "og:title", content: "Data costs · Marky" },
       {
         property: "og:description",
         content: "What each paid data provider actually cost, from the stored request ledger.",
@@ -70,7 +70,7 @@ function SpendPage() {
           hint={
             data.budget
               ? `${usd(data.budget.spentUsd)} spent in ${data.budget.periodMonth}${
-                  data.budget.hardStop ? " — hard stop on" : ""
+                  data.budget.hardStop ? ", hard stop on" : ""
                 }`
               : "No budget record stored"
           }

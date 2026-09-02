@@ -346,7 +346,7 @@ export const CHECKS: Record<CheckId, CheckDefinition> = {
     label: "Almost nothing on the page",
     severity: "advice",
     instruction: (n) =>
-      `Give ${n} nearly empty pages something to say — a page with almost no text gives Google nothing to understand.`,
+      `Give ${n} nearly empty pages something to say: a page with almost no text gives Google nothing to understand.`,
     fixableByWordingProposal: false,
   },
   // SEO starter guide: "Links are a great way to connect your users and
