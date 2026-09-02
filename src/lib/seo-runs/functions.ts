@@ -206,13 +206,15 @@ export const evaluateSeoRun = createServerFn({ method: "POST" })
     };
     const preflight = assessSeoPreflight(connectorSnapshot, evidenceSnapshot);
     if (!preflight.ready) {
+      const { describePreflightBlock } = await import("./preflight-words");
+      const failureReason = describePreflightBlock(preflight);
       const { error } = await supabaseAdmin
         .from("seo_runs")
         .update({
           state: "preflight_blocked",
           connector_snapshot: connectorSnapshot,
           evidence_snapshot: evidenceSnapshot,
-          failure_reason: null,
+          failure_reason: failureReason,
         })
         .eq("tenant_id", tenantId)
         .eq("id", run.id);
@@ -235,6 +237,7 @@ export const evaluateSeoRun = createServerFn({ method: "POST" })
         state: "preflight_blocked" as const,
         connector_snapshot: connectorSnapshot,
         evidence_snapshot: evidenceSnapshot,
+        failure_reason: failureReason,
         preflight,
       };
     }

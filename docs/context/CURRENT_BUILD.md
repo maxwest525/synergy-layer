@@ -34,6 +34,19 @@ Last updated: 2026-08-31, after wiring Google Ads campaign reporting
 describes 2026-08-21 and has NOT been rewritten; the current-state blocks
 immediately below supersede it.
 
+## 0ad. A blocked SEO run says why, 2026-09-02
+
+All six stored SEO runs were `preflight_blocked` with no reason on the
+row: the preflight result went to the run's event payload and nowhere the
+run screen reads. Two of the six blocked on the cloud Firecrawl connection
+being pending while the self-hosted renderer, which every page proof and
+competitor observation already uses, sat real and healthy beside it. The
+server now writes the reason to the run, the preflight accepts the
+self-hosted renderer as a stand-in for the cloud one, and migration
+`20260902080000`, applied live and ledgered, backfills the six reasons,
+lets `change_type` carry the lane's current name (`page_wording`), and
+moves the rows (CODE-44, from DB-11).
+
 ## 0ac. Search Console attempts are ledgered like every other provider's, 2026-09-02
 
 A failed Search Console observation reached `capabilities.health` and an
