@@ -1988,6 +1988,7 @@ export type Database = {
           keyword: string
           language_code: string | null
           location_code: number | null
+          postback_token_hash: string | null
           posted_at: string
           priority: string
           provider_task_id: string
@@ -2007,6 +2008,7 @@ export type Database = {
           keyword: string
           language_code?: string | null
           location_code?: number | null
+          postback_token_hash?: string | null
           posted_at?: string
           priority?: string
           provider_task_id: string
@@ -2026,6 +2028,7 @@ export type Database = {
           keyword?: string
           language_code?: string | null
           location_code?: number | null
+          postback_token_hash?: string | null
           posted_at?: string
           priority?: string
           provider_task_id?: string

@@ -34,6 +34,32 @@ Last updated: 2026-08-31, after wiring Google Ads campaign reporting
 describes 2026-08-21 and has NOT been rewritten; the current-state blocks
 immediately below supersede it.
 
+## 0v. A callback is authenticated by something only the task knows, 2026-09-02
+
+Migration `20260902030000_postback_token_and_shared_rows.sql`, applied live
+and ledgered, closes CODE-34 and CODE-36. The DataForSEO Standard-queue
+postback had been authenticated by the project's publishable key, which
+ships in the browser bundle: any caller who read it passed the gate and
+triggered a service-role lookup. Each task now carries its own random
+token in the postback URL; the table stores the token's SHA-256 and nothing
+else; the receiver hashes what it is handed, finds the task by hash, refuses
+a body that is not about that task, and answers every refusal with the same
+401 (`src/lib/dataforseo/postback-token.ts`, pure and tested). No task was in
+flight at the switch. No rate limit was added, because its threshold would
+be an invented number.
+
+Audit rows with no tenant were readable by every authenticated account
+because `is_tenant_member(NULL)` is true by design for shared rows. The read
+policy on `activity_events` now distinguishes the two cases (a row with a
+tenant reads for its members; a row without one reads for admins and its
+own actor or subject), the write policies on the three tables that hold
+shared rows require the admin role for a row with no tenant, and the auth
+and MCP audit writers file the operator's active workspace on the row.
+
+Corrected on the way: the OP-11 claim of seven `USING (true)` registry read
+policies was stale; the live catalog holds one, on
+`essential_concern_templates`. The sign-up decision still stands.
+
 ## 0u. Membership is not authority: the database-side pass, 2026-09-02
 
 Migration `20260902020000_membership_is_not_authority.sql`, applied live and

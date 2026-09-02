@@ -40,12 +40,25 @@ type AuditInput = {
   detail?: string;
 };
 
+/** The operator's active workspace, so the audit row is tenant-scoped rather than shared. */
+async function activeTenantFor(userId: string | null): Promise<string | null> {
+  if (!userId) return null;
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data } = await supabaseAdmin
+    .from("profiles")
+    .select("active_tenant_id")
+    .eq("id", userId)
+    .maybeSingle();
+  return data?.active_tenant_id ?? null;
+}
+
 /** Every MCP tool call is filed to Activity: client, operator, tool, timestamp,
  * duration, and outcome. Arguments are recorded by key only and tokens never are. */
 async function audit(input: AuditInput): Promise<void> {
   try {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     await supabaseAdmin.from("activity_events").insert({
+      tenant_id: await activeTenantFor(input.userId),
       actor_kind: "mcp_client",
       actor_id: input.clientId ?? "unknown_client",
       verb: `mcp.tool.${input.outcome}`,

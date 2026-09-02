@@ -1,8 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database } from "@/integrations/supabase/types";
+import { hashPostbackToken, newPostbackToken, postbackUrl } from "./postback-token";
 import { dataforseoGet, dataforseoPost, fingerprint, persistSnapshot } from "./transport.server";
-import { supabasePublishableKey } from "@/integrations/supabase/public-config";
 
 type Client = SupabaseClient<Database>;
 
@@ -22,13 +22,6 @@ function today(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-export function postbackUrl(origin: string): string {
-  // The provider sends no custom headers, so the callback is authenticated by
-  // the publishable key in the query string plus the unguessable task tag.
-  const key = supabasePublishableKey() ?? "";
-  return `${origin}/api/public/hooks/dataforseo-postback?id=$id&tag=$tag&key=${encodeURIComponent(key)}`;
-}
-
 /**
  * Scheduled observation path: queue the SERP task and let the provider call
  * back. Live mode is never used here, per the documentation digest.
@@ -43,8 +36,13 @@ export async function queueSerpTasks(
   const reportingDate = today();
   const endpoint = "/serp/google/organic/task_post";
 
-  const pending: { keyword: string; tag: string; params: Record<string, unknown>; fp: string }[] =
-    [];
+  const pending: {
+    keyword: string;
+    tag: string;
+    params: Record<string, unknown>;
+    fp: string;
+    token: string;
+  }[] = [];
   let skipped = 0;
 
   for (const keyword of keywords) {
@@ -75,7 +73,9 @@ export async function queueSerpTasks(
       continue;
     }
 
-    pending.push({ keyword, tag: fp, params, fp });
+    // One random token per task: the provider echoes it in the callback URL,
+    // and the table stores only its hash (postback-token.ts).
+    pending.push({ keyword, tag: fp, params, fp, token: newPostbackToken() });
   }
 
   if (pending.length === 0) return { queued: 0, skipped, costUsd: 0 };
@@ -99,7 +99,7 @@ export async function queueSerpTasks(
     tasks: pending.map((entry) => ({
       ...entry.params,
       tag: entry.tag,
-      postback_url: postbackUrl(origin),
+      postback_url: postbackUrl(origin, entry.token),
       postback_data: "regular",
     })),
   });
@@ -120,6 +120,7 @@ export async function queueSerpTasks(
       request_fingerprint: entry.fp,
       request_params: entry.params as never,
       state: "queued",
+      postback_token_hash: hashPostbackToken(entry.token),
     });
     if (!error) queuedCount += 1;
   }

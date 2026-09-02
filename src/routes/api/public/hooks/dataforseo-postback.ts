@@ -1,43 +1,47 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { supabasePublishableKey } from "@/integrations/supabase/public-config";
 
 /**
- * DataForSEO Standard-queue postback receiver. Verified with the project
- * publishable key plus the per-task tag; it never returns operational detail
- * to any caller. The publishable key is a public identifier, so the tag and
- * the provider task id are what actually stand between a stranger and a
- * stored snapshot; replacing the key with a per-task secret is BACKLOG.md
- * CODE-34.
+ * DataForSEO Standard-queue postback receiver. The provider sends no custom
+ * headers, so the callback is authenticated by the per-task token minted at
+ * queue time and carried in the postback URL; the table stores only the
+ * token's hash, and the body must be about the task the token belongs to.
+ * Every refusal is the same 401, and no operational detail is returned to
+ * any caller.
  */
 export const Route = createFileRoute("/api/public/hooks/dataforseo-postback")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const key = supabasePublishableKey();
-        const url = new URL(request.url);
-        const presented = request.headers.get("apikey") ?? url.searchParams.get("key");
-        const { verifySharedSecret } = await import("@/lib/shared-secret.server");
-        if (!verifySharedSecret(presented, key)) {
-          return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        const unauthorized = () =>
+          new Response(JSON.stringify({ error: "Unauthorized" }), {
             status: 401,
             headers: { "Content-Type": "application/json" },
           });
-        }
 
+        const url = new URL(request.url);
+        const token = url.searchParams.get("token");
+        if (!token) return unauthorized();
+
+        const { decidePostback, hashPostbackToken } =
+          await import("@/lib/dataforseo/postback-token");
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const { ingestSerpPostback } = await import("@/lib/dataforseo/serp.server");
 
         try {
           const body = (await request.json()) as Parameters<typeof ingestSerpPostback>[2];
-          const tag = (body.tasks ?? [])[0]?.data?.["tag"];
           const { data: queued } = await supabaseAdmin
             .from("dataforseo_serp_tasks")
-            .select("tenant_id")
-            .eq("tag", typeof tag === "string" ? tag : "")
+            .select("tenant_id, provider_task_id, tag")
+            .eq("postback_token_hash", hashPostbackToken(token))
             .maybeSingle();
-          if (!queued) return Response.json({ ok: true, stored: 0, unmatched: true });
+          const decision = decidePostback({ token, queued, body });
+          if (!decision.ok) {
+            // The reason stays in the server log; the caller sees one answer.
+            console.error("[dataforseo-postback]", decision.reason);
+            return unauthorized();
+          }
 
-          const result = await ingestSerpPostback(supabaseAdmin, queued.tenant_id, body);
+          const result = await ingestSerpPostback(supabaseAdmin, decision.tenantId, body);
           return Response.json({ ok: true, ...result });
         } catch (error) {
           // The reason stays in the server log. A public caller learns only

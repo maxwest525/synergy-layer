@@ -70,12 +70,16 @@ REFERENCES or TRIGGER, and the default privileges for new tables start
 closed. Approval locks every lane: the immutability guard fires on the state
 alone.
 
-Still open from the same review, tracked in `BACKLOG.md`: the DataForSEO
-postback authenticates with the public publishable key (CODE-34), audit
-rows with no tenant are readable by every authenticated account (CODE-36),
-the OpenAI Ads bridge uses one global secret with a caller-chosen tenant
-(CODE-37), and sign-up is open with the registry read policies at
-`USING (true)` (OP-11).
+Rows with no tenant are shared rows: readable by every member, written by
+admins alone (`20260902030000`). Audit rows the server files carry the
+operator's active workspace; a row filed without one (an unprovisioned
+sign-in) reads for admins and its own actor. The DataForSEO postback is
+authenticated by a per-task token whose hash alone is stored.
+
+Still open from the same review, tracked in `BACKLOG.md`: the OpenAI Ads
+bridge uses one global secret with a caller-chosen tenant (CODE-37), and
+sign-up is open on the auth project (OP-11; the registry read policies were
+found already narrowed).
 
 ## Related
 
