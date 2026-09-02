@@ -314,6 +314,7 @@ function Ga4Page() {
           ))}
         </div>
 
+        <Ga4RuleRunWords run={findings.data.latestRun} />
         {findings.data.findings.length === 0 ? (
           <p className="mt-4 text-sm text-muted-foreground">
             No findings stored yet. They appear after the nightly observation runs over collected
@@ -421,6 +422,44 @@ function Ga4Page() {
           </ul>
         )}
       </GlassCard>
+    </div>
+  );
+}
+
+/**
+ * What the last rule run did, in words: which rules ran, and which could
+ * not and why. Without this, zero findings and "two rules never ran" look
+ * the same (CODE-47).
+ */
+function Ga4RuleRunWords({
+  run,
+}: {
+  run: {
+    ranAt: string | null;
+    reportingDate: string | null;
+    rulesEvaluated: string[];
+    unmet: string[];
+  } | null;
+}) {
+  if (!run) {
+    return (
+      <p className="mb-3 text-sm text-muted-foreground">
+        The GA4 rules have not run yet, so there is nothing to find or to explain.
+      </p>
+    );
+  }
+  return (
+    <div className="mb-3 space-y-1 text-sm text-muted-foreground">
+      <p>
+        Last rule run {run.ranAt ? new Date(run.ranAt).toLocaleString() : "at an unrecorded time"}
+        {run.reportingDate ? ` over the snapshot ending ${run.reportingDate}` : ""}.{" "}
+        {run.rulesEvaluated.length > 0
+          ? `Rules evaluated: ${run.rulesEvaluated.join(", ")}.`
+          : "No rule was evaluated."}
+      </p>
+      {run.unmet.map((sentence) => (
+        <p key={sentence}>{sentence}</p>
+      ))}
     </div>
   );
 }

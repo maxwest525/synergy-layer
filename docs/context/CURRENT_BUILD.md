@@ -34,6 +34,18 @@ Last updated: 2026-08-31, after wiring Google Ads campaign reporting
 describes 2026-08-21 and has NOT been rewritten; the current-state blocks
 immediately below supersede it.
 
+## 0aa. The GA4 rules say which of them ran, 2026-09-02
+
+Twenty-seven successful GA4 rule runs recorded `observations: 0` and
+nothing more, so the findings panel could not tell "one rule ran and
+nothing qualified" from "three rules never ran because no prior snapshot
+existed" (CODE-47). The evaluator now returns the rule keys it evaluated
+and a sentence for each reason a rule could not run; the daily runner
+carries both into the `ga4.rules` step output; and the findings panel reads
+the latest stored step and prints them above the list, the way
+`unmetPrerequisites` already does for the Search Console rules. A run
+recorded before the words existed renders as having none.
+
 ## 0z. A finding carries no impact it never estimated, 2026-09-02
 
 Every rule module wrote its business impact three times: once as the
