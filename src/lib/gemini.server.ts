@@ -1,7 +1,12 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+import type { Database } from "@/integrations/supabase/types";
 import { generateStructuredJson } from "./ai/structured.server";
 import { litellmConfigured } from "./ai/routing";
 import { validatePageMetadataWording, type PageMetadataWording } from "./page-metadata-proposals";
 import { validatePageWordingWording, type PageWordingWording } from "./page-wording-proposals";
+
+type Client = SupabaseClient<Database>;
 
 /**
  * The system half of the wording request.
@@ -80,13 +85,16 @@ type WordingRequest = {
   model: string;
   prompt: string;
   fetcher?: Fetcher;
+  /** Whose spend a proxy-routed call counts against; unused on the direct path. */
+  client: Client;
+  tenantId: string;
 };
 
 export async function generatePageWordingWording(
   input: WordingRequest,
 ): Promise<PageWordingWording> {
   return validatePageWordingWording(
-    await generateWording(input, "page_wording_fields", RESPONSE_JSON_SCHEMA),
+    await generateWording(input, "page_wording_fields", RESPONSE_JSON_SCHEMA, "page_wording"),
   );
 }
 
@@ -94,7 +102,12 @@ export async function generatePageMetadataWording(
   input: WordingRequest,
 ): Promise<PageMetadataWording> {
   return validatePageMetadataWording(
-    await generateWording(input, "page_metadata_wording", METADATA_RESPONSE_JSON_SCHEMA),
+    await generateWording(
+      input,
+      "page_metadata_wording",
+      METADATA_RESPONSE_JSON_SCHEMA,
+      "page_metadata",
+    ),
   );
 }
 
@@ -111,6 +124,7 @@ async function generateWording(
   input: WordingRequest,
   schemaName: string,
   schema: Record<string, unknown>,
+  surface: string,
 ): Promise<unknown> {
   if (litellmConfigured(process.env)) {
     return generateStructuredJson({
@@ -118,6 +132,9 @@ async function generateWording(
       prompt: input.prompt,
       schemaName,
       schema,
+      client: input.client,
+      tenantId: input.tenantId,
+      surface,
       ...(input.fetcher ? { fetcher: input.fetcher as typeof fetch } : {}),
     });
   }

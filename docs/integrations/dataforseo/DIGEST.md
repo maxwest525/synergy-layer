@@ -160,12 +160,48 @@ Content Analysis brand mentions, Business Data reviews/local pack, Domain Analyt
 `historical_serps`, `bulk_traffic_estimation`, SERP AI Overview capture, OnPage Lighthouse sampling,
 Merchant/App Data. All are recorded here so a future implementation agent does not rediscover them.
 
+## 12a. OnPage result-item shapes (added for the site-audit rule engine)
+
+Recorded before writing operator copy that names what a row *is*, per the
+documentation-first rule in AGENTS.md. Both confirmed against DataForSEO's
+published response documentation, not yet diffed against a live crawl (same
+stated-assumption caveat as `onpage.test.ts:100`).
+
+**`/on_page/redirect_chains`** — one item in `result[0].items[]` is **one
+whole redirect chain** (a starting address and everywhere it bounces through),
+not one hop: `{ is_redirect_loop, chain: [...] }`. The nested `chain` array
+holds one entry per hop, each carrying `link_from`/`link_to`,
+`page_from`/`page_to`, `domain_from`/`domain_to`, `type` ("redirect"),
+`dofollow`, `is_broken`, `direction` ("internal"/"external"). A chain
+`/a/ → /b/ → /c/` is one item with two hops in `chain`. At the top level,
+`result[0].total_items_count` counts chains (not hops) and is populated —
+`parseResultItems`'s `total_items_count` read is correct for this kind.
+Source: https://docs.dataforseo.com/v3/on_page/redirect_chains/ (verified
+2026-08-31).
+
+**`/on_page/duplicate_tags`** — one item in `result[0].items[]` is **one
+shared tag value**, not one page: `{ accumulator, total_count, pages: [...] }`,
+where `accumulator` is the duplicated title/description text, `total_count`
+is how many pages carry it, and `pages` lists those pages. Critically, the
+top-level result object has **no `total_items_count` field at all** for this
+endpoint — only `total_pages_count` (all pages on the domain with a
+duplicate tag), `pages_count` (pages returned in this response, bounded by
+`limit`), and `items_count` (number of accumulator groups returned). So
+`parseResultItems`'s `total_items_count` read is always `null` for
+`onpage_duplicate_title` and `onpage_duplicate_description`: there is no
+provider field to populate it from, not a parsing gap. `returned_row_count`
+(`items.length`) is a count of duplicate-value groups, not of affected pages;
+a rule that wants "how many pages" rather than "how many shared titles" needs
+`total_pages_count`, which nothing in this repo reads yet. Source:
+https://docs.dataforseo.com/v3/on_page/duplicate_tags/ (verified 2026-08-31).
+
 ## 12. Revision history
 
 | Version | Date | Change | Sources |
 |---|---|---|---|
 | 1.0.0 | 2026-08-10 | Initial documentation-first digest. Recorded Backlinks as requiring a $100/mo access commitment. | Pricing hub, Backlinks pricing, Backlinks pricing explained |
 | 1.1.0 | 2026-08-10 | **Correction.** The $100/mo Backlinks access commitment was removed by DataForSEO on **2026-07-01**; Backlinks moved to pay-as-you-go at ~$0.024 per request + ~$0.000036 per row. The v1.0.0 statement was stale. Removed the subscription gate from the cost model, the risk register, and capability metadata: Backlinks is in scope for first ingestion under the existing $300/mo AOOS ceiling with no separate paid-access approval. Access is now treated as unavailable only when the live API reports it. | https://dataforseo.com/pricing/backlinks/backlinks, https://dataforseo.com/help-center/backlinks-api-pricing-explained, https://dataforseo.com/blog/dataforseo-updates |
+| 1.2.0 | 2026-08-31 | Added §12a: `/on_page/redirect_chains` and `/on_page/duplicate_tags` result-item shapes, read before the site-audit rule engine (Session A, docs/handoffs/2026-08-28-parallel-rule-sessions.md) named a count on an operator screen. | https://docs.dataforseo.com/v3/on_page/redirect_chains/, https://docs.dataforseo.com/v3/on_page/duplicate_tags/ |
 
 Correction protocol: pricing and access claims in this digest are dated. Any claim that gates AOOS
 behaviour (a spend ceiling, an approval, a capability being withheld) must cite a current source and

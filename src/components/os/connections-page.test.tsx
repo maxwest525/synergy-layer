@@ -129,10 +129,12 @@ describe("the honesty invariant", () => {
     expect(screen.getByRole("status")).toHaveTextContent(/counting/i);
   });
 
-  it("tells a credential with no code behind it apart from an unrun one", () => {
+  it("reads an unrun connector the same way whichever one it is", () => {
+    // Google Ads now has a real reader (google-ads.server.ts), so an unrun
+    // account reads exactly like any other unrun table-backed connector.
     show([facts("google_ads"), facts("pagespeed_insights")]);
     const ads = screen.getByText("Google Ads").closest("li");
-    expect(ads?.textContent).toMatch(/nothing in this system calls it/i);
+    expect(ads?.textContent).toMatch(/nothing has been stored/i);
     const speed = screen.getByText("PageSpeed Insights").closest("li");
     expect(speed?.textContent).toMatch(/nothing has been stored/i);
   });

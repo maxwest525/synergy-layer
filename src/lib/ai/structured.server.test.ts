@@ -49,6 +49,9 @@ describe("routing the wording call off Google's own endpoint", () => {
     useProxy();
     const { sent, fetcher } = proxy();
     await generateStructuredJson({
+      client: {} as never,
+      tenantId: "tenant-1",
+      surface: "test",
       system: "s",
       prompt: "p",
       schemaName: "page_wording_fields",
@@ -65,6 +68,9 @@ describe("routing the wording call off Google's own endpoint", () => {
     useProxy();
     const { sent, fetcher } = proxy();
     await generateStructuredJson({
+      client: {} as never,
+      tenantId: "tenant-1",
+      surface: "test",
       system: "s",
       prompt: "p",
       schemaName: "page_wording_fields",
@@ -83,6 +89,9 @@ describe("routing the wording call off Google's own endpoint", () => {
     useProxy();
     const { sent, fetcher } = proxy();
     await generateStructuredJson({
+      client: {} as never,
+      tenantId: "tenant-1",
+      surface: "test",
       system: "the fixed instructions",
       prompt: "this page's evidence",
       schemaName: "x",
@@ -100,6 +109,9 @@ describe("routing the wording call off Google's own endpoint", () => {
     const { sent, fetcher } = proxy();
     const long = "x".repeat(MIN_CACHEABLE_CHARS);
     await generateStructuredJson({
+      client: {} as never,
+      tenantId: "tenant-1",
+      surface: "test",
       system: long,
       prompt: "p",
       schemaName: "x",
@@ -119,6 +131,9 @@ describe("failing in a way the operator can act on", () => {
     const fetcher = (async () => new Response("no", { status: 401 })) as unknown as typeof fetch;
     await expect(
       generateStructuredJson({
+        client: {} as never,
+        tenantId: "tenant-1",
+        surface: "test",
         system: "s",
         prompt: "p",
         schemaName: "x",
@@ -136,6 +151,9 @@ describe("failing in a way the operator can act on", () => {
       })) as unknown as typeof fetch;
     await expect(
       generateStructuredJson({
+        client: {} as never,
+        tenantId: "tenant-1",
+        surface: "test",
         system: "s",
         prompt: "p",
         schemaName: "x",
@@ -151,6 +169,9 @@ describe("failing in a way the operator can act on", () => {
       new Response(JSON.stringify({ choices: [] }), { status: 200 })) as unknown as typeof fetch;
     await expect(
       generateStructuredJson({
+        client: {} as never,
+        tenantId: "tenant-1",
+        surface: "test",
         system: "s",
         prompt: "p",
         schemaName: "x",
@@ -164,6 +185,9 @@ describe("failing in a way the operator can act on", () => {
     const { fetcher } = proxy();
     await expect(
       generateStructuredJson({
+        client: {} as never,
+        tenantId: "tenant-1",
+        surface: "test",
         system: "s",
         prompt: "p",
         schemaName: "x",
@@ -171,5 +195,126 @@ describe("failing in a way the operator can act on", () => {
         fetcher,
       }),
     ).rejects.toThrow(/LITELLM_BASE_URL/);
+  });
+});
+
+/** Enough of a client for `assertAiBudget`/`recordAiSpend`'s two tables. */
+function fakeBudgetClient(seed: { ceilingUsd: number; spentUsd: number }) {
+  const budget = {
+    id: "budget-1",
+    period_month: `${new Date().toISOString().slice(0, 7)}-01`,
+    ceiling_usd: seed.ceilingUsd,
+    spent_usd: seed.spentUsd,
+    hard_stop: true,
+    alerts_fired: [] as number[],
+  };
+  const requests: Record<string, unknown>[] = [];
+  const client = {
+    from(table: string) {
+      if (table === "ai_gateway_budgets") {
+        return {
+          select: () => ({
+            eq: () => ({
+              eq: () => ({ maybeSingle: async () => ({ data: { ...budget }, error: null }) }),
+            }),
+          }),
+          update: (patch: Record<string, unknown>) => ({
+            eq: async () => {
+              Object.assign(budget, patch);
+              return { error: null };
+            },
+          }),
+        };
+      }
+      if (table === "ai_gateway_requests") {
+        return {
+          insert: async (row: Record<string, unknown>) => {
+            requests.push(row);
+            return { error: null };
+          },
+        };
+      }
+      throw new Error(`fakeBudgetClient: unexpected table ${table}, did a threshold get crossed?`);
+    },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } as any;
+  return { client, budget, requests };
+}
+
+describe("gating and recording spend when the operator has priced this role", () => {
+  beforeEach(() => {
+    useProxy();
+  });
+
+  it("does not touch the budget at all when no price is configured -- the default in every other test here", async () => {
+    const { fetcher } = proxy();
+    await generateStructuredJson({
+      client: {} as never, // would throw immediately if `assertAiBudget` were called
+      tenantId: "tenant-1",
+      surface: "test",
+      system: "s",
+      prompt: "p",
+      schemaName: "x",
+      schema: SCHEMA,
+      fetcher,
+    });
+  });
+
+  it("refuses the call before it happens once the estimate would cross the ceiling", async () => {
+    process.env["AI_PRICE_WORDING_INPUT_PER_1M"] = "1000000"; // $1/token, guarantees a refusal
+    process.env["AI_PRICE_WORDING_OUTPUT_PER_1M"] = "1000000";
+    const { client } = fakeBudgetClient({ ceilingUsd: 1, spentUsd: 0 });
+    const { fetcher } = proxy();
+
+    await expect(
+      generateStructuredJson({
+        client,
+        tenantId: "tenant-1",
+        surface: "test",
+        system: "s",
+        prompt: "p",
+        schemaName: "x",
+        schema: SCHEMA,
+        fetcher,
+      }),
+    ).rejects.toThrow(/spend ceiling reached/);
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
+  it("records the model's actual reported usage, not a guess, once the call succeeds", async () => {
+    process.env["AI_PRICE_WORDING_INPUT_PER_1M"] = "1";
+    process.env["AI_PRICE_WORDING_OUTPUT_PER_1M"] = "2";
+    const { client, budget, requests } = fakeBudgetClient({ ceilingUsd: 300, spentUsd: 0 });
+    const fetcher = vi.fn(
+      async () =>
+        new Response(
+          JSON.stringify({
+            choices: [{ message: { content: JSON.stringify({ seoTitle: "x" }) } }],
+            usage: { prompt_tokens: 2_000_000, completion_tokens: 500_000 },
+          }),
+          { status: 200 },
+        ),
+    );
+
+    await generateStructuredJson({
+      client,
+      tenantId: "tenant-1",
+      surface: "page_wording",
+      system: "s",
+      prompt: "p",
+      schemaName: "x",
+      schema: SCHEMA,
+      fetcher: fetcher as unknown as typeof fetch,
+    });
+
+    // $1/M input * 2M + $2/M output * 0.5M = $2 + $1 = $3, not the pre-call guess.
+    expect(budget.spent_usd).toBeCloseTo(3, 6);
+    expect(requests[0]).toMatchObject({
+      surface: "page_wording",
+      input_tokens: 2_000_000,
+      output_tokens: 500_000,
+      cost_usd: 3,
+      priced: true,
+    });
   });
 });

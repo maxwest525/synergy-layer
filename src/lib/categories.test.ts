@@ -115,7 +115,21 @@ describe("breadcrumbsForPath", () => {
     expect(breadcrumbsForPath("/", null)).toEqual([{ label: "Command center", to: "/" }]);
   });
 
-  it("returns an empty trail for an unlinked legacy route", () => {
-    expect(breadcrumbsForPath("/studio", "trumoveinc.com")).toEqual([]);
+  it("routes an unlinked legacy route back through the command center", () => {
+    // These used to return an empty trail, which blanked the breadcrumb bar on
+    // exactly the deep pages an operator gets lost on. Every page now carries
+    // a clickable way back to the start.
+    expect(breadcrumbsForPath("/studio", "trumoveinc.com")).toEqual([
+      { label: "trumoveinc.com" },
+      { label: "Command center", to: "/" },
+      { label: "Studio", to: "/studio" },
+    ]);
+  });
+
+  it("names the workspace, not the row id, on a detail page outside the categories", () => {
+    expect(breadcrumbsForPath("/recommendations/abc-123", null)).toEqual([
+      { label: "Command center", to: "/" },
+      { label: "Recommendations", to: "/recommendations" },
+    ]);
   });
 });

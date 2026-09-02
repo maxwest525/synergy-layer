@@ -22,6 +22,10 @@ export type UmamiObservationResult = {
   unchanged: number;
   periodStart: string;
   periodEnd: string;
+  /** Recommendations filed by evaluateUmamiSnapshots against the reading just taken. */
+  findingsFiled: number;
+  /** Set when the rules could not be evaluated; the observation itself still succeeded. */
+  findingsError: string | null;
 };
 
 /** The site AOOS owns decides which Umami property is read. */
@@ -29,7 +33,7 @@ async function pickWebsite(
   db: Client,
   tenantId: string,
   websites: UmamiWebsite[],
-): Promise<UmamiWebsite> {
+): Promise<{ website: UmamiWebsite; matchedOwnedAsset: boolean }> {
   if (websites.length === 0) {
     throw new UmamiFailure("api_error", "Umami returned no websites for these credentials.");
   }
@@ -50,7 +54,7 @@ async function pickWebsite(
   const match = websites.find(
     (site) => site.domain && owned.has(site.domain.replace(/^www\./, "")),
   );
-  return match ?? websites[0]!;
+  return { website: match ?? websites[0]!, matchedOwnedAsset: Boolean(match) };
 }
 
 /**
@@ -108,7 +112,7 @@ export async function observeUmami(
 
     const headers = await umamiAuthHeaders();
     const websites = await listUmamiWebsites(headers);
-    const website = await pickWebsite(db, input.tenantId, websites);
+    const { website, matchedOwnedAsset } = await pickWebsite(db, input.tenantId, websites);
 
     const [stats, series, pages, referrers] = await Promise.all([
       fetchUmamiStats(headers, website.id, startAt, endAt),
@@ -124,6 +128,10 @@ export async function observeUmami(
       websiteId: website.id,
       requestWindow: { startAt, endAt },
       fetchedAt: new Date().toISOString(),
+      // Whether `website` matched a tenant-owned asset (vs. pickWebsite's
+      // fallback to the first Umami property). The rule engine reads this to
+      // decide whether it can honestly say "your" Umami instance on screen.
+      matchedOwnedAsset,
     };
 
     const rows = [
@@ -172,6 +180,21 @@ export async function observeUmami(
     }
 
     await close("succeeded", null, 200);
+
+    // A stored reading that nothing reads is the stage-three failure this
+    // product exists to name, so the rules run on the reading just taken. A
+    // failure here must not fail the observation: the snapshot is stored and
+    // immutable either way, and the finding can be filed by the next run.
+    // Mirrors measurement/pagespeed.server.ts's identical inline evaluation.
+    let findingsFiled = 0;
+    let findingsError: string | null = null;
+    try {
+      const { evaluateUmamiSnapshots } = await import("../umami-rules.server");
+      findingsFiled = (await evaluateUmamiSnapshots(admin, input.tenantId)).recommendations;
+    } catch (error) {
+      findingsError = error instanceof Error ? error.message : "the rules could not be evaluated";
+    }
+
     return {
       runId,
       websiteId: website.id,
@@ -180,6 +203,8 @@ export async function observeUmami(
       unchanged,
       periodStart,
       periodEnd,
+      findingsFiled,
+      findingsError,
     };
   } catch (error) {
     const failure =

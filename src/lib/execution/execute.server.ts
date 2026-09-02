@@ -46,7 +46,7 @@ export async function captureMeasurementFollowupWarning(
 async function boundedFetch(
   url: string,
   init: RequestInit & { label: string },
-): Promise<{ status: number; text: string; headers: Headers }> {
+): Promise<{ status: number; text: string; headers: Headers; finalUrl: string }> {
   const { label, ...rest } = init;
   let response: Response;
   try {
@@ -56,7 +56,13 @@ async function boundedFetch(
     throw new Error(`${label} request ${reason} after ${REQUEST_TIMEOUT_MS / 1000}s.`);
   }
   const text = (await response.text()).slice(0, MAX_RESPONSE_CHARS);
-  return { status: response.status, text, headers: response.headers };
+  // response.url is where redirects actually landed; empty in some test mocks.
+  return {
+    status: response.status,
+    text,
+    headers: response.headers,
+    finalUrl: response.url || url,
+  };
 }
 
 /**
@@ -270,9 +276,54 @@ export function createGithubApi(): GithubApi | null {
 }
 
 /**
- * The target site renders its title and H1 in the browser, so the origin's raw
- * HTML is only an application shell. Proof therefore needs a renderer.
- * Returns null when no Firecrawl credential is configured.
+ * The name every direct-fetch proof carries, so an audit row states its source.
+ */
+export const DIRECT_FETCH_NAME = "Direct fetch of the page HTML";
+
+/**
+ * The target site serves prerendered HTML (brittmove PR #5, verified live on
+ * the production origin 2026-09-01), so a plain fetch of the page carries each
+ * route's real title, H1 and meta description and is itself a proof source.
+ * No credential, no charge. A route that is still client-only yields a shell
+ * here, which under-proves and falls through to the JavaScript renderers —
+ * the same safety direction as a stale render: the approved new wording
+ * cannot exist in any cache older than the commit, so a stale copy can only
+ * under-prove a forward change, never falsely prove one.
+ */
+export function createDirectFetchVerifier(
+  deps: { fetchPage?: typeof boundedFetch } = {},
+): RenderedVerifier {
+  const fetchPage = deps.fetchPage ?? boundedFetch;
+  return {
+    name: DIRECT_FETCH_NAME,
+    async render(url) {
+      const response = await fetchPage(url, {
+        method: "GET",
+        label: "Direct page fetch",
+        // The page may sit behind a CDN; ask for the origin's copy.
+        headers: { "Cache-Control": "no-cache", Pragma: "no-cache" },
+      });
+      if (response.status < 200 || response.status >= 300) {
+        throw new Error(
+          `The public page returned HTTP ${response.status} to a direct fetch, so nothing was proven.`,
+        );
+      }
+      return {
+        finalUrl: response.finalUrl ?? url,
+        title: extractDocumentTitle(response.text),
+        heading: extractFirstHeading(response.text),
+        metaDescription: extractMetaDescription(response.text),
+        subheadings: extractSubheadings(response.text),
+        renderedBy: DIRECT_FETCH_NAME,
+      };
+    },
+  };
+}
+
+/**
+ * Scrape request for the JavaScript renderers, which remain the fallback for
+ * routes the prerender does not cover. Returns null when no Firecrawl
+ * credential is configured.
  */
 export function buildRenderedScrapeRequest(url: string) {
   return {

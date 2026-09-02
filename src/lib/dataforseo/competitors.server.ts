@@ -78,7 +78,7 @@ const SURFACE_DOMAINS = new Set([
   "mymovingreviews.com",
 ]);
 
-function normaliseDomain(value: string): string {
+export function normaliseDomain(value: string): string {
   return value
     .trim()
     .toLowerCase()

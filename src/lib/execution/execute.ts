@@ -502,6 +502,15 @@ export type PublishCheckOutcome = {
 export async function checkPublishedPage(input: {
   store: ExecutionStore;
   renderer: RenderedVerifier | null;
+  /**
+   * Free, credential-less fetch of the page's own HTML. The site serves
+   * prerendered pages (brittmove PR #5, live 2026-09-01), so the origin's raw
+   * HTML carries each route's real title, H1 and meta description and is
+   * itself proof. Tried before the JavaScript renderer: a route that is still
+   * client-only yields a shell here and the check falls through. Optional so
+   * a caller without one keeps the renderer-only behaviour.
+   */
+  directFetcher?: RenderedVerifier | null;
   robotsProver: RobotsProver | null;
   requestId: string;
   actorId: string;
@@ -631,77 +640,113 @@ export async function checkPublishedPage(input: {
     };
   }
 
-  if (!input.renderer) {
+  // Direct fetch first: free, credential-less, and the origin's prerendered
+  // HTML is exactly what a visitor and Googlebot receive. The JavaScript
+  // renderer stays as the fallback for routes that are still client-only.
+  const sources = [input.directFetcher ?? null, input.renderer].filter(
+    (source): source is RenderedVerifier => source !== null,
+  );
+  if (sources.length === 0) {
     return refuse(
-      "Rendered-page verification is not connected. This site renders its title and H1 with JavaScript, so raw HTML cannot prove anything. Configure Crawl4AI (VPS_SCRAPER_API_KEY) or the self-hosted Firecrawl (SELFHOSTED_FIRECRAWL_BASE_URL and SELFHOSTED_FIRECRAWL_API_KEY) to enable this check.",
+      "Rendered-page verification is not connected. Configure Crawl4AI (VPS_SCRAPER_API_KEY) or the self-hosted Firecrawl (SELFHOSTED_FIRECRAWL_BASE_URL and SELFHOSTED_FIRECRAWL_API_KEY) to enable this check.",
     );
   }
 
-  let page: RenderedPage;
-  try {
-    page = await input.renderer.render(target.value);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Rendering the public page failed.";
-    await record({ kind: "publish_check", status: "failed", error: message });
-    return { status: "failed", message };
-  }
+  /** Expected fields the page actually served, even with the old value. A
+   * source that saw the real page outranks one that saw an unrendered shell,
+   * so the recorded "pending" reason describes the page, not a broken
+   * renderer. */
+  const expectedFieldsFound = (proof: PublishedProof): number => {
+    let found = 0;
+    if (proof.expectedTitle && proof.foundTitle) found += 1;
+    if (proof.expectedHeading && proof.foundHeading) found += 1;
+    if (proof.expectedDescription && proof.foundDescription) found += 1;
+    return found;
+  };
 
-  const finalUrl = checkTargetUrl(page.finalUrl);
-  if (!finalUrl.ok) {
-    const message = `The rendered page resolved to ${page.finalUrl}, which is outside the allowlisted site. Nothing was proven.`;
-    await record({ kind: "publish_check", status: "failed", error: message });
-    return { status: "failed", message };
-  }
+  const sourceFailures: string[] = [];
+  let bestPending: PublishedProof | null = null;
 
-  const proof = verifyRenderedPage(page, request.changes);
-  const provenValues = proof.expectedDescription ? "meta description" : "title and H1";
-  if (!proof.ok) {
+  for (const source of sources) {
+    let page: RenderedPage;
+    try {
+      page = await source.render(target.value);
+    } catch (error) {
+      sourceFailures.push(
+        error instanceof Error ? error.message : "Rendering the public page failed.",
+      );
+      continue;
+    }
+
+    const finalUrl = checkTargetUrl(page.finalUrl);
+    if (!finalUrl.ok) {
+      const message = `The rendered page resolved to ${page.finalUrl}, which is outside the allowlisted site. Nothing was proven.`;
+      await record({ kind: "publish_check", status: "failed", error: message });
+      return { status: "failed", message };
+    }
+
+    const proof = verifyRenderedPage(page, request.changes);
+    if (!proof.ok) {
+      if (!bestPending || expectedFieldsFound(proof) > expectedFieldsFound(bestPending)) {
+        bestPending = proof;
+      }
+      continue;
+    }
+
+    const provenValues = proof.expectedDescription ? "meta description" : "title and H1";
+    let changed = false;
+    let warning: string | undefined;
+    if (!request.publishedProofAt) {
+      const result = await input.store.applyRenderedProof({
+        id: request.id,
+        notes: `Rendered page at ${proof.finalUrl} served the approved ${provenValues}, as rendered by ${proof.renderedBy}.`,
+        revision: request.commitSha,
+        proof,
+      });
+      changed = result.changed;
+      warning = result.warning;
+    }
+
     await record({
       kind: "publish_check",
-      status: "pending",
-      error: proof.reason,
+      status: "verified",
+      commitSha: request.commitSha,
       detail: {
         foundTitle: proof.foundTitle,
         foundHeading: proof.foundHeading,
         foundDescription: proof.foundDescription,
         renderedBy: proof.renderedBy,
+        appliedNow: changed,
+        ...(warning ? { measurementFollowupWarning: warning } : {}),
       },
     });
-    return { status: "pending", message: proof.reason, proof };
-  }
-
-  let changed = false;
-  let warning: string | undefined;
-  if (!request.publishedProofAt) {
-    const result = await input.store.applyRenderedProof({
-      id: request.id,
-      notes: `Rendered page at ${proof.finalUrl} served the approved ${provenValues}, as rendered by ${proof.renderedBy}.`,
-      revision: request.commitSha,
+    return {
+      status: "verified",
+      message: warning
+        ? `The rendered public page serves the approved ${provenValues}. The change is applied, but measurement follow-up needs a retry: ${warning}`
+        : `The rendered public page serves the approved ${provenValues}. The post-change Search Console window starts now. Outcome is not verified until finalized data arrives.`,
       proof,
-    });
-    changed = result.changed;
-    warning = result.warning;
+      ...(warning ? { warning } : {}),
+    };
   }
 
-  await record({
-    kind: "publish_check",
-    status: "verified",
-    commitSha: request.commitSha,
-    detail: {
-      foundTitle: proof.foundTitle,
-      foundHeading: proof.foundHeading,
-      foundDescription: proof.foundDescription,
-      renderedBy: proof.renderedBy,
-      appliedNow: changed,
-      ...(warning ? { measurementFollowupWarning: warning } : {}),
-    },
-  });
-  return {
-    status: "verified",
-    message: warning
-      ? `The rendered public page serves the approved ${provenValues}. The change is applied, but measurement follow-up needs a retry: ${warning}`
-      : `The rendered public page serves the approved ${provenValues}. The post-change Search Console window starts now. Outcome is not verified until finalized data arrives.`,
-    proof,
-    ...(warning ? { warning } : {}),
-  };
+  if (bestPending) {
+    await record({
+      kind: "publish_check",
+      status: "pending",
+      error: bestPending.reason,
+      detail: {
+        foundTitle: bestPending.foundTitle,
+        foundHeading: bestPending.foundHeading,
+        foundDescription: bestPending.foundDescription,
+        renderedBy: bestPending.renderedBy,
+        ...(sourceFailures.length > 0 ? { otherSourceFailures: sourceFailures } : {}),
+      },
+    });
+    return { status: "pending", message: bestPending.reason, proof: bestPending };
+  }
+
+  const message = sourceFailures.join(" ") || "Rendering the public page failed.";
+  await record({ kind: "publish_check", status: "failed", error: message });
+  return { status: "failed", message };
 }

@@ -41,6 +41,16 @@ Live revalidation on 2026-08-18 confirmed that this deployed Umami version rejec
 `type=url` with HTTP 400 and accepts `type=path`. AOOS therefore uses `path` for
 top-page metrics on this instance.
 
+`GET /api/websites/{id}/metrics` also accepts `limit` (optional, default 500)
+and `offset` (optional, default 0) query parameters. Verified against
+https://docs.umami.is/docs/api/website-stats on 2026-08-31: "limit (optional,
+default 500) Number of rows returned." AOOS sends no `limit`, so the provider
+applies its own 500-row default; `fetchUmamiMetrics` then slices the response
+to `UMAMI_RULE_THRESHOLDS.referrer.appSliceLimit` (25) client side
+(`umami-rule-checks.ts`). A rule reasoning about whether a stored referrer list
+is complete must compare against the smaller of the two limits, not assume our
+own 25-row slice is what bound the read.
+
 ## Limits and risks
 
 - No published rate limit on self-hosted instances. AOOS still throttles to one

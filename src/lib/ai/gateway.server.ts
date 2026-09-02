@@ -78,3 +78,13 @@ export function modelFor(role: ModelRole): string {
 export function reasoningModel(): string {
   return modelFor("reasoning");
 }
+
+/**
+ * The fast model for constrained, low-complexity calls: reordering an
+ * existing list, rewording a sentence, anything that cannot invent a new
+ * fact and has a safe deterministic fallback if it fails. Reasoning-tier
+ * pricing on a task this bounded is spend with nothing behind it.
+ */
+export function fastModel(): string {
+  return modelFor("fast");
+}

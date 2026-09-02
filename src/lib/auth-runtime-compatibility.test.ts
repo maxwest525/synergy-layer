@@ -22,7 +22,11 @@ describe("Lovable preview auth runtime compatibility", () => {
     const hook = readFileSync(`${sourceRoot}/hooks/use-operator-session.ts`, "utf8");
     const middleware = readFileSync(`${sourceRoot}/lib/server-function-auth.ts`, "utf8");
     const start = readFileSync(`${sourceRoot}/start.ts`, "utf8");
-    const shell = readFileSync(`${sourceRoot}/components/os/shell.tsx`, "utf8");
+    // The shell the root actually renders. This read named `shell.tsx` until
+    // 2026-08-29, which stopped being rendered on 2026-08-20 -- so the
+    // assertion below passed against a file no operator could reach, and
+    // would have kept passing if the live shell regressed.
+    const shell = readFileSync(`${sourceRoot}/components/os/app-shell.tsx`, "utf8");
     const switcher = readFileSync(`${sourceRoot}/components/os/tenant-switcher.tsx`, "utf8");
 
     expect(hook).not.toContain("auth.getSession(");

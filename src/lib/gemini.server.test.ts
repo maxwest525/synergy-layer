@@ -34,6 +34,8 @@ describe("direct Gemini structured output", () => {
     );
 
     const result = await generatePageWordingWording({
+      client: {} as never,
+      tenantId: "tenant-1",
       apiKey: "test-key",
       model: "gemini-test",
       prompt: "draft wording only",
@@ -68,6 +70,8 @@ describe("direct Gemini structured output", () => {
 
     await expect(
       generatePageWordingWording({
+        client: {} as never,
+        tenantId: "tenant-1",
         apiKey: "test-key",
         model: "gemini-test",
         prompt: "draft",
@@ -103,6 +107,8 @@ describe("direct Gemini structured output", () => {
     );
 
     const result = await generatePageMetadataWording({
+      client: {} as never,
+      tenantId: "tenant-1",
       apiKey: "test-key",
       model: "gemini-test",
       prompt: "draft wording only",
@@ -145,6 +151,8 @@ describe("direct Gemini structured output", () => {
 
     await expect(
       generatePageMetadataWording({
+        client: {} as never,
+        tenantId: "tenant-1",
         apiKey: "test-key",
         model: "gemini-test",
         prompt: "draft",
@@ -175,6 +183,8 @@ describe("direct Gemini structured output", () => {
     );
 
     await generatePageWordingWording({
+      client: {} as never,
+      tenantId: "tenant-1",
       apiKey: "test-key",
       model: "",
       prompt: "draft",

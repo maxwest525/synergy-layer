@@ -53,11 +53,12 @@ describe("the stage no screen has ever shown", () => {
   });
 
   it("says the reading is happening and the telling is not", () => {
-    // Umami, not PageSpeed: PageSpeed earned a rule module and now reaches the
-    // operator, so this example moved to a connector that is still silent.
-    const view = buildConnections([facts("umami", { storedRows: 412 })]);
-    expect(row(view, "umami").reason).toContain("412");
-    expect(row(view, "umami").reason).toMatch(/reading is happening; the telling is not/i);
+    // OpenSEO, not Umami: Umami earned a rule module (umami-rules.server.ts)
+    // and now reaches the operator, so this example moved again to a
+    // connector that is still silent.
+    const view = buildConnections([facts("openseo", { storedRows: 412 })]);
+    expect(row(view, "openseo").reason).toContain("412");
+    expect(row(view, "openseo").reason).toMatch(/reading is happening; the telling is not/i);
   });
 
   it("names the silent ones in the headline", () => {
@@ -72,10 +73,15 @@ describe("the stage no screen has ever shown", () => {
 
   it("counts the writers rather than asserting how many there are", () => {
     // This sentence said "two" when there were three, then "three" when the
-    // targeting pass made DataForSEO the fourth. It is now derived.
-    const view = buildConnections([facts("umami", { storedRows: 412 })]);
-    expect(view.headline).toContain("five parts");
-    expect(FINDING_SOURCES).toHaveLength(5);
+    // targeting pass made DataForSEO the fourth, then "five" once PageSpeed
+    // and DataForSEO's targeting pass both wrote. `onpage-rules.server.ts`
+    // (site-audit), `backlink-rules.server.ts` (backlink-findings) and
+    // `umami-rules.server.ts` (umami) made it eight; `discovery-findings.server.ts`
+    // (competitor-discovery) makes it nine. It is derived from
+    // FINDING_SOURCES, not hand-counted.
+    const view = buildConnections([facts("openseo", { storedRows: 412 })]);
+    expect(view.headline).toContain("nine parts");
+    expect(FINDING_SOURCES).toHaveLength(9);
   });
 
   it("says nothing when no connection is collecting in silence", () => {
@@ -161,11 +167,13 @@ describe("the four stages", () => {
     expect(row(view, "umami").reason).toMatch(/credentials are not set/i);
   });
 
-  it("tells a credential with no code behind it apart from an unrun one", () => {
-    // Google Ads has a credential slot and nothing reads it. That is a
-    // different problem from an account that simply has not run yet.
+  it("reads an unrun connector the same way whichever one it is", () => {
+    // Google Ads used to be this file's example of a credential slot with no
+    // code behind it (`table: null`) -- google-ads.server.ts now reads a real
+    // campaign-performance report, so it is an ordinary table-backed
+    // connector like PageSpeed: configured, wired, just not run yet.
     const view = buildConnections([facts("google_ads"), facts("pagespeed_insights")]);
-    expect(row(view, "google_ads").reason).toMatch(/nothing in this system calls it/i);
+    expect(row(view, "google_ads").reason).toMatch(/nothing has been stored/i);
     expect(row(view, "pagespeed_insights").reason).toMatch(/nothing has been stored/i);
   });
 

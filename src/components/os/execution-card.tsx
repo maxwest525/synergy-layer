@@ -46,9 +46,10 @@ function CostNote() {
         are not metered here, and the read-only connection test costs nothing.
       </p>
       <p>
-        A rendered publish check goes through Crawl4AI first, which runs on our own box and costs
-        nothing. Only if Crawl4AI fails does the check fall back to Firecrawl and spend 1 credit
-        from the connected account. Nothing else in this slice calls a paid provider.
+        A publish check reads the page&apos;s own prerendered HTML first, which costs nothing. If
+        that under-proves, it goes to Crawl4AI, which runs on our own box and also costs nothing.
+        Only if both fall short does the check reach Firecrawl and spend 1 credit from the connected
+        account. Nothing else in this slice calls a paid provider.
       </p>
       <p>
         Lovable build credits are separate and are not $0. Known build usage through the work before
@@ -323,14 +324,12 @@ export function ExecutionCard(props: Props) {
           <Button
             variant="outline"
             size="sm"
-            disabled={running || !data.rendererCredentialPresent || !data.targetAllowed}
+            disabled={running || !data.targetAllowed}
             onClick={() => publishCheck.mutate()}
           >
-            {data.rendererCredentialPresent
-              ? data.rendererName?.startsWith("Crawl4AI")
-                ? "Check rendered page (Crawl4AI, no charge)"
-                : "Check rendered page (1 Firecrawl credit)"
-              : "Rendered check unavailable"}
+            {data.rendererName?.includes("Firecrawl")
+              ? "Check the live page (free; 1 Firecrawl credit only if the fallback answers)"
+              : "Check the live page (no charge)"}
           </Button>
         ) : null}
         {facts.commitUrl ? (

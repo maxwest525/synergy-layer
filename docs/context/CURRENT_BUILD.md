@@ -1,5 +1,25 @@
 # AOOS Current Build Context
 
+> **Open work lives in [`BACKLOG.md`](BACKLOG.md), not here and not in the handoffs.**
+> This file records current state. That one records what is still owed, with a
+> stable ID per item and a grade saying whether it was verified or only carried
+> forward. If you are looking for "what is left to do", that is the file.
+
+> **2026-08-29 — read the session record first.**
+> [`docs/handoffs/2026-08-29-session-record.md`](../handoffs/2026-08-29-session-record.md)
+> covers a session that changed several things this file assumes.
+>
+> The two that matter most:
+>
+> 1. **The public website served 38 characters of text on every URL**, with one
+>    sitewide title and no H1, including to Googlebot — a Vite SPA whose words
+>    only existed after JavaScript ran. Fixed by prerendering (brittmove PR #4,
+>    merged): 30 pages now ship 27,000–35,000 characters each. Any conclusion in
+>    this file drawn from thin search evidence predates that fix.
+> 2. **The page wording lane was locked to exactly two changes by the database**,
+>    not by preference — `jsonb_array_length(_changes) <> 2`, an equality, since 20260814080000. Four layers enforced it. All four are removed and the
+>    migration is applied, so the lane now edits subheadings too.
+
 Purpose: a lightweight, always-current handoff note so a future agent run does not
 lose decisions made in chat. This file records **current state only**: architecture,
 live integrations, pending approvals, active workflows, and next priorities.
@@ -8,9 +28,246 @@ It is not authoritative documentation. Provider digests under
 `docs/integrations/<provider>/DIGEST.md` and their PLAN files remain the source of
 truth for provider behaviour and must never be overwritten by this file.
 
-Last updated: 2026-08-28, on the Command center queue-fixes branch. Section 0
-below still describes 2026-08-21 and has NOT been rewritten; the current-state
-blocks immediately below supersede it.
+Last updated: 2026-08-31, after wiring Google Ads campaign reporting
+(CODE-28) on top of the four merged CODE-6 rule sessions
+(A: OnPage, B: Backlinks, C: Umami, D: discovery). Section 0 below still
+describes 2026-08-21 and has NOT been rewritten; the current-state blocks
+immediately below supersede it.
+
+## 0n. Where production actually builds from, 2026-09-01
+
+Read this before believing any "Verified 2026-08-31" or "2026-09-01" closure
+below: **none of it is live.** Since 2026-08-30 the Lovable project that serves
+`trumove.marky.systems` has synced to `maxwest525/trumove-resource-center`, not
+to this repository. Everything merged here from PR #89 through PR #103 (the
+four rule sessions, the spend ceiling, Google Ads reporting, the publish-proof
+fix, the contradiction pass, the breadcrumbs) exists on GitHub `main` and
+nowhere else. OP-10's "stuck pull" reading is withdrawn; the bridge is
+disconnected, not stuck. A Vercel project was imported on 2026-09-01 and
+serves GitHub `main` at `synergy-layer.vercel.app`, but it holds no server
+secrets and no schedule targets it, so it is a shadow, not production.
+
+The evidence, the measured divergence (26 commits here, 11 in the mirror, one
+merge conflict), the step-by-step plan with a rollback per step, and the
+single-repository decision the operator has to make are in
+[`DEPLOYMENT_TOPOLOGY.md`](DEPLOYMENT_TOPOLOGY.md). `PROJECTS.md` now carries
+the warning too.
+
+Also landed in this change: the Lovable-side `optimizeDeps.exclude` fix for
+the TanStack prebundle hang (mirror commit `77e2578`, 2026-08-30) is ported into
+`vite.config.ts`, and Lovable's `20260831113553` migration file for
+`google_ads_snapshots` is kept verbatim beside this repository's idempotent
+`20260831210000`, because the live migration ledger names the former.
+
+## 0m. The self-contradiction pass, and every page gets a way back, 2026-09-01
+
+The operator put four screenshots side by side and the platform argued with
+itself on every one. Each contradiction traced to code, not data, and each is
+closed:
+
+- **A loop is no longer "stalled" at a stage its own numbers prove was
+  passed.** `loop-state.ts` flagged the first zero-count stage and claimed
+  "the loop cannot reach the stage after it" while the stages after it showed
+  5 approved and 1 in flight. A stage now stalls the loop only when nothing is
+  recorded at it or after it; an empty stage the loop demonstrably moved past
+  is a named gap ("holds nothing right now, while later stages carry stored
+  work"), drawn dashed, and the loop reads Turning. The "N of M loops
+  complete" badge now says what it counts: "N of M loops stalled".
+- **The PageSpeed instruction now reads the error it quotes.** "Fix the page
+  speed provider key" sat above a stored 429 naming a daily quota of zero on
+  the provider's own Google Cloud project, for an API that answers without a
+  key. The instruction and the blocker line are derived from the stored error
+  (quota errors say to fix the quota in the Cloud console), and the circular
+  "Blocked by: the last provider attempt failed" is gone - the blocker names
+  the external fix and says one successful measurement clears it.
+- **"Nothing is currently waiting on a decision" no longer renders beside 58
+  waiting recommendations.** The draft-a-change card's sentence is scoped to
+  what its rule actually checks: no page change proposed. The decisions loop
+  stage is likewise relabelled "Page change proposed", because it counts
+  change_requests and nothing else.
+- **A row nothing can act on cannot age its way to the top of Marky assist.**
+  "Enable the research capability" ranked as the biggest win for 27 days
+  while its own detail page said approving it records a decision that runs
+  nothing. `urgencyFor` now pins `actionable: false` rows at nice-to-have;
+  the Command center computes actionability from the single source of truth
+  (`recommendation-action.ts`, a drafted change, or a governed fix lane).
+- **Seeded scores are no longer presented as measurements.** The 2026-08-04
+  seed rows carry hand-written confidence (85%) and time-saved (240 minutes)
+  figures no code derives; the recommendation detail page now says exactly
+  that instead of rendering them beside the derived-confidence findings.
+- **Every page has a way back.** `breadcrumbsForPath` returned an empty trail
+  for any route outside the six categories - the breadcrumb bar blanked on
+  exactly the deep pages an operator gets lost on - and the crumbs it did
+  return rendered as dead text. Every route now gets a trail through the
+  Command center, ancestor crumbs are links, and the top bar carries a Back
+  control on every page but home.
+
+Still open from the same screenshots, filed rather than done: one shared
+definition of "waiting" across Command center, the loops, and next-best
+actions (CODE-32); the approval-time duplicate guard and shared-blocker
+rollup (CODE-31).
+
+## 0l. Corrections from live evidence, and publish proof reads the page itself, 2026-09-01
+
+Three stale claims in this file and the backlog were contradicted by the live
+database and the live site, checked 2026-09-01. Recorded per SOURCE_OF_TRUTH
+(live production first), because each one sent the operator chasing a fix that
+was not theirs to make.
+
+- **The executor token has been configured and working since 2026-08-11.** The
+  "Still blocked" bullet below saying `GITHUB_EXECUTOR_TOKEN` is not configured
+  is wrong and stands corrected. `change_request_executions` holds preflights
+  reading "Proved with the configured token" (2026-08-11, 2026-08-14) and real
+  commits to the website repository on 2026-08-14, 08-25, 08-28 and 08-29, each
+  with its SHA and replacements recorded. One change (6aa5a3b1, corporate
+  relocation) completed the full pipeline to applied on 2026-08-14.
+- **The prerender is live in production.** Measured by direct curl 2026-09-01:
+  the homepage returns 243,067 bytes with `#root` fully populated, and
+  `/services/corporate-relocation` and `/research` serve real per-route H1s in
+  the raw HTML — including the approved values of committed changes 26725aea
+  and f8feacee. This supersedes CODE-24's 2026-08-31 empty-shell measurement
+  and closes the deploy half of OP-9. Still true: an unknown path returns 200
+  with the homepage bytes (soft-404), tracked in the backlog.
+- **Publish proof was failing for the platform's own reasons, not the
+  operator's.** The proof renderer chain had Crawl4AI answering HTTP 401 on
+  all 34 requests of 2026-08-30 — it was clean through 08-29 02:35 UTC, and
+  nothing has rendered since, so the outage is bounded to that day and the
+  operator's green health probe on 08-31 suggests it recovered (CODE-29 holds
+  the exact bounds) — and its Firecrawl fallback reported the
+  research page as "an unrendered application shell" while a plain fetch of
+  the same URL served the approved H1. Fixed in this change: publish proof now
+  reads the page's own prerendered HTML first, at no charge and with no
+  credential, with Crawl4AI-then-Firecrawl kept as the JavaScript fallback for
+  client-only routes (`createDirectFetchVerifier` in
+  `src/lib/execution/execute.server.ts`, source loop in `checkPublishedPage`,
+  contract updated in `docs/execution-handbook/EXECUTION_ROLLBACK.md`). A
+  pending verdict now describes the page a source actually saw rather than a
+  broken renderer's shell. The three committed-and-live changes should each
+  flip to applied on one "Check the live page" click.
+- **One change can never prove as targeted.** The homepage meta-description
+  change (78fc8c5e) edited `DefaultSeo.tsx`, but the live homepage head serves
+  the same old sentence from a different source in the website repo, so the
+  edit is committed, deployed, and invisible. That is a proposal-targeting
+  defect (CODE-30), not a publish failure.
+
+## 0k. Google Ads reports real campaign data, 2026-08-31
+
+CODE-28 in `BACKLOG.md`, closing the reporting half of OP-1. Until now
+`google-ads.server.ts` did one thing: prove OAuth/developer-token access via
+`customers:listAccessibleCustomers`. It now also sends a GAQL
+`googleAds:search` query for campaign id/name/status/channel type plus
+impressions, clicks, cost and conversions, segmented by day over the trailing
+30 days, and upserts the rows into `google_ads_snapshots` keyed on
+`(tenant_id, customer_id, campaign_id, segment_date)` -- a rerun corrects that
+day's numbers rather than duplicating, since Google Ads attributes
+conversions for several days after the click.
+
+- New pure module `src/lib/measurement/google-ads.ts` (GAQL builder,
+  normalizer, connection-state description) and server module
+  `src/lib/measurement/google-ads.server.ts` (token acquisition, fetch,
+  upsert, a `measurement_runs` row per attempt) -- mirrors the GA4/PageSpeed
+  measurement pattern already in this directory.
+- `refreshGoogleAds` server function and a Google Ads card on
+  `/measurement/tools`, gated behind `assertOperator` like every other
+  provider refresh. One click, one report, no schedule.
+- `growth-operations.ts`'s `google.ads` capability gained a
+  `campaigns.report_read` operation and dropped `campaign_reads` from its
+  `prohibited` list; budget/bid/ad writes stay prohibited.
+- `connections.ts`'s `google_ads` entry moved off `table: null` -- it used to
+  be this file's own example of "a credential with no code behind it."
+- `essentials.tsx`'s Google Ads concern now reads real stored-row counts
+  (`data.googleAds`) instead of a hardcoded "nothing stored" sentence.
+- **Stated gap, not silently missing:** `google_ads_snapshots` already
+  existed live in the database with zero rows and no migration file behind
+  it -- the same undocumented-drift shape CODE-9 found elsewhere. A catch-up
+  migration (`20260831210000_google_ads_snapshots.sql`) now matches the live
+  schema. No rule module reads this table yet, so a stored campaign-day row
+  does not yet become a finding; negative keywords and Keyword Planner remain
+  unbuilt. 10 new tests, 1624 total, typecheck clean, lint 0 errors.
+
+## 0j. Competitor discovery findings reach the operator, 2026-08-31
+
+Session D of the four-way parallel rule build
+(`docs/handoffs/2026-08-28-parallel-rule-sessions.md`, CODE-6 in
+`BACKLOG.md`). Labs (`competitors_domain`), Domain Analytics (whois,
+technologies) and Content Analysis were all collecting snapshots nothing
+read; four rules now do, on `discovery-rule-checks.ts` (pure) and
+`discovery-findings.server.ts` (writer, `source_module: "competitor-discovery"`
+— never `"dataforseo"`), wired to a new manual workflow
+`dfs-discovery-findings` (`registry/modules/competitor-discovery.ts`). Costs
+nothing to run: it re-reads stored snapshots, calls no provider.
+
+- `overlap_list_reached_the_row_limit` and `rival_page_mentions_your_brand`
+  write `recommendations` like every other fact rule.
+- **The other two are not findings.** `same_registration_details_across_two_known_domains`
+  and `identical_technology_stack_across_two_known_domains` file a `pending`
+  row in a new table, `domain_ownership_candidates`, for the operator to
+  confirm or reject — same shape as `ad_advertiser_candidates`. Nothing writes
+  `confirmed` or touches `company_classification` from a match; only an
+  explicit operator action would, and that action does not exist as a UI yet
+  (`CODE-27`). See `COMPETITIVE_MODEL.md` §4 for the full lifecycle.
+- **Still a documented gap, not silently missing:** `collectWhoisOverviewForKnownDomains`
+  is written and tested but has no caller — no workflow node, no operator
+  button — so the whois-match rule stays correctly silent
+  (`whois_collection` prerequisite unmet) until one is built.
+- Four new non-volume `Prerequisite` members (`whois_collection`,
+  `technology_collection`, `brand_mention_collection`,
+  `reviewed_competitor_set`) in `rule-buckets.ts`, so an empty competition
+  screen would eventually name what it is missing rather than blaming volume.
+  The three existing screens that already call `unmetPrerequisites` (Your
+  pages, Site health, Getting found) pass `true` for all four: none of them
+  reads discovery evidence, so those screens say nothing about it rather than
+  guessing.
+- Fixed in the same change: `workflow-runner.server.ts`'s brand-term
+  derivation for `cap.dataforseo_content_analysis` stripped a domain's TLD but
+  left a leading `www.` on, so every mention search for a `www.`-form target
+  searched for the wrong word.
+
+## 0i. Umami rule engine reaches the visitors category, 2026-08-31
+
+Session C of `docs/handoffs/2026-08-28-parallel-rule-sessions.md`. `cap.umami`
+had been `real` since 2026-08-18 (see 0d) with `umami_snapshots` rows stored
+and no rule reading them, so `visitors` was a category with no Umami finding.
+Three of the doc's rules shipped, each with every required adversarial-review
+correction applied: `umami_zero_recorded` (renamed from the proposed
+`umami_tracking_silent`), `umami_site_traffic_shift`, and
+`umami_referrer_source_stopped`. `umami_page_traffic_shift` and
+`umami_recording_stopped` stay killed, as the doc requires.
+
+- `src/lib/umami-rule-checks.ts` (pure, fully unit-tested),
+  `src/lib/umami-rules.server.ts` (writer), `src/registry/modules/umami-findings.ts`
+  (registry module) — new. `evaluateUmamiSnapshots` runs inline at the end of
+  `observeUmami` (`src/lib/umami/observe.server.ts`), mirroring how
+  `evaluatePageSpeedReadings` runs at the end of the PageSpeed read: a rules
+  failure never fails the observation itself.
+- `src/lib/rule-buckets.ts` gained a new `umami_second_window` prerequisite
+  (deliberately not a reuse of `second_collection` or `analytics`, both wired
+  to other providers' facts) and the three rule assignments. The three
+  call sites that build a `PrerequisiteState` (`your-pages.ts`,
+  `site-health.ts`, `getting-found.ts`) pass `umamiSecondWindow: true` as a
+  stated placeholder, the same pattern already used there for
+  `urlInspection`/`approvedKeywords`/`backlinkCollection` — none of them
+  reads Umami yet, so the field is honestly a stub, not a real check.
+- `connections.ts`'s `umami` entry now claims `findingSources: ["umami"]`.
+- `umami/client.server.ts`'s `fetchUmamiMetrics` slice-to-25 default is now
+  `UMAMI_RULE_THRESHOLDS.referrer.appSliceLimit`, read from the same object
+  the rule's completeness guard reads, instead of a hand-copied `25`.
+- `docs/integrations/umami/DIGEST.md` gained the verified provider default row
+  limit (500) for `GET /api/websites/:id/metrics`.
+
+**Inert today, honestly:** as of 0d there is exactly one stored Umami run (four
+rows, 2026-08-18, all real zeros). `umami_site_traffic_shift` and
+`umami_referrer_source_stopped` both need a second, non-overlapping stored
+window before they can fire at all — on the daily 28-day cadence that is
+roughly day 29 of collection — and the pending capability-promotion migration
+(0d) still has to be applied before the daily job even runs. `umami_zero_recorded`
+can fire today once that migration applies, on the existing four rows.
+
+**Not done, flagged in the PR body:** `finding-router.ts`'s `CATEGORY_BY_RULE`
+still lists the old `umami_tracking_silent` id, which no rule emits any more;
+harmless because `CATEGORY_BY_MODULE`'s `umami: "visitors"` entry routes all
+three current rule ids correctly by fallback, but the stale entry is worth
+deleting whenever that shared file is next touched.
 
 ## 0h. Subheadings surfaced, heading order deleted, 2026-08-28
 

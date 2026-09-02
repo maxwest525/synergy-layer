@@ -47,6 +47,7 @@ export type EssentialsFacts = {
     storedSufficient: boolean | null;
   };
   pagespeed: PageSpeedFacts;
+  googleAds: { campaignDayRows: number; distinctCampaigns: number; latestAt: string | null };
   systems: Record<string, SystemFacts | null>;
 };
 
@@ -147,6 +148,7 @@ export const getEssentials = createServerFn({ method: "GET" })
       systems,
       psRuns,
       psSnapshots,
+      googleAdsRows,
     ] = await Promise.all([
       selected
         ? readSelectedPropertySnapshots(db, tenantId, selected.site_url)
@@ -194,6 +196,12 @@ export const getEssentials = createServerFn({ method: "GET" })
         .from("pagespeed_snapshots")
         .select("id", { count: "exact", head: true })
         .eq("tenant_id", tenantId),
+      db
+        .from("google_ads_snapshots")
+        .select("campaign_id, collected_at")
+        .eq("tenant_id", tenantId)
+        .order("collected_at", { ascending: false })
+        .limit(500),
     ]);
 
     assertRead("Change requests", changeRows);
@@ -203,6 +211,7 @@ export const getEssentials = createServerFn({ method: "GET" })
     assertRead("Tool systems catalog", systems);
     assertRead("PageSpeed runs", psRuns);
     assertRead("PageSpeed snapshots", psSnapshots);
+    assertRead("Google Ads snapshots", googleAdsRows);
 
     const snapshots = gscSnapshots.snapshots;
     const totals = snapshots.filter((row) => row.kind === "property_totals");
@@ -314,6 +323,11 @@ export const getEssentials = createServerFn({ method: "GET" })
       },
 
       pagespeed,
+      googleAds: {
+        campaignDayRows: (googleAdsRows.data ?? []).length,
+        distinctCampaigns: new Set((googleAdsRows.data ?? []).map((row) => row.campaign_id)).size,
+        latestAt: googleAdsRows.data?.[0]?.collected_at ?? null,
+      },
       systems: systemMap,
     };
   });

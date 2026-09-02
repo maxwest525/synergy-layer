@@ -28,6 +28,7 @@ export function LoopStrip({ loop }: { loop: LoopState }) {
       <ol className="mt-4 grid gap-2 sm:grid-cols-5">
         {loop.stages.map((stage, index) => {
           const stalled = stage.key === loop.stalledStageKey;
+          const gap = loop.gapStageKeys.includes(stage.key);
           return (
             <li key={stage.key} className="relative">
               <Link
@@ -36,7 +37,9 @@ export function LoopStrip({ loop }: { loop: LoopState }) {
                   "flex h-full flex-col rounded-xl border px-3 py-2.5 transition-colors",
                   stalled
                     ? "border-amber-500/50 bg-amber-500/5"
-                    : "border-border/60 hover:border-primary/40 hover:bg-primary/5",
+                    : gap
+                      ? "border-border/80 border-dashed hover:border-primary/40 hover:bg-primary/5"
+                      : "border-border/60 hover:border-primary/40 hover:bg-primary/5",
                 )}
               >
                 <span className="text-[0.65rem] uppercase tracking-[0.14em] text-muted-foreground">
@@ -53,6 +56,10 @@ export function LoopStrip({ loop }: { loop: LoopState }) {
 
       {loop.stallReason ? (
         <p className="mt-3 text-sm text-foreground/80">{loop.stallReason}</p>
+      ) : loop.gapStageKeys.length > 0 ? (
+        <p className="mt-3 text-sm text-muted-foreground">
+          {gapSentence(loop)} The loop still turns; the gap is listed under What is missing.
+        </p>
       ) : (
         <p className="mt-3 text-sm text-muted-foreground">
           Every stage of this loop has stored activity, so evidence is reaching decisions and work.
@@ -60,4 +67,16 @@ export function LoopStrip({ loop }: { loop: LoopState }) {
       )}
     </GlassCard>
   );
+}
+
+/** Names the empty-but-passed stages so a zero beside filled stages is explained, not alarming. */
+function gapSentence(loop: LoopState): string {
+  const labels = loop.stages
+    .filter((stage) => loop.gapStageKeys.includes(stage.key))
+    .map((stage) => `"${stage.label}"`);
+  const list =
+    labels.length <= 1
+      ? (labels[0] ?? "")
+      : `${labels.slice(0, -1).join(", ")} and ${labels[labels.length - 1]}`;
+  return `${list} ${labels.length === 1 ? "holds" : "hold"} nothing right now, while later stages carry stored work from other evidence.`;
 }

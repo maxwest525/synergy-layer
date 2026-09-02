@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database } from "@/integrations/supabase/types";
 import { dataforseoGet, dataforseoPost, fingerprint, persistSnapshot } from "./transport.server";
+import { supabasePublishableKey } from "@/integrations/supabase/public-config";
 
 type Client = SupabaseClient<Database>;
 
@@ -24,7 +25,7 @@ function today(): string {
 export function postbackUrl(origin: string): string {
   // The provider sends no custom headers, so the callback is authenticated by
   // the publishable key in the query string plus the unguessable task tag.
-  const key = process.env["SUPABASE_PUBLISHABLE_KEY"] ?? "";
+  const key = supabasePublishableKey() ?? "";
   return `${origin}/api/public/hooks/dataforseo-postback?id=$id&tag=$tag&key=${encodeURIComponent(key)}`;
 }
 

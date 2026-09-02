@@ -711,94 +711,6 @@ export type Database = {
           },
         ]
       }
-      ai_gateway_budgets: {
-        Row: {
-          alerts_fired: Json
-          ceiling_usd: number
-          created_at: string
-          hard_stop: boolean
-          id: string
-          period_month: string
-          spent_usd: number
-          tenant_id: string
-          updated_at: string
-        }
-        Insert: {
-          alerts_fired?: Json
-          ceiling_usd?: number
-          created_at?: string
-          hard_stop?: boolean
-          id?: string
-          period_month: string
-          spent_usd?: number
-          tenant_id: string
-          updated_at?: string
-        }
-        Update: {
-          alerts_fired?: Json
-          ceiling_usd?: number
-          created_at?: string
-          hard_stop?: boolean
-          id?: string
-          period_month?: string
-          spent_usd?: number
-          tenant_id?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "ai_gateway_budgets_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      ai_gateway_requests: {
-        Row: {
-          cost_usd: number
-          created_at: string
-          id: string
-          input_tokens: number
-          model: string
-          output_tokens: number
-          priced: boolean
-          surface: string
-          tenant_id: string
-        }
-        Insert: {
-          cost_usd?: number
-          created_at?: string
-          id?: string
-          input_tokens?: number
-          model: string
-          output_tokens?: number
-          priced?: boolean
-          surface: string
-          tenant_id: string
-        }
-        Update: {
-          cost_usd?: number
-          created_at?: string
-          id?: string
-          input_tokens?: number
-          model?: string
-          output_tokens?: number
-          priced?: boolean
-          surface?: string
-          tenant_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "ai_gateway_requests_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       assets: {
         Row: {
           config: Json
@@ -1840,6 +1752,94 @@ export type Database = {
           },
         ]
       }
+      ai_gateway_budgets: {
+        Row: {
+          alerts_fired: Json
+          ceiling_usd: number
+          created_at: string
+          hard_stop: boolean
+          id: string
+          period_month: string
+          spent_usd: number
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          alerts_fired?: Json
+          ceiling_usd?: number
+          created_at?: string
+          hard_stop?: boolean
+          id?: string
+          period_month: string
+          spent_usd?: number
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          alerts_fired?: Json
+          ceiling_usd?: number
+          created_at?: string
+          hard_stop?: boolean
+          id?: string
+          period_month?: string
+          spent_usd?: number
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_gateway_budgets_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_gateway_requests: {
+        Row: {
+          cost_usd: number
+          created_at: string
+          id: string
+          input_tokens: number
+          model: string
+          output_tokens: number
+          priced: boolean
+          surface: string
+          tenant_id: string
+        }
+        Insert: {
+          cost_usd?: number
+          created_at?: string
+          id?: string
+          input_tokens?: number
+          model: string
+          output_tokens?: number
+          priced?: boolean
+          surface: string
+          tenant_id: string
+        }
+        Update: {
+          cost_usd?: number
+          created_at?: string
+          id?: string
+          input_tokens?: number
+          model?: string
+          output_tokens?: number
+          priced?: boolean
+          surface?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_gateway_requests_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       dataforseo_budgets: {
         Row: {
           alerts_fired: Json
@@ -2132,6 +2132,56 @@ export type Database = {
           },
           {
             foreignKeyName: "dataforseo_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      domain_ownership_candidates: {
+        Row: {
+          created_at: string
+          domain_a: string
+          domain_b: string
+          evidence: Json
+          id: string
+          matched_fields: Json
+          review_state: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          rule: string
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          domain_a: string
+          domain_b: string
+          evidence?: Json
+          id?: string
+          matched_fields?: Json
+          review_state?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          rule: string
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          domain_a?: string
+          domain_b?: string
+          evidence?: Json
+          id?: string
+          matched_fields?: Json
+          review_state?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          rule?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "domain_ownership_candidates_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
