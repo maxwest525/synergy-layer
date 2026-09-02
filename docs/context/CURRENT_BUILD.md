@@ -924,10 +924,13 @@ prettier errors" — that is no longer true and those notes are stale.
 Unchanged from the sections below, restated because they are the things most
 likely to waste someone's afternoon:
 
-- `GITHUB_EXECUTOR_TOKEN` is not configured, so no change request has ever been
-  executed against the real repository. The UI names this exactly and refuses
-  without writing. **Where this secret lives, recorded 2026-08-28 so nobody
-  hunts for it again:** it is a fine-grained GitHub personal access token
+- `GITHUB_EXECUTOR_TOKEN` **is configured and has been since 2026-08-11**: seven
+  executions with a recorded commit and six change requests with a source
+  commit, the first on 2026-08-11 (live `change_request_executions`,
+  2026-09-02). An earlier version of this bullet said the opposite; the UI
+  names the absence exactly and refuses without writing whenever a host lacks
+  the token, which is how the Vercel shadow behaves. **Where this secret
+  lives, recorded 2026-08-28 so nobody hunts for it again:** it is a fine-grained GitHub personal access token
   created on the `maxwest525` GitHub account, scoped to the single repository
   `maxwest525/brittmove-829a7519` with Contents read/write only (the executor
   is hard-allowlisted to that repo and branch in
@@ -1159,7 +1162,7 @@ secret paths are stored.
 - `src/components/os/execution-card.tsx` — six-stage plain-language status, execute + check published, attempt log, "Provider API charge: $0" with the AI build usage caveat.
 - Migration: `change_requests.source_repo/source_branch/source_commit_*/published_proof_*` and `public.change_request_executions` (tenant read, server write).
 - Applied now means proven live on the public URL; the manual "Mark applied" button is gone. Verification still requires finalized post-change Search Console rows.
-- Blocker: `GITHUB_EXECUTOR_TOKEN` is not configured, so no real commit has been attempted. The UI names this exactly and refuses without writing.
+- Corrected 2026-09-02: `GITHUB_EXECUTOR_TOKEN` is configured; real commits have been made since 2026-08-11 (see §0 above). The UI names the absence and refuses without writing only on a host that lacks the token.
 
 ## Direct measurement truth (2026-08-14)
 
