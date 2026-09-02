@@ -34,6 +34,39 @@ Last updated: 2026-08-31, after wiring Google Ads campaign reporting
 describes 2026-08-21 and has NOT been rewritten; the current-state blocks
 immediately below supersede it.
 
+## 0bw. The tariff clause is a change AOOS drafts, not one a person types, 2026-09-02
+
+Asked why a session would push to the website repository at all, the answer is
+that it should not. `execution/allowlist.ts` has allowlisted
+`maxwest525/brittmove-829a7519` on `main` since the executor was built, and
+CODE-7 made a governed commit the only way a change reaches the site: draft,
+operator approval, commit, rendered proof. A hand-written pull request routes
+around that. OP-12 asked for exactly that and has been rewritten.
+
+What actually stopped the tariff clause was file ownership, not access. 49 CFR
+§ 371.107(c) wants a statement the site carries in every part but one, and the
+sentence is in `src/components/trumove/Footer.tsx` -- a sitewide component no
+governed change kind owned. Four things had to move together, because each one
+alone would have produced a control that lies:
+
+- `site.footer_wording`, a change kind over that one file.
+- `buildBrokerStatementFix`, which amends the sentence that is there rather
+  than writing one that is not. It refuses when the statement is missing
+  outright (an insertion, which exact replacement cannot do), when the file
+  holds it more than once, and when the site already states it.
+- `broker_statement` as an owned wording field, and `visibleText` on every
+  rendered page, so the clause can be proven live by containment. A footer
+  sentence is not a title, an H1 or an H2, so nothing could previously be asked
+  whether it was on the page.
+- The database halves of both lists, in
+  `20260902160000_the_rendered_proof_accepts_the_footer.sql`, applied and
+  ledgered 2026-09-02. The executor's allowlist and the proof routine's cannot
+  see each other; `proof-target-allowlist.test.ts` is what makes them fail
+  together instead of drifting.
+
+The other three broker findings stay unfixable, each now saying which limit it
+hits rather than sharing one reason that was false (CODE-89).
+
 ## 0bv. Reading the live site found a number the homepage does not carry, 2026-09-02
 
 The nightly watch and the registration check had both shipped without ever

@@ -4,6 +4,7 @@ import {
   buildCrawlDirectiveFix,
   fixTargetForPage,
   fixTargetForPageCheck,
+  buildBrokerStatementFix,
   fixTargetForSiteCheck,
   noFixReasonForPage,
 } from "./audit-fixes";
@@ -191,5 +192,86 @@ describe("which page a fix can actually be drafted for", () => {
   it("says a check no lane owns is manual, whatever page it names", () => {
     expect(fixTargetForPage("thin_content", SERVICE)).toBeNull();
     expect(noFixReasonForPage("thin_content", SERVICE)).toContain("manual fix");
+  });
+});
+
+describe("buildBrokerStatementFix", () => {
+  // Transcribed from maxwest525/brittmove-829a7519 at d983fb0,
+  // src/components/trumove/Footer.tsx:168-170, read 2026-09-02.
+  const LIVE_FOOTER = [
+    '          <p className="text-muted-foreground/60 max-w-[720px]">',
+    "            TruMove Inc. arranges transportation through independently authorized FMCSA motor carriers and does not transport household goods.",
+    "          </p>",
+  ].join("\n");
+
+  const HAS_ALL_BUT_TARIFF = { notTransport: true, arrange: true, tariff: false };
+
+  it("amends the live footer sentence and adds nothing else", () => {
+    const built = buildBrokerStatementFix({
+      footerContent: LIVE_FOOTER,
+      statement: HAS_ALL_BUT_TARIFF,
+    });
+    expect("error" in built).toBe(false);
+    if ("error" in built) return;
+    expect(built.changes).toHaveLength(1);
+    const [change] = built.changes;
+    expect(LIVE_FOOTER).toContain(change!.before);
+    expect(change!.after.startsWith(change!.before)).toBe(true);
+    expect(change!.after).toMatch(/published tariff\.$/);
+  });
+
+  it("refuses when the site already states how charges are determined", () => {
+    const built = buildBrokerStatementFix({
+      footerContent: LIVE_FOOTER,
+      statement: { notTransport: true, arrange: true, tariff: true },
+    });
+    expect(built).toEqual({
+      error: "The site already states how the carrier's charges are determined.",
+    });
+  });
+
+  it("refuses to write a statement that is missing more than the tariff clause", () => {
+    const built = buildBrokerStatementFix({
+      footerContent: LIVE_FOOTER,
+      statement: { notTransport: false, arrange: false, tariff: false },
+    });
+    expect("error" in built && built.error).toContain("nothing to replace");
+  });
+
+  it("refuses when the governed file does not hold the statement as one sentence", () => {
+    const built = buildBrokerStatementFix({
+      footerContent: "<p>{brokerLine}</p>",
+      statement: HAS_ALL_BUT_TARIFF,
+    });
+    expect("error" in built && built.error).toContain("not hold it as one sentence");
+  });
+
+  it("refuses rather than amend one of several statements", () => {
+    const built = buildBrokerStatementFix({
+      footerContent: [
+        "  <p>TruMove arranges transportation and does not transport goods.</p>",
+        "  <p>TruMove Inc. arranges moves with carriers and does not transport them itself.</p>",
+      ].join("\n"),
+      statement: HAS_ALL_BUT_TARIFF,
+    });
+    expect("error" in built && built.error).toContain("sentences carrying the statement");
+  });
+
+  it("points the broker statement finding at the governed footer file", () => {
+    const target = fixTargetForSiteCheck("broker_statement_missing");
+    expect(target).toEqual({
+      changeKind: "site.footer_wording",
+      filePath: "src/components/trumove/Footer.tsx",
+    });
+  });
+
+  it("leaves the other three broker findings without a fix", () => {
+    for (const check of [
+      "broker_numbers_missing",
+      "broker_numbers_disagree",
+      "broker_numbers_off_homepage",
+    ]) {
+      expect(fixTargetForSiteCheck(check)).toBeNull();
+    }
   });
 });

@@ -1,7 +1,11 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database } from "@/integrations/supabase/types";
-import { buildCrawlDirectiveFix, fixTargetForSiteCheck } from "./audit-fixes";
+import {
+  buildBrokerStatementFix,
+  buildCrawlDirectiveFix,
+  fixTargetForSiteCheck,
+} from "./audit-fixes";
 import { GOVERNED_BRANCH, GOVERNED_PROJECT_ID, GOVERNED_REPO } from "./execution/allowlist";
 import { createGithubApi } from "./execution/execute.server";
 import { applyExactReplacements } from "./execution/source-change";
@@ -93,6 +97,79 @@ export async function prepareSiteFixProposal(
   }
   const head = await github.branchHead(GOVERNED_REPO, GOVERNED_BRANCH);
   const source = await github.readFile(GOVERNED_REPO, target.filePath, head);
+
+  // The footer lane and the robots lane share everything except the edit they
+  // build and the evidence that edit rests on, so they split here rather than
+  // threading a second builder through one function that names robots.txt in
+  // its own refusals (CODE-90).
+  if (target.changeKind === "site.footer_wording") {
+    const homepage = facts.licence?.homepage;
+    if (!homepage) {
+      throw new Error(
+        "The stored site read holds no homepage registration facts, so nothing proves which clause is missing. Run the audit again.",
+      );
+    }
+    const statementFix = buildBrokerStatementFix({
+      footerContent: source.content,
+      statement: homepage.statement,
+    });
+    if ("error" in statementFix) throw new Error(statementFix.error);
+
+    const applied = applyExactReplacements(source.content, statementFix.changes);
+    if (!applied.ok) throw new Error(applied.reason);
+    if (applied.value.alreadyApplied) {
+      throw new Error("The source already contains this fix, so no proposal was created.");
+    }
+
+    return {
+      proposalType: target.changeKind,
+      targetUrl: facts.origin,
+      title: statementFix.title,
+      changes: statementFix.changes as unknown as Record<string, unknown>[],
+      rationale: statementFix.rationale,
+      evidence: [
+        {
+          source: "site_read",
+          check,
+          label: finding.label,
+          detail: finding.detail,
+          origin: facts.origin,
+          homepageUrl: facts.licence?.homepageUrl ?? null,
+          brokerStatusShown: homepage.brokerStatusShown,
+          statement: homepage.statement,
+          observedAt,
+        },
+        {
+          source: "regulation",
+          citation: "49 CFR § 371.107(c)",
+          read: "https://www.law.cornell.edu/cfr/text/49/371.107",
+        },
+        {
+          source: "governed_source",
+          repo: GOVERNED_REPO,
+          branch: GOVERNED_BRANCH,
+          file: target.filePath,
+          revision: head,
+        },
+      ],
+      evidenceSummary: `The live site read at ${observedAt} proved: ${finding.detail}`,
+      evidenceLimitations:
+        "This reads the words on the page, not the operator's FMCSA record. It cannot confirm the statement is true of them, only that the site now makes it. Paragraph (a), the physical address, is not read at all.",
+      riskNote:
+        "This edits a compliance statement shown on every page. Operator review is required, and approval locks this exact sentence and source revision.",
+      generationContext: {
+        provider: "deterministic_site_audit",
+        check,
+        changeKind: target.changeKind,
+        generatedAt: new Date().toISOString(),
+      },
+      sourceRepo: GOVERNED_REPO,
+      sourceBranch: GOVERNED_BRANCH,
+      sourceFile: target.filePath,
+      sourceProjectId: GOVERNED_PROJECT_ID,
+      sourceRevisionBefore: head,
+    };
+  }
 
   // Recomputed from the stored facts rather than parsed back out of the
   // finding's prose, which only ever names the first three. Recorded on the

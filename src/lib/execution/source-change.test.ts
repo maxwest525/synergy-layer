@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import type { RenderedPage } from "./source-change";
 import { extractSubheadings, verifyRenderedPage } from "./source-change";
 
 /**
@@ -16,6 +17,7 @@ describe("verifyRenderedPage proves whatever fields the change carries", () => {
     heading: "Move across the country",
     metaDescription: "We move you.",
     subheadings: ["What it costs", "How long it takes"],
+    visibleText: "",
     renderedBy: "Crawl4AI",
   };
 
@@ -89,5 +91,53 @@ describe("extractSubheadings", () => {
 
   it("returns an empty list when a page has none, never a placeholder", () => {
     expect(extractSubheadings("<h1>Only a heading</h1>")).toEqual([]);
+  });
+});
+
+describe("proving a broker statement live", () => {
+  const STATEMENT =
+    "TruMove Inc. arranges transportation through independently authorized FMCSA motor carriers and does not transport household goods. Charges for transportation are determined by the carrier's published tariff.";
+
+  function footerPage(visible: string): RenderedPage {
+    return {
+      finalUrl: "https://trumoveinc.com/",
+      title: "TruMove",
+      heading: "TruMove",
+      metaDescription: null,
+      subheadings: [],
+      visibleText: visible,
+      renderedBy: "test",
+    };
+  }
+
+  const change = {
+    field: "broker_statement",
+    label: "Broker statement",
+    before: "old",
+    after: STATEMENT,
+  };
+
+  it("proves the sentence when the rendered page carries it among other text", () => {
+    const proof = verifyRenderedPage(footerPage(`Some hero copy. ${STATEMENT} Copyright 2026.`), [
+      change,
+    ]);
+    expect(proof.ok).toBe(true);
+  });
+
+  it("refuses when the page carries the old statement instead", () => {
+    const proof = verifyRenderedPage(
+      footerPage(
+        "TruMove Inc. arranges transportation through independently authorized FMCSA motor carriers and does not transport household goods.",
+      ),
+      [change],
+    );
+    expect(proof.ok).toBe(false);
+  });
+
+  it("treats an unrendered shell as no proof either way, not as a match", () => {
+    const proof = verifyRenderedPage(footerPage(""), [change]);
+    expect(proof.ok).toBe(false);
+    if (proof.ok) return;
+    expect(proof.reason).toContain("unrendered application shell");
   });
 });
