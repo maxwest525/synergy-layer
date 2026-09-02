@@ -34,6 +34,16 @@ Last updated: 2026-08-31, after wiring Google Ads campaign reporting
 describes 2026-08-21 and has NOT been rewritten; the current-state blocks
 immediately below supersede it.
 
+## 0ba. The breadcrumb names the page you are on, 2026-09-02
+
+The trail stopped at the category on every nested view and read labels
+off the URL outside the categories. `src/lib/breadcrumbs.ts` now builds
+one crumb per path segment from names a person wrote: the category
+model, the sidebar's own labels, a short view-title map, and a kind word
+for a row under a list. The ancestor is always a link and the current
+crumb is the page the operator is on; a test walks every route file and
+fails when a segment has no name (CODE-74, from NAV-8).
+
 ## 0az. The nightly proposal job frees a page once its change is decided, 2026-09-02
 
 `propose-from-evidence` used to exclude any page that had ever carried a

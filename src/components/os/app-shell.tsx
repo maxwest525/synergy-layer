@@ -8,13 +8,8 @@ import { useCommandCenter } from "./command-center-facts";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useOperatorSession, type OperatorSession } from "@/hooks/use-operator-session";
 import { TenantSwitcher } from "./tenant-switcher";
-import {
-  CATEGORIES,
-  breadcrumbsForPath,
-  categoryForPath,
-  navEntries,
-  type NavEntry,
-} from "@/lib/categories";
+import { breadcrumbsForPath } from "@/lib/breadcrumbs";
+import { CATEGORIES, categoryForPath, navEntries, type NavEntry } from "@/lib/categories";
 import type { StatusLine } from "@/lib/command-center";
 import type { NavTone } from "@/lib/suggestion-queue";
 import { getWorkspaceAccessState } from "@/lib/operator-session-gate";
