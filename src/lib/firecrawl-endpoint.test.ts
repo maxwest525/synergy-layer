@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { FIRECRAWL_CLOUD_URL, firecrawlEndpoint } from "./firecrawl-endpoint";
+import {
+  FIRECRAWL_CLOUD_URL,
+  firecrawlEndpoint,
+  selfHostedFirecrawlRefusal,
+} from "./firecrawl-endpoint";
 
 describe("which Firecrawl answers a scrape", () => {
   it("prefers the self-hosted deployment when it is fully configured", () => {
@@ -54,5 +58,30 @@ describe("which Firecrawl answers a scrape", () => {
 
   it("is null when neither deployment is configured, so callers refuse rather than guess", () => {
     expect(firecrawlEndpoint({})).toBeNull();
+  });
+});
+
+describe("a self-hosted deployment that failed its last check is refused by name", () => {
+  it("names the failed check and both ways out", () => {
+    // The chooser trusts a present key; only the probe knows the box rejects
+    // it. Without this the page audit sent a hundred requests to a 401 (CODE-17).
+    const refusal = selfHostedFirecrawlRefusal({
+      health: "failing",
+      lastCheckedAt: "2026-09-01T16:05:00.000Z",
+      probeOutcome: "unauthorized",
+    });
+    expect(refusal).toContain("failed its last check at 2026-09-01T16:05:00.000Z (unauthorized)");
+    expect(refusal).toContain("Re-run the check on Connection health");
+    expect(refusal).toContain("remove SELFHOSTED_FIRECRAWL_BASE_URL");
+  });
+
+  it("does not block a workspace whose probe has never run, or one that passed", () => {
+    expect(selfHostedFirecrawlRefusal(null)).toBeNull();
+    expect(
+      selfHostedFirecrawlRefusal({ health: "healthy", lastCheckedAt: null, probeOutcome: null }),
+    ).toBeNull();
+    expect(
+      selfHostedFirecrawlRefusal({ health: "unknown", lastCheckedAt: null, probeOutcome: null }),
+    ).toBeNull();
   });
 });
