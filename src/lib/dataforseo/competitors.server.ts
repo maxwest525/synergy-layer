@@ -23,11 +23,20 @@ export const COMPETITOR_CONFIG = {
 };
 
 /**
- * Domains that rank for almost everything. They are real search surfaces worth
- * knowing about, but they are not businesses competing for the same customer,
- * so they are classified separately and never presented as competitors.
+ * General web platforms, directories and review sites that rank for almost
+ * everything. They are real search surfaces worth knowing about, but not
+ * sites competing for this SERP, so they are classified separately and never
+ * presented as competitors.
+ *
+ * Moving-niche publishers and marketplaces (moveBuddha, Moving.com and the
+ * rest of the route-matrix operators the research log names) used to be on
+ * this list too, which hid the SERP's actual rivals as "surfaces" (COMP-2).
+ * domain_class is SERP-derived: does this domain rank alongside us. What the
+ * business is (publisher_directory, lead_vendor, carrier) is the operator's
+ * declaration in company_classification, and neither is derived from the
+ * other (COMPETITIVE_MODEL.md, section 2).
  */
-const SURFACE_DOMAINS = new Set([
+const PLATFORM_DOMAINS = new Set([
   "facebook.com",
   "instagram.com",
   "twitter.com",
@@ -67,15 +76,6 @@ const SURFACE_DOMAINS = new Set([
   "realtor.com",
   "apartments.com",
   "google.com",
-  "moving.com",
-  "movers.com",
-  "unpakt.com",
-  "hireahelper.com",
-  "updater.com",
-  "uhaul.com",
-  "move.org",
-  "movebuddha.com",
-  "mymovingreviews.com",
 ]);
 
 export function normaliseDomain(value: string): string {
@@ -85,8 +85,9 @@ export function normaliseDomain(value: string): string {
     .replace(/^www\./, "");
 }
 
-function classify(domain: string): "competitor" | "surface" {
-  if (SURFACE_DOMAINS.has(domain)) return "surface";
+/** SERP-derived only: a domain that ranks alongside you, or a general web platform. */
+export function classifyDomain(domain: string): "competitor" | "surface" {
+  if (PLATFORM_DOMAINS.has(domain)) return "surface";
   if (/\.(gov|edu|mil)$/.test(domain)) return "surface";
   return "competitor";
 }
@@ -180,7 +181,7 @@ export async function deriveCompetitorsFromSerp(
     const meetsThreshold = entry.keywords.size >= COMPETITOR_CONFIG.minKeywordAppearances;
     if (!meetsThreshold) skipped += 1;
 
-    const domainClass = classify(entry.domain);
+    const domainClass = classifyDomain(entry.domain);
     if (meetsThreshold) {
       if (domainClass === "competitor") competitors += 1;
       else surfaces += 1;

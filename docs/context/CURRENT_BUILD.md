@@ -34,6 +34,17 @@ Last updated: 2026-08-31, after wiring Google Ads campaign reporting
 describes 2026-08-21 and has NOT been rewritten; the current-state blocks
 immediately below supersede it.
 
+## 0an. Publishers that rank alongside you are no longer hidden, 2026-09-02
+
+The SERP-derived classifier's "surface" list mixed general web platforms
+with nine moving-niche publishers and marketplaces, so moveBuddha,
+Moving.com and move.org, which the research log names as the route-matrix
+rivals, were filed as surfaces the competitor screen never presents. The
+list holds general platforms only now; what a business is stays the
+operator's declaration in `company_classification`. The four derived rows
+were corrected live, and the badge says "Ranks alongside you" rather than
+"Business competitor" (CODE-62, from COMP-2).
+
 ## 0am. Keyword discovery files what it found, 2026-09-02
 
 Suggestions and gap keywords under ten monthly searches were discarded
