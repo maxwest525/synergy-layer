@@ -47,7 +47,7 @@ export function GlassCard({
     <div
       className={cn(
         "relative overflow-hidden rounded-2xl border border-border/70 bg-card/60 p-5 backdrop-blur-xl",
-        "shadow-[0_1px_0_0_hsl(var(--border))] transition-colors duration-300",
+        "shadow-[0_1px_0_0_var(--border)] transition-colors duration-300",
         className,
       )}
     >

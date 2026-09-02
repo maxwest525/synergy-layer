@@ -34,6 +34,15 @@ Last updated: 2026-08-31, after wiring Google Ads campaign reporting
 describes 2026-08-21 and has NOT been rewritten; the current-state blocks
 immediately below supersede it.
 
+## 0bi. Every colour on screen resolves to a token, 2026-09-02
+
+Eight screens used amber and emerald palette classes, so the "needs
+attention" yellow was three hues, and one card shadow wrapped an oklch
+token in hsl() and never rendered. All resolve to the warning and
+success tokens now, the shadow reads the border token directly, and a
+test walks every screen file for a raw palette class or an hsl-wrapped
+token (CODE-82, from DS-2).
+
 ## 0bh. Connections say when the newest row arrived, 2026-09-02
 
 "Reaching you" carried no date, so an hour-old and a month-old connection

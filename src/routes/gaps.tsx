@@ -166,7 +166,7 @@ function GapsRoute() {
                             tone={STATUS_TONE[entry.status]}
                           />
                           {entry.mutates ? (
-                            <span className="text-xs text-amber-400">
+                            <span className="text-xs text-warning">
                               writes at the provider, needs approval
                             </span>
                           ) : null}

@@ -120,7 +120,7 @@ export function RunControlCard({
               : "Every step in this run has been completed."}
           </p>
           {nextNode?.kind === "approval" ? (
-            <p className="text-xs text-amber-300/90">
+            <p className="text-xs text-warning">
               This is a decision point. Advancing it records your approval and continues the same
               run.
             </p>
