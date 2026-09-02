@@ -28,16 +28,25 @@ export function parseUuidInput(data: unknown): { id: string } {
   return { id: readUuid(input["id"]) };
 }
 
+function readOptionalFlag(value: unknown, label: string): boolean | undefined {
+  if (value === null || value === undefined) return undefined;
+  if (typeof value !== "boolean") throw new Error(`${label} must be true or false.`);
+  return value;
+}
+
 export function parseChangeTransitionInput(data: unknown): {
   id: string;
   notes: string | null | undefined;
   revision: string | null | undefined;
+  /** Set only by the "approve anyway" control when another change to the page is in flight. */
+  acknowledgeInFlight: boolean | undefined;
 } {
   const input = readRecord(data);
   return {
     id: readUuid(input["id"]),
     notes: readOptionalText(input["notes"], 2_000, "notes"),
     revision: readOptionalText(input["revision"], 200, "revision"),
+    acknowledgeInFlight: readOptionalFlag(input["acknowledgeInFlight"], "acknowledgeInFlight"),
   };
 }
 

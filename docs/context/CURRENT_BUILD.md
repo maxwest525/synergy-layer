@@ -34,6 +34,28 @@ Last updated: 2026-08-31, after wiring Google Ads campaign reporting
 describes 2026-08-21 and has NOT been rewritten; the current-state blocks
 immediately below supersede it.
 
+## 0o. Approving a second change to a page now names the first, 2026-09-02
+
+CODE-31, the approval half. `transition_change_request` refuses `approve`
+while another change to the same page is approved and not yet live, or live
+with a measurement window whose rows are not readable yet, unless the call
+carries an explicit acknowledgement; the acknowledgement lands on the audit
+event as the sibling's id. The change page reads the same rule before the
+click (`src/lib/change-request-conflicts.ts`, a pure module with tests) and
+replaces the plain Approve control with "Approve anyway, measure both
+together" while a sibling is in flight, with the consequence stated beside it.
+Migration `20260902010000` is applied live and registered in the ledger; the
+old four-argument overload is dropped so the RPC stays unambiguous.
+`VALIDATION_GATES.md` gained the Concurrency gate.
+
+Not done, recorded rather than implied: the needs-attention rollup for several
+changes sharing one blocker, and the two pre-existing duplicates on the queue,
+which the guard does not retroactively resolve.
+
+Also applied live in this pass: `domain_ownership_candidates`
+(`20260831120000`), which the merged discovery workflow writes to and which
+did not exist in production until today.
+
 ## 0n. Where production actually builds from, 2026-09-01
 
 Read this before believing any "Verified 2026-08-31" or "2026-09-01" closure

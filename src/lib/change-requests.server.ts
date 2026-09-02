@@ -8,6 +8,12 @@ import {
   type PostChangeRow,
 } from "./change-request-evidence";
 import { type ChangeAction } from "./change-request-state";
+import {
+  findInFlightSiblings,
+  type InFlightSibling,
+  type MeasurementWindowRef,
+} from "./change-request-conflicts";
+import { ptDate } from "./change-measurement";
 import { fetchChangeMeasurementHistory } from "./change-measurements.server";
 import { fetchCrawlDirectiveOutcome } from "./crawl-directive-outcome.server";
 import type { GradedOutcome } from "./site-health";
@@ -67,6 +73,7 @@ export async function fetchChangeRequest(client: Client, tenantId: string, id: s
       measurement: { cycle: null, windows: [], observations: [], revisions: [] },
       gradedOutcomes: [] as GradedOutcome[],
       crawlOutcome: null,
+      inFlight: [] as InFlightSibling[],
     };
   }
   const [
@@ -76,6 +83,7 @@ export async function fetchChangeRequest(client: Client, tenantId: string, id: s
     measurement,
     gradedOutcomes,
     crawlOutcome,
+    inFlight,
   ] = await Promise.all([
     client
       .from("change_request_versions")
@@ -96,6 +104,9 @@ export async function fetchChangeRequest(client: Client, tenantId: string, id: s
     // reads URL Inspection rather than the performance rows the wording
     // lanes use. Null for every other proposal type.
     fetchCrawlDirectiveOutcome(client, tenantId, id),
+    // Other changes to the same page that are still in flight, so the page can
+    // say so before an approval rather than after the database refuses it.
+    fetchInFlightSiblings(client, tenantId, id, data.target_url),
   ]);
   if (versionError) throw new Error(versionError.message);
   if (originSeoRunError) throw new Error(originSeoRunError.message);
@@ -107,7 +118,63 @@ export async function fetchChangeRequest(client: Client, tenantId: string, id: s
     measurement,
     gradedOutcomes,
     crawlOutcome,
+    inFlight,
   };
+}
+
+/**
+ * The same rule the database applies inside `transition_change_request`:
+ * siblings on this page that are approved and not live, or live with a
+ * measurement window still waiting on rows. Read through the operator's own
+ * client, so tenant scope is the row policy's, not this function's.
+ */
+async function fetchInFlightSiblings(
+  client: Client,
+  tenantId: string,
+  candidateId: string,
+  targetUrl: string,
+): Promise<InFlightSibling[]> {
+  const { data: siblings, error: siblingError } = await client
+    .from("change_requests")
+    .select("id, title, state, target_url, approved_at, applied_at")
+    .eq("tenant_id", tenantId)
+    .eq("target_url", targetUrl)
+    .neq("id", candidateId)
+    .in("state", ["approved", "applied"]);
+  if (siblingError) throw new Error(siblingError.message);
+  const applied = (siblings ?? []).filter((row) => row.state === "applied").map((row) => row.id);
+  let windows: MeasurementWindowRef[] = [];
+  if (applied.length > 0) {
+    const { data: cycles, error: cycleError } = await client
+      .from("change_measurement_cycles")
+      .select("id, change_request_id")
+      .eq("tenant_id", tenantId)
+      .in("change_request_id", applied);
+    if (cycleError) throw new Error(cycleError.message);
+    const cycleIds = (cycles ?? []).map((cycle) => cycle.id);
+    if (cycleIds.length > 0) {
+      const { data: rows, error: windowError } = await client
+        .from("change_measurement_windows")
+        .select("cycle_id, available_after_pt")
+        .eq("tenant_id", tenantId)
+        .in("cycle_id", cycleIds);
+      if (windowError) throw new Error(windowError.message);
+      const changeByCycle = new Map((cycles ?? []).map((c) => [c.id, c.change_request_id]));
+      windows = (rows ?? []).flatMap((row) => {
+        const changeRequestId = changeByCycle.get(row.cycle_id);
+        return changeRequestId
+          ? [{ change_request_id: changeRequestId, available_after_pt: row.available_after_pt }]
+          : [];
+      });
+    }
+  }
+  return findInFlightSiblings({
+    candidateId,
+    targetUrl,
+    siblings: siblings ?? [],
+    windows,
+    todayPt: ptDate(new Date()),
+  });
 }
 
 /**
@@ -256,6 +323,12 @@ type TransitionInput = {
   userId: string;
   notes?: string | null;
   revision?: string | null;
+  /**
+   * True only when the operator has seen that another change to the same page
+   * is in flight and chose to approve regardless. The database refuses an
+   * unacknowledged approval in that situation; see change-request-conflicts.ts.
+   */
+  acknowledgeInFlight?: boolean;
 };
 
 /**
@@ -290,12 +363,21 @@ export async function transitionChangeRequest(
     }
   }
 
-  const args: { _id: string; _action: string; _notes?: string; _revision?: string } = {
+  const args: {
+    _id: string;
+    _action: string;
+    _notes?: string;
+    _revision?: string;
+    _acknowledge_in_flight?: boolean;
+  } = {
     _id: input.id,
     _action: input.action,
   };
   if (input.notes) args._notes = input.notes;
   if (input.revision) args._revision = input.revision;
+  if (input.action === "approve" && input.acknowledgeInFlight === true) {
+    args._acknowledge_in_flight = true;
+  }
 
   const { data, error } = await client.rpc("transition_change_request", args);
 
