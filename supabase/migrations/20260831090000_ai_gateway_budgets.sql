@@ -7,7 +7,7 @@
 -- with its own $-per-request pricing, versus per-token model pricing) and
 -- forcing them into one schema would only add indirection neither needs.
 
-CREATE TABLE public.ai_gateway_budgets (
+CREATE TABLE IF NOT EXISTS public.ai_gateway_budgets (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id uuid NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
   period_month date NOT NULL,
@@ -22,11 +22,14 @@ CREATE TABLE public.ai_gateway_budgets (
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.ai_gateway_budgets TO authenticated;
 GRANT ALL ON public.ai_gateway_budgets TO service_role;
 ALTER TABLE public.ai_gateway_budgets ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS ai_budget_read ON public.ai_gateway_budgets;
 CREATE POLICY ai_budget_read ON public.ai_gateway_budgets FOR SELECT USING (is_tenant_member(tenant_id));
+DROP POLICY IF EXISTS ai_budget_write ON public.ai_gateway_budgets;
 CREATE POLICY ai_budget_write ON public.ai_gateway_budgets FOR ALL USING (is_operator() AND is_tenant_member(tenant_id)) WITH CHECK (is_operator() AND is_tenant_member(tenant_id));
+DROP TRIGGER IF EXISTS touch_ai_gateway_budgets ON public.ai_gateway_budgets;
 CREATE TRIGGER touch_ai_gateway_budgets BEFORE UPDATE ON public.ai_gateway_budgets FOR EACH ROW EXECUTE FUNCTION public.touch_updated_at();
 
-CREATE TABLE public.ai_gateway_requests (
+CREATE TABLE IF NOT EXISTS public.ai_gateway_requests (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id uuid NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
   surface text NOT NULL,
@@ -37,9 +40,11 @@ CREATE TABLE public.ai_gateway_requests (
   priced boolean NOT NULL DEFAULT true,
   created_at timestamptz NOT NULL DEFAULT now()
 );
-CREATE INDEX ai_gateway_requests_tenant_month ON public.ai_gateway_requests (tenant_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS ai_gateway_requests_tenant_month ON public.ai_gateway_requests (tenant_id, created_at DESC);
 GRANT SELECT, INSERT ON public.ai_gateway_requests TO authenticated;
 GRANT ALL ON public.ai_gateway_requests TO service_role;
 ALTER TABLE public.ai_gateway_requests ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS ai_gateway_requests_read ON public.ai_gateway_requests;
 CREATE POLICY ai_gateway_requests_read ON public.ai_gateway_requests FOR SELECT USING (is_tenant_member(tenant_id));
+DROP POLICY IF EXISTS ai_gateway_requests_write ON public.ai_gateway_requests;
 CREATE POLICY ai_gateway_requests_write ON public.ai_gateway_requests FOR INSERT WITH CHECK (is_operator() AND is_tenant_member(tenant_id));
