@@ -34,6 +34,24 @@ Last updated: 2026-08-31, after wiring Google Ads campaign reporting
 describes 2026-08-21 and has NOT been rewritten; the current-state blocks
 immediately below supersede it.
 
+## 0x. The bridge secret is the one the caller's connection names, 2026-09-02
+
+The two OpenAI Ads bridge hooks verified every caller against one global
+variable and then let the payload choose the tenant by slug, so any
+tenant's caller could have written another tenant's events; they also
+advertised CORS to every origin with the secret header allow-listed, an
+invitation to a browser caller that would ship the secret (CODE-37).
+Migration `20260902040000`, applied live and ledgered, adds
+`bridge_secret_name` to the connection row, naming the server variable
+that holds its bridge secret the way `secret_name` names the provider
+credential; the default is the variable in use today, so the website and
+the live bridge are unchanged. Both hooks now resolve the tenant from the
+slug first, verify against that tenant's variable, and answer an unknown
+tenant and a wrong secret alike. The CORS surface is gone: the only caller
+is the website's server-side function. The connection settings screen shows
+the bridge secret's name and whether the host carries it, beside the
+provider credential it already showed.
+
 ## 0w. A scheduled run works for the tenant its schedule names, 2026-09-02
 
 The scheduler ran every workflow through the service-role client and let

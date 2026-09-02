@@ -110,6 +110,14 @@ function ConnectionCard({ connection, canEdit }: { connection: ConnectionView; c
               : `Missing. Add ${connection.secretName} in Project Settings, Secrets.`
           }
         />
+        <DetailRow
+          label="Bridge secret"
+          value={
+            connection.bridgeSecretPresent
+              ? `Present on the server as ${connection.bridgeSecretName}; the website must present the same value.`
+              : `Missing. Add ${connection.bridgeSecretName} in Project Settings, Secrets, or the bridge refuses every call.`
+          }
+        />
         <DetailRow label="Last changed" value={formatWhen(connection.updatedAt)} />
       </dl>
 

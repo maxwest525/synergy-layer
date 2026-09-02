@@ -29,6 +29,8 @@ export type ConnectionView = {
   matchUserAgent: boolean;
   secretName: string;
   secretPresent: boolean;
+  bridgeSecretName: string;
+  bridgeSecretPresent: boolean;
   updatedAt: string;
 };
 

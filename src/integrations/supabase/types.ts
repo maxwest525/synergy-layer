@@ -3031,6 +3031,7 @@ export type Database = {
       openai_ads_connections: {
         Row: {
           allowed_origins: string[]
+          bridge_secret_name: string
           canonical_origin: string
           created_at: string
           delivery_mode: string
@@ -3052,6 +3053,7 @@ export type Database = {
         }
         Insert: {
           allowed_origins?: string[]
+          bridge_secret_name?: string
           canonical_origin: string
           created_at?: string
           delivery_mode?: string
@@ -3073,6 +3075,7 @@ export type Database = {
         }
         Update: {
           allowed_origins?: string[]
+          bridge_secret_name?: string
           canonical_origin?: string
           created_at?: string
           delivery_mode?: string

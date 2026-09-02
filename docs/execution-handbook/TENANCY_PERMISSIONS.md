@@ -79,10 +79,14 @@ operator's active workspace; a row filed without one (an unprovisioned
 sign-in) reads for admins and its own actor. The DataForSEO postback is
 authenticated by a per-task token whose hash alone is stored.
 
-Still open from the same review, tracked in `BACKLOG.md`: the OpenAI Ads
-bridge uses one global secret with a caller-chosen tenant (CODE-37), and
-sign-up is open on the auth project (OP-11; the registry read policies were
-found already narrowed).
+The OpenAI Ads bridge hooks resolve the caller's tenant from the payload's
+slug and verify against the secret that tenant's connection names
+(`bridge_secret_name`, `20260902040000`); an unknown tenant and a wrong
+secret get the same answer, and there is no CORS surface.
+
+Still open from the same review, tracked in `BACKLOG.md`: sign-up is open
+on the auth project (OP-11; the registry read policies were found already
+narrowed).
 
 ## Related
 

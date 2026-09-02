@@ -77,6 +77,10 @@ export const getOpenAiAdsCapiSettings = createServerFn({ method: "POST" })
           secretName: String(raw["secret_name"]),
           // Presence only. The value itself never crosses this boundary.
           secretPresent: Boolean(process.env[String(raw["secret_name"])]?.trim()),
+          // The bridge secret the website must present, named per connection
+          // (CODE-37). Presence only, as above.
+          bridgeSecretName: String(raw["bridge_secret_name"]),
+          bridgeSecretPresent: Boolean(process.env[String(raw["bridge_secret_name"])]?.trim()),
           updatedAt: String(raw["updated_at"]),
         }
       : null;
