@@ -175,6 +175,66 @@ export function findPageOwnedDescription(pageSource: string): string | null {
   return null;
 }
 
+export type MetadataSourceSelection = {
+  path: string;
+  content: string;
+  /** True when the edit lands in the sitewide default and so reaches every page without its own description. */
+  sitewideDefault: boolean;
+  /** True when the edit lands in the page's own source, because that page sets its own description. */
+  pageOwned: boolean;
+};
+
+/**
+ * Which file the live description can be changed in.
+ *
+ * A page that sets its own description is edited in its own file, and only
+ * there: the shared files never reach it. A page that leaves the description
+ * to the sitewide default is edited in whichever shared file holds the live
+ * value exactly once. Every refusal names what it found, because a proposal
+ * bound to the wrong file is worse than none (change 78fc8c5e, CODE-30).
+ */
+export function selectMetadataSource(input: {
+  sharedFiles: { path: string; content: string }[];
+  pageSource: { path: string; content: string } | null;
+  liveMetaDescription: string;
+  sitewideDefaultPath: string;
+}): MetadataSourceSelection {
+  if (input.pageSource) {
+    const owned = findPageOwnedDescription(input.pageSource.content);
+    if (owned === "dynamic") {
+      throw new Error(
+        `This page builds its description from an expression in ${input.pageSource.path}, which the drafter cannot read or replace exactly. It needs a hand edit.`,
+      );
+    }
+    if (owned !== null) {
+      if (owned !== input.liveMetaDescription) {
+        throw new Error(
+          `This page's source (${input.pageSource.path}) sets a different description ("${owned}") from the one the live page serves ("${input.liveMetaDescription}"). Either the site has not been published since that source changed, or the page is served from somewhere else. Nothing was drafted, because an edit could not be proven against the live page.`,
+        );
+      }
+      const count = countOccurrences(input.pageSource.content, input.liveMetaDescription);
+      if (count !== 1) {
+        throw new Error(
+          `The live description occurs ${count} times in ${input.pageSource.path}, so an exact replacement there is ambiguous.`,
+        );
+      }
+      return {
+        path: input.pageSource.path,
+        content: input.pageSource.content,
+        sitewideDefault: false,
+        pageOwned: true,
+      };
+    }
+  }
+  const shared = selectUniqueLiteralSource(input.sharedFiles, input.liveMetaDescription);
+  return {
+    path: shared.path,
+    content: shared.content,
+    sitewideDefault: shared.path === input.sitewideDefaultPath,
+    pageOwned: false,
+  };
+}
+
 /**
  * The live value must occur exactly once across every allowlisted file
  * together, or an exact replacement could edit the wrong file or the wrong

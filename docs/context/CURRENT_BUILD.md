@@ -34,6 +34,22 @@ Last updated: 2026-08-31, after wiring Google Ads campaign reporting
 describes 2026-08-21 and has NOT been rewritten; the current-state blocks
 immediately below supersede it.
 
+## 0s. A page's own description is now a governed edit, 2026-09-02
+
+CODE-33, opened and closed the same day. The `page.metadata` change kind now
+owns the page sources already governed under `page.wording`; the database
+proof allowlist already listed every one of them, so the executor and the
+proof routine still agree file for file. `selectMetadataSource`
+(`page-metadata-proposals.ts`, six tests) binds a description edit to the
+page's own file when that page renders its own `SeoHead` description, and to
+the shared head component or the sitewide default only when the page leaves
+the description to them. It refuses, naming both values, when the page's
+source and the live page disagree, and refuses an expression it cannot
+replace exactly. The execution readiness card names every kind that may write
+a file (`changeKindsForFile`) rather than the first one it finds. The homepage
+description, unreachable since 78fc8c5e, can be drafted against
+`src/pages/Index.tsx` again.
+
 ## 0r. Changes waiting on one publish are one Inbox item, 2026-09-02
 
 CODE-31, the rollup half. Four approved changes sat committed and unproven
