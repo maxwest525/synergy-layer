@@ -152,9 +152,21 @@ export async function resolveTenantId(
   ]);
   const profile = profileResult.data;
   if (profile?.active_tenant_id) {
-    resolvedCache.set(db, profile.active_tenant_id);
-    writeTenantCache(db, profile.active_tenant_id);
-    return profile.active_tenant_id;
+    // The saved selection is honoured only when the caller can see that
+    // tenant, the same check the explicit branch makes. The database refuses
+    // a profile pointing at a workspace the account is not a member of
+    // (profiles_active_tenant_requires_membership), so this guards the
+    // service-role reads that trust the value after the fact (CODE-35).
+    const { data: visible } = await db
+      .from("tenants")
+      .select("id")
+      .eq("id", profile.active_tenant_id)
+      .maybeSingle();
+    if (visible?.id) {
+      resolvedCache.set(db, visible.id);
+      writeTenantCache(db, visible.id);
+      return visible.id;
+    }
   }
 
   const membership = membershipResult.data;

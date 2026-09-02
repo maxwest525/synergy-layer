@@ -34,6 +34,43 @@ Last updated: 2026-08-31, after wiring Google Ads campaign reporting
 describes 2026-08-21 and has NOT been rewritten; the current-state blocks
 immediately below supersede it.
 
+## 0u. Membership is not authority: the database-side pass, 2026-09-02
+
+Migration `20260902020000_membership_is_not_authority.sql`, applied live and
+ledgered the same day, closes the database half of the 2026-09-02 review
+(CODE-35, CODE-38, CODE-39, CODE-40, CODE-41, CODE-42, CODE-45). Approval now
+locks every lane: the immutability guard fires on the state alone rather
+than on the lane's old name, so the five approved page wording rows and the
+page metadata row can no longer be rewritten after approval. The revise
+routine accepts the lane it serves (`page_wording`), which it had refused
+since the rename, so Edit and Regenerate on a draft can now write a version
+row for the first time. Every routine that took an actor from its caller
+binds it to the session when there is one; the null-actor system path is
+the server's. Membership alone no longer advances a workflow run, reassigns
+a concern, seeds concerns, or records an audit row: each asks for the
+operator role. Provisioning creates the tenant membership it never created,
+the allow-list names the workspace an entry joins, and a profile can only
+point at a workspace the account belongs to. The three vendor schedules that
+read "on" with nothing behind them are off, with the reason on the activity
+feed. The anon role holds no table privilege in `public` and the REST API
+answers 401 where it answered 200 with an empty list.
+
+Two migrations in this directory had never run, found while repairing the
+ledger: the trigger widening in `20260819213000` and the windows CHECK in
+`20260820200000`. The second was a break waiting to happen: the live
+trigger inserts 56 and 90-day windows that the live constraint refused, so
+the next rendered proof would have failed inside the proof routine with five
+approved changes waiting on it (CODE-49). Both effects are re-issued here.
+Every hand-named migration file now has a ledger row; those two are named
+superseded and must stay ledgered, because replaying either would break.
+
+Still open from the review: the postback authenticated by the public key
+(CODE-34), audit rows with no tenant (CODE-36), the Ads bridge secret
+(CODE-37), the unbuilt concern evaluator (CODE-43), the blocked SEO runs
+(CODE-44), the Vercel origin (CODE-46), GA4 observation reasons (CODE-47),
+scheduler outcome durability (CODE-48), and the operator decisions in
+OP-11.
+
 ## 0t. Security review, first hardening pass, 2026-09-02
 
 A ten-lens gap analysis ran on 2026-09-02 (security and tenancy, database

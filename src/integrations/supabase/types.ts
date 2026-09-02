@@ -948,6 +948,7 @@ export type Database = {
           note: string | null
           revoked_at: string | null
           role: Database["public"]["Enums"]["app_role"]
+          tenant_id: string | null
           updated_at: string
         }
         Insert: {
@@ -959,6 +960,7 @@ export type Database = {
           note?: string | null
           revoked_at?: string | null
           role?: Database["public"]["Enums"]["app_role"]
+          tenant_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -970,9 +972,18 @@ export type Database = {
           note?: string | null
           revoked_at?: string | null
           role?: Database["public"]["Enums"]["app_role"]
+          tenant_id?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "authorized_operators_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       automation_jobs: {
         Row: {

@@ -3,7 +3,7 @@ id: 20260814-tenancy-permissions
 title: Tenancy and Permissions
 tags: [security, governance, architecture]
 created: 2026-08-14
-updated: 2026-08-14
+updated: 2026-09-02
 related: [20260814-proposal-data-contract, 20260814-execution-rollback, 20260814-test-cases]
 summary: Tenant isolation, RLS, roles, service boundary, and approval-rights contract.
 ---
@@ -55,14 +55,27 @@ Public hooks compare their shared secret in constant time
 (the reason goes to the server log), and the execution readiness read
 discloses which credentials a host holds only to an authenticated caller.
 
+The database side followed the same day (migration `20260902020000`,
+applied live). A session's actor is `auth.uid()`: the proposal, revision and
+run-claim routines refuse an `_actor` that is not the signed-in account, and
+the null-actor system path is reserved for the server. Membership alone
+writes nothing: advancing a run, owning or seeding concerns, and recording
+audit rows require the operator role, and the measurement routines and the
+two proposal wrappers execute for `service_role` alone. Provisioning creates
+the tenant membership (`authorized_operators.tenant_id` names the workspace
+an entry joins), and `profiles.active_tenant_id` is refused unless the
+account is a member of that workspace. The anon role holds no table or
+sequence privilege in `public`, `authenticated` holds no TRUNCATE,
+REFERENCES or TRIGGER, and the default privileges for new tables start
+closed. Approval locks every lane: the immutability guard fires on the state
+alone.
+
 Still open from the same review, tracked in `BACKLOG.md`: the DataForSEO
-postback authenticates with the public publishable key (CODE-34), the active
-tenant on a profile is trusted without a membership check (CODE-35), audit
+postback authenticates with the public publishable key (CODE-34), audit
 rows with no tenant are readable by every authenticated account (CODE-36),
 the OpenAI Ads bridge uses one global secret with a caller-chosen tenant
-(CODE-37), sign-up is open and the registry read policies are `USING (true)`
-(OP-11), membership-only RPCs and policies (CODE-40), provisioning creates no
-membership (CODE-41), and the anon role's default table privileges (CODE-45).
+(CODE-37), and sign-up is open with the registry read policies at
+`USING (true)` (OP-11).
 
 ## Related
 

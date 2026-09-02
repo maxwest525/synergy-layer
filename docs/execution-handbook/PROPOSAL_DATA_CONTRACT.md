@@ -3,7 +3,7 @@ id: 20260814-proposal-data-contract
 title: Proposal Data Contract
 tags: [execution, architecture, governance]
 created: 2026-08-14
-updated: 2026-08-29
+updated: 2026-09-02
 related:
   [
     20260814-source-of-truth,
@@ -55,10 +55,15 @@ repository/branch/file/project/revision, and revision count.
 a title and an H1 regardless of what the finding said.
 
 **A naming trap worth knowing.** The RPCs `create_title_h1_proposal` and
-`revise_title_h1_proposal` still exist in the database and are **called by
-nothing**. Application code calls `create_page_wording_proposal` and
-`revise_page_wording_proposal` only. A live `title_h1` row also exists in
-`change_requests` as history. None of that makes `title_h1` a current lane.
+`revise_title_h1_proposal` still exist in the database as the bodies behind
+`create_page_wording_proposal` and `revise_page_wording_proposal`, which is
+what application code calls, always through the service role (`serviceRpc`);
+since 2026-09-02 the wrappers execute for `service_role` alone, and the
+bodies bind `_actor` to the signed-in account whenever a session is present.
+No `title_h1` row exists any more: the last one moved to `page_wording` on
+2026-09-02 and the CHECK admits `page_wording`, `page_metadata` and
+`site.crawl_directives` only. Until that day the revise routine refused every
+type but `title_h1`, so Edit and Regenerate had never written a version row.
 
 Initial generation stores the proposed request without inventing a history row.
 Each Edit or Regenerate appends the prior state to `change_request_versions`,

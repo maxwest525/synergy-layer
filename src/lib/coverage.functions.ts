@@ -83,6 +83,10 @@ export const setConcernOwnership = createServerFn({ method: "POST" })
   )
   .handler(
     async ({ context, data }): Promise<{ ownerName: string | null; targetDate: string | null }> => {
+      // The routine checks the role again; this keeps a non-operator from
+      // paying the round trip and reading the routine's error text (CODE-40).
+      const { assertOperator } = await import("./os-admin.server");
+      await assertOperator(context.supabase, context.userId);
       const result = await context.supabase.rpc("set_concern_ownership", {
         p_concern_id: data.concernId,
         // The routine normalises an empty owner to null; the date column accepts null.
