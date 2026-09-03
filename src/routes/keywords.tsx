@@ -129,6 +129,11 @@ function KeywordReviewPage() {
           result.inboxResolved ? ", inbox item cleared" : ""
         }`,
       );
+      if (result.metricsNotStored > 0) {
+        toast.error(
+          `${result.metricsNotStored} keyword${result.metricsNotStored === 1 ? "" : "s"} kept no record of what it was worth. The database is missing the columns that hold it.`,
+        );
+      }
       // The decision now runs the targeting pass, so the operator is told what
       // it produced rather than being left to wonder whether anything happened.
       if (result.targeting.ran) {

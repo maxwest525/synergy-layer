@@ -82,9 +82,20 @@ export const decideKeywordCandidates = createServerFn({ method: "POST" })
     const { logActivity } = await import("./os.server");
 
     let count = 0;
+    // Non-zero when the metrics snapshot could not be written, which today means
+    // migration 20260903020000 is not applied on this host. The approval still
+    // stands; the snapshot is simply absent, and the screen says so rather than
+    // implying every approval kept what it was given (CODE-95).
+    let metricsNotStored = 0;
     if (data.decision === "approve") {
-      count = (await approveKeywords(context.supabase, tenantId, data.keywords, context.userId))
-        .approved;
+      const result = await approveKeywords(
+        context.supabase,
+        tenantId,
+        data.keywords,
+        context.userId,
+      );
+      count = result.approved;
+      metricsNotStored = result.metricsNotStored;
     } else {
       count = (await rejectKeywords(context.supabase, tenantId, data.keywords, context.userId))
         .rejected;
@@ -135,5 +146,5 @@ export const decideKeywordCandidates = createServerFn({ method: "POST" })
     }
 
     const inbox = await reconcileKeywordInbox(context.supabase, tenantId);
-    return { count, targeting, ...inbox };
+    return { count, metricsNotStored, targeting, ...inbox };
   });

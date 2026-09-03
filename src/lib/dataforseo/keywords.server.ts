@@ -426,9 +426,11 @@ export async function approveKeywords(
   tenantId: string,
   keywords: string[],
   approvedBy?: string | null,
-): Promise<{ approved: number }> {
+): Promise<{ approved: number; metricsStored: number; metricsNotStored: number }> {
   const now = new Date().toISOString();
   let approved = 0;
+  let metricsStored = 0;
+  let metricsNotStored = 0;
 
   for (const raw of keywords) {
     const keyword = raw.trim().toLowerCase();
@@ -447,6 +449,12 @@ export async function approveKeywords(
 
     const metrics = candidate?.metrics;
 
+    // The approval write is exactly what it always was. The metrics snapshot is
+    // a second, separate write, because 20260903020000 may not be applied on
+    // the host yet: folding the new columns into this upsert would make every
+    // approval fail with "column does not exist", and `if (error) continue`
+    // below would swallow it into "0 keywords approved" with no reason. A
+    // migration that has not landed must not be able to break approval.
     const { error } = await client.from("tracked_keywords").upsert(
       {
         tenant_id: tenantId,
@@ -456,15 +464,6 @@ export async function approveKeywords(
         candidate_id: candidate?.id ?? null,
         approved_by: approvedBy ?? null,
         active: true,
-        // The three snapshot columns move together or stay NULL together: a
-        // dated snapshot with nothing in it would claim a reading nobody took.
-        ...(metricsWorthKeeping(metrics)
-          ? {
-              approved_metrics: metrics as Json,
-              approved_metrics_captured_at: now,
-              approved_metrics_candidate_id: candidate?.id ?? null,
-            }
-          : {}),
       },
       {
         onConflict: "tenant_id,keyword,location_code,language_code",
@@ -474,6 +473,28 @@ export async function approveKeywords(
     if (error) continue;
     approved += 1;
 
+    // Snapshot what the candidate was carrying, at the moment of approval
+    // (CODE-95). Best effort by construction: an unapplied migration leaves the
+    // keyword approved and the snapshot absent, which is the truth, rather than
+    // failing the approval. The miss is counted so the caller can say so
+    // instead of implying every approval was captured.
+    if (metricsWorthKeeping(metrics)) {
+      const { error: snapshotError } = await client
+        .from("tracked_keywords")
+        .update({
+          approved_metrics: metrics as Json,
+          approved_metrics_captured_at: now,
+          approved_metrics_candidate_id: candidate?.id ?? null,
+        })
+        .eq("tenant_id", tenantId)
+        .eq("keyword", keyword)
+        .eq("location_code", KEYWORD_CONFIG.locationCode)
+        .eq("language_code", KEYWORD_CONFIG.languageCode)
+        .is("approved_metrics", null);
+      if (snapshotError) metricsNotStored += 1;
+      else metricsStored += 1;
+    }
+
     if (candidate) {
       await client
         .from("keyword_candidates")
@@ -482,7 +503,7 @@ export async function approveKeywords(
     }
   }
 
-  return { approved };
+  return { approved, metricsStored, metricsNotStored };
 }
 
 /** Marks candidates as rejected so a later pass does not re-file them. */
