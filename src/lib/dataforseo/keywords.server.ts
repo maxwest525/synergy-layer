@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import type { Database } from "@/integrations/supabase/types";
+import type { Database, Json } from "@/integrations/supabase/types";
 import { fileInboxItem } from "../os.server";
 import { rankByVolume } from "./keyword-ranking";
 import { labsCall } from "./labs.server";
@@ -403,6 +403,23 @@ export async function suggestKeywords(
   };
 }
 
+/**
+ * Whether a candidate's stored metrics are worth snapshotting onto the approved
+ * row (CODE-95).
+ *
+ * `keyword_candidates.metrics` defaults to `{}`, so an empty object is the
+ * ordinary state of a candidate nobody has paid to enrich. Dating that as a
+ * snapshot would say a reading was taken when none was, which is the same
+ * mistake as rendering a placeholder zero as a measurement (CODE-72). Only an
+ * object with something in it is a reading; everything else leaves all three
+ * columns NULL, and NULL reads as the absence it is.
+ */
+export function metricsWorthKeeping(metrics: unknown): boolean {
+  if (metrics === null || metrics === undefined) return false;
+  if (typeof metrics !== "object" || Array.isArray(metrics)) return false;
+  return Object.keys(metrics as Record<string, unknown>).length > 0;
+}
+
 /** Promotes reviewed candidates into the approved set that SERP observes. */
 export async function approveKeywords(
   client: Client,
@@ -417,12 +434,18 @@ export async function approveKeywords(
     const keyword = raw.trim().toLowerCase();
     if (!keyword) continue;
 
+    // `metrics` comes with the id now. Approval used to select the id alone and
+    // drop everything else the candidate carried -- volume, CPC, competition,
+    // difficulty, intent -- some of it paid for twice, and unrecoverable
+    // afterwards because enrichment only ever sees pending rows (CODE-95).
     const { data: candidate } = await client
       .from("keyword_candidates")
-      .select("id")
+      .select("id, metrics")
       .eq("tenant_id", tenantId)
       .eq("keyword", keyword)
       .maybeSingle();
+
+    const metrics = candidate?.metrics;
 
     const { error } = await client.from("tracked_keywords").upsert(
       {
@@ -433,6 +456,15 @@ export async function approveKeywords(
         candidate_id: candidate?.id ?? null,
         approved_by: approvedBy ?? null,
         active: true,
+        // The three snapshot columns move together or stay NULL together: a
+        // dated snapshot with nothing in it would claim a reading nobody took.
+        ...(metricsWorthKeeping(metrics)
+          ? {
+              approved_metrics: metrics as Json,
+              approved_metrics_captured_at: now,
+              approved_metrics_candidate_id: candidate?.id ?? null,
+            }
+          : {}),
       },
       {
         onConflict: "tenant_id,keyword,location_code,language_code",
