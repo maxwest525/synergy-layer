@@ -711,6 +711,94 @@ export type Database = {
           },
         ]
       }
+      ai_gateway_budgets: {
+        Row: {
+          alerts_fired: Json
+          ceiling_usd: number
+          created_at: string
+          hard_stop: boolean
+          id: string
+          period_month: string
+          spent_usd: number
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          alerts_fired?: Json
+          ceiling_usd?: number
+          created_at?: string
+          hard_stop?: boolean
+          id?: string
+          period_month: string
+          spent_usd?: number
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          alerts_fired?: Json
+          ceiling_usd?: number
+          created_at?: string
+          hard_stop?: boolean
+          id?: string
+          period_month?: string
+          spent_usd?: number
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_gateway_budgets_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_gateway_requests: {
+        Row: {
+          cost_usd: number
+          created_at: string
+          id: string
+          input_tokens: number
+          model: string
+          output_tokens: number
+          priced: boolean
+          surface: string
+          tenant_id: string
+        }
+        Insert: {
+          cost_usd?: number
+          created_at?: string
+          id?: string
+          input_tokens?: number
+          model: string
+          output_tokens?: number
+          priced?: boolean
+          surface: string
+          tenant_id: string
+        }
+        Update: {
+          cost_usd?: number
+          created_at?: string
+          id?: string
+          input_tokens?: number
+          model?: string
+          output_tokens?: number
+          priced?: boolean
+          surface?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_gateway_requests_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       assets: {
         Row: {
           config: Json
@@ -1756,94 +1844,6 @@ export type Database = {
           },
           {
             foreignKeyName: "competitor_candidates_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      ai_gateway_budgets: {
-        Row: {
-          alerts_fired: Json
-          ceiling_usd: number
-          created_at: string
-          hard_stop: boolean
-          id: string
-          period_month: string
-          spent_usd: number
-          tenant_id: string
-          updated_at: string
-        }
-        Insert: {
-          alerts_fired?: Json
-          ceiling_usd?: number
-          created_at?: string
-          hard_stop?: boolean
-          id?: string
-          period_month: string
-          spent_usd?: number
-          tenant_id: string
-          updated_at?: string
-        }
-        Update: {
-          alerts_fired?: Json
-          ceiling_usd?: number
-          created_at?: string
-          hard_stop?: boolean
-          id?: string
-          period_month?: string
-          spent_usd?: number
-          tenant_id?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "ai_gateway_budgets_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      ai_gateway_requests: {
-        Row: {
-          cost_usd: number
-          created_at: string
-          id: string
-          input_tokens: number
-          model: string
-          output_tokens: number
-          priced: boolean
-          surface: string
-          tenant_id: string
-        }
-        Insert: {
-          cost_usd?: number
-          created_at?: string
-          id?: string
-          input_tokens?: number
-          model: string
-          output_tokens?: number
-          priced?: boolean
-          surface: string
-          tenant_id: string
-        }
-        Update: {
-          cost_usd?: number
-          created_at?: string
-          id?: string
-          input_tokens?: number
-          model?: string
-          output_tokens?: number
-          priced?: boolean
-          surface?: string
-          tenant_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "ai_gateway_requests_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -4994,9 +4994,6 @@ export type Database = {
           active: boolean
           approved_at: string
           approved_by: string | null
-          approved_metrics: Json | null
-          approved_metrics_candidate_id: string | null
-          approved_metrics_captured_at: string | null
           candidate_id: string | null
           created_at: string
           domain: string
@@ -5051,6 +5048,9 @@ export type Database = {
           active: boolean
           approved_at: string
           approved_by: string | null
+          approved_metrics: Json | null
+          approved_metrics_candidate_id: string | null
+          approved_metrics_captured_at: string | null
           candidate_id: string | null
           created_at: string
           id: string
@@ -5649,6 +5649,22 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      revise_page_metadata_proposal: {
+        Args: {
+          _actor: string
+          _changes: Json
+          _evidence: Json
+          _evidence_limitations: string
+          _evidence_summary: string
+          _generation_context: Json
+          _id: string
+          _rationale: string
+          _revision_kind: string
+          _risk_note: string
+          _source_revision_before: string
+        }
+        Returns: Json
+      }
       revise_page_wording_proposal: {
         Args: {
           _actor: string
@@ -5820,12 +5836,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -5849,11 +5865,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -5874,11 +5890,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -5899,11 +5915,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -5916,11 +5932,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
