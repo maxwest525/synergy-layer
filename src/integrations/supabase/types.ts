@@ -5048,6 +5048,9 @@ export type Database = {
           active: boolean
           approved_at: string
           approved_by: string | null
+          approved_metrics: Json | null
+          approved_metrics_candidate_id: string | null
+          approved_metrics_captured_at: string | null
           candidate_id: string | null
           created_at: string
           id: string
@@ -5061,6 +5064,9 @@ export type Database = {
           active?: boolean
           approved_at?: string
           approved_by?: string | null
+          approved_metrics?: Json | null
+          approved_metrics_candidate_id?: string | null
+          approved_metrics_captured_at?: string | null
           candidate_id?: string | null
           created_at?: string
           id?: string
@@ -5074,6 +5080,9 @@ export type Database = {
           active?: boolean
           approved_at?: string
           approved_by?: string | null
+          approved_metrics?: Json | null
+          approved_metrics_candidate_id?: string | null
+          approved_metrics_captured_at?: string | null
           candidate_id?: string | null
           created_at?: string
           id?: string
