@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database, Json } from "@/integrations/supabase/types";
 import { fileInboxItem } from "../os.server";
+import { phraseKey } from "../keyword-phrases";
 import { rankByVolume } from "./keyword-ranking";
 import { labsCall } from "./labs.server";
 
@@ -404,6 +405,57 @@ export async function suggestKeywords(
 }
 
 /**
+ * The approved keywords a new approval would duplicate (CODE-98).
+ *
+ * Nothing deduped at intake, so fifty approved rows were fourteen targets:
+ * nineteen spellings of "long distance movers", thirteen of "long distance
+ * moving company". `getTrackedKeywords` is the entire input to SERP
+ * observation, and serp.server.ts posts one paid task per string, so those
+ * thirty-six redundant rows bought thirty-six answers to questions already
+ * asked. The operator's standing rule is that OpenSEO and other non-metered
+ * providers come first, and an OpenSEO rank tracker makes this worse rather
+ * than better: adding keywords to a scheduled tracker arms recurring paid
+ * checks, so thirty-six duplicates become thirty-six recurring ones.
+ *
+ * `phraseKey` already collapses spellings to their content words and is
+ * tested; the detectors have used it since CODE-93. This is the same key
+ * applied one stage earlier, at the door instead of in the reading.
+ *
+ * Returns the incoming keywords that a currently active approved keyword
+ * already covers, keyed by the spelling that would be redundant. The first
+ * spelling of a target to arrive keeps the slot; nothing already approved is
+ * displaced by a newcomer.
+ */
+export function redundantAgainst(
+  incoming: readonly string[],
+  activeApproved: readonly string[],
+): Map<string, string> {
+  const held = new Map<string, string>();
+  for (const approved of activeApproved) {
+    const key = phraseKey(approved);
+    if (key && !held.has(key)) held.set(key, approved);
+  }
+
+  const redundant = new Map<string, string>();
+  for (const raw of incoming) {
+    const keyword = raw.trim().toLowerCase();
+    if (!keyword) continue;
+    const key = phraseKey(keyword);
+    // A phrase with no content words is its own target: "best" alone groups
+    // with nothing, and dropping it would be the tool deciding for the
+    // operator rather than deduplicating.
+    if (!key) continue;
+    const covering = held.get(key);
+    if (covering !== undefined && covering !== keyword) {
+      redundant.set(keyword, covering);
+      continue;
+    }
+    if (covering === undefined) held.set(key, keyword);
+  }
+  return redundant;
+}
+
+/**
  * Whether a candidate's stored metrics are worth snapshotting onto the approved
  * row (CODE-95).
  *
@@ -426,15 +478,49 @@ export async function approveKeywords(
   tenantId: string,
   keywords: string[],
   approvedBy?: string | null,
-): Promise<{ approved: number; metricsStored: number; metricsNotStored: number }> {
+): Promise<{ approved: number; metricsStored: number; metricsNotStored: number; folded: number }> {
   const now = new Date().toISOString();
   let approved = 0;
   let metricsStored = 0;
   let metricsNotStored = 0;
+  let folded = 0;
+
+  // What is already approved and active decides what a new approval would
+  // duplicate. Read once (CODE-98).
+  const { data: activeRows } = await client
+    .from("tracked_keywords")
+    .select("keyword")
+    .eq("tenant_id", tenantId)
+    .eq("active", true);
+  const redundant = redundantAgainst(
+    keywords,
+    (activeRows ?? []).map((row) => row.keyword),
+  );
 
   for (const raw of keywords) {
     const keyword = raw.trim().toLowerCase();
     if (!keyword) continue;
+
+    // A spelling of a target something already approved covers. The operator
+    // did press approve, so the candidate leaves the queue as approved and does
+    // not come back. It simply never becomes a tracked target of its own, which
+    // is what a paid SERP task is bought per (CODE-98).
+    if (redundant.has(keyword)) {
+      const { data: dupe } = await client
+        .from("keyword_candidates")
+        .select("id")
+        .eq("tenant_id", tenantId)
+        .eq("keyword", keyword)
+        .maybeSingle();
+      if (dupe) {
+        await client
+          .from("keyword_candidates")
+          .update({ review_state: "approved", reviewed_by: approvedBy ?? null, reviewed_at: now })
+          .eq("id", dupe.id);
+      }
+      folded += 1;
+      continue;
+    }
 
     // `metrics` comes with the id now. Approval used to select the id alone and
     // drop everything else the candidate carried -- volume, CPC, competition,
@@ -503,7 +589,7 @@ export async function approveKeywords(
     }
   }
 
-  return { approved, metricsStored, metricsNotStored };
+  return { approved, metricsStored, metricsNotStored, folded };
 }
 
 /** Marks candidates as rejected so a later pass does not re-file them. */

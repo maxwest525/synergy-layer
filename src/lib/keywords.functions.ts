@@ -87,6 +87,10 @@ export const decideKeywordCandidates = createServerFn({ method: "POST" })
     // stands; the snapshot is simply absent, and the screen says so rather than
     // implying every approval kept what it was given (CODE-95).
     let metricsNotStored = 0;
+    // Spellings an already-approved target covers. They leave the queue as
+    // approved and do not become tracked targets of their own, because SERP
+    // observation buys one paid task per tracked keyword (CODE-98).
+    let folded = 0;
     if (data.decision === "approve") {
       const result = await approveKeywords(
         context.supabase,
@@ -96,6 +100,7 @@ export const decideKeywordCandidates = createServerFn({ method: "POST" })
       );
       count = result.approved;
       metricsNotStored = result.metricsNotStored;
+      folded = result.folded;
     } else {
       count = (await rejectKeywords(context.supabase, tenantId, data.keywords, context.userId))
         .rejected;
@@ -146,5 +151,5 @@ export const decideKeywordCandidates = createServerFn({ method: "POST" })
     }
 
     const inbox = await reconcileKeywordInbox(context.supabase, tenantId);
-    return { count, metricsNotStored, targeting, ...inbox };
+    return { count, metricsNotStored, folded, targeting, ...inbox };
   });
