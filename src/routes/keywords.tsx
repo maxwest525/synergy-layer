@@ -129,6 +129,11 @@ function KeywordReviewPage() {
           result.inboxResolved ? ", inbox item cleared" : ""
         }`,
       );
+      if (result.folded > 0) {
+        toast.success(
+          `${result.folded} were other ways of spelling something you already target, so they were not added again.`,
+        );
+      }
       if (result.metricsNotStored > 0) {
         toast.error(
           `${result.metricsNotStored} keyword${result.metricsNotStored === 1 ? "" : "s"} kept no record of what it was worth. The database is missing the columns that hold it.`,
