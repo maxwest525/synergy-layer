@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import type { Database } from "@/integrations/supabase/types";
+import type { Database, Json } from "@/integrations/supabase/types";
 import { fileInboxItem } from "../os.server";
 import { rankByVolume } from "./keyword-ranking";
 import { labsCall } from "./labs.server";
@@ -403,27 +403,58 @@ export async function suggestKeywords(
   };
 }
 
+/**
+ * Whether a candidate's stored metrics are worth snapshotting onto the approved
+ * row (CODE-95).
+ *
+ * `keyword_candidates.metrics` defaults to `{}`, so an empty object is the
+ * ordinary state of a candidate nobody has paid to enrich. Dating that as a
+ * snapshot would say a reading was taken when none was, which is the same
+ * mistake as rendering a placeholder zero as a measurement (CODE-72). Only an
+ * object with something in it is a reading; everything else leaves all three
+ * columns NULL, and NULL reads as the absence it is.
+ */
+export function metricsWorthKeeping(metrics: unknown): boolean {
+  if (metrics === null || metrics === undefined) return false;
+  if (typeof metrics !== "object" || Array.isArray(metrics)) return false;
+  return Object.keys(metrics as Record<string, unknown>).length > 0;
+}
+
 /** Promotes reviewed candidates into the approved set that SERP observes. */
 export async function approveKeywords(
   client: Client,
   tenantId: string,
   keywords: string[],
   approvedBy?: string | null,
-): Promise<{ approved: number }> {
+): Promise<{ approved: number; metricsStored: number; metricsNotStored: number }> {
   const now = new Date().toISOString();
   let approved = 0;
+  let metricsStored = 0;
+  let metricsNotStored = 0;
 
   for (const raw of keywords) {
     const keyword = raw.trim().toLowerCase();
     if (!keyword) continue;
 
+    // `metrics` comes with the id now. Approval used to select the id alone and
+    // drop everything else the candidate carried -- volume, CPC, competition,
+    // difficulty, intent -- some of it paid for twice, and unrecoverable
+    // afterwards because enrichment only ever sees pending rows (CODE-95).
     const { data: candidate } = await client
       .from("keyword_candidates")
-      .select("id")
+      .select("id, metrics")
       .eq("tenant_id", tenantId)
       .eq("keyword", keyword)
       .maybeSingle();
 
+    const metrics = candidate?.metrics;
+
+    // The approval write is exactly what it always was. The metrics snapshot is
+    // a second, separate write, because 20260903020000 may not be applied on
+    // the host yet: folding the new columns into this upsert would make every
+    // approval fail with "column does not exist", and `if (error) continue`
+    // below would swallow it into "0 keywords approved" with no reason. A
+    // migration that has not landed must not be able to break approval.
     const { error } = await client.from("tracked_keywords").upsert(
       {
         tenant_id: tenantId,
@@ -442,6 +473,28 @@ export async function approveKeywords(
     if (error) continue;
     approved += 1;
 
+    // Snapshot what the candidate was carrying, at the moment of approval
+    // (CODE-95). Best effort by construction: an unapplied migration leaves the
+    // keyword approved and the snapshot absent, which is the truth, rather than
+    // failing the approval. The miss is counted so the caller can say so
+    // instead of implying every approval was captured.
+    if (metricsWorthKeeping(metrics)) {
+      const { error: snapshotError } = await client
+        .from("tracked_keywords")
+        .update({
+          approved_metrics: metrics as Json,
+          approved_metrics_captured_at: now,
+          approved_metrics_candidate_id: candidate?.id ?? null,
+        })
+        .eq("tenant_id", tenantId)
+        .eq("keyword", keyword)
+        .eq("location_code", KEYWORD_CONFIG.locationCode)
+        .eq("language_code", KEYWORD_CONFIG.languageCode)
+        .is("approved_metrics", null);
+      if (snapshotError) metricsNotStored += 1;
+      else metricsStored += 1;
+    }
+
     if (candidate) {
       await client
         .from("keyword_candidates")
@@ -450,7 +503,7 @@ export async function approveKeywords(
     }
   }
 
-  return { approved };
+  return { approved, metricsStored, metricsNotStored };
 }
 
 /** Marks candidates as rejected so a later pass does not re-file them. */

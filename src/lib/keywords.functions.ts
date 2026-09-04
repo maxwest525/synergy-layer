@@ -53,6 +53,14 @@ export const listKeywordCandidates = createServerFn({ method: "POST" })
     };
   });
 
+/**
+ * Whether the free targeting pass ran after a decision, and what it found.
+ * `ran: false` always carries the reason, so the screen never has to guess
+ * between "no findings" and "it never ran".
+ */
+export type KeywordDecisionTargeting =
+  { ran: true; observations: number; recommendations: number } | { ran: false; reason: string };
+
 export const decideKeywordCandidates = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) =>
@@ -74,9 +82,20 @@ export const decideKeywordCandidates = createServerFn({ method: "POST" })
     const { logActivity } = await import("./os.server");
 
     let count = 0;
+    // Non-zero when the metrics snapshot could not be written, which today means
+    // migration 20260903020000 is not applied on this host. The approval still
+    // stands; the snapshot is simply absent, and the screen says so rather than
+    // implying every approval kept what it was given (CODE-95).
+    let metricsNotStored = 0;
     if (data.decision === "approve") {
-      count = (await approveKeywords(context.supabase, tenantId, data.keywords, context.userId))
-        .approved;
+      const result = await approveKeywords(
+        context.supabase,
+        tenantId,
+        data.keywords,
+        context.userId,
+      );
+      count = result.approved;
+      metricsNotStored = result.metricsNotStored;
     } else {
       count = (await rejectKeywords(context.supabase, tenantId, data.keywords, context.userId))
         .rejected;
@@ -92,6 +111,40 @@ export const decideKeywordCandidates = createServerFn({ method: "POST" })
       payload: { keywords: data.keywords.slice(0, 100) },
     });
 
+    // An approval used to end here. The only workflow that reads the approved
+    // set is `dfs-targeting-pass`, registered `triggerKind: "manual"` with no
+    // cron and no hook, so fifty approved keywords produced nothing at all
+    // until someone independently opened /workflows and pressed a button.
+    //
+    // The pass is free: it calls no provider and reads only rows already
+    // stored, so running it on the operator's own click breaks no spend rule.
+    // A rejection changes the approved set too (a keyword can be rejected
+    // after approval), so both decisions re-run it.
+    let targeting: KeywordDecisionTargeting = { ran: false, reason: "nothing was decided" };
+    if (count > 0) {
+      const { runTargetingPass } = await import("./dataforseo/targeting-rules.server");
+      try {
+        const result = await runTargetingPass(context.supabase, tenantId);
+        targeting = { ran: true, ...result };
+      } catch (error) {
+        // The decision is already stored and must not be rolled back because
+        // the pass failed. The failure is recorded rather than swallowed: a
+        // pass that silently did nothing is the failure this project exists
+        // to catch.
+        const reason = error instanceof Error ? error.message : "the targeting pass failed";
+        targeting = { ran: false, reason };
+        await logActivity(context.supabase, {
+          tenantId,
+          actorKind: "user",
+          actorId: context.userId,
+          verb: "keyword.targeting_failed",
+          subjectKind: "keyword_candidate",
+          summary: `The targeting pass did not run after the decision: ${reason}`,
+          payload: {},
+        });
+      }
+    }
+
     const inbox = await reconcileKeywordInbox(context.supabase, tenantId);
-    return { count, ...inbox };
+    return { count, metricsNotStored, targeting, ...inbox };
   });
