@@ -129,10 +129,34 @@ function KeywordReviewPage() {
           result.inboxResolved ? ", inbox item cleared" : ""
         }`,
       );
+      if (result.folded > 0) {
+        toast.success(
+          `${result.folded} were other ways of spelling something you already target, so they were not added again.`,
+        );
+      }
+      if (result.metricsNotStored > 0) {
+        toast.error(
+          `${result.metricsNotStored} keyword${result.metricsNotStored === 1 ? "" : "s"} kept no record of what it was worth. The database is missing the columns that hold it.`,
+        );
+      }
+      // The decision now runs the targeting pass, so the operator is told what
+      // it produced rather than being left to wonder whether anything happened.
+      if (result.targeting.ran) {
+        toast.success(
+          result.targeting.recommendations > 0
+            ? `Targeting pass: ${result.targeting.recommendations} suggestion${result.targeting.recommendations === 1 ? "" : "s"} from your approved set`
+            : "Targeting pass ran and raised nothing new",
+        );
+      } else if (result.count > 0) {
+        toast.error(
+          `Your decision was saved, and the targeting pass did not run: ${result.targeting.reason}`,
+        );
+      }
       setSelected([]);
       void queryClient.invalidateQueries({ queryKey: ["keyword-candidates"] });
       void queryClient.invalidateQueries({ queryKey: ["inbox"] });
       void queryClient.invalidateQueries({ queryKey: ["overview"] });
+      void queryClient.invalidateQueries({ queryKey: ["recommendations"] });
     },
     onError: (error: Error) => toast.error(error.message),
   });

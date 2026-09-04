@@ -99,6 +99,23 @@ describe("an approved keyword no page is about", () => {
     expect(found[0]?.target).toBe("piano movers austin");
   });
 
+  it("names the nearest page and the words it is short of, rather than only an absence", () => {
+    const [found] = detectKeywordsWithoutPage(approved("piano movers austin"), pages);
+    // The movers page shares "mover" and "austin" and lacks "piano", so the
+    // operator is told which page to reword instead of being told to write one.
+    expect(found?.description).toContain("https://x.test/movers");
+    expect(found?.description).toContain('"mover"');
+    expect(found?.description).toContain('"piano"');
+    expect(found?.evidence["nearestPage"]).toBe("https://x.test/movers");
+    expect(found?.evidence["nearestPageMissing"]).toEqual(["piano"]);
+  });
+
+  it("says there is nothing to reword when no read page shares a single word", () => {
+    const [found] = detectKeywordsWithoutPage(approved("kayak storage"), pages);
+    expect(found?.description).toContain("shares a single word");
+    expect(found?.evidence["nearestPage"]).toBeUndefined();
+  });
+
   it("stays silent when a title carries the phrase", () => {
     expect(detectKeywordsWithoutPage(approved("movers in austin"), pages)).toEqual([]);
   });

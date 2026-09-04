@@ -13,6 +13,7 @@ import {
   StatePill,
 } from "@/components/os/primitives";
 import { formatWhen } from "@/lib/format-when";
+import { getModelRouting } from "@/lib/ai/routing.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AvailabilityBadge } from "@/components/os/availability-badge";
@@ -111,6 +112,7 @@ function SystemsPage() {
   const loadTenantContext = useServerFn(getTenantContext);
   const loadEstate = useServerFn(getToolEstate);
   const loadConnections = useServerFn(getConnectorReadiness);
+  const loadModelRouting = useServerFn(getModelRouting);
   const checkConnections = useServerFn(checkConnectorReadiness);
   const queryClient = useQueryClient();
 
@@ -130,6 +132,12 @@ function SystemsPage() {
   const connectorLedger = useSuspenseQuery({
     queryKey: ["connector-readiness", activeTenantId],
     queryFn: () => loadConnections(),
+    retry: false,
+  });
+
+  const modelRouting = useSuspenseQuery({
+    queryKey: ["model-routing", activeTenantId],
+    queryFn: () => loadModelRouting(),
     retry: false,
   });
   const check = useMutation({
@@ -208,6 +216,26 @@ function SystemsPage() {
           </Button>
         }
       />
+
+      <GlassCard className="p-5">
+        <h2 className="text-sm font-semibold text-foreground">Where model calls go</h2>
+        {/* Read from the host, not from the settings list: a connector-placed
+            variable can be absent from settings and still answer, so only the
+            running deployment knows which service a call would reach. */}
+        <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
+          {modelRouting.data.statement}
+        </p>
+        {modelRouting.data.provider === null ? (
+          <p className="mt-2 text-xs text-destructive">
+            No model route is configured, so wording drafts and embeddings have nothing to call.
+          </p>
+        ) : modelRouting.data.provider !== "litellm" ? (
+          <p className="mt-2 text-xs text-destructive">
+            This is not your own proxy, so these calls are not billed to your key and carry no
+            prompt caching.
+          </p>
+        ) : null}
+      </GlassCard>
 
       <GlassCard className="p-5">
         <div className="flex flex-wrap items-start justify-between gap-4">

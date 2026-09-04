@@ -1,7 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import type { Database } from "@/integrations/supabase/types";
+import type { Database, Json } from "@/integrations/supabase/types";
 import { fileInboxItem } from "../os.server";
+import { phraseKey } from "../keyword-phrases";
 import { rankByVolume } from "./keyword-ranking";
 import { labsCall } from "./labs.server";
 
@@ -403,27 +404,143 @@ export async function suggestKeywords(
   };
 }
 
+/**
+ * The approved keywords a new approval would duplicate (CODE-98).
+ *
+ * Nothing deduped at intake, so fifty approved rows were fourteen targets:
+ * nineteen spellings of "long distance movers", thirteen of "long distance
+ * moving company". `getTrackedKeywords` is the entire input to SERP
+ * observation, and serp.server.ts posts one paid task per string, so those
+ * thirty-six redundant rows bought thirty-six answers to questions already
+ * asked. The operator's standing rule is that OpenSEO and other non-metered
+ * providers come first, and an OpenSEO rank tracker makes this worse rather
+ * than better: adding keywords to a scheduled tracker arms recurring paid
+ * checks, so thirty-six duplicates become thirty-six recurring ones.
+ *
+ * `phraseKey` already collapses spellings to their content words and is
+ * tested; the detectors have used it since CODE-93. This is the same key
+ * applied one stage earlier, at the door instead of in the reading.
+ *
+ * Returns the incoming keywords that a currently active approved keyword
+ * already covers, keyed by the spelling that would be redundant. The first
+ * spelling of a target to arrive keeps the slot; nothing already approved is
+ * displaced by a newcomer.
+ */
+export function redundantAgainst(
+  incoming: readonly string[],
+  activeApproved: readonly string[],
+): Map<string, string> {
+  const held = new Map<string, string>();
+  for (const approved of activeApproved) {
+    const key = phraseKey(approved);
+    if (key && !held.has(key)) held.set(key, approved);
+  }
+
+  const redundant = new Map<string, string>();
+  for (const raw of incoming) {
+    const keyword = raw.trim().toLowerCase();
+    if (!keyword) continue;
+    const key = phraseKey(keyword);
+    // A phrase with no content words is its own target: "best" alone groups
+    // with nothing, and dropping it would be the tool deciding for the
+    // operator rather than deduplicating.
+    if (!key) continue;
+    const covering = held.get(key);
+    if (covering !== undefined && covering !== keyword) {
+      redundant.set(keyword, covering);
+      continue;
+    }
+    if (covering === undefined) held.set(key, keyword);
+  }
+  return redundant;
+}
+
+/**
+ * Whether a candidate's stored metrics are worth snapshotting onto the approved
+ * row (CODE-95).
+ *
+ * `keyword_candidates.metrics` defaults to `{}`, so an empty object is the
+ * ordinary state of a candidate nobody has paid to enrich. Dating that as a
+ * snapshot would say a reading was taken when none was, which is the same
+ * mistake as rendering a placeholder zero as a measurement (CODE-72). Only an
+ * object with something in it is a reading; everything else leaves all three
+ * columns NULL, and NULL reads as the absence it is.
+ */
+export function metricsWorthKeeping(metrics: unknown): boolean {
+  if (metrics === null || metrics === undefined) return false;
+  if (typeof metrics !== "object" || Array.isArray(metrics)) return false;
+  return Object.keys(metrics as Record<string, unknown>).length > 0;
+}
+
 /** Promotes reviewed candidates into the approved set that SERP observes. */
 export async function approveKeywords(
   client: Client,
   tenantId: string,
   keywords: string[],
   approvedBy?: string | null,
-): Promise<{ approved: number }> {
+): Promise<{ approved: number; metricsStored: number; metricsNotStored: number; folded: number }> {
   const now = new Date().toISOString();
   let approved = 0;
+  let metricsStored = 0;
+  let metricsNotStored = 0;
+  let folded = 0;
+
+  // What is already approved and active decides what a new approval would
+  // duplicate. Read once (CODE-98).
+  const { data: activeRows } = await client
+    .from("tracked_keywords")
+    .select("keyword")
+    .eq("tenant_id", tenantId)
+    .eq("active", true);
+  const redundant = redundantAgainst(
+    keywords,
+    (activeRows ?? []).map((row) => row.keyword),
+  );
 
   for (const raw of keywords) {
     const keyword = raw.trim().toLowerCase();
     if (!keyword) continue;
 
+    // A spelling of a target something already approved covers. The operator
+    // did press approve, so the candidate leaves the queue as approved and does
+    // not come back. It simply never becomes a tracked target of its own, which
+    // is what a paid SERP task is bought per (CODE-98).
+    if (redundant.has(keyword)) {
+      const { data: dupe } = await client
+        .from("keyword_candidates")
+        .select("id")
+        .eq("tenant_id", tenantId)
+        .eq("keyword", keyword)
+        .maybeSingle();
+      if (dupe) {
+        await client
+          .from("keyword_candidates")
+          .update({ review_state: "approved", reviewed_by: approvedBy ?? null, reviewed_at: now })
+          .eq("id", dupe.id);
+      }
+      folded += 1;
+      continue;
+    }
+
+    // `metrics` comes with the id now. Approval used to select the id alone and
+    // drop everything else the candidate carried -- volume, CPC, competition,
+    // difficulty, intent -- some of it paid for twice, and unrecoverable
+    // afterwards because enrichment only ever sees pending rows (CODE-95).
     const { data: candidate } = await client
       .from("keyword_candidates")
-      .select("id")
+      .select("id, metrics")
       .eq("tenant_id", tenantId)
       .eq("keyword", keyword)
       .maybeSingle();
 
+    const metrics = candidate?.metrics;
+
+    // The approval write is exactly what it always was. The metrics snapshot is
+    // a second, separate write, because 20260903020000 may not be applied on
+    // the host yet: folding the new columns into this upsert would make every
+    // approval fail with "column does not exist", and `if (error) continue`
+    // below would swallow it into "0 keywords approved" with no reason. A
+    // migration that has not landed must not be able to break approval.
     const { error } = await client.from("tracked_keywords").upsert(
       {
         tenant_id: tenantId,
@@ -442,6 +559,28 @@ export async function approveKeywords(
     if (error) continue;
     approved += 1;
 
+    // Snapshot what the candidate was carrying, at the moment of approval
+    // (CODE-95). Best effort by construction: an unapplied migration leaves the
+    // keyword approved and the snapshot absent, which is the truth, rather than
+    // failing the approval. The miss is counted so the caller can say so
+    // instead of implying every approval was captured.
+    if (metricsWorthKeeping(metrics)) {
+      const { error: snapshotError } = await client
+        .from("tracked_keywords")
+        .update({
+          approved_metrics: metrics as Json,
+          approved_metrics_captured_at: now,
+          approved_metrics_candidate_id: candidate?.id ?? null,
+        })
+        .eq("tenant_id", tenantId)
+        .eq("keyword", keyword)
+        .eq("location_code", KEYWORD_CONFIG.locationCode)
+        .eq("language_code", KEYWORD_CONFIG.languageCode)
+        .is("approved_metrics", null);
+      if (snapshotError) metricsNotStored += 1;
+      else metricsStored += 1;
+    }
+
     if (candidate) {
       await client
         .from("keyword_candidates")
@@ -450,7 +589,7 @@ export async function approveKeywords(
     }
   }
 
-  return { approved };
+  return { approved, metricsStored, metricsNotStored, folded };
 }
 
 /** Marks candidates as rejected so a later pass does not re-file them. */

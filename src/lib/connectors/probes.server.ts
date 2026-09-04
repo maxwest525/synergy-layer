@@ -32,7 +32,6 @@ type RequestDescriptor = {
 };
 
 const noSafeProbe = new Set<ConnectorKey>([
-  "google_search_console",
   "pagespeed_insights",
   "perplexity",
   // Every call this credential can make is a conversion write. AOOS has no
@@ -305,6 +304,10 @@ export async function probeConnector(
   if (key === "google_analytics_4") {
     const { probeGa4 } = await import("./ga4.server");
     return probeGa4(options);
+  }
+  if (key === "google_search_console") {
+    const { probeSearchConsole } = await import("./gsc.server");
+    return probeSearchConsole(options);
   }
   const env = withConnectorDefaults(options.env ?? process.env);
   const checkedAt = new Date().toISOString();
